@@ -1,0 +1,48 @@
+{
+  "uuid": "11111111-1111-1111-1111-111111111111",
+  "sistEndret": "2026-08-18T09:00:00.000000+02:00",
+  "status": "ACTIVE",
+  "ad_content": {
+    "uuid": "11111111-1111-1111-1111-111111111111",
+    "published": "2026-08-14T08:00:00+02:00",
+    "expires": "2026-09-14T23:59:59+02:00",
+    "updated": "2026-08-18T09:00:00+02:00",
+    "title": "Backend-utvikler til teamet",
+    "jobtitle": "Backend-utvikler",
+    "description": "<p>Vi søker en utvikler.</p>",
+    "sourceurl": "https://agreed.no/jobb/backend",
+    "source": "AMEDIA",
+    "applicationUrl": "https://agreed.no/soknad",
+    "applicationDue": "2026-09-14",
+    "link": "https://arbeidsplassen.nav.no/stillinger/stilling/11111111-1111-1111-1111-111111111111",
+    "engagementtype": "Fast",
+    "extent": "Heltid",
+    "starttime": "Etter avtale",
+    "positioncount": "1",
+    "sector": "Privat",
+    "employer": {
+      "name": "AGREED AS",
+      "orgnr": "931895923",
+      "description": "Konsulentselskap",
+      "homepage": "https://agreed.no"
+    },
+    "workLocations": [
+      {
+        "country": "Norge",
+        "address": "Torggata 1",
+        "city": "HAMAR",
+        "postalCode": "2317",
+        "county": "INNLANDET",
+        "municipal": "HAMAR"
+      }
+    ],
+    "contactList": [],
+    "occupationCategories": [
+      {
+        "level1": "IT",
+        "level2": "Utvikler"
+      }
+    ],
+    "categoryList": []
+  }
+}
