@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Hugin.Core\Hugin.Core.csproj" />
     <ProjectReference Include="..\Hugin.Console\Hugin.Console.csproj" />
   </ItemGroup>
