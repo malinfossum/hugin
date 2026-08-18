@@ -72,6 +72,47 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task DeactivateExpired_compares_instants_not_local_clocks()
+    {
+        var repo = new EfAdRepository(_db);
+
+        // Expired 31 minutes ago in UTC terms, but its local wall-clock (23:59 at +02:00)
+        // is ahead of now's (22:30 at +00:00). A converter that orders by local ticks
+        // would call this ad still active for another two hours.
+        var expires = new DateTimeOffset(2026, 8, 18, 23, 59, 0, TimeSpan.FromHours(2));
+        var now = new DateTimeOffset(2026, 8, 18, 22, 30, 0, TimeSpan.Zero);
+        await repo.UpsertAsync(new FeedAd("x", "Utvikler", null, null, "3405", null, expires, null, true), T1);
+
+        Assert.That(await repo.DeactivateExpiredAsync(now), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Pipeline_upsert_persists_a_changed_route()
+    {
+        var repo = new EfPipelineRepository(_db);
+        await repo.UpsertAsync(new()
+        {
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.SoektSelv,
+            Route = Core.Models.OutreachRoute.SoektSelv,
+            Created = T1,
+            Updated = T1,
+        });
+        await repo.UpsertAsync(new()
+        {
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.BedtGetSjekke,
+            Route = Core.Models.OutreachRoute.BedtGetSjekke,
+            Created = T1,
+            Updated = T2,
+        });
+
+        var stored = await repo.GetByOrgnrAsync("1");
+        Assert.That(stored!.Route, Is.EqualTo(Core.Models.OutreachRoute.BedtGetSjekke),
+            "the stored row must follow the route change, not just the returned entry");
+    }
+
+    [Test]
     public async Task Pipeline_upsert_is_one_entry_per_company()
     {
         var repo = new EfPipelineRepository(_db);

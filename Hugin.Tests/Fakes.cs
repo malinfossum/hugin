@@ -169,6 +169,7 @@ internal sealed class FakePipelineRepository : IPipelineRepository
         else
         {
             existing.Status = entry.Status;
+            existing.Route = entry.Route;
             existing.Why = entry.Why;
             existing.Note = entry.Note;
             existing.SvarText = entry.SvarText;

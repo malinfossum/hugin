@@ -183,6 +183,7 @@ internal static class Program
         if (items.Companies.Count == 0)
         {
             Console.WriteLine("(ingen)");
+            Console.WriteLine();
         }
         else
         {
@@ -253,6 +254,13 @@ internal static class Program
         catch (CompanyNotFoundException ex)
         {
             Console.Error.WriteLine($"Feil: {ex.Message}");
+            return 1;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // Only an unknown orgnr needs the network (the Brreg lookup); a known one never
+            // gets here. Offline is an inconvenience, not a crash.
+            Console.Error.WriteLine($"Feil: fikk ikke kontakt med Enhetsregisteret ({ex.Message}) — prøv igjen senere.");
             return 1;
         }
     }

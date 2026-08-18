@@ -129,6 +129,10 @@ public class PipelineServiceTests
 
         var bedt = await h.Service.TrackAsync("934161181", PipelineStatus.BedtGetSjekke, null, null, null);
         Assert.That(bedt.Entry.Route, Is.EqualTo(OutreachRoute.BedtGetSjekke));
+
+        var stored = await h.Pipeline.GetByOrgnrAsync("934161181");
+        Assert.That(stored!.Route, Is.EqualTo(OutreachRoute.BedtGetSjekke),
+            "the repository row must carry the change, not only the TrackResult");
     }
 
     [Test]
