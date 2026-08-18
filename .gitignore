@@ -1,0 +1,23 @@
+# Visual Studio workspace cache (per-machine, not source)
+.vs/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+
+# Publish output
+publish/
+*.publishsettings
+
+# Rider / JetBrains (in case you ever switch)
+.idea/
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# Hugin local state — never commit (contains real outreach history)
+hugin.json
+*.db

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Hugin.Console/Hugin.Console.csproj" />
+  <Project Path="Hugin.Core/Hugin.Core.csproj" />
+  <Project Path="Hugin.Tests/Hugin.Tests.csproj" />
+</Solution>
