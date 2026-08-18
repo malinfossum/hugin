@@ -9,12 +9,21 @@
   "keywords": [
     "utvikler",
     "developer",
+    "engineer",
+    "programmerer",
+    "fullstack",
     "backend",
     "frontend",
-    "fullstack",
+    "devops",
     "programvare",
-    "software"
+    "software",
+    "arkitekt",
+    "IT-konsulent",
+    "kunstig intelligens",
+    "maskinlæring",
+    "machine learning"
   ],
+  "categories": ["IT"],
   "navToken": null,
   "linkouts": [
     { "label": "FINN — utvikler × Innlandet", "url": "<your finn.no saved search URL>" },

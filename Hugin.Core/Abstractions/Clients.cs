@@ -6,7 +6,8 @@ public sealed record RegisterCompany(string Orgnr, string Name, string? Municipa
 
 /// <summary>An ad as the feed returns it — before it becomes a stored <see cref="Models.Ad"/>.</summary>
 public sealed record FeedAd(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
-    string? MunicipalityNumber, DateTimeOffset? Published, DateTimeOffset? Expires, string? SourceUrl, bool IsActive);
+    string? MunicipalityNumber, DateTimeOffset? Published, DateTimeOffset? Expires, string? SourceUrl, bool IsActive,
+    string? Category = null);
 
 /// <summary>
 /// One page of the feed. <paramref name="NextCursor"/> is null at the tail, where the page is

@@ -216,7 +216,8 @@ internal static class Program
             foreach (var ad in items.Ads)
             {
                 var marker = ad.IsActive ? "" : "  [utgått]";
-                Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{marker}");
+                var category = ad.Category is null ? "" : $"  [{ad.Category}]";
+                Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{category}{marker}");
                 if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
             }
         }
@@ -304,11 +305,19 @@ internal static class Program
             }
 
             Console.WriteLine($"{ads.Count} aktive annonser");
-            foreach (var ad in ads)
+            Console.WriteLine();
+
+            foreach (var group in ads.GroupBy(a => a.Category ?? "Uten kategori").OrderBy(g => g.Key))
             {
-                var expires = ad.Expires is { } e ? $"  (frist {e:yyyy-MM-dd})" : "";
-                Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{expires}");
-                if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
+                Console.WriteLine($"[{group.Key}] ({group.Count()})");
+                foreach (var ad in group)
+                {
+                    var expires = ad.Expires is { } e ? $"  (frist {e:yyyy-MM-dd})" : "";
+                    Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{expires}");
+                    if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
+                }
+
+                Console.WriteLine();
             }
 
             return 0;

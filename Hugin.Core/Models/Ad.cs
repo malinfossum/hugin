@@ -15,6 +15,9 @@ public sealed class Ad
     public DateTimeOffset? Published { get; set; }
     public DateTimeOffset? Expires { get; set; }
     public string? SourceUrl { get; set; }
+
+    // NAV's occupation category for display/grouping, e.g. "IT / Utvikling".
+    public string? Category { get; set; }
     public DateTimeOffset FirstSeen { get; set; }
     public bool IsActive { get; set; }
 }

@@ -19,7 +19,7 @@ cp hugin.json.example hugin.json
 dotnet run --project Hugin.Console -- sync
 ```
 
-Edit `hugin.json` to set your municipalities, industry codes, and keywords. Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400); industry codes are SN2025, where a prefix such as `62` matches every sub-code beneath it.
+Edit `hugin.json` to set your municipalities, industry codes, and keywords. Keywords are the recall net and can stay broad — `categories` (NAV's occupation categories, default `["IT"]`) filters out keyword coincidences like *prosjektutvikler massivtre*; ads NAV has not categorized always pass. `hugin list --ads` groups results by that category. Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400); industry codes are SN2025, where a prefix such as `62` matches every sub-code beneath it.
 
 `hugin.json` and the `hugin.db` database are gitignored — the pipeline holds your own outreach history.
 

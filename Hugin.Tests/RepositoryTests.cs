@@ -63,6 +63,17 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task Category_survives_insert_and_update()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("a", "Utvikler", null, null, "3403", T1, null, null, true, "IT / Utvikling"), T1);
+        await repo.UpsertAsync(new FeedAd("a", "Utvikler", null, null, "3403", T1, null, null, true, "IT / Drift"), T2);
+
+        var stored = (await repo.GetActiveAsync()).Single();
+        Assert.That(stored.Category, Is.EqualTo("IT / Drift"));
+    }
+
+    [Test]
     public async Task GetActive_filters_on_flag_and_municipality()
     {
         var repo = new EfAdRepository(_db);

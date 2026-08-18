@@ -74,6 +74,7 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
                 Published = ad.Published,
                 Expires = ad.Expires,
                 SourceUrl = ad.SourceUrl,
+                Category = ad.Category,
                 FirstSeen = seenAt,
                 IsActive = ad.IsActive,
             });
@@ -87,6 +88,7 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
             existing.Published = ad.Published;
             existing.Expires = ad.Expires;
             existing.SourceUrl = ad.SourceUrl;
+            existing.Category = ad.Category;
             existing.IsActive = ad.IsActive;
         }
 

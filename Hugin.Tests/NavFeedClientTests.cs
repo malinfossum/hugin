@@ -57,6 +57,7 @@ public class NavFeedClientTests
         Assert.That(active.SourceUrl, Is.EqualTo("https://arbeidsplassen.nav.no/stillinger/stilling/11111111-1111-1111-1111-111111111111"));
         Assert.That(active.Expires, Is.Not.Null);
         Assert.That(active.IsActive, Is.True);
+        Assert.That(active.Category, Is.EqualTo("IT / Utvikling"));
 
         var gone = page.Ads.Single(a => a.FeedId.StartsWith("2222", StringComparison.Ordinal));
         Assert.That(gone.IsActive, Is.False, "the feed reporting INACTIVE must flip the ad");
@@ -64,6 +65,37 @@ public class NavFeedClientTests
         Assert.That(page.Ads.All(a => a.SourceUrl is null
             || a.SourceUrl.StartsWith("http://", StringComparison.Ordinal)
             || a.SourceUrl.StartsWith("https://", StringComparison.Ordinal)), Is.True);
+    }
+
+    [Test]
+    public async Task Keyword_hit_outside_configured_categories_is_dropped()
+    {
+        // "Prosjektutvikler massivtre" survives the keyword net ("utvikler"), but NAV files
+        // it under Bygg og anlegg — the category gate is what keeps it out of the radar.
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"66666666-6666-6666-6666-666666666666",
+             "status":"ACTIVE","title":"Prosjektutvikler massivtre","businessName":"Moelven Limtre AS",
+             "municipal":"RINGSAKER","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-y"}
+            """;
+        const string detail = """
+            {"uuid":"66666666-6666-6666-6666-666666666666","status":"ACTIVE",
+             "sistEndret":"2026-08-18T09:00:00+02:00",
+             "ad_content":{"uuid":"66666666-6666-6666-6666-666666666666",
+              "title":"Prosjektutvikler massivtre","link":"https://arbeidsplassen.nav.no/stillinger/stilling/6",
+              "employer":{"name":"Moelven Limtre AS"},
+              "workLocations":[{"municipal":"RINGSAKER"}],
+              "occupationCategories":[{"level1":"Bygg og anlegg","level2":"Prosjektering"}]}}
+            """;
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/6666", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null);
+
+        Assert.That(result.Ads, Is.Empty);
     }
 
     [Test]

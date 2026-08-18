@@ -125,6 +125,7 @@ internal sealed class FakeAdRepository : IAdRepository
             existing.Published = ad.Published;
             existing.Expires = ad.Expires;
             existing.SourceUrl = ad.SourceUrl;
+            existing.Category = ad.Category;
             existing.IsActive = ad.IsActive;
         }
         else
@@ -139,6 +140,7 @@ internal sealed class FakeAdRepository : IAdRepository
                 Published = ad.Published,
                 Expires = ad.Expires,
                 SourceUrl = ad.SourceUrl,
+                Category = ad.Category,
                 FirstSeen = seenAt,
                 IsActive = ad.IsActive,
             };

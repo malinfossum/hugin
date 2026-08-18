@@ -64,7 +64,10 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
                 var ad = MapSummary(summary);
                 if (ad is null || !AdFilter.Matches(ad, config)) continue;
 
-                ads.Add(await EnrichAsync(ad, ct));
+                // Enrichment can also disqualify: NAV's occupation category separates real
+                // developer roles from keyword coincidences like prosjektutvikler massivtre.
+                if (await EnrichAsync(ad, ct) is { } enriched)
+                    ads.Add(enriched);
             }
         }
 
@@ -88,7 +91,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
             IsActive: string.Equals(Text(summary, "status"), "ACTIVE", StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task<FeedAd> EnrichAsync(FeedAd ad, CancellationToken ct)
+    private async Task<FeedAd?> EnrichAsync(FeedAd ad, CancellationToken ct)
     {
         using var response = await SendAuthorizedAsync($"api/v1/feedentry/{ad.FeedId}", ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return ad;
@@ -112,8 +115,15 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
             ? e
             : default;
 
+        var categories = Categories(content);
+        if (!AdFilter.MatchesCategory(categories.Select(c => c.Level1).Distinct().ToList(), config))
+            return null;
+
         return ad with
         {
+            Category = categories.Count == 0
+                ? null
+                : string.Join("; ", categories.Select(c => $"{c.Level1} / {c.Level2}").Distinct()),
             Title = Sanitizer.Clean(Text(content, "title") ?? ad.Title),
             EmployerName = employer.ValueKind == JsonValueKind.Object
                 ? Sanitizer.Clean(Text(employer, "name") ?? ad.EmployerName)
@@ -174,6 +184,18 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
                 return number;
 
         return null;
+    }
+
+    private static List<(string Level1, string Level2)> Categories(JsonElement content)
+    {
+        var categories = new List<(string, string)>();
+
+        if (content.TryGetProperty("occupationCategories", out var list) && list.ValueKind == JsonValueKind.Array)
+            foreach (var item in list.EnumerateArray())
+                if (Text(item, "level1") is { } level1)
+                    categories.Add((level1, Text(item, "level2") ?? ""));
+
+        return categories;
     }
 
     private static DateTimeOffset? Timestamp(JsonElement e, string name) =>
