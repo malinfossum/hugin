@@ -17,7 +17,11 @@ public static class MarkdownExporter
 
     public static string Export(IReadOnlyList<(PipelineEntry Entry, Company Company)> rows, DateTimeOffset since)
     {
-        var included = rows.Where(r => r.Entry.Updated >= since).ToList();
+        // Funnet is pre-outreach: whatever route an entry once had, it only exports after
+        // something was actually sent or asked.
+        var included = rows
+            .Where(r => r.Entry.Status != PipelineStatus.Funnet && r.Entry.Updated >= since)
+            .ToList();
 
         var sb = new StringBuilder();
         Section(sb, "## Søkt selv", included.Where(r => RouteOf(r.Entry) == OutreachRoute.SoektSelv));

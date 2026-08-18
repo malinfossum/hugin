@@ -78,6 +78,18 @@ public class MarkdownExporterTests
     }
 
     [Test]
+    public void Funnet_entries_never_export_even_with_a_leftover_route()
+    {
+        // Track soekt-selv by mistake, reset to funnet: the route survives (by design, for
+        // real answers), but a found-not-contacted company has no place in the outreach log.
+        var markdown = MarkdownExporter.Export(
+            [(Entry("1", PipelineStatus.Funnet, route: OutreachRoute.SoektSelv), Company("1", "Bare funnet AS"))],
+            Since);
+
+        Assert.That(markdown, Does.Not.Contain("Bare funnet AS"));
+    }
+
+    [Test]
     public void Empty_why_gets_warning_marker()
     {
         var markdown = MarkdownExporter.Export(
