@@ -1,0 +1,23 @@
+{
+  "municipalities": [
+    { "name": "Gjøvik", "number": "3407" },
+    { "name": "Hamar", "number": "3403" },
+    { "name": "Lillehammer", "number": "3405" },
+    { "name": "Ringsaker", "number": "3411" }
+  ],
+  "naeringskoder": ["62"],
+  "keywords": [
+    "utvikler",
+    "developer",
+    "backend",
+    "frontend",
+    "fullstack",
+    "programvare",
+    "software"
+  ],
+  "navToken": null,
+  "linkouts": [
+    { "label": "FINN — utvikler × Innlandet", "url": "<your finn.no saved search URL>" },
+    { "label": "LinkedIn — entry level", "url": "<your LinkedIn saved search URL>" }
+  ]
+}
