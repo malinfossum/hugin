@@ -8,7 +8,11 @@ public sealed record RegisterCompany(string Orgnr, string Name, string? Municipa
 public sealed record FeedAd(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
     string? MunicipalityNumber, DateTimeOffset? Published, DateTimeOffset? Expires, string? SourceUrl, bool IsActive);
 
-public sealed record FeedPage(IReadOnlyList<FeedAd> Ads, string? NextCursor);
+/// <summary>
+/// One page of the feed. <paramref name="NextCursor"/> is null at the tail, where the page is
+/// still collecting entries — <paramref name="PageId"/> is what a later sync resumes from.
+/// </summary>
+public sealed record FeedPage(IReadOnlyList<FeedAd> Ads, string? NextCursor, string? PageId = null);
 
 public interface IBrregClient
 {

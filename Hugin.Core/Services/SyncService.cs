@@ -101,7 +101,12 @@ public sealed class SyncService(
 
                 // Cursor after commit: everything on this page is stored before we move on.
                 cursor = feedPage.NextCursor;
-                await syncState.SetAsync("nav", cursor, now, ct);
+
+                // At the tail there is no next page yet, but that page keeps collecting entries
+                // until it fills and rolls over. Resuming from it — rather than from "newest"
+                // — is what stops those entries being skipped; re-reading it is harmless
+                // because upserts are idempotent.
+                await syncState.SetAsync("nav", cursor ?? feedPage.PageId, now, ct);
 
                 if (cursor is null) break;
             }

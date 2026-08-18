@@ -98,7 +98,7 @@ public sealed class BrregClient(HttpClient http) : IBrregClient
             NaceCode: e.TryGetProperty("naeringskode1", out var nace) ? String(nace, "kode") : null,
             ParentOrgnr: String(e, "overordnetEnhet"),
             IsBranch: isBranch,
-            Website: UrlGuard.HttpOrHttps(String(e, "hjemmeside")));
+            Website: UrlGuard.Website(String(e, "hjemmeside")));
 
     private static string? Municipality(JsonElement e, bool isBranch)
     {

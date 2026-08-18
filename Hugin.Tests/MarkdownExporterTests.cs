@@ -12,13 +12,19 @@ public class MarkdownExporterTests
         new() { Orgnr = orgnr, Name = name, Website = website, FirstSeen = Since, LastSeenInRegister = Since };
 
     private static PipelineEntry Entry(string orgnr, PipelineStatus status, string why = "fordi",
-        string? svar = null, DateTimeOffset? updated = null) =>
+        string? svar = null, DateTimeOffset? updated = null, OutreachRoute? route = null) =>
         new()
         {
             Orgnr = orgnr,
             Status = status,
             Why = why,
             SvarText = svar,
+            Route = route ?? status switch
+            {
+                PipelineStatus.SoektSelv => OutreachRoute.SoektSelv,
+                PipelineStatus.BedtGetSjekke => OutreachRoute.BedtGetSjekke,
+                _ => OutreachRoute.Ingen,
+            },
             Created = Since,
             Updated = updated ?? Updated,
         };
@@ -50,6 +56,25 @@ public class MarkdownExporterTests
         Assert.That(markdown.IndexOf("Svar AS", StringComparison.Ordinal), Is.GreaterThan(bedt),
             "an answered entry stays in the section it was sent through");
         Assert.That(markdown, Does.Contain("| Dato | Bedrift | Nettside | Grunn | Svar |"));
+    }
+
+    [Test]
+    public void Answered_self_application_stays_in_soekt_selv()
+    {
+        var markdown = MarkdownExporter.Export(
+        [
+            (Entry("1", PipelineStatus.Svar, svar: "avslag", route: OutreachRoute.SoektSelv),
+                Company("1", "Selv AS")),
+            (Entry("2", PipelineStatus.Svar, svar: "ja", route: OutreachRoute.BedtGetSjekke),
+                Company("2", "Via GET AS")),
+        ], Since);
+
+        var soekt = markdown.IndexOf("## Søkt selv", StringComparison.Ordinal);
+        var bedt = markdown.IndexOf("## Bedt GET om å sjekke", StringComparison.Ordinal);
+
+        Assert.That(markdown.IndexOf("Selv AS", StringComparison.Ordinal), Is.InRange(soekt, bedt),
+            "GET must not be credited for an application she sent herself");
+        Assert.That(markdown.IndexOf("Via GET AS", StringComparison.Ordinal), Is.GreaterThan(bedt));
     }
 
     [Test]

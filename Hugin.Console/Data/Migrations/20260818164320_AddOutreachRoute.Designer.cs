@@ -2,6 +2,7 @@
 using Hugin.Console.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hugin.Console.Data.Migrations
 {
     [DbContext(typeof(HuginDbContext))]
-    partial class HuginDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818164320_AddOutreachRoute")]
+    partial class AddOutreachRoute
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");

@@ -46,6 +46,7 @@ public sealed class PipelineService(
             Id = existing?.Id ?? 0,
             Orgnr = orgnr,
             Status = status,
+            Route = RouteFor(status, existing?.Route ?? OutreachRoute.Ingen),
             Why = why ?? existing?.Why ?? "",
             Note = note ?? existing?.Note,
             SvarText = svar ?? existing?.SvarText,
@@ -61,4 +62,15 @@ public sealed class PipelineService(
 
         return new TrackResult(entry, fetchedFromBrreg, warning);
     }
+
+    /// <summary>
+    /// Only the two outreach statuses set a route; funnet and svar carry forward whatever was
+    /// already recorded, so an answer never rewrites how the company was approached.
+    /// </summary>
+    private static OutreachRoute RouteFor(PipelineStatus status, OutreachRoute existing) => status switch
+    {
+        PipelineStatus.SoektSelv => OutreachRoute.SoektSelv,
+        PipelineStatus.BedtGetSjekke => OutreachRoute.BedtGetSjekke,
+        _ => existing,
+    };
 }

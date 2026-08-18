@@ -108,14 +108,43 @@ public class SyncServiceTests
     public async Task Nav_cursor_is_stored_after_a_clean_page()
     {
         var nav = new FakeNavFeedClient(
-            new FeedPage([Ad("a", "Backend-utvikler", "3403")], "side-2"),
-            new FeedPage([Ad("b", "Frontend-utvikler", "3407")], null));
+            new FeedPage([Ad("a", "Backend-utvikler", "3403")], "side-2", "side-1"),
+            new FeedPage([Ad("b", "Frontend-utvikler", "3407")], null, "side-2"));
 
         var h = Build(nav: nav);
         await h.Service.SyncAsync();
 
         Assert.That(h.Nav.RequestedCursors, Is.EqualTo(new string?[] { null, "side-2" }));
-        Assert.That(h.SyncState.Store["nav"].Cursor, Is.Null, "the tail page reports no next cursor");
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a", "b" }));
+    }
+
+    [Test]
+    public async Task Tail_page_stays_the_resume_point_instead_of_resetting()
+    {
+        // The tail page reports no next_id, but it keeps collecting entries until it fills
+        // and rolls over. Storing null here would send the next sync back to whatever page is
+        // newest by then, silently skipping everything appended in between.
+        var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3403")], null, "hale-side"));
+
+        var h = Build(nav: nav);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.SyncState.Store["nav"].Cursor, Is.EqualTo("hale-side"));
+    }
+
+    [Test]
+    public async Task Second_sync_resumes_from_the_stored_page_instead_of_the_newest()
+    {
+        var nav = new FakeNavFeedClient(
+            new FeedPage([Ad("a", "Backend-utvikler", "3403")], null, "hale-side"),
+            new FeedPage([Ad("b", "Frontend-utvikler", "3403")], null, "hale-side"));
+
+        var h = Build(nav: nav);
+        await h.Service.SyncAsync();
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Nav.RequestedCursors, Is.EqualTo(new string?[] { null, "hale-side" }),
+            "only a first-ever sync may start at the newest page");
         Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a", "b" }));
     }
 

@@ -45,6 +45,26 @@ public class BrregClientTests
     }
 
     [Test]
+    public async Task Scheme_less_hjemmeside_becomes_a_usable_link()
+    {
+        // Brreg never stores a scheme, so guarding on http(s) alone dropped every website.
+        const string enhet = """
+            {"organisasjonsnummer":"923591435","navn":"APROXIMA AS",
+             "naeringskode1":{"kode":"62.010"},"hjemmeside":"www.innit.no",
+             "forretningsadresse":{"kommunenummer":"3403"}}
+            """;
+
+        var client = new BrregClient(HttpFixtures.Client(request =>
+            request.RequestUri!.ToString().Contains("enheter/923591435", StringComparison.Ordinal)
+                ? HttpFixtures.Json(enhet)
+                : HttpFixtures.NotFound()));
+
+        var result = await client.GetByOrgnrAsync("923591435");
+
+        Assert.That(result!.Website, Is.EqualTo("https://www.innit.no"));
+    }
+
+    [Test]
     public async Task GetByOrgnr_returns_null_when_neither_register_has_it()
     {
         var client = new BrregClient(HttpFixtures.Client(_ => HttpFixtures.NotFound()));

@@ -65,7 +65,7 @@ Lives next to the executable (or `--config <path>`). This file is the whole "pre
 |---|---|---|
 | `Company` | `Orgnr` (PK, string), `Name`, `MunicipalityNumber`, `NaceCode`, `ParentOrgnr?`, `IsBranch`, `Website?`, `FirstSeen`, `LastSeenInRegister` | From Brreg — both hovedenheter and **underenheter** (branch offices have their own orgnr; `ParentOrgnr` links to the parent). Never deleted; companies that disappear from the register are marked, not removed. |
 | `Ad` | `FeedId` (PK), `Title`, `EmployerName`, `EmployerOrgnr?`, `MunicipalityNumber?`, `Published`, `Expires?`, `SourceUrl`, `FirstSeen`, `IsActive` | From NAV feed. `SourceUrl` is the deep-link NAV's terms require; `IsActive` flips on sync when the feed reports the ad gone. |
-| `PipelineEntry` | `Id` (PK), `Orgnr` (FK → Company), `Status` (enum: `Funnet`, `SoektSelv`, `BedtGetSjekke`, `Svar`), `Why` (begrunnelse, text), `Note?`, `SvarText?`, `Created`, `Updated` | One entry per company. `Why` is the "Grunn til at de er interessante" column — export flags entries where it is empty. |
+| `PipelineEntry` | `Id` (PK), `Orgnr` (FK → Company), `Status` (enum: `Funnet`, `SoektSelv`, `BedtGetSjekke`, `Svar`), `Route` (enum: `Ingen`, `SoektSelv`, `BedtGetSjekke`), `Why` (begrunnelse, text), `Note?`, `SvarText?`, `Created`, `Updated` | One entry per company. `Why` is the "Grunn til at de er interessante" column — export flags entries where it is empty. `Route` records how the company was approached and survives the move to `Svar`, so an answered self-application is not filed under GET (see corrections below). |
 | `SyncState` | `Source` (PK: `brreg` / `nav`), `LastSyncUtc`, `Cursor?` | Feed position / incremental state per source. |
 | `ReviewMark` | `LastReviewedUtc` (single row) | What "new" means: everything with `FirstSeen` after this. Advanced only by `hugin new --seen` — except the **first successful sync sets it as the baseline**, so `new` starts near-empty instead of dumping several hundred "new" companies. The initial inventory is browsed deliberately via `list --companies`. |
 
@@ -132,6 +132,14 @@ EF Core-backed repository tests use SQLite in-memory. The Stop-hook (`dotnet tes
 - NAV feed excludes finn-only ads — accepted; link-outs cover it.
 - Brreg lists ~140 NACE-62 entities in Gjøvik alone — most are one-person consultancies. The `new` output groups and counts rather than judging; curation (the `Why`) stays human.
 - Of the default kommunenummer values, only Gjøvik (3407) is verified against the live API; Hamar (3403), Lillehammer (3405) and Ringsaker (3411) are assumed. **The implementation plan must include a verification step against Brreg's `/kommuner` endpoint before the defaults ship.**
+
+## Post-implementation corrections (2026-08-18)
+
+Three defects found after the build, against the live APIs rather than in review:
+
+1. **NAV feed resume point.** At the feed tail `next_id` is null, and storing that as the cursor sent every later sync back to `?last=true` — the newest page — skipping every page that completed in between. Tail pages roll over within the hour, so a daily sync would have missed almost all ads. `FeedPage` now also carries the page `id`, and sync stores `next_id ?? id`; re-reading one page is harmless because upserts are idempotent.
+2. **Company websites.** Brreg stores `hjemmeside` as a bare hostname (`www.innit.no`) — of 200 companies sampled across the configured municipalities, 39 had one and none carried a scheme, so `UrlGuard.HttpOrHttps` discarded all of them and the export's Nettside column was always empty. `UrlGuard.Website` now assumes https for a scheme-less hostname, still refusing any value that declares a different scheme, and requires a dot so a typed note does not become a link.
+3. **Answered outreach attribution.** Because `Status` is linear and ends at `Svar`, an answer to an application Malin sent herself moved into the "Bedt GET om å sjekke" section. Hence the `Route` field above; export now splits on route rather than status.
 
 ## Stress-test record (2026-08-18)
 

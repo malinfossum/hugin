@@ -61,7 +61,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
             }
         }
 
-        return new FeedPage(ads, Text(root, "next_id"));
+        return new FeedPage(ads, Text(root, "next_id"), Text(root, "id"));
     }
 
     private FeedAd? MapSummary(JsonElement summary)

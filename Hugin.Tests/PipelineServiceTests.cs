@@ -107,6 +107,40 @@ public class PipelineServiceTests
     }
 
     [Test]
+    public async Task Route_is_remembered_when_the_answer_arrives()
+    {
+        var h = await BuildAsync();
+        await h.Service.TrackAsync("934161181", PipelineStatus.SoektSelv, "fordi", null, null);
+
+        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Svar, null, null, "avslag");
+
+        Assert.That(result.Entry.Status, Is.EqualTo(PipelineStatus.Svar));
+        Assert.That(result.Entry.Route, Is.EqualTo(OutreachRoute.SoektSelv),
+            "an answer must not rewrite how the company was approached");
+    }
+
+    [Test]
+    public async Task Route_follows_the_latest_outreach_status()
+    {
+        var h = await BuildAsync();
+
+        var soekt = await h.Service.TrackAsync("934161181", PipelineStatus.SoektSelv, "fordi", null, null);
+        Assert.That(soekt.Entry.Route, Is.EqualTo(OutreachRoute.SoektSelv));
+
+        var bedt = await h.Service.TrackAsync("934161181", PipelineStatus.BedtGetSjekke, null, null, null);
+        Assert.That(bedt.Entry.Route, Is.EqualTo(OutreachRoute.BedtGetSjekke));
+    }
+
+    [Test]
+    public async Task Funnet_leaves_the_route_unset()
+    {
+        var h = await BuildAsync();
+        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Funnet, "fordi", null, null);
+
+        Assert.That(result.Entry.Route, Is.EqualTo(OutreachRoute.Ingen));
+    }
+
+    [Test]
     public async Task Why_is_never_overwritten_with_null()
     {
         var h = await BuildAsync();
