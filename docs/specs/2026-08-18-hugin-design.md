@@ -94,10 +94,10 @@ Network failure on either source: warn, continue with cached data, exit code 0 (
 
 | Command | Behavior |
 |---|---|
-| `hugin sync` | Pull Brreg (upsert companies) + NAV feed (upsert ads, flip `IsActive`). Prints a one-line summary per source. |
+| `hugin sync [--full]` | Pull Brreg (upsert companies) + NAV feed (upsert ads, flip `IsActive`). Prints a one-line summary per source. `--full` walks the NAV feed from its oldest page (resuming from the stored cursor if one exists) instead of the capped daily pull — the one-time backfill that loads every currently-open ad. *(Added post-v1: the daily sync alone only accumulates ads from its first run forward.)* |
 | `hugin new` | Everything first seen since `ReviewMark`: new companies grouped by municipality, new ads with deep-links, then the configured link-outs as a reminder. `--seen` advances the mark. |
 | `hugin track <orgnr> <status>` | Create/update the company's `PipelineEntry`. Options: `--why "..."`, `--note "..."`, `--svar "..."`. Warns when setting a status beyond `Funnet` with an empty `Why`. **Unknown orgnr:** fetched directly from Brreg (`/enheter/{orgnr}`, fallback `/underenheter/{orgnr}`) and stored regardless of NACE code — the NACE filter governs *discovery*, never *tracking* (Norsk Tipping is NACE 92, Statens vegvesen 84; both must be trackable). |
-| `hugin list [--status <s>]` | Pipeline overview table. `--companies [--kommune <nr>]` browses the full synced company inventory instead — this is how the first-sync backlog is explored. |
+| `hugin list [--status <s>]` | Pipeline overview table. `--companies [--kommune <nr>]` browses the full synced company inventory instead — this is how the first-sync backlog is explored. `--ads [--kommune <nr>]` lists stored ads that are currently active. *(Added post-v1: stored ads were otherwise only visible through `new`.)* |
 | `hugin export [--since <date>]` | Markdown tables in Preparelogg shape (Dato · Bedrift · Annonse/Nettside · Grunn · Svar), split "Søkt selv" / "Bedt GET sjekke". Entries with empty `Why` are included but marked `⚠ mangler begrunnelse`. Defaults to the last 7 days. |
 
 Output is plain text/markdown to stdout — pipe or copy directly into the Preparelogg.

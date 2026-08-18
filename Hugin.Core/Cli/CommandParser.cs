@@ -13,7 +13,7 @@ public static class CommandParser
 
     // Options that stand alone; everything else expects a following value.
     private static readonly HashSet<string> ValuelessFlags =
-        new(StringComparer.OrdinalIgnoreCase) { "seen", "companies" };
+        new(StringComparer.OrdinalIgnoreCase) { "seen", "companies", "full", "ads" };
 
     public static Command Parse(string[] args)
     {
@@ -33,8 +33,8 @@ public static class CommandParser
 
     private static Command ParseSync(string[] args)
     {
-        var (_, error) = ReadOptions(args, 1, []);
-        return error is not null ? new InvalidCommand(error) : new SyncCommand();
+        var (options, error) = ReadOptions(args, 1, ["full"]);
+        return error is not null ? new InvalidCommand(error) : new SyncCommand(options.ContainsKey("full"));
     }
 
     private static Command ParseNew(string[] args)
@@ -63,7 +63,7 @@ public static class CommandParser
 
     private static Command ParseList(string[] args)
     {
-        var (options, error) = ReadOptions(args, 1, ["status", "companies", "kommune"]);
+        var (options, error) = ReadOptions(args, 1, ["status", "companies", "kommune", "ads"]);
         if (error is not null) return new InvalidCommand(error);
 
         PipelineStatus? status = null;
@@ -74,7 +74,8 @@ public static class CommandParser
             status = parsed;
         }
 
-        return new ListCommand(status, options.ContainsKey("companies"), options.GetValueOrDefault("kommune"));
+        return new ListCommand(status, options.ContainsKey("companies"),
+            options.GetValueOrDefault("kommune"), options.ContainsKey("ads"));
     }
 
     private static Command ParseExport(string[] args)

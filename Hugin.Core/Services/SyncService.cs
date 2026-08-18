@@ -26,16 +26,23 @@ public sealed class SyncService(
     IClock clock,
     HuginConfig config)
 {
-    // A generous stop so a malformed next_id chain cannot loop forever; the real feed
-    // reports a null cursor at the tail long before this.
+    // A generous stop so a malformed next_id chain cannot loop forever. Daily syncs from
+    // yesterday's tail need a handful of pages; a full backfill walks the whole feed and
+    // gets a far higher ceiling that only a broken cursor chain could ever reach.
     private const int MaxPagesPerSync = 100;
+    private const int MaxPagesFullSync = 20_000;
 
-    public async Task<SyncSummary> SyncAsync(CancellationToken ct = default)
+    /// <param name="fullNav">Walk the NAV feed from its oldest page (or the stored cursor)
+    /// to the tail, instead of the capped daily pull. First run: the whole history.</param>
+    /// <param name="onNavPage">Called after each stored page with (pages, adsStored) — a
+    /// backfill takes minutes and deserves a heartbeat.</param>
+    public async Task<SyncSummary> SyncAsync(bool fullNav = false,
+        Action<int, int>? onNavPage = null, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
 
         var brregResult = await SyncBrregAsync(now, ct);
-        var navResult = await SyncNavAsync(now, ct);
+        var navResult = await SyncNavAsync(now, fullNav, onNavPage, ct);
 
         // Expiry is a local sweep, not feed data: an ad past its date is stale whether or not
         // NAV was reachable this morning.
@@ -79,17 +86,25 @@ public sealed class SyncService(
         }
     }
 
-    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, CancellationToken ct)
+    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, bool full,
+        Action<int, int>? onPage, CancellationToken ct)
     {
         var stored = 0;
 
         try
         {
             var cursor = (await syncState.GetAsync("nav", ct))?.Cursor;
+            var maxPages = full ? MaxPagesFullSync : MaxPagesPerSync;
+            var firstFetch = true;
 
-            for (var page = 0; page < MaxPagesPerSync; page++)
+            for (var page = 0; page < maxPages; page++)
             {
-                var feedPage = await nav.GetPageAsync(cursor, ct);
+                // A backfill with no stored position starts at the feed's oldest page; with
+                // one, it resumes — so an interrupted backfill continues instead of restarting.
+                var feedPage = full && firstFetch && cursor is null
+                    ? await nav.GetFirstPageAsync(ct)
+                    : await nav.GetPageAsync(cursor, ct);
+                firstFetch = false;
 
                 foreach (var ad in feedPage.Ads)
                 {
@@ -108,6 +123,7 @@ public sealed class SyncService(
                 // because upserts are idempotent.
                 await syncState.SetAsync("nav", cursor ?? feedPage.PageId, now, ct);
 
+                onPage?.Invoke(page + 1, stored);
                 if (cursor is null) break;
             }
 

@@ -149,6 +149,48 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Full_sync_with_no_cursor_starts_at_the_feed_beginning()
+    {
+        var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3403")], null, "side-1"));
+
+        var h = Build(nav: nav);
+        await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(h.Nav.FirstPageRequested, Is.True, "a backfill must not start at the tail");
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a" }));
+    }
+
+    [Test]
+    public async Task Full_sync_resumes_from_a_stored_cursor()
+    {
+        var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3403")], null, "side-9"));
+
+        var h = Build(nav: nav);
+        await h.SyncState.SetAsync("nav", "side-8", Now);
+        await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(h.Nav.FirstPageRequested, Is.False);
+        Assert.That(h.Nav.RequestedCursors, Is.EqualTo(new string?[] { "side-8" }),
+            "an interrupted backfill continues where it stopped");
+    }
+
+    [Test]
+    public async Task Full_sync_is_not_capped_at_a_hundred_pages()
+    {
+        // 150 chained pages, one matching ad each — a capped walk would stop at 100.
+        var pages = Enumerable.Range(0, 150)
+            .Select(i => new FeedPage([Ad($"annonse-{i}", "Backend-utvikler", "3403")],
+                i < 149 ? $"side-{i + 1}" : null, $"side-{i}"))
+            .ToArray();
+
+        var h = Build(nav: new FakeNavFeedClient(pages));
+        var summary = await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(summary.Nav.Fetched, Is.EqualTo(150));
+        Assert.That(h.Ads.Store, Has.Count.EqualTo(150));
+    }
+
+    [Test]
     public async Task Expired_ads_deactivated_each_sync()
     {
         var nav = new FakeNavFeedClient(new FeedPage(

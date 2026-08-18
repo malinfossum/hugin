@@ -63,6 +63,21 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task GetActive_filters_on_flag_and_municipality()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("aktiv-hamar", "Utvikler", null, null, "3403", T1, null, null, true), T1);
+        await repo.UpsertAsync(new FeedAd("aktiv-gjovik", "Utvikler", null, null, "3407", T1, null, null, true), T1);
+        await repo.UpsertAsync(new FeedAd("borte", "Utvikler", null, null, "3403", T1, null, null, false), T1);
+
+        var all = await repo.GetActiveAsync(null);
+        Assert.That(all.Select(a => a.FeedId), Is.EquivalentTo(new[] { "aktiv-hamar", "aktiv-gjovik" }));
+
+        var hamar = await repo.GetActiveAsync("3403");
+        Assert.That(hamar.Select(a => a.FeedId), Is.EqualTo(new[] { "aktiv-hamar" }));
+    }
+
+    [Test]
     public async Task ReviewMark_roundtrip_null_until_set()
     {
         var repo = new EfReviewMarkRepository(_db);

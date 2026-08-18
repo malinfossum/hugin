@@ -93,6 +93,12 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
+        await db.Ads
+            .Where(a => a.IsActive && (municipalityNumber == null || a.MunicipalityNumber == municipalityNumber))
+            .OrderByDescending(a => a.Published)
+            .ToListAsync(ct);
+
     public async Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {
         // Expiry is a local fallback: an ad past its date is stale even if the feed has not said so.

@@ -24,5 +24,9 @@ public interface IBrregClient
 
 public interface INavFeedClient
 {
+    /// <summary>A null cursor lands at the newest page — the normal daily entry point.</summary>
     public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default);
+
+    /// <summary>The feed's oldest page — the entry point for a full backfill.</summary>
+    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default);
 }

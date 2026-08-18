@@ -66,7 +66,7 @@ internal static class Program
 
         return command switch
         {
-            SyncCommand => await RunSyncAsync(services),
+            SyncCommand cmd => await RunSyncAsync(services, cmd),
             NewCommand cmd => await RunNewAsync(services, cmd, loaded.Config),
             TrackCommand cmd => await RunTrackAsync(services, cmd),
             ListCommand cmd => await RunListAsync(services, cmd, loaded.Config),
@@ -138,9 +138,17 @@ internal static class Program
         return builder.Build();
     }
 
-    private static async Task<int> RunSyncAsync(IServiceProvider services)
+    private static async Task<int> RunSyncAsync(IServiceProvider services, SyncCommand command)
     {
-        var summary = await services.GetRequiredService<SyncService>().SyncAsync();
+        if (command.Full)
+            Console.WriteLine("Full gjennomgang av NAV-feeden — første gang tar dette noen minutter. "
+                + "Avbrytes den, fortsetter neste `hugin sync --full` der den slapp.");
+
+        var summary = await services.GetRequiredService<SyncService>().SyncAsync(
+            fullNav: command.Full,
+            onNavPage: command.Full
+                ? (pages, ads) => { if (pages % 50 == 0) Console.WriteLine($"  nav: {pages} sider lest, {ads} annonser lagret …"); }
+        : null);
 
         Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
         Console.WriteLine(Line("nav", summary.Nav, "annonser"));
@@ -285,6 +293,27 @@ internal static class Program
             return 0;
         }
 
+        if (command.Ads)
+        {
+            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune);
+
+            if (ads.Count == 0)
+            {
+                Console.WriteLine("Ingen aktive annonser lagret — kjør `hugin sync --full` for å hente historikken.");
+                return 0;
+            }
+
+            Console.WriteLine($"{ads.Count} aktive annonser");
+            foreach (var ad in ads)
+            {
+                var expires = ad.Expires is { } e ? $"  (frist {e:yyyy-MM-dd})" : "";
+                Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{expires}");
+                if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
+            }
+
+            return 0;
+        }
+
         var entries = await services.GetRequiredService<IPipelineRepository>().GetAllAsync(command.Status);
 
         if (entries.Count == 0)
@@ -343,12 +372,14 @@ internal static class Program
         Console.WriteLine("""
             hugin — jobbradar for utviklerstillinger
 
-              hugin sync                          Hent selskaper fra Brreg og annonser fra NAV
+              hugin sync [--full]                 Hent selskaper fra Brreg og annonser fra NAV;
+                                                  --full går gjennom hele NAV-historikken (første gang: alle åpne annonser)
               hugin new [--seen]                  Vis alt nytt siden sist; --seen flytter merket
               hugin track <orgnr> <status>        Sett status: funnet | soekt-selv | bedt-get | svar
                   [--why "..."] [--note "..."] [--svar "..."]
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper
+              hugin list --ads [--kommune <nr>]   Vis aktive annonser
               hugin export [--since ÅÅÅÅ-MM-DD]   Skriv Preparelogg-tabeller (standard: siste 7 dager)
 
             Globalt:

@@ -67,6 +67,34 @@ public class NavFeedClientTests
     }
 
     [Test]
+    public async Task Detail_status_wins_over_a_stale_active_summary()
+    {
+        // A backfill reads historical entries: the summary said ACTIVE when it was written,
+        // but the ad may be gone by the time we enrich it — NAV then returns the stub with
+        // its CURRENT status. That status is the truth about "now".
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"55555555-5555-5555-5555-555555555555",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Borte AS","municipal":"HAMAR",
+             "sistEndret":"2026-07-01T09:00:00+02:00"}}],"next_id":null,"id":"side-x"}
+            """;
+        const string stub = """
+            {"uuid":"55555555-5555-5555-5555-555555555555",
+             "sistEndret":"2026-08-10T09:00:00+02:00","status":"INACTIVE"}
+            """;
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/5555", StringComparison.Ordinal)) return HttpFixtures.Json(stub);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null);
+
+        Assert.That(result.Ads.Single().IsActive, Is.False,
+            "an ad NAV has stripped is gone now, whatever the historical entry said");
+    }
+
+    [Test]
     public async Task Passes_cursor_and_returns_next_cursor()
     {
         var requested = new List<string>();
@@ -93,6 +121,21 @@ public class NavFeedClientTests
 
         Assert.That(requested.Any(u => u.Contains("last=true", StringComparison.Ordinal)), Is.True,
             "a first sync must not walk the feed from 2019");
+    }
+
+    [Test]
+    public async Task First_page_request_carries_no_cursor_and_no_last_flag()
+    {
+        var requested = new List<string>();
+        await Client(request =>
+        {
+            requested.Add(request.RequestUri!.ToString());
+            return ServeFeed(request);
+        }).GetFirstPageAsync();
+
+        var feedRequest = requested.First(u => u.Contains("api/v1/feed", StringComparison.Ordinal));
+        Assert.That(feedRequest, Does.EndWith("api/v1/feed"),
+            "the oldest page lives at the bare feed URL — no page id, no last=true");
     }
 
     [Test]

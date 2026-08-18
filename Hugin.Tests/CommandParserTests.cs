@@ -9,7 +9,15 @@ public class CommandParserTests
     public void No_args_is_help() => Assert.That(CommandParser.Parse([]), Is.TypeOf<HelpCommand>());
 
     [Test]
-    public void Sync() => Assert.That(CommandParser.Parse(["sync"]), Is.TypeOf<SyncCommand>());
+    public void Sync() => Assert.That(CommandParser.Parse(["sync"]), Is.EqualTo(new SyncCommand(false)));
+
+    [Test]
+    public void Sync_full() => Assert.That(CommandParser.Parse(["sync", "--full"]), Is.EqualTo(new SyncCommand(true)));
+
+    [Test]
+    public void List_ads_with_kommune()
+        => Assert.That(CommandParser.Parse(["list", "--ads", "--kommune", "3403"]),
+            Is.EqualTo(new ListCommand(null, false, "3403", true)));
 
     [Test]
     public void New_with_seen() => Assert.That(CommandParser.Parse(["new", "--seen"]), Is.EqualTo(new NewCommand(true)));
@@ -34,7 +42,7 @@ public class CommandParserTests
     [Test]
     public void List_companies_with_kommune()
         => Assert.That(CommandParser.Parse(["list", "--companies", "--kommune", "3405"]),
-            Is.EqualTo(new ListCommand(null, true, "3405")));
+            Is.EqualTo(new ListCommand(null, true, "3405", false)));
 
     [Test]
     public void Export_with_since()

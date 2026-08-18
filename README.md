@@ -27,15 +27,15 @@ Edit `hugin.json` to set your municipalities, industry codes, and keywords. Muni
 
 | Command | What it does |
 |---|---|
-| `hugin sync` | Pulls companies from Brreg and job ads from the NAV feed |
+| `hugin sync [--full]` | Pulls companies from Brreg and job ads from the NAV feed. `--full` walks the entire feed history — run it once after setup to load every currently-open ad; interrupted runs resume |
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `funnet`, `soekt-selv`, `bedt-get`, `svar`. Options: `--why`, `--note`, `--svar` |
-| `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory |
+| `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory; `--ads [--kommune <nr>]` lists currently-open ads |
 | `hugin export [--since ÅÅÅÅ-MM-DD]` | Writes markdown tables of the week's outreach (defaults to the last 7 days) |
 
 `--config <path>` points at a different `hugin.json`. The database is created next to it.
 
-The first sync sets a baseline, so `hugin new` starts empty rather than listing every company in the register. Use `hugin list --companies` to browse that initial inventory.
+The first sync sets a baseline, so `hugin new` starts empty rather than listing every company in the register. Use `hugin list --companies` to browse that initial inventory, and `hugin sync --full` once to backfill every open job ad from the feed's history — after that, plain `hugin sync` keeps up day to day.
 
 ## Data sources
 

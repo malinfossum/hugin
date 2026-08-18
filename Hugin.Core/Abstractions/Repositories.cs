@@ -21,6 +21,9 @@ public interface IAdRepository
 
     /// <summary>Expires &lt; now → IsActive = false. Returns the number of ads flipped.</summary>
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default);
+
+    /// <summary>Currently-open ads, newest first, optionally narrowed to one municipality.</summary>
+    public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default);
 }
 
 public interface IPipelineRepository

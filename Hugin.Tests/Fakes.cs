@@ -34,13 +34,24 @@ internal sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClien
     private readonly Queue<FeedPage> _pages = new(pages);
 
     public List<string?> RequestedCursors { get; } = [];
+    public bool FirstPageRequested { get; private set; }
     public bool Throws { get; set; }
 
     public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
     {
         RequestedCursors.Add(cursor);
-        if (Throws) throw new HttpRequestException("nav utilgjengelig");
+        return NextPage();
+    }
 
+    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default)
+    {
+        FirstPageRequested = true;
+        return NextPage();
+    }
+
+    private Task<FeedPage> NextPage()
+    {
+        if (Throws) throw new HttpRequestException("nav utilgjengelig");
         return Task.FromResult(_pages.Count > 0 ? _pages.Dequeue() : new FeedPage([], null));
     }
 }
@@ -135,6 +146,11 @@ internal sealed class FakeAdRepository : IAdRepository
 
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Ad>>(Store.Values
+            .Where(a => a.IsActive && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber))
+            .ToList());
 
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {

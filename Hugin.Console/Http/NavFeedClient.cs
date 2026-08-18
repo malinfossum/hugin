@@ -36,11 +36,18 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
 {
     public const string BaseAddress = "https://pam-stilling-feed.nav.no/";
 
-    public async Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
-    {
+    public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default) =>
         // No cursor means no sync has completed: start at the newest page rather than
-        // walking the feed from its beginning in 2019.
-        var path = cursor is null ? "api/v1/feed?last=true" : $"api/v1/feed/{cursor}";
+        // walking the whole history uninvited. A deliberate backfill goes through
+        // GetFirstPageAsync instead.
+        FetchPageAsync(cursor is null ? "api/v1/feed?last=true" : $"api/v1/feed/{cursor}", ct);
+
+    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default) =>
+        // The bare feed URL is the oldest page (mid-2023 as of writing).
+        FetchPageAsync("api/v1/feed", ct);
+
+    private async Task<FeedPage> FetchPageAsync(string path, CancellationToken ct)
+    {
 
         using var response = await SendAuthorizedAsync(path, ct);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
@@ -88,6 +95,14 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
 
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var root = doc.RootElement;
+
+        // The summary's status is historical — written when the feed entry was appended. The
+        // detail response carries the ad's status NOW, and now is what IsActive means. During
+        // a backfill this is the difference between 3 open ads and 11 phantom ones.
+        var isActiveNow = Text(root, "status") is { } current
+            ? string.Equals(current, "ACTIVE", StringComparison.OrdinalIgnoreCase)
+            : ad.IsActive;
+        ad = ad with { IsActive = isActiveNow };
 
         // Inactive ads come back as a stub with no ad_content; the summary is all there is.
         if (!root.TryGetProperty("ad_content", out var content) || content.ValueKind != JsonValueKind.Object)
