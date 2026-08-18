@@ -10,7 +10,11 @@ C# / .NET 10, EF Core with SQLite, NUnit. Layered: `Hugin.Core` holds the domain
 
 ## Setup
 
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+
 ```bash
+git clone https://github.com/malinfossum/hugin.git
+cd hugin
 cp hugin.json.example hugin.json
 dotnet run --project Hugin.Console -- sync
 ```
