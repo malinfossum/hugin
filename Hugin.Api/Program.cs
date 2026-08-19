@@ -1,4 +1,5 @@
 using Hugin.Api;
+using Hugin.Api.Endpoints;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
@@ -43,6 +44,7 @@ builder.Services.AddSingleton<INavFeedClient>(sp =>
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<NewItemsService>();
 builder.Services.AddScoped<PipelineService>();
+builder.Services.AddScoped<AdOverviewService>();
 
 var app = builder.Build();
 
@@ -52,6 +54,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 app.UseHuginSecurity();
 
 app.MapGet("/api/status", () => Results.Ok(new { ok = true })); // placeholder until Task 6
+app.MapAds();
 
 app.Run();
 
