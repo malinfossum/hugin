@@ -58,10 +58,34 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 app.UseHuginSecurity();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapAds();
 app.MapReads();
 app.MapWrites();
 app.MapSync();
+
+// SPA fallback — but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
+app.MapFallback(async context =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var index = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
+    if (File.Exists(index))
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(index);
+    }
+    else
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound; // API-only dev host
+    }
+});
 
 app.Run();
 
