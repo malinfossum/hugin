@@ -24,6 +24,10 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   const announce = useAnnounce()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const pendingFocus = useRef(false)
+  // Snapshot of the asOf the user was actually looking at when they opened the dialog.
+  // A refetch (refreshKey bump) while the dialog is open must not change what gets posted —
+  // that would mark items the user never reviewed as seen.
+  const reviewedAsOf = useRef<string | null>(null)
 
   const load = useCallback(() => {
     setError(null)
@@ -49,17 +53,24 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   }, [data])
 
   const handleConfirm = async () => {
-    if (!data) return
+    const asOf = reviewedAsOf.current
+    if (!asOf) return
     setConfirmOpen(false)
     try {
-      await api.post('/api/seen', { asOf: data.asOf })
+      await api.post('/api/seen', { asOf })
     } catch {
       setError('Kunne ikke merke som sett.')
       return
     }
+    reviewedAsOf.current = null
     pendingFocus.current = true
     await load()
     announce('Merket som sett.')
+  }
+
+  const handleCancel = () => {
+    reviewedAsOf.current = null
+    setConfirmOpen(false)
   }
 
   const hasNew = !!data && (data.companies.length > 0 || data.ads.length > 0)
@@ -114,7 +125,13 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
           )}
 
           {hasNew ? (
-            <button type="button" onClick={() => setConfirmOpen(true)}>
+            <button
+              type="button"
+              onClick={() => {
+                reviewedAsOf.current = data.asOf
+                setConfirmOpen(true)
+              }}
+            >
               Merk som sett
             </button>
           ) : (
@@ -127,7 +144,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
         title="Merket flyttes — dette kan ikke angres."
         confirmLabel="Merk som sett"
         onConfirm={handleConfirm}
-        onCancel={() => setConfirmOpen(false)}
+        onCancel={handleCancel}
       />
     </section>
   )
