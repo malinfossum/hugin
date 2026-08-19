@@ -86,6 +86,13 @@ main {
   }
 }
 
+.eksport-markdown {
+  overflow-x: auto;
+  border: 1px solid var(--border, #2a2a32);
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

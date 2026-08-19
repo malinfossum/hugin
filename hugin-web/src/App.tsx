@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
+import { EksportView } from './views/EksportView'
 import { PipelineView } from './views/PipelineView'
 import './styles/main.css'
 
@@ -30,7 +31,7 @@ export default function App() {
         {view === 'Dashbord' && <DashboardView />}
         {view === 'Pipeline' && <PipelineView />}
         {view === 'Bedrifter' && <BedrifterView />}
-        {view === 'Eksport' && <p>Eksport kommer.</p>}
+        {view === 'Eksport' && <EksportView />}
       </main>
     </LiveRegionProvider>
   )
