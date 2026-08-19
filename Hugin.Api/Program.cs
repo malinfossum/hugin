@@ -45,6 +45,7 @@ builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<NewItemsService>();
 builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<AdOverviewService>();
+builder.Services.AddScoped<ExportService>();
 
 var app = builder.Build();
 
@@ -53,8 +54,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 app.UseHuginSecurity();
 
-app.MapGet("/api/status", () => Results.Ok(new { ok = true })); // placeholder until Task 6
 app.MapAds();
+app.MapReads();
 
 app.Run();
 

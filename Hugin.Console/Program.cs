@@ -342,21 +342,10 @@ internal static class Program
 
     private static async Task<int> RunExportAsync(IServiceProvider services, ExportCommand command)
     {
-        var clock = services.GetRequiredService<IClock>();
-        var since = command.Since ?? clock.UtcNow.AddDays(-7);
+        var export = new ExportService(services.GetRequiredService<IPipelineRepository>(),
+            services.GetRequiredService<ICompanyRepository>(), services.GetRequiredService<IClock>());
 
-        var entries = await services.GetRequiredService<IPipelineRepository>().GetUpdatedAfterAsync(since);
-        var repository = services.GetRequiredService<ICompanyRepository>();
-
-        var rows = new List<(PipelineEntry Entry, Company Company)>(entries.Count);
-        foreach (var entry in entries)
-        {
-            var company = await repository.GetAsync(entry.Orgnr)
-                ?? new Company { Orgnr = entry.Orgnr, Name = entry.Orgnr };
-            rows.Add((entry, company));
-        }
-
-        Console.WriteLine(MarkdownExporter.Export(rows, since));
+        Console.WriteLine(await export.ExportAsync(command.Since));
         return 0;
     }
 

@@ -124,6 +124,10 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         await db.SaveChangesAsync(ct);
         return stale.Count;
     }
+
+    public async Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
+        await db.Ads.Where(a => a.EmployerOrgnr == orgnr)
+            .OrderByDescending(a => a.Published).ToListAsync(ct);
 }
 
 public sealed class EfPipelineRepository(HuginDbContext db) : IPipelineRepository

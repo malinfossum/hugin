@@ -178,6 +178,20 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task GetByEmployerAsync_returns_expired_too_newest_first()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(SomeFeedAd("old") with { EmployerOrgnr = "999888777",
+            Published = T1.AddDays(-30), IsActive = false }, T1);
+        await repo.UpsertAsync(SomeFeedAd("new") with { EmployerOrgnr = "999888777",
+            Published = T1 }, T1);
+        await repo.UpsertAsync(SomeFeedAd("other") with { EmployerOrgnr = "111" }, T1);
+
+        var ads = await repo.GetByEmployerAsync("999888777");
+        Assert.That(ads.Select(a => a.FeedId), Is.EqualTo(new[] { "new", "old" }));
+    }
+
+    [Test]
     public async Task Upsert_preserves_hidden_flag()
     {
         // The v1 upsert trap in reverse: Hidden is Hugin's own field — the feed knows nothing

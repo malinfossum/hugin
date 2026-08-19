@@ -1,4 +1,5 @@
 using Hugin.Core.Abstractions;
+using Hugin.Core.Config;
 using Hugin.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -30,6 +31,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.RemoveAll(typeof(INavFeedClient));
             services.AddSingleton<IBrregClient>(Brreg);
             services.AddSingleton<INavFeedClient>(Nav);
+
+            // Otherwise-default config, but with one linkout so /api/status's passthrough is observable.
+            services.RemoveAll(typeof(HuginConfig));
+            services.AddSingleton(new HuginConfig
+            {
+                Linkouts = [new Linkout("Finn.no", "https://finn.no")],
+            });
         });
     }
 

@@ -28,6 +28,9 @@ public interface IAdRepository
 
     /// <summary>Dashboard dismiss flag. Returns false when the feedId is unknown.</summary>
     public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default);
+
+    /// <summary>All stored ads for one employer — active and expired — newest published first.</summary>
+    public Task<IReadOnlyList<Models.Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default);
 }
 
 public interface IPipelineRepository

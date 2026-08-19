@@ -179,6 +179,12 @@ internal sealed class FakeAdRepository : IAdRepository
         foreach (var ad in stale) ad.IsActive = false;
         return Task.FromResult(stale.Count);
     }
+
+    public Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Ad>>(Store.Values
+            .Where(a => a.EmployerOrgnr == orgnr)
+            .OrderByDescending(a => a.Published)
+            .ToList());
 }
 
 internal sealed class FakePipelineRepository : IPipelineRepository
