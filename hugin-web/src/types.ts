@@ -1,0 +1,89 @@
+// Mirrors of the C# DTOs, as serialized (camelCase).
+
+export type PipelineStatusSlug = 'funnet' | 'soekt-selv' | 'bedt-get' | 'svar'
+
+export interface AdDto {
+  feedId: string
+  title: string
+  employer: string | null
+  employerOrgnr: string | null
+  kommune: string | null
+  expires: string | null
+  daysLeft: number | null
+  category: string | null
+  sourceUrl: string | null
+  pipelineStatus: PipelineStatusSlug | null
+  hidden: boolean
+  isActive: boolean
+}
+
+export interface CompanyDto {
+  orgnr: string
+  name: string
+  kommune: string | null
+  naceCode: string | null
+  isBranch: boolean
+  website: string | null
+  parentOrgnr: string | null
+}
+
+export interface CompanyDetailDto {
+  company: CompanyDto
+  ads: AdDto[]
+}
+
+export interface NewDto {
+  companies: CompanyDto[]
+  ads: AdDto[]
+  since: string
+  asOf: string
+}
+
+export interface PipelineDto {
+  orgnr: string
+  companyName: string
+  status: PipelineStatusSlug
+  route: 'ingen' | 'soekt-selv' | 'bedt-get'
+  why: string
+  note: string | null
+  svar: string | null
+  updated: string
+}
+
+export interface TrackResponse {
+  entry: PipelineDto
+  warning: string | null
+}
+
+export interface SourceStateDto {
+  lastSyncUtc: string
+}
+
+export interface LinkoutDto {
+  label: string
+  url: string
+}
+
+export interface StatusDto {
+  brreg: SourceStateDto | null
+  nav: SourceStateDto | null
+  reviewMark: string | null
+  activeAds: number
+  companies: number
+  pipelineEntries: number
+  linkouts: LinkoutDto[]
+}
+
+export interface SourceResultDto {
+  succeeded: boolean
+  fetched: number
+  error: string | null
+}
+
+export interface SyncRunStatus {
+  running: boolean
+  startedUtc: string | null
+  finishedUtc: string | null
+  brreg: SourceResultDto | null
+  nav: SourceResultDto | null
+}
