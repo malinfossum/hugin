@@ -2,9 +2,9 @@
 
 body {
   margin: 0;
-  background: var(--color-bg, #101014);
-  color: var(--color-text, #e8e8ec);
-  font-family: var(--font-body, system-ui, sans-serif);
+  background: var(--page-bg, #101014);
+  color: var(--text, #e8e8ec);
+  font-family: var(--font-sans, system-ui, sans-serif);
 }
 
 main {
@@ -15,10 +15,10 @@ main {
 
 /* Urgency — color never alone; the days-left number always renders beside it. */
 .frist-rod {
-  color: var(--color-danger, #ff6b6b);
+  color: var(--danger, #ff6b6b);
 }
 .frist-gul {
-  color: var(--color-warning, #ffc957);
+  color: var(--warning, #ffc957);
 }
 
 .visually-hidden {
