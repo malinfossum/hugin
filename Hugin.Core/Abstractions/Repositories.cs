@@ -23,7 +23,11 @@ public interface IAdRepository
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default);
 
     /// <summary>Currently-open ads, newest first, optionally narrowed to one municipality.</summary>
-    public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default);
+    public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(string? municipalityNumber = null,
+        bool includeHidden = false, CancellationToken ct = default);
+
+    /// <summary>Dashboard dismiss flag. Returns false when the feedId is unknown.</summary>
+    public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default);
 }
 
 public interface IPipelineRepository

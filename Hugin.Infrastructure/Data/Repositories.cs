@@ -95,11 +95,22 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null,
+        bool includeHidden = false, CancellationToken ct = default) =>
         await db.Ads
-            .Where(a => a.IsActive && (municipalityNumber == null || a.MunicipalityNumber == municipalityNumber))
+            .Where(a => a.IsActive
+                && (municipalityNumber == null || a.MunicipalityNumber == municipalityNumber)
+                && (includeHidden || !a.Hidden))
             .OrderByDescending(a => a.Published)
             .ToListAsync(ct);
+
+    public async Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default)
+    {
+        if (await db.Ads.FindAsync([feedId], ct) is not { } ad) return false;
+        ad.Hidden = hidden;
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
 
     public async Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {

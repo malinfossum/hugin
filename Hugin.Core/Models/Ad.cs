@@ -20,4 +20,7 @@ public sealed class Ad
     public string? Category { get; set; }
     public DateTimeOffset FirstSeen { get; set; }
     public bool IsActive { get; set; }
+
+    // Dashboard dismiss flag ("Skjul") — Hugin's own field, never touched by sync upserts.
+    public bool Hidden { get; set; }
 }

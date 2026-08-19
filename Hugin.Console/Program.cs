@@ -297,7 +297,7 @@ internal static class Program
 
         if (command.Ads)
         {
-            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune);
+            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune, includeHidden: true);
 
             if (ads.Count == 0)
             {

@@ -149,10 +149,20 @@ internal sealed class FakeAdRepository : IAdRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
+    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null,
+        bool includeHidden = false, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values
-            .Where(a => a.IsActive && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber))
+            .Where(a => a.IsActive
+                && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber)
+                && (includeHidden || !a.Hidden))
             .ToList());
+
+    public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default)
+    {
+        if (!Store.TryGetValue(feedId, out var ad)) return Task.FromResult(false);
+        ad.Hidden = hidden;
+        return Task.FromResult(true);
+    }
 
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {

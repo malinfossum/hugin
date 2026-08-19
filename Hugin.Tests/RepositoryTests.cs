@@ -31,6 +31,11 @@ public class RepositoryTests
     private static RegisterCompany Norkart(string orgnr = "934161181") =>
         new(orgnr, "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
 
+    private static FeedAd SomeFeedAd(string id) =>
+        new(id, "Utvikler", "Firma AS", "999888777", "3407",
+            Published: DateTimeOffset.UtcNow, Expires: DateTimeOffset.UtcNow.AddDays(14),
+            SourceUrl: "https://arbeidsplassen.nav.no/x", IsActive: true, Category: "IT / Utvikling");
+
     [Test]
     public async Task Upsert_sets_FirstSeen_once_and_LastSeen_always()
     {
@@ -147,5 +152,43 @@ public class RepositoryTests
         var all = await repo.GetAllAsync();
         Assert.That(all, Has.Count.EqualTo(1));
         Assert.That(all[0].Status, Is.EqualTo(Core.Models.PipelineStatus.SoektSelv));
+    }
+
+    [Test]
+    public async Task SetHiddenAsync_flags_ad_and_reports_unknown()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(SomeFeedAd("ad-1"), T1);
+
+        Assert.That(await repo.SetHiddenAsync("ad-1", true), Is.True);
+        Assert.That((await _db.Ads.FindAsync("ad-1"))!.Hidden, Is.True);
+        Assert.That(await repo.SetHiddenAsync("finnes-ikke", true), Is.False);
+    }
+
+    [Test]
+    public async Task GetActiveAsync_excludes_hidden_unless_asked()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(SomeFeedAd("ad-1"), T1);
+        await repo.UpsertAsync(SomeFeedAd("ad-2"), T1);
+        await repo.SetHiddenAsync("ad-2", true);
+
+        Assert.That((await repo.GetActiveAsync()).Select(a => a.FeedId), Is.EquivalentTo(new[] { "ad-1" }));
+        Assert.That((await repo.GetActiveAsync(includeHidden: true)).Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Upsert_preserves_hidden_flag()
+    {
+        // The v1 upsert trap in reverse: Hidden is Hugin's own field — the feed knows nothing
+        // about it, so the update path must never touch it or every daily sync would resurrect
+        // everything dismissed.
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(SomeFeedAd("ad-1"), T1);
+        await repo.SetHiddenAsync("ad-1", true);
+
+        await repo.UpsertAsync(SomeFeedAd("ad-1"), T2);
+
+        Assert.That((await _db.Ads.FindAsync("ad-1"))!.Hidden, Is.True);
     }
 }
