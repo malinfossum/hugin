@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../../api'
+import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
 import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
 
@@ -54,10 +54,15 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
   const startSync = async () => {
     try {
       await api.post('/api/sync')
-    } catch {
-      announce('En synk kjører allerede.')
+      wasRunning.current = true
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        announce('En synk kjører allerede.')
+        wasRunning.current = true
+      } else {
+        announce('Kunne ikke starte synk — prøv igjen.')
+      }
     }
-    wasRunning.current = true
   }
 
   const failureMessage = sync && !sync.running ? getFailureMessage(sync) : null

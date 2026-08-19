@@ -35,7 +35,11 @@ function syncStatus(overrides: Partial<SyncRunStatus> = {}): SyncRunStatus {
   }
 }
 
-function mockFetch(options: { status?: () => StatusDto; syncStatus?: () => SyncRunStatus }) {
+function mockFetch(options: {
+  status?: () => StatusDto
+  syncStatus?: () => SyncRunStatus
+  post?: () => Promise<Response>
+}) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
@@ -46,7 +50,7 @@ function mockFetch(options: { status?: () => StatusDto; syncStatus?: () => SyncR
       return Promise.resolve(jsonResponse(options.syncStatus?.() ?? syncStatus()))
     }
     if (url === '/api/sync' && method === 'POST') {
-      return Promise.resolve(jsonResponse({}))
+      return options.post ? options.post() : Promise.resolve(jsonResponse({}))
     }
     return Promise.reject(new Error(`unhandled request ${method} ${url}`))
   })
@@ -166,5 +170,44 @@ describe('SyncHeader', () => {
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     expect(liveRegion).toHaveTextContent('Synk delvis feilet: Brreg utilgjengelig')
+  })
+
+  it('announces "En synk kjører allerede." when the POST is rejected with 409', async () => {
+    const fetchMock = mockFetch({
+      post: () => Promise.resolve(jsonResponse({ title: 'Kjører allerede' }, { status: 409 })),
+    })
+    renderHeader(fetchMock)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Synk nå' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50)
+    })
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    expect(liveRegion).toHaveTextContent('En synk kjører allerede.')
+  })
+
+  it('announces a generic failure message (not "already running") on a non-409 POST failure', async () => {
+    const fetchMock = mockFetch({
+      post: () => Promise.reject(new TypeError('Failed to fetch')),
+    })
+    renderHeader(fetchMock)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Synk nå' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50)
+    })
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    expect(liveRegion).toHaveTextContent('Kunne ikke starte synk — prøv igjen.')
+    expect(liveRegion).not.toHaveTextContent('En synk kjører allerede.')
   })
 })
