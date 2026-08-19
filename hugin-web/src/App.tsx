@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
+import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
 import { PipelineView } from './views/PipelineView'
 import './styles/main.css'
@@ -28,7 +29,7 @@ export default function App() {
         <h1 className="visually-hidden">Hugin</h1>
         {view === 'Dashbord' && <DashboardView />}
         {view === 'Pipeline' && <PipelineView />}
-        {view === 'Bedrifter' && <p>Bedrifter kommer.</p>}
+        {view === 'Bedrifter' && <BedrifterView />}
         {view === 'Eksport' && <p>Eksport kommer.</p>}
       </main>
     </LiveRegionProvider>
