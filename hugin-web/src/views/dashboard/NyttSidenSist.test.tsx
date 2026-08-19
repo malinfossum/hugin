@@ -57,6 +57,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         pipelineStatus: null,
         hidden: false,
         isActive: true,
+        published: '2026-08-10T00:00:00Z',
       },
     ],
     since: '2026-08-12T00:00:00Z',

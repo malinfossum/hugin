@@ -39,6 +39,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     pipelineStatus: null,
     hidden: false,
     isActive: true,
+    published: '2026-08-12T00:00:00Z',
     ...overrides,
   }
 }
@@ -116,8 +117,13 @@ describe('BedrifterView', () => {
       '915787630': {
         company: companies[0],
         ads: [
-          ad({ feedId: 'a1', title: 'Aktiv annonse', isActive: true }),
-          ad({ feedId: 'a2', title: 'Utgått annonse', isActive: false }),
+          ad({
+            feedId: 'a1',
+            title: 'Aktiv annonse',
+            isActive: true,
+            published: '2026-08-01T00:00:00Z',
+          }),
+          ad({ feedId: 'a2', title: 'Utgått annonse', isActive: false, published: null }),
         ],
       },
     }
@@ -133,6 +139,8 @@ describe('BedrifterView', () => {
     if (!activeRow || !expiredRow) throw new Error('row not found')
     expect(within(activeRow).queryByText('[utgått]')).not.toBeInTheDocument()
     expect(within(expiredRow).getByText('[utgått]')).toBeInTheDocument()
+    expect(within(activeRow).getByText('publisert 2026-08-01')).toBeInTheDocument()
+    expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })
 
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {

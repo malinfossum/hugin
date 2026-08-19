@@ -5,7 +5,7 @@ namespace Hugin.Core.Services;
 
 public sealed record AdOverview(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
     string? MunicipalityNumber, DateTimeOffset? Expires, int? DaysLeft, string? Category,
-    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden);
+    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden, DateTimeOffset? Published);
 
 /// <summary>
 /// The dashboard's deadline view: active ads with the outreach pipeline joined in, soonest
@@ -26,7 +26,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
                 a.Expires is { } e ? (e.UtcDateTime.Date - today).Days : null,
                 a.Category, a.SourceUrl,
                 a.EmployerOrgnr is { } o && entries.TryGetValue(o, out var entry) ? entry.Status : null,
-                a.Hidden))
+                a.Hidden, a.Published))
             .OrderBy(a => a.Expires is null)      // nulls last
             .ThenBy(a => a.Expires)
             .ToList();

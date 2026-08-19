@@ -6,6 +6,10 @@ function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleDateString('nb-NO') : '—'
 }
 
+function publishedText(published: string | null): string | null {
+  return published ? `publisert ${published.slice(0, 10)}` : null
+}
+
 export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {
   const [detail, setDetail] = useState<CompanyDetailDto | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -75,6 +79,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
                 <li key={ad.feedId}>
                   <span>{ad.title}</span>
                   {!ad.isActive && <span>[utgått]</span>}
+                  {publishedText(ad.published) && <span>{publishedText(ad.published)}</span>}
                   <span>Frist: {formatDate(ad.expires)}</span>
                   {ad.sourceUrl && (
                     <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">

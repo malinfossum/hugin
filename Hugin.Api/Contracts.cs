@@ -6,18 +6,18 @@ namespace Hugin.Api;
 
 public sealed record AdDto(string FeedId, string Title, string? Employer, string? EmployerOrgnr,
     string? Kommune, DateTimeOffset? Expires, int? DaysLeft, string? Category, string? SourceUrl,
-    string? PipelineStatus, bool Hidden, bool IsActive)
+    string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published)
 {
     // AdOverview only ever holds active ads.
     public static AdDto From(AdOverview a) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
         a.MunicipalityNumber, a.Expires, a.DaysLeft, a.Category, a.SourceUrl,
-        a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true);
+        a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true, a.Published);
 
     // The new-list and company history are review lists, not the deadline view: no pipeline
     // join, no days-left countdown.
     public static AdDto FromAd(Ad a) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
         a.MunicipalityNumber, a.Expires, DaysLeft: null, a.Category, a.SourceUrl,
-        PipelineStatus: null, a.Hidden, a.IsActive);
+        PipelineStatus: null, a.Hidden, a.IsActive, a.Published);
 }
 
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,

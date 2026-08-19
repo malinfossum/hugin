@@ -15,6 +15,7 @@ export interface AdDto {
   pipelineStatus: PipelineStatusSlug | null
   hidden: boolean
   isActive: boolean
+  published: string | null
 }
 
 export interface CompanyDto {

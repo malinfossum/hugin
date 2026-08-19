@@ -24,6 +24,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     pipelineStatus: null,
     hidden: false,
     isActive: true,
+    published: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
