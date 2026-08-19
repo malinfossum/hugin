@@ -24,3 +24,4 @@ hugin.json
 
 # Frontend build output — rebuilt from hugin-web
 Hugin.Api/wwwroot/
+hugin-web/node_modules/

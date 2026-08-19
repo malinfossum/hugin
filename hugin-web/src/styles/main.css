@@ -1,0 +1,49 @@
+@import "../../design-system/tokens/index.css";
+
+body {
+  margin: 0;
+  background: var(--color-bg, #101014);
+  color: var(--color-text, #e8e8ec);
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+
+main {
+  padding: 1rem;
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+/* Urgency — color never alone; the days-left number always renders beside it. */
+.frist-rod {
+  color: var(--color-danger, #ff6b6b);
+}
+.frist-gul {
+  color: var(--color-warning, #ffc957);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  main {
+    padding: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  main {
+    padding: 2rem;
+  }
+}

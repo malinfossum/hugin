@@ -1,0 +1,37 @@
+/*
+ * Kenaz — steady torchlight over a warm near-black ground.
+ * The sibling to ignite.css, turned down: same fire, lower energy.
+ * Surfaces warm; the page itself stays true black for OLED.
+ * Opt in with <html data-palette="kenaz">.
+ */
+[data-palette="kenaz"] {
+	--surface-1: #000000;
+	--surface-2: #0b0a09;
+	--surface-3: #14110d;
+	--surface-4: #1d1811;
+	--surface-5: #262016;
+
+	--text: #f4efe6;
+	--text-muted: #b8ada0;
+	--text-faint: #8f8578;
+
+	/* #322b22 holds parity with the default --border (1.50:1 vs 1.48:1 on
+	   black). Do not lower it: #2a241c measures 1.37:1 and would make Kenaz
+	   worse than every other app for input boundaries (WCAG 1.4.11). */
+	--border: #322b22;
+	--border-strong: #3a3226;
+	--border-soft: #1c1813;
+
+	--accent-rgb: 217 154 78;
+	--accent-strong-rgb: 232 178 106;
+	--on-accent: #241704;
+}
+
+/* Kenaz ships dark-only today; these channels exist so the palette is reusable.
+   --on-accent is deliberately not restated: the base :root[data-theme="light"]
+   rule has higher specificity and correctly supplies white at 6.08:1. */
+[data-theme="light"][data-palette="kenaz"] {
+	--accent-rgb: 158 100 26;
+	--accent-strong-rgb: 130 80 18;
+	--accent-solid: #8a5716;
+}
