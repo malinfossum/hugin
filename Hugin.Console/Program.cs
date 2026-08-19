@@ -18,11 +18,6 @@ namespace Hugin.Console;
 // namespace rather than the type. The alias must sit inside the namespace to outrank it.
 using Console = System.Console;
 
-internal sealed class SystemClock : IClock
-{
-    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
-}
-
 internal static class Program
 {
     private static async Task<int> Main(string[] args)

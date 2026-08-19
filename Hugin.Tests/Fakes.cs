@@ -9,33 +9,41 @@ internal sealed class FakeClock(DateTimeOffset now) : IClock
     public DateTimeOffset UtcNow { get; set; } = now;
 }
 
-internal sealed class FakeBrregClient : IBrregClient
+public sealed class FakeBrregClient : IBrregClient
 {
     public List<RegisterCompany> Companies { get; init; } = [];
     public Dictionary<string, RegisterCompany> ByOrgnr { get; init; } = [];
     public bool Throws { get; set; }
 
-    public Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
+    /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
+    public Func<Task>? OnCall { get; set; }
+
+    public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
     {
+        if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
-        return Task.FromResult<IReadOnlyList<RegisterCompany>>(Companies);
+        return Companies;
     }
 
-    public Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
+    public async Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
     {
+        if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
-        return Task.FromResult(ByOrgnr.GetValueOrDefault(orgnr));
+        return ByOrgnr.GetValueOrDefault(orgnr);
     }
 }
 
-internal sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
+public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
 {
     private readonly Queue<FeedPage> _pages = new(pages);
 
     public List<string?> RequestedCursors { get; } = [];
     public bool FirstPageRequested { get; private set; }
     public bool Throws { get; set; }
+
+    /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
+    public Func<Task>? OnCall { get; set; }
 
     public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
     {
@@ -49,10 +57,11 @@ internal sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClien
         return NextPage();
     }
 
-    private Task<FeedPage> NextPage()
+    private async Task<FeedPage> NextPage()
     {
+        if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("nav utilgjengelig");
-        return Task.FromResult(_pages.Count > 0 ? _pages.Dequeue() : new FeedPage([], null));
+        return _pages.Count > 0 ? _pages.Dequeue() : new FeedPage([], null);
     }
 }
 
