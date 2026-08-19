@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { DashboardView } from './views/dashboard/DashboardView'
+import { PipelineView } from './views/PipelineView'
 import './styles/main.css'
 
 const VIEWS = ['Dashbord', 'Pipeline', 'Bedrifter', 'Eksport'] as const
@@ -26,7 +27,7 @@ export default function App() {
       <main>
         <h1 className="visually-hidden">Hugin</h1>
         {view === 'Dashbord' && <DashboardView />}
-        {view === 'Pipeline' && <p>Pipeline kommer.</p>}
+        {view === 'Pipeline' && <PipelineView />}
         {view === 'Bedrifter' && <p>Bedrifter kommer.</p>}
         {view === 'Eksport' && <p>Eksport kommer.</p>}
       </main>

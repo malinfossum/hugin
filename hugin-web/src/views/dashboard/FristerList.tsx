@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
-import type { AdDto, PipelineStatusSlug } from '../../types'
-
-const PIPELINE_LABELS: Record<PipelineStatusSlug, string> = {
-  funnet: 'Funnet',
-  'soekt-selv': 'Søkt selv',
-  'bedt-get': 'Bedt GET sjekke',
-  svar: 'Svar',
-}
+import { PIPELINE_LABELS } from '../../pipelineLabels'
+import type { AdDto } from '../../types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
   if (daysLeft === null) return undefined
