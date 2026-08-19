@@ -1,4 +1,4 @@
-using Hugin.Console.Data;
+using Hugin.Infrastructure.Data;
 using Hugin.Core.Abstractions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

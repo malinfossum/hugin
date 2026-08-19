@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Hugin.Console.Http;
+namespace Hugin.Infrastructure.Http;
 
 /// <summary>
 /// Supplies the bearer token for the NAV feed. A token configured in hugin.json wins and is

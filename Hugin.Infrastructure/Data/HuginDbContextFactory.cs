@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Hugin.Console.Data;
+namespace Hugin.Infrastructure.Data;
 
 /// <summary>Design-time only — `dotnet ef migrations` needs a context it can build without the host.</summary>
 public sealed class HuginDbContextFactory : IDesignTimeDbContextFactory<HuginDbContext>

@@ -1,11 +1,12 @@
 using System.Text;
-using Hugin.Console.Data;
-using Hugin.Console.Http;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Cli;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
 using Hugin.Core.Services;
+using Hugin.Infrastructure;
+using Hugin.Infrastructure.Data;
+using Hugin.Infrastructure.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

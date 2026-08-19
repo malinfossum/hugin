@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Hugin.Core.Config;
 
-namespace Hugin.Console;
+namespace Hugin.Infrastructure;
 
 public sealed record LoadedConfig(HuginConfig Config, string ConfigPath, string DatabasePath, string? Warning);
 

@@ -2,14 +2,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hugin.Core\Hugin.Core.csproj" />
+    <ProjectReference Include="..\Hugin.Infrastructure\Hugin.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-using Hugin.Console.Http;
+using Hugin.Infrastructure.Http;
 
 namespace Hugin.Tests;
 

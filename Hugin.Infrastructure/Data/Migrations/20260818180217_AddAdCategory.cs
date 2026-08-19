@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Hugin.Console.Data.Migrations;
+namespace Hugin.Infrastructure.Data.Migrations;
 
 /// <inheritdoc />
 public partial class AddAdCategory : Migration

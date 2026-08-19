@@ -1,7 +1,7 @@
 using Hugin.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Hugin.Console.Data;
+namespace Hugin.Infrastructure.Data;
 
 public sealed class HuginDbContext(DbContextOptions<HuginDbContext> options) : DbContext(options)
 {

@@ -3,7 +3,7 @@ using System.Text.Json;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Services;
 
-namespace Hugin.Console.Http;
+namespace Hugin.Infrastructure.Http;
 
 /// <summary>
 /// Enhetsregisteret over HTTP. Open data, no auth.

@@ -6,7 +6,7 @@ using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
 
-namespace Hugin.Console.Http;
+namespace Hugin.Infrastructure.Http;
 
 /// <summary>
 /// The NAV stillingsfeed (arbeidsplassen.no), a JSON Feed 1.0 stream behind a JWT bearer.

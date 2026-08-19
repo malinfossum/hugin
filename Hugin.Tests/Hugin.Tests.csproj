@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Hugin.Core\Hugin.Core.csproj" />
-    <ProjectReference Include="..\Hugin.Console\Hugin.Console.csproj" />
+    <ProjectReference Include="..\Hugin.Infrastructure\Hugin.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

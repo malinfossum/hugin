@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using Hugin.Console.Http;
+using Hugin.Infrastructure.Http;
 using Hugin.Core.Config;
 
 namespace Hugin.Tests;

@@ -1,4 +1,4 @@
-using Hugin.Console;
+using Hugin.Infrastructure;
 
 namespace Hugin.Tests;
 

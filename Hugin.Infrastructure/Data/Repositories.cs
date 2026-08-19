@@ -2,7 +2,7 @@ using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Hugin.Console.Data;
+namespace Hugin.Infrastructure.Data;
 
 public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
 {
