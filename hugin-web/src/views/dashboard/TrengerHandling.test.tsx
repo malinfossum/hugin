@@ -63,6 +63,14 @@ describe('TrengerHandling', () => {
     expect(screen.queryByText(/Ingen frist/)).not.toBeInTheDocument()
   })
 
+  it('shows "frist utløpt" for an overdue (negative daysLeft) funnet entry', async () => {
+    const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'funnet', daysLeft: -1 })]
+    renderTrenger(mockFetch(ads))
+
+    const item = await screen.findByText(/Forfalt/)
+    expect(item).toHaveTextContent('funnet, ikke søkt — frist utløpt')
+  })
+
   it('renders nothing when there are no near-frist funnet entries', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Feil status', pipelineStatus: 'soekt-selv', daysLeft: 2 }),

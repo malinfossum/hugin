@@ -3,7 +3,9 @@ import { api } from '../../api'
 import type { AdDto } from '../../types'
 
 function fristText(daysLeft: number): string {
-  return daysLeft === 0 ? 'frist i dag' : `frist om ${daysLeft} dager`
+  if (daysLeft < 0) return 'frist utløpt'
+  if (daysLeft === 0) return 'frist i dag'
+  return `frist om ${daysLeft} dager`
 }
 
 export function TrengerHandling({ refreshKey }: { refreshKey: number }) {

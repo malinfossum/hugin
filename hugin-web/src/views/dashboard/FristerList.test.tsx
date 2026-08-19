@@ -99,6 +99,22 @@ describe('FristerList', () => {
     expect(ingenSpan).not.toHaveClass('frist-gul')
   })
 
+  it('shows "utløpt" with frist-rod for an overdue (negative daysLeft) row', async () => {
+    const ads = [ad({ feedId: 'a1', title: 'Forfalt', daysLeft: -2 })]
+    renderList(fakeServer(ads))
+
+    const rows = await screen.findAllByRole('listitem')
+    expect(within(rows[0]).getByText('utløpt')).toHaveClass('frist-rod')
+  })
+
+  it('shows "i dag" with frist-rod for a due-today (daysLeft 0) row', async () => {
+    const ads = [ad({ feedId: 'a1', title: 'I dag', daysLeft: 0 })]
+    renderList(fakeServer(ads))
+
+    const rows = await screen.findAllByRole('listitem')
+    expect(within(rows[0]).getByText('i dag')).toHaveClass('frist-rod')
+  })
+
   it('hides a row on Skjul, POSTs the hide endpoint, moves focus to the next row and announces', async () => {
     const user = userEvent.setup()
     const ads = [

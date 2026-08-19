@@ -19,6 +19,7 @@ function urgencyClass(daysLeft: number | null): string | undefined {
 
 function daysLeftText(daysLeft: number | null): string {
   if (daysLeft === null) return 'ingen frist'
+  if (daysLeft < 0) return 'utløpt'
   if (daysLeft === 0) return 'i dag'
   return `${daysLeft} dager`
 }
