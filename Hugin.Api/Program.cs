@@ -56,6 +56,7 @@ app.UseHuginSecurity();
 
 app.MapAds();
 app.MapReads();
+app.MapWrites();
 
 app.Run();
 

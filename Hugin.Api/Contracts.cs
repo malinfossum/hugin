@@ -46,6 +46,12 @@ public sealed record PipelineDto(string Orgnr, string CompanyName, string Status
     };
 }
 
+public sealed record TrackRequest(string Status, string? Why, string? Note, string? Svar);
+
+public sealed record SeenRequest(DateTimeOffset AsOf);
+
+public sealed record TrackResponse(PipelineDto Entry, string? Warning);
+
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
