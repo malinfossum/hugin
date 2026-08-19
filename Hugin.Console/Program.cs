@@ -59,7 +59,7 @@ internal static class Program
 
         await using (var scope = host.Services.CreateAsyncScope())
         {
-            await scope.ServiceProvider.GetRequiredService<HuginDbContext>().Database.MigrateAsync();
+            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>());
         }
 
         await using var runScope = host.Services.CreateAsyncScope();
@@ -114,7 +114,7 @@ internal static class Program
         services.AddSingleton(loaded.Config);
         services.AddSingleton<IClock, SystemClock>();
 
-        services.AddDbContext<HuginDbContext>(o => o.UseSqlite($"Data Source={loaded.DatabasePath}"));
+        services.AddDbContext<HuginDbContext>(o => o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
 
         services.AddScoped<ICompanyRepository, EfCompanyRepository>();
         services.AddScoped<IAdRepository, EfAdRepository>();
