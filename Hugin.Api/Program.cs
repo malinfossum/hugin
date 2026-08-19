@@ -1,5 +1,6 @@
 using Hugin.Api;
 using Hugin.Api.Endpoints;
+using Hugin.Api.Services;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
@@ -47,6 +48,9 @@ builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<AdOverviewService>();
 builder.Services.AddScoped<ExportService>();
 
+builder.Services.AddSingleton<SyncRunner>();
+builder.Services.AddHostedService<StartupSync>();
+
 var app = builder.Build();
 
 await using (var scope = app.Services.CreateAsyncScope())
@@ -57,6 +61,7 @@ app.UseHuginSecurity();
 app.MapAds();
 app.MapReads();
 app.MapWrites();
+app.MapSync();
 
 app.Run();
 
