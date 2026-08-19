@@ -21,6 +21,28 @@ main {
   color: var(--warning, #ffc957);
 }
 
+.advarsel {
+  color: var(--warning, #ffc957);
+}
+
+.spinner {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-inline-end: 0.4em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -0.15em;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
