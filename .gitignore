@@ -9,6 +9,7 @@ obj/
 
 # Publish output
 publish/
+publish-single/
 *.publishsettings
 
 # Rider / JetBrains (in case you ever switch)

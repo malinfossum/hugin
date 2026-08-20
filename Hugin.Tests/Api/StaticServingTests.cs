@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.FileProviders;
 
 namespace Hugin.Tests.Api;
 
@@ -119,5 +120,129 @@ public sealed class StaticServingTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
         Assert.That(response.Content.Headers.ContentType?.MediaType, Is.Not.EqualTo("text/html"));
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Not.Contain(StaticServingFactory.Marker));
+    }
+}
+
+/// <summary>
+/// Points content root at a temp dir with NO wwwroot subfolder at all — forces Program.cs into the
+/// embedded-frontend branch (ManifestEmbeddedFileProvider) instead of the physical-folder one
+/// StaticServingFactory above exercises. Same env-var lever as StaticServingFactory; see its doc
+/// comment for why.
+/// </summary>
+public sealed class EmbeddedServingFactory : WebApplicationFactory<Program>
+{
+    private const string ContentRootEnvVar = "ASPNETCORE_CONTENTROOT";
+
+    private readonly string _tempDir =
+        Path.Combine(Path.GetTempPath(), $"hugin-embedded-{Guid.NewGuid():N}");
+    private readonly string _dbPath =
+        Path.Combine(Path.GetTempPath(), $"hugin-embedded-db-{Guid.NewGuid():N}.db");
+
+    public EmbeddedServingFactory()
+    {
+        Directory.CreateDirectory(_tempDir); // deliberately no "wwwroot" subfolder underneath
+        Environment.SetEnvironmentVariable(ContentRootEnvVar, _tempDir);
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseSetting("hugin:autosync", "false");
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll(typeof(DbContextOptions<HuginDbContext>));
+            services.AddDbContext<HuginDbContext>(o =>
+                o.UseSqlite(HuginDbInitializer.ConnectionString(_dbPath)));
+
+            services.RemoveAll(typeof(IBrregClient));
+            services.RemoveAll(typeof(INavFeedClient));
+            services.AddSingleton<IBrregClient>(new FakeBrregClient());
+            services.AddSingleton<INavFeedClient>(new FakeNavFeedClient());
+
+            services.RemoveAll(typeof(HuginConfig));
+            services.AddSingleton(new HuginConfig());
+        });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        Environment.SetEnvironmentVariable(ContentRootEnvVar, null);
+        SqliteConnection.ClearAllPools();
+        try { File.Delete(_dbPath); } catch (IOException) { }
+        try { Directory.Delete(_tempDir, recursive: true); } catch (IOException) { }
+    }
+}
+
+/// <summary>
+/// Exercises the embedded-frontend branch end-to-end — but only when this test run's Hugin.Api
+/// build actually has a frontend embedded. Hugin.Api.csproj embeds wwwroot conditionally on
+/// `Exists('wwwroot')` at build time, so an API-only dev build (no `npm run build` yet) has nothing
+/// embedded to serve. Forcing that precondition from here would mean either running the frontend
+/// build as a `dotnet test` dependency (couples the .NET suite to node tooling) or shipping a fake
+/// embedded resource the real csproj doesn't carry — both worse than a clean, self-documenting
+/// skip. When wwwroot IS present (as it normally is on Malin's machine after `.\build.ps1` or
+/// `npm run build`), this runs for real and proves the whole path; the task 6 smoke step
+/// additionally verifies it against the actual single-file publish.
+/// </summary>
+[TestFixture]
+public sealed class EmbeddedServingTests
+{
+    private EmbeddedServingFactory? _factory;
+    private HttpClient? _client;
+    private bool _embeddedFrontendPresent;
+
+    [OneTimeSetUp]
+    public void Up()
+    {
+        _embeddedFrontendPresent = new ManifestEmbeddedFileProvider(typeof(Program).Assembly, "wwwroot")
+            .GetFileInfo("index.html").Exists;
+        if (!_embeddedFrontendPresent) return;
+
+        _factory = new EmbeddedServingFactory();
+        _client = _factory.CreateClient();
+    }
+
+    [OneTimeTearDown]
+    public void Down()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
+    }
+
+    private void SkipIfNothingEmbedded()
+    {
+        if (_embeddedFrontendPresent) return;
+        Assert.Ignore("This Hugin.Api build has no wwwroot embedded (no `npm run build` yet) — " +
+            "run `.\\build.ps1` to exercise the embedded branch. See EmbeddedServingTests' doc " +
+            "comment and the task 6 smoke step for the full story.");
+    }
+
+    [Test]
+    public async Task Root_serves_the_embedded_index_when_no_physical_wwwroot_exists()
+    {
+        SkipIfNothingEmbedded();
+
+        var response = await _client!.GetAsync("/");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
+    }
+
+    [Test]
+    public async Task Unknown_non_api_path_falls_back_to_the_embedded_index()
+    {
+        SkipIfNothingEmbedded();
+
+        var response = await _client!.GetAsync("/noe-annet");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/html"));
+    }
+
+    [Test]
+    public async Task Unknown_api_path_is_still_404_not_the_embedded_fallback()
+    {
+        SkipIfNothingEmbedded();
+
+        var response = await _client!.GetAsync("/api/finnes-ikke");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }

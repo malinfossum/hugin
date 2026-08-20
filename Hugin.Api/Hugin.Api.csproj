@@ -5,11 +5,43 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>hugin-api</AssemblyName>
+    <!-- Lets ManifestEmbeddedFileProvider resolve embedded wwwroot files by their real relative
+         path (nested folders included) instead of the raw dotted resource-name scheme. Generated
+         even when no wwwroot files are embedded below (empty manifest), so it's safe unconditional. -->
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <!-- No IIS hosting here (Kestrel self-hosted, started by double-click) — an unused web.config
+         next to the exe is just noise. -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
+
+  <!-- The single-file publish (-p:PublishSingleFile=true, see build.ps1) embeds wwwroot into the
+       exe already — the Web SDK's default publish behavior of ALSO copying a physical wwwroot/
+       folder (plus its Static Web Assets endpoint manifest) next to the exe would silently defeat
+       that: Program.cs's physical-folder branch takes priority whenever wwwroot exists beside the
+       exe, so the embedded copy would never actually get served. Suppressed for that one publish
+       only — the normal dual-exe `publish\` output still gets its physical wwwroot as before. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(PublishSingleFile)' == 'true' AND Exists('wwwroot')">
+    <Content Update="wwwroot\**" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Hugin.Core\Hugin.Core.csproj" />
     <ProjectReference Include="..\Hugin.Infrastructure\Hugin.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
+  </ItemGroup>
+
+  <!-- Embed the built frontend when it's present (after `npm run build` in hugin-web), so a
+       single-file publish carries wwwroot inside the exe. wwwroot itself stays gitignored build
+       output; API-only dev builds (no frontend built yet) simply skip this and fall back to the
+       physical-folder branch in Program.cs, which 404s cleanly with no wwwroot at all. -->
+  <ItemGroup Condition="Exists('wwwroot')">
+    <EmbeddedResource Include="wwwroot\**" />
   </ItemGroup>
 
 </Project>

@@ -8,11 +8,13 @@ Named after Odin's raven of thought, who flies out each morning and returns with
 
 C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a React + TypeScript frontend (Vite, Vitest). Layered: `Hugin.Core` holds the domain and has no I/O; `Hugin.Infrastructure` is the I/O boundary (database, HTTP clients, config); `Hugin.Console` and `Hugin.Api` are thin hosts; `Hugin.Tests` covers it all.
 
-## Setup
+## Download
 
-Prebuilt Windows binaries are on the [Releases page](https://github.com/malinfossum/hugin/releases) — unzip, put a `hugin.json` beside the executables (start from `hugin.json.example`), and run. They require the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
-Building from source requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+- **`Hugin.exe`** — single self-contained file, dashboard only, frontend included. No .NET install needed. Put it anywhere, add a `hugin.json` beside it (start from `hugin.json.example`), run it.
+- **Zip** — `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+- **Build from source** — needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and Node for the frontend:
 
 ```bash
 git clone https://github.com/malinfossum/hugin.git
@@ -48,18 +50,20 @@ Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor prof
 
 ## Web dashboard
 
-A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the pipeline, active ads, and company inventory, track outreach, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal.
+A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the **Applications** (Søknader) view, active ads, and company inventory, track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, sort the list, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal. English and Norwegian (bokmål) are both built in — the dashboard picks one from your browser's language on first visit, and a toggle in the topbar switches and remembers your choice.
 
-Build both hosts side by side:
+Build both hosts side by side, plus the single-file exe:
 
 ```powershell
 .\build.ps1
 ```
 
-This runs `npm run build` in `hugin-web`, then publishes `Hugin.Console` and `Hugin.Api` into `publish\`. Run the dashboard:
+This runs `npm run build` in `hugin-web`, publishes `Hugin.Console` and `Hugin.Api` into `publish\`, and publishes a self-contained, single-file `Hugin.exe` (frontend embedded) into `publish-single\`. Run the dashboard:
 
 ```bash
 publish\hugin-api.exe
+# or, the single-file build:
+publish-single\Hugin.exe
 ```
 
 That's the whole start-up: the dashboard opens in your default browser by itself, and closing the console window stops it. `--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI; `--no-browser` skips the automatic browser launch.

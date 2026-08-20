@@ -8,6 +8,7 @@ using Hugin.Infrastructure;
 using Hugin.Infrastructure.Data;
 using Hugin.Infrastructure.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var configPath = ArgValue(args, "--config");
 var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
@@ -69,6 +70,25 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 app.UseHuginSecurity();
 
+// Physical wwwroot (a normal `dotnet publish`, or dev after `npm run build`) wins when present;
+// otherwise fall back to the frontend embedded into this assembly at publish time (the
+// single-file exe, which has no physical wwwroot beside it at all). UseDefaultFiles/UseStaticFiles
+// both resolve IWebHostEnvironment.WebRootFileProvider synchronously right here, at startup — so
+// this must run before those two calls, not lazily inside a request.
+//
+// Set explicitly in BOTH branches rather than leaving the physical case to ASP.NET Core's default:
+// Microsoft.NET.Sdk.Web's "static web assets" dev convenience wraps the default WebRootFileProvider
+// in a CompositeFileProvider that resolves wwwroot/* back to this PROJECT'S OWN SOURCE TREE
+// (Hugin.Api\wwwroot on the machine that built it) ahead of the content-root-relative physical
+// folder — harmless for the real beside-the-exe deployment (no such manifest ships with a publish),
+// but it silently defeats the ASPNETCORE_CONTENTROOT-based content-root override the test suite
+// uses to point at a temp wwwroot. A plain PhysicalFileProvider anchored at wwwrootPhysicalPath
+// sidesteps that composite entirely and keeps the beside-the-exe rule exact.
+var wwwrootPhysicalPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+app.Environment.WebRootFileProvider = Directory.Exists(wwwrootPhysicalPath)
+    ? new PhysicalFileProvider(wwwrootPhysicalPath)
+    : new ManifestEmbeddedFileProvider(typeof(Program).Assembly, "wwwroot");
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -86,11 +106,15 @@ app.MapFallback(async context =>
         return;
     }
 
-    var index = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
-    if (File.Exists(index))
+    // Goes through the same IFileProvider as UseStaticFiles above (physical or embedded) rather
+    // than a hardcoded physical path, so the SPA fallback works from inside the single-file exe too.
+    var index = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+    if (index.Exists)
     {
         context.Response.ContentType = "text/html";
-        await context.Response.SendFileAsync(index);
+        context.Response.ContentLength = index.Length;
+        await using var stream = index.CreateReadStream();
+        await stream.CopyToAsync(context.Response.Body);
     }
     else
     {
