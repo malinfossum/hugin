@@ -1,16 +1,18 @@
 # Hugin
 
-Hugin is a command-line job radar for the Norwegian developer job market: it watches public registries for new companies and job ads in your region and tracks your outreach pipeline.
+Hugin is a job radar for the Norwegian developer job market: it watches public registries for new companies and job ads in your region and tracks your outreach pipeline — from the command line or a local web dashboard.
 
 Named after Odin's raven of thought, who flies out each morning and returns with tidings — while his sibling Munin remembers.
 
 ## Stack
 
-C# / .NET 10, EF Core with SQLite, NUnit. Layered: `Hugin.Core` holds the domain and has no I/O; `Hugin.Console` is the CLI and the I/O boundary; `Hugin.Tests` covers both.
+C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a React + TypeScript frontend (Vite, Vitest). Layered: `Hugin.Core` holds the domain and has no I/O; `Hugin.Infrastructure` is the I/O boundary (database, HTTP clients, config); `Hugin.Console` and `Hugin.Api` are thin hosts; `Hugin.Tests` covers it all.
 
 ## Setup
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+Prebuilt Windows binaries are on the [Releases page](https://github.com/malinfossum/hugin/releases) — unzip, put a `hugin.json` beside the executables (start from `hugin.json.example`), and run. They require the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+Building from source requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
 git clone https://github.com/malinfossum/hugin.git
