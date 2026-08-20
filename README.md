@@ -59,10 +59,10 @@ Build both hosts side by side:
 This runs `npm run build` in `hugin-web`, then publishes `Hugin.Console` and `Hugin.Api` into `publish\`. Run the dashboard:
 
 ```bash
-publish\hugin-api.exe --port 5111
+publish\hugin-api.exe
 ```
 
-`--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI.
+That's the whole start-up: the dashboard opens in your default browser by itself, and closing the console window stops it. `--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI; `--no-browser` skips the automatic browser launch.
 
 For local development, run the API and the Vite dev server side by side:
 

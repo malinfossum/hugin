@@ -96,6 +96,31 @@ app.MapFallback(async context =>
     }
 });
 
+// One double-click is the whole start-up: open the dashboard in the default browser once the
+// host is listening. Every test host sets hugin:autosync=false (the RealHostBindingTests
+// subprocess included, via env var), so tests never pop a browser; --no-browser opts out.
+var openBrowser = Array.IndexOf(args, "--no-browser") < 0
+    && app.Configuration["hugin:autosync"] != "false";
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    Console.WriteLine($"Hugin kjører på http://localhost:{port} — lukk dette vinduet for å avslutte.");
+
+    if (!openBrowser) return;
+    try
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = $"http://localhost:{port}",
+            UseShellExecute = true,
+        });
+    }
+    catch (Exception)
+    {
+        // Best-effort: no default browser (or a locked-down shell) must not stop the server.
+    }
+});
+
 app.Run();
 
 static string? ArgValue(string[] args, string name)
