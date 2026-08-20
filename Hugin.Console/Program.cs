@@ -1,11 +1,12 @@
 using System.Text;
-using Hugin.Console.Data;
-using Hugin.Console.Http;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Cli;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
 using Hugin.Core.Services;
+using Hugin.Infrastructure;
+using Hugin.Infrastructure.Data;
+using Hugin.Infrastructure.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,11 +17,6 @@ namespace Hugin.Console;
 // This namespace is itself called Hugin.Console, so the bare name Console would bind to the
 // namespace rather than the type. The alias must sit inside the namespace to outrank it.
 using Console = System.Console;
-
-internal sealed class SystemClock : IClock
-{
-    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
-}
 
 internal static class Program
 {
@@ -58,7 +54,7 @@ internal static class Program
 
         await using (var scope = host.Services.CreateAsyncScope())
         {
-            await scope.ServiceProvider.GetRequiredService<HuginDbContext>().Database.MigrateAsync();
+            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>());
         }
 
         await using var runScope = host.Services.CreateAsyncScope();
@@ -113,7 +109,7 @@ internal static class Program
         services.AddSingleton(loaded.Config);
         services.AddSingleton<IClock, SystemClock>();
 
-        services.AddDbContext<HuginDbContext>(o => o.UseSqlite($"Data Source={loaded.DatabasePath}"));
+        services.AddDbContext<HuginDbContext>(o => o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
 
         services.AddScoped<ICompanyRepository, EfCompanyRepository>();
         services.AddScoped<IAdRepository, EfAdRepository>();
@@ -296,7 +292,7 @@ internal static class Program
 
         if (command.Ads)
         {
-            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune);
+            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune, includeHidden: true);
 
             if (ads.Count == 0)
             {
@@ -346,21 +342,10 @@ internal static class Program
 
     private static async Task<int> RunExportAsync(IServiceProvider services, ExportCommand command)
     {
-        var clock = services.GetRequiredService<IClock>();
-        var since = command.Since ?? clock.UtcNow.AddDays(-7);
+        var export = new ExportService(services.GetRequiredService<IPipelineRepository>(),
+            services.GetRequiredService<ICompanyRepository>(), services.GetRequiredService<IClock>());
 
-        var entries = await services.GetRequiredService<IPipelineRepository>().GetUpdatedAfterAsync(since);
-        var repository = services.GetRequiredService<ICompanyRepository>();
-
-        var rows = new List<(PipelineEntry Entry, Company Company)>(entries.Count);
-        foreach (var entry in entries)
-        {
-            var company = await repository.GetAsync(entry.Orgnr)
-                ?? new Company { Orgnr = entry.Orgnr, Name = entry.Orgnr };
-            rows.Add((entry, company));
-        }
-
-        Console.WriteLine(MarkdownExporter.Export(rows, since));
+        Console.WriteLine(await export.ExportAsync(command.Since));
         return 0;
     }
 

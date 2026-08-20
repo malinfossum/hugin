@@ -21,3 +21,7 @@ Thumbs.db
 # Hugin local state — never commit (contains real outreach history)
 hugin.json
 *.db
+
+# Frontend build output — rebuilt from hugin-web
+Hugin.Api/wwwroot/
+hugin-web/node_modules/

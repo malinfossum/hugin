@@ -9,33 +9,49 @@ internal sealed class FakeClock(DateTimeOffset now) : IClock
     public DateTimeOffset UtcNow { get; set; } = now;
 }
 
-internal sealed class FakeBrregClient : IBrregClient
+public sealed class FakeBrregClient : IBrregClient
 {
     public List<RegisterCompany> Companies { get; init; } = [];
     public Dictionary<string, RegisterCompany> ByOrgnr { get; init; } = [];
     public bool Throws { get; set; }
 
-    public Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
+    /// <summary>Makes only GetByOrgnrAsync fail, leaving GetCompaniesAsync (discovery) alone —
+    /// for tests isolating employer-enrichment failure from discovery failure.</summary>
+    public bool ThrowsOnGetByOrgnr { get; set; }
+
+    /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
+    public List<string> ByOrgnrRequests { get; } = [];
+
+    /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
+    public Func<Task>? OnCall { get; set; }
+
+    public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
     {
+        if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
-        return Task.FromResult<IReadOnlyList<RegisterCompany>>(Companies);
+        return Companies;
     }
 
-    public Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
+    public async Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
     {
-        if (Throws) throw new HttpRequestException("brreg utilgjengelig");
-        return Task.FromResult(ByOrgnr.GetValueOrDefault(orgnr));
+        ByOrgnrRequests.Add(orgnr);
+        if (OnCall is not null) await OnCall();
+        if (Throws || ThrowsOnGetByOrgnr) throw new HttpRequestException("brreg utilgjengelig");
+        return ByOrgnr.GetValueOrDefault(orgnr);
     }
 }
 
-internal sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
+public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
 {
     private readonly Queue<FeedPage> _pages = new(pages);
 
     public List<string?> RequestedCursors { get; } = [];
     public bool FirstPageRequested { get; private set; }
     public bool Throws { get; set; }
+
+    /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
+    public Func<Task>? OnCall { get; set; }
 
     public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
     {
@@ -49,10 +65,11 @@ internal sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClien
         return NextPage();
     }
 
-    private Task<FeedPage> NextPage()
+    private async Task<FeedPage> NextPage()
     {
+        if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("nav utilgjengelig");
-        return Task.FromResult(_pages.Count > 0 ? _pages.Dequeue() : new FeedPage([], null));
+        return _pages.Count > 0 ? _pages.Dequeue() : new FeedPage([], null);
     }
 }
 
@@ -149,10 +166,20 @@ internal sealed class FakeAdRepository : IAdRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
+    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null,
+        bool includeHidden = false, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values
-            .Where(a => a.IsActive && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber))
+            .Where(a => a.IsActive
+                && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber)
+                && (includeHidden || !a.Hidden))
             .ToList());
+
+    public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default)
+    {
+        if (!Store.TryGetValue(feedId, out var ad)) return Task.FromResult(false);
+        ad.Hidden = hidden;
+        return Task.FromResult(true);
+    }
 
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {
@@ -160,6 +187,12 @@ internal sealed class FakeAdRepository : IAdRepository
         foreach (var ad in stale) ad.IsActive = false;
         return Task.FromResult(stale.Count);
     }
+
+    public Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Ad>>(Store.Values
+            .Where(a => a.EmployerOrgnr == orgnr)
+            .OrderByDescending(a => a.Published)
+            .ToList());
 }
 
 internal sealed class FakePipelineRepository : IPipelineRepository

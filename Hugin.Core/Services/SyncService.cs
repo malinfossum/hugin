@@ -90,6 +90,9 @@ public sealed class SyncService(
         Action<int, int>? onPage, CancellationToken ct)
     {
         var stored = 0;
+        // Orgnrs already attempted this run — one Brreg lookup per unknown employer,
+        // no matter how many ads (or pages, in a --full backfill) report it.
+        var attemptedEmployerOrgnrs = new HashSet<string>();
 
         try
         {
@@ -112,6 +115,8 @@ public sealed class SyncService(
 
                     await ads.UpsertAsync(ad, now, ct);
                     stored++;
+
+                    await EnrichEmployerAsync(ad.EmployerOrgnr, attemptedEmployerOrgnrs, now, ct);
                 }
 
                 // Cursor after commit: everything on this page is stored before we move on.
@@ -132,6 +137,31 @@ public sealed class SyncService(
         catch (Exception ex)
         {
             return new SourceResult(false, stored, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Discovery (SyncBrregAsync) only pulls companies matching the configured nace/kommune
+    /// filter, so an ad's employer can be a registry unit no local row exists for (e.g. NT ads
+    /// carrying NACE 92, which the discovery filter never fetches) — and the parent-chain
+    /// pipeline join in <see cref="AdOverviewService"/> needs that row to resolve up to the
+    /// tracked orgnr. Best-effort, like track's out-of-filter fetch: a Brreg hiccup here must
+    /// never fail the NAV sync or skip the ad, which is already stored by the time this runs.
+    /// </summary>
+    private async Task EnrichEmployerAsync(string? employerOrgnr, HashSet<string> attempted,
+        DateTimeOffset now, CancellationToken ct)
+    {
+        if (employerOrgnr is null || !attempted.Add(employerOrgnr)) return;
+        if (await companies.GetAsync(employerOrgnr, ct) is not null) return;
+
+        try
+        {
+            if (await brreg.GetByOrgnrAsync(employerOrgnr, ct) is { } fetched)
+                await companies.UpsertAsync(fetched, now, ct);
+        }
+        catch (Exception)
+        {
+            // Orgnr stays in `attempted` either way — no retry within this run.
         }
     }
 }

@@ -1,0 +1,38 @@
+import { useState } from 'react'
+import { LiveRegionProvider } from './components/LiveRegion'
+import { BedrifterView } from './views/BedrifterView'
+import { DashboardView } from './views/dashboard/DashboardView'
+import { EksportView } from './views/EksportView'
+import { PipelineView } from './views/PipelineView'
+import './styles/main.css'
+
+const VIEWS = ['Dashbord', 'Pipeline', 'Bedrifter', 'Eksport'] as const
+export type ViewName = (typeof VIEWS)[number]
+
+export default function App() {
+  const [view, setView] = useState<ViewName>('Dashbord')
+
+  return (
+    <LiveRegionProvider>
+      <nav aria-label="Hovedmeny">
+        {VIEWS.map((name) => (
+          <button
+            key={name}
+            type="button"
+            onClick={() => setView(name)}
+            aria-current={view === name ? 'page' : undefined}
+          >
+            {name}
+          </button>
+        ))}
+      </nav>
+      <main>
+        <h1 className="visually-hidden">Hugin</h1>
+        {view === 'Dashbord' && <DashboardView />}
+        {view === 'Pipeline' && <PipelineView />}
+        {view === 'Bedrifter' && <BedrifterView />}
+        {view === 'Eksport' && <EksportView />}
+      </main>
+    </LiveRegionProvider>
+  )
+}
