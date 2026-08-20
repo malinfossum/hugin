@@ -225,40 +225,58 @@ public class RepositoryTests
     }
 
     [Test]
-    public async Task Pipeline_upsert_persists_a_changed_route()
+    public async Task Pipeline_upsert_persists_a_changed_status()
     {
         var repo = new EfPipelineRepository(_db);
         await repo.UpsertAsync(new()
         {
             Orgnr = "1",
-            Status = Core.Models.PipelineStatus.SoektSelv,
-            Route = Core.Models.OutreachRoute.SoektSelv,
+            Status = Core.Models.PipelineStatus.Applied,
             Created = T1,
             Updated = T1,
         });
         await repo.UpsertAsync(new()
         {
             Orgnr = "1",
-            Status = Core.Models.PipelineStatus.BedtGetSjekke,
-            Route = Core.Models.OutreachRoute.BedtGetSjekke,
+            Status = Core.Models.PipelineStatus.Answered,
             Created = T1,
             Updated = T2,
         });
 
         var stored = await repo.GetByOrgnrAsync("1");
-        Assert.That(stored!.Route, Is.EqualTo(Core.Models.OutreachRoute.BedtGetSjekke),
-            "the stored row must follow the route change, not just the returned entry");
+        Assert.That(stored!.Status, Is.EqualTo(Core.Models.PipelineStatus.Answered),
+            "the stored row must follow the status change, not just the returned entry");
+    }
+
+    [Test]
+    public async Task Pipeline_upsert_persists_the_starred_flag()
+    {
+        // The copy-every-field trap, in reverse: an upsert that forgets Starred would silently
+        // un-star every entry the moment its status changes.
+        var repo = new EfPipelineRepository(_db);
+        await repo.UpsertAsync(new()
+        {
+            Orgnr = "1", Status = Core.Models.PipelineStatus.Active, Starred = false, Created = T1, Updated = T1,
+        });
+        await repo.UpsertAsync(new()
+        {
+            Orgnr = "1", Status = Core.Models.PipelineStatus.Applied, Starred = true, Created = T1, Updated = T2,
+        });
+
+        var stored = await repo.GetByOrgnrAsync("1");
+        Assert.That(stored!.Starred, Is.True,
+            "the stored row must follow the starred change, not just the returned entry");
     }
 
     [Test]
     public async Task Pipeline_upsert_is_one_entry_per_company()
     {
         var repo = new EfPipelineRepository(_db);
-        await repo.UpsertAsync(new() { Orgnr = "1", Status = Core.Models.PipelineStatus.Funnet, Created = T1, Updated = T1 });
-        await repo.UpsertAsync(new() { Orgnr = "1", Status = Core.Models.PipelineStatus.SoektSelv, Created = T1, Updated = T2 });
+        await repo.UpsertAsync(new() { Orgnr = "1", Status = Core.Models.PipelineStatus.Active, Created = T1, Updated = T1 });
+        await repo.UpsertAsync(new() { Orgnr = "1", Status = Core.Models.PipelineStatus.Applied, Created = T1, Updated = T2 });
         var all = await repo.GetAllAsync();
         Assert.That(all, Has.Count.EqualTo(1));
-        Assert.That(all[0].Status, Is.EqualTo(Core.Models.PipelineStatus.SoektSelv));
+        Assert.That(all[0].Status, Is.EqualTo(Core.Models.PipelineStatus.Applied));
     }
 
     [Test]

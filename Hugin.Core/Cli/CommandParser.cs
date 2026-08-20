@@ -9,7 +9,7 @@ namespace Hugin.Core.Cli;
 /// </summary>
 public static class CommandParser
 {
-    private const string StatusHelp = "funnet | soekt-selv | bedt-get | svar";
+    private const string StatusHelp = "active | applied | answered";
 
     // Options that stand alone; everything else expects a following value.
     private static readonly HashSet<string> ValuelessFlags =
@@ -98,10 +98,9 @@ public static class CommandParser
     {
         switch (raw?.ToLowerInvariant())
         {
-            case "funnet": status = PipelineStatus.Funnet; return true;
-            case "soekt-selv" or "søkt-selv": status = PipelineStatus.SoektSelv; return true;
-            case "bedt-get": status = PipelineStatus.BedtGetSjekke; return true;
-            case "svar": status = PipelineStatus.Svar; return true;
+            case "active": status = PipelineStatus.Active; return true;
+            case "applied": status = PipelineStatus.Applied; return true;
+            case "answered": status = PipelineStatus.Answered; return true;
             default: status = default; return false;
         }
     }

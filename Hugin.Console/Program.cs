@@ -54,7 +54,8 @@ internal static class Program
 
         await using (var scope = host.Services.CreateAsyncScope())
         {
-            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>());
+            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>(),
+                loaded.DatabasePath);
         }
 
         await using var runScope = host.Services.CreateAsyncScope();
@@ -359,10 +360,9 @@ internal static class Program
 
     private static string StatusLabel(PipelineStatus status) => status switch
     {
-        PipelineStatus.Funnet => "funnet",
-        PipelineStatus.SoektSelv => "søkt selv",
-        PipelineStatus.BedtGetSjekke => "bedt GET sjekke",
-        PipelineStatus.Svar => "svar",
+        PipelineStatus.Active => "aktiv",
+        PipelineStatus.Applied => "søkt",
+        PipelineStatus.Answered => "svar",
         _ => status.ToString(),
     };
 
@@ -374,7 +374,7 @@ internal static class Program
               hugin sync [--full]                 Hent selskaper fra Brreg og annonser fra NAV;
                                                   --full går gjennom hele NAV-historikken (første gang: alle åpne annonser)
               hugin new [--seen]                  Vis alt nytt siden sist; --seen flytter merket
-              hugin track <orgnr> <status>        Sett status: funnet | soekt-selv | bedt-get | svar
+              hugin track <orgnr> <status>        Sett status: active | applied | answered
                   [--why "..."] [--note "..."] [--svar "..."]
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper

@@ -32,13 +32,13 @@ public sealed class WriteEndpointTests
     public async Task Track_unknown_orgnr_returns_404()
     {
         var response = await _client.PutAsJsonAsync("/api/pipeline/000000000",
-            new { status = "soekt-selv", why = "", note = (string?)null, svar = (string?)null });
+            new { status = "applied", why = "", note = (string?)null, svar = (string?)null });
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
-    public async Task Track_known_orgnr_updates_pipeline_and_preserves_route_on_svar()
+    public async Task Track_known_orgnr_updates_pipeline()
     {
         using (var scope = _factory.Services.CreateScope())
         {
@@ -48,24 +48,51 @@ public sealed class WriteEndpointTests
         }
 
         var first = await _client.PutAsJsonAsync("/api/pipeline/999888777",
-            new { status = "soekt-selv", why = "", note = (string?)null, svar = (string?)null });
+            new { status = "applied", why = "", note = (string?)null, svar = (string?)null });
         Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var firstDto = await first.Content.ReadFromJsonAsync<TrackResponseProbe>();
         Assert.That(firstDto!.Warning, Is.Not.Null);
-        Assert.That(firstDto.Entry.Status, Is.EqualTo("soekt-selv"));
-        Assert.That(firstDto.Entry.Route, Is.EqualTo("soekt-selv"));
+        Assert.That(firstDto.Entry.Status, Is.EqualTo("applied"));
 
         var second = await _client.PutAsJsonAsync("/api/pipeline/999888777",
-            new { status = "svar", why = "god match", note = (string?)null, svar = (string?)null });
+            new { status = "answered", why = "god match", note = (string?)null, svar = (string?)null });
         Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var secondDto = await second.Content.ReadFromJsonAsync<TrackResponseProbe>();
         Assert.That(secondDto!.Warning, Is.Null);
-        Assert.That(secondDto.Entry.Status, Is.EqualTo("svar"));
+        Assert.That(secondDto.Entry.Status, Is.EqualTo("answered"));
+    }
 
-        // Route survival: svar must not overwrite the outreach route recorded by soekt-selv.
-        Assert.That(secondDto.Entry.Route, Is.EqualTo("soekt-selv"));
+    [Test]
+    public async Task Track_starred_survives_a_status_only_edit()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Sporbar AS", "3407", "62.100", null, false, null),
+                    DateTimeOffset.UtcNow);
+        }
+
+        var starred = await _client.PutAsJsonAsync("/api/pipeline/999888777",
+            new { status = "active", why = "fordi", note = (string?)null, svar = (string?)null, starred = true });
+        Assert.That(starred.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var starredDto = await starred.Content.ReadFromJsonAsync<TrackResponseProbe>();
+        Assert.That(starredDto!.Entry.Starred, Is.True);
+
+        // A status-only edit (starred omitted, i.e. null) must not clear the star.
+        var statusOnly = await _client.PutAsJsonAsync("/api/pipeline/999888777",
+            new { status = "applied", why = (string?)null, note = (string?)null, svar = (string?)null });
+        Assert.That(statusOnly.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var statusOnlyDto = await statusOnly.Content.ReadFromJsonAsync<TrackResponseProbe>();
+        Assert.That(statusOnlyDto!.Entry.Starred, Is.True, "star must survive a status-only edit");
+        Assert.That(statusOnlyDto.Entry.Status, Is.EqualTo("applied"));
+
+        // Explicitly clearing it still works.
+        var cleared = await _client.PutAsJsonAsync("/api/pipeline/999888777",
+            new { status = "applied", why = (string?)null, note = (string?)null, svar = (string?)null, starred = false });
+        var clearedDto = await cleared.Content.ReadFromJsonAsync<TrackResponseProbe>();
+        Assert.That(clearedDto!.Entry.Starred, Is.False);
     }
 
     [Test]

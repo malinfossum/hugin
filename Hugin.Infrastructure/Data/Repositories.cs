@@ -187,7 +187,7 @@ public sealed class EfPipelineRepository(HuginDbContext db) : IPipelineRepositor
         {
             // Created belongs to the first sighting; everything else is the current state.
             existing.Status = entry.Status;
-            existing.Route = entry.Route;
+            existing.Starred = entry.Starred;
             existing.Why = entry.Why;
             existing.Note = entry.Note;
             existing.SvarText = entry.SvarText;

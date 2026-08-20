@@ -5,8 +5,8 @@ using Hugin.Core.Models;
 namespace Hugin.Core.Services;
 
 /// <summary>
-/// Renders the pipeline in the Preparelogg "Jobbsøk" shape, so the weekly requirement becomes
-/// copy-paste. Everything here is pure string building — no console, no files.
+/// Renders the pipeline's outreach table — everything applied to or answered — so the weekly
+/// review becomes copy-paste. Everything here is pure string building — no console, no files.
 /// </summary>
 public static class MarkdownExporter
 {
@@ -17,16 +17,13 @@ public static class MarkdownExporter
 
     public static string Export(IReadOnlyList<(PipelineEntry Entry, Company Company)> rows, DateTimeOffset since)
     {
-        // Funnet is pre-outreach: whatever route an entry once had, it only exports after
-        // something was actually sent or asked.
+        // Active is pre-outreach: it only exports once something was actually applied to.
         var included = rows
-            .Where(r => r.Entry.Status != PipelineStatus.Funnet && r.Entry.Updated >= since)
+            .Where(r => r.Entry.Status >= PipelineStatus.Applied && r.Entry.Updated >= since)
             .ToList();
 
         var sb = new StringBuilder();
-        Section(sb, "## Søkt selv", included.Where(r => RouteOf(r.Entry) == OutreachRoute.SoektSelv));
-        sb.AppendLine();
-        Section(sb, "## Bedt GET om å sjekke", included.Where(r => RouteOf(r.Entry) == OutreachRoute.BedtGetSjekke));
+        Section(sb, "## Søkt", included);
 
         return sb.ToString();
     }
@@ -46,18 +43,6 @@ public static class MarkdownExporter
             .Replace("|", "\\|", StringComparison.Ordinal)
             .Trim();
     }
-
-    /// <summary>
-    /// Sections follow the recorded route. An entry with no route — tracked straight to an
-    /// answer without saying how it was approached — falls to the GET section, as before.
-    /// </summary>
-    private static OutreachRoute RouteOf(PipelineEntry entry) => entry.Route switch
-    {
-        OutreachRoute.Ingen when entry.Status == PipelineStatus.SoektSelv => OutreachRoute.SoektSelv,
-        OutreachRoute.Ingen when entry.Status is PipelineStatus.BedtGetSjekke or PipelineStatus.Svar
-            => OutreachRoute.BedtGetSjekke,
-        var route => route,
-    };
 
     private static void Section(StringBuilder sb, string title,
         IEnumerable<(PipelineEntry Entry, Company Company)> rows)

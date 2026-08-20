@@ -45,11 +45,11 @@ afterEach(() => {
 describe('TrengerHandling', () => {
   it('shows only funnet entries with a near frist', async () => {
     const ads = [
-      ad({ feedId: 'a1', title: 'Skal med', pipelineStatus: 'funnet', daysLeft: 3 }),
-      ad({ feedId: 'a2', title: 'Feil status', pipelineStatus: 'soekt-selv', daysLeft: 2 }),
-      ad({ feedId: 'a3', title: 'For langt unna', pipelineStatus: 'funnet', daysLeft: 10 }),
-      ad({ feedId: 'a4', title: 'Ingen frist', pipelineStatus: 'funnet', daysLeft: null }),
-      ad({ feedId: 'a5', title: 'Frist i dag', pipelineStatus: 'funnet', daysLeft: 0 }),
+      ad({ feedId: 'a1', title: 'Skal med', pipelineStatus: 'active', daysLeft: 3 }),
+      ad({ feedId: 'a2', title: 'Feil status', pipelineStatus: 'applied', daysLeft: 2 }),
+      ad({ feedId: 'a3', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),
+      ad({ feedId: 'a4', title: 'Ingen frist', pipelineStatus: 'active', daysLeft: null }),
+      ad({ feedId: 'a5', title: 'Frist i dag', pipelineStatus: 'active', daysLeft: 0 }),
     ]
     renderTrenger(mockFetch(ads))
 
@@ -65,7 +65,7 @@ describe('TrengerHandling', () => {
   })
 
   it('shows "frist utløpt" for an overdue (negative daysLeft) funnet entry', async () => {
-    const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'funnet', daysLeft: -1 })]
+    const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'active', daysLeft: -1 })]
     renderTrenger(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
@@ -74,8 +74,8 @@ describe('TrengerHandling', () => {
 
   it('renders nothing when there are no near-frist funnet entries', async () => {
     const ads = [
-      ad({ feedId: 'a1', title: 'Feil status', pipelineStatus: 'soekt-selv', daysLeft: 2 }),
-      ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'funnet', daysLeft: 10 }),
+      ad({ feedId: 'a1', title: 'Feil status', pipelineStatus: 'applied', daysLeft: 2 }),
+      ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),
     ]
     const fetchMock = mockFetch(ads)
     const { container } = renderTrenger(fetchMock)

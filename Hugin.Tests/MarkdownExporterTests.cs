@@ -12,19 +12,13 @@ public class MarkdownExporterTests
         new() { Orgnr = orgnr, Name = name, Website = website, FirstSeen = Since, LastSeenInRegister = Since };
 
     private static PipelineEntry Entry(string orgnr, PipelineStatus status, string why = "fordi",
-        string? svar = null, DateTimeOffset? updated = null, OutreachRoute? route = null) =>
+        string? svar = null, DateTimeOffset? updated = null) =>
         new()
         {
             Orgnr = orgnr,
             Status = status,
             Why = why,
             SvarText = svar,
-            Route = route ?? status switch
-            {
-                PipelineStatus.SoektSelv => OutreachRoute.SoektSelv,
-                PipelineStatus.BedtGetSjekke => OutreachRoute.BedtGetSjekke,
-                _ => OutreachRoute.Ingen,
-            },
             Created = Since,
             Updated = updated ?? Updated,
         };
@@ -37,53 +31,25 @@ public class MarkdownExporterTests
     }
 
     [Test]
-    public void Rows_split_into_soekt_selv_and_bedt_get_sections()
+    public void Applied_and_answered_entries_appear_under_the_soekt_heading()
     {
         var markdown = MarkdownExporter.Export(
         [
-            (Entry("1", PipelineStatus.SoektSelv), Company("1", "Selv AS")),
-            (Entry("2", PipelineStatus.BedtGetSjekke), Company("2", "Bedt AS")),
-            (Entry("3", PipelineStatus.Svar, svar: "avslag"), Company("3", "Svar AS")),
+            (Entry("1", PipelineStatus.Applied), Company("1", "Søkt AS")),
+            (Entry("2", PipelineStatus.Answered, svar: "avslag"), Company("2", "Svart AS")),
         ], Since);
 
-        var soekt = markdown.IndexOf("## Søkt selv", StringComparison.Ordinal);
-        var bedt = markdown.IndexOf("## Bedt GET om å sjekke", StringComparison.Ordinal);
-
-        Assert.That(soekt, Is.GreaterThanOrEqualTo(0));
-        Assert.That(bedt, Is.GreaterThan(soekt));
-        Assert.That(markdown.IndexOf("Selv AS", StringComparison.Ordinal), Is.InRange(soekt, bedt));
-        Assert.That(markdown.IndexOf("Bedt AS", StringComparison.Ordinal), Is.GreaterThan(bedt));
-        Assert.That(markdown.IndexOf("Svar AS", StringComparison.Ordinal), Is.GreaterThan(bedt),
-            "an answered entry stays in the section it was sent through");
+        Assert.That(markdown, Does.Contain("## Søkt"));
+        Assert.That(markdown, Does.Contain("Søkt AS"));
+        Assert.That(markdown, Does.Contain("Svart AS"));
         Assert.That(markdown, Does.Contain("| Dato | Bedrift | Nettside | Grunn | Svar |"));
     }
 
     [Test]
-    public void Answered_self_application_stays_in_soekt_selv()
+    public void Active_entries_never_export()
     {
         var markdown = MarkdownExporter.Export(
-        [
-            (Entry("1", PipelineStatus.Svar, svar: "avslag", route: OutreachRoute.SoektSelv),
-                Company("1", "Selv AS")),
-            (Entry("2", PipelineStatus.Svar, svar: "ja", route: OutreachRoute.BedtGetSjekke),
-                Company("2", "Via GET AS")),
-        ], Since);
-
-        var soekt = markdown.IndexOf("## Søkt selv", StringComparison.Ordinal);
-        var bedt = markdown.IndexOf("## Bedt GET om å sjekke", StringComparison.Ordinal);
-
-        Assert.That(markdown.IndexOf("Selv AS", StringComparison.Ordinal), Is.InRange(soekt, bedt),
-            "GET must not be credited for an application she sent herself");
-        Assert.That(markdown.IndexOf("Via GET AS", StringComparison.Ordinal), Is.GreaterThan(bedt));
-    }
-
-    [Test]
-    public void Funnet_entries_never_export_even_with_a_leftover_route()
-    {
-        // Track soekt-selv by mistake, reset to funnet: the route survives (by design, for
-        // real answers), but a found-not-contacted company has no place in the outreach log.
-        var markdown = MarkdownExporter.Export(
-            [(Entry("1", PipelineStatus.Funnet, route: OutreachRoute.SoektSelv), Company("1", "Bare funnet AS"))],
+            [(Entry("1", PipelineStatus.Active), Company("1", "Bare funnet AS"))],
             Since);
 
         Assert.That(markdown, Does.Not.Contain("Bare funnet AS"));
@@ -93,7 +59,7 @@ public class MarkdownExporterTests
     public void Empty_why_gets_warning_marker()
     {
         var markdown = MarkdownExporter.Export(
-            [(Entry("1", PipelineStatus.SoektSelv, why: ""), Company("1", "Uten grunn AS"))], Since);
+            [(Entry("1", PipelineStatus.Applied, why: ""), Company("1", "Uten grunn AS"))], Since);
 
         Assert.That(markdown, Does.Contain("⚠ mangler begrunnelse"));
     }
@@ -103,8 +69,8 @@ public class MarkdownExporterTests
     {
         var markdown = MarkdownExporter.Export(
         [
-            (Entry("1", PipelineStatus.SoektSelv, updated: Since.AddDays(-1)), Company("1", "Gammel AS")),
-            (Entry("2", PipelineStatus.SoektSelv, updated: Since.AddDays(1)), Company("2", "Fersk AS")),
+            (Entry("1", PipelineStatus.Applied, updated: Since.AddDays(-1)), Company("1", "Gammel AS")),
+            (Entry("2", PipelineStatus.Applied, updated: Since.AddDays(1)), Company("2", "Fersk AS")),
         ], Since);
 
         Assert.That(markdown, Does.Not.Contain("Gammel AS"));
@@ -115,7 +81,7 @@ public class MarkdownExporterTests
     public void Dates_render_as_yyyy_MM_dd()
     {
         var markdown = MarkdownExporter.Export(
-            [(Entry("1", PipelineStatus.SoektSelv), Company("1", "Dato AS"))], Since);
+            [(Entry("1", PipelineStatus.Applied), Company("1", "Dato AS"))], Since);
 
         Assert.That(markdown, Does.Contain("| 2026-08-14 |"));
     }
@@ -125,8 +91,8 @@ public class MarkdownExporterTests
     {
         var markdown = MarkdownExporter.Export(
         [
-            (Entry("1", PipelineStatus.SoektSelv), Company("1", "Med side AS", "https://eksempel.no")),
-            (Entry("2", PipelineStatus.SoektSelv), Company("2", "Uten side AS")),
+            (Entry("1", PipelineStatus.Applied), Company("1", "Med side AS", "https://eksempel.no")),
+            (Entry("2", PipelineStatus.Applied), Company("2", "Uten side AS")),
         ], Since);
 
         Assert.That(markdown, Does.Contain("https://eksempel.no"));
@@ -137,7 +103,7 @@ public class MarkdownExporterTests
     public void Cell_content_from_the_register_cannot_break_the_table()
     {
         var markdown = MarkdownExporter.Export(
-            [(Entry("1", PipelineStatus.SoektSelv, why: "Utvikler | 100% remote"), Company("1", "Rør | AS"))], Since);
+            [(Entry("1", PipelineStatus.Applied, why: "Utvikler | 100% remote"), Company("1", "Rør | AS"))], Since);
 
         var row = markdown.Split('\n').Single(l => l.Contains("Rør", StringComparison.Ordinal));
         var delimiters = row.Where((c, i) => c == '|' && (i == 0 || row[i - 1] != '\\')).Count();

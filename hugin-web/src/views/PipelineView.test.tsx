@@ -16,8 +16,8 @@ function entry(overrides: Partial<PipelineDto> = {}): PipelineDto {
   return {
     orgnr: '915787630',
     companyName: 'Acme AS',
-    status: 'funnet',
-    route: 'ingen',
+    status: 'active',
+    starred: false,
     why: '',
     note: null,
     svar: null,
@@ -67,45 +67,42 @@ afterEach(() => {
 })
 
 describe('PipelineView', () => {
-  it('groups entries into the four sections with correct membership', async () => {
+  it('groups entries into the three sections with correct membership', async () => {
     const entries = [
-      entry({ orgnr: '1', companyName: 'Funnet-firma', status: 'funnet' }),
-      entry({ orgnr: '2', companyName: 'Søkt-firma', status: 'soekt-selv', why: 'begrunnelse' }),
-      entry({ orgnr: '3', companyName: 'Bedt-firma', status: 'bedt-get', why: 'begrunnelse' }),
-      entry({ orgnr: '4', companyName: 'Svar-firma', status: 'svar', why: 'begrunnelse' }),
+      entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active' }),
+      entry({ orgnr: '2', companyName: 'Søkt-firma', status: 'applied', why: 'begrunnelse' }),
+      entry({ orgnr: '3', companyName: 'Svar-firma', status: 'answered', why: 'begrunnelse' }),
     ]
     renderView(fakeServer(entries))
 
-    await screen.findByText('Funnet-firma')
+    await screen.findByText('Aktiv-firma')
 
-    const funnetSection = screen.getByRole('heading', { name: 'Funnet' }).closest('section')
-    const soektSection = screen.getByRole('heading', { name: 'Søkt selv' }).closest('section')
-    const bedtSection = screen.getByRole('heading', { name: 'Bedt GET sjekke' }).closest('section')
-    const svarSection = screen.getByRole('heading', { name: 'Svar' }).closest('section')
-    if (!funnetSection || !soektSection || !bedtSection || !svarSection) {
+    const activeSection = screen.getByRole('heading', { name: 'Aktiv' }).closest('section')
+    const appliedSection = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
+    const answeredSection = screen.getByRole('heading', { name: 'Svar' }).closest('section')
+    if (!activeSection || !appliedSection || !answeredSection) {
       throw new Error('section not found')
     }
 
-    expect(within(funnetSection).getByText('Funnet-firma')).toBeInTheDocument()
-    expect(within(soektSection).getByText('Søkt-firma')).toBeInTheDocument()
-    expect(within(bedtSection).getByText('Bedt-firma')).toBeInTheDocument()
-    expect(within(svarSection).getByText('Svar-firma')).toBeInTheDocument()
+    expect(within(activeSection).getByText('Aktiv-firma')).toBeInTheDocument()
+    expect(within(appliedSection).getByText('Søkt-firma')).toBeInTheDocument()
+    expect(within(answeredSection).getByText('Svar-firma')).toBeInTheDocument()
 
-    expect(within(funnetSection).queryByText('Søkt-firma')).not.toBeInTheDocument()
-    expect(within(soektSection).queryByText('Funnet-firma')).not.toBeInTheDocument()
+    expect(within(activeSection).queryByText('Søkt-firma')).not.toBeInTheDocument()
+    expect(within(appliedSection).queryByText('Aktiv-firma')).not.toBeInTheDocument()
   })
 
-  it('shows the funnet-hint text under the Funnet heading', async () => {
-    renderView(fakeServer([entry({ orgnr: '1', companyName: 'Funnet-firma', status: 'funnet' })]))
+  it('shows the active-hint text under the Aktiv heading', async () => {
+    renderView(fakeServer([entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active' })]))
 
-    await screen.findByText('Funnet-firma')
+    await screen.findByText('Aktiv-firma')
 
-    expect(screen.getByText('Funnet-oppføringer tas aldri med i eksporten.')).toBeInTheDocument()
+    expect(screen.getByText('Aktiv-oppføringer tas aldri med i eksporten.')).toBeInTheDocument()
   })
 
-  it('shows "⚠ mangler begrunnelse" for a beyond-funnet entry with empty why', async () => {
+  it('shows "⚠ mangler begrunnelse" for a beyond-active entry with empty why', async () => {
     renderView(
-      fakeServer([entry({ orgnr: '2', companyName: 'Søkt-firma', status: 'soekt-selv', why: '' })])
+      fakeServer([entry({ orgnr: '2', companyName: 'Søkt-firma', status: 'applied', why: '' })])
     )
 
     await screen.findByText('Søkt-firma')
@@ -113,12 +110,12 @@ describe('PipelineView', () => {
     expect(screen.getByText('⚠ mangler begrunnelse')).toBeInTheDocument()
   })
 
-  it('does not show the missing-why marker for a funnet entry with empty why', async () => {
+  it('does not show the missing-why marker for an active entry with empty why', async () => {
     renderView(
-      fakeServer([entry({ orgnr: '1', companyName: 'Funnet-firma', status: 'funnet', why: '' })])
+      fakeServer([entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active', why: '' })])
     )
 
-    await screen.findByText('Funnet-firma')
+    await screen.findByText('Aktiv-firma')
 
     expect(screen.queryByText('⚠ mangler begrunnelse')).not.toBeInTheDocument()
   })
@@ -126,7 +123,7 @@ describe('PipelineView', () => {
   it('edit-submit PUTs the right body and announces "Lagret."', async () => {
     const user = userEvent.setup()
     const fetchMock = fakeServer([
-      entry({ orgnr: '1', companyName: 'Acme AS', status: 'funnet', why: '' }),
+      entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', why: '' }),
     ])
     renderView(fetchMock)
 
@@ -136,7 +133,7 @@ describe('PipelineView', () => {
     const form = screen.getByLabelText('Status').closest('form')
     if (!form) throw new Error('form not found')
 
-    await user.selectOptions(within(form).getByLabelText('Status'), 'soekt-selv')
+    await user.selectOptions(within(form).getByLabelText('Status'), 'applied')
     await user.type(within(form).getByLabelText('Begrunnelse'), 'Søkte via nettside')
     await user.type(within(form).getByLabelText('Notat'), 'Fulgt opp')
     await user.type(within(form).getByLabelText('Svar'), 'Venter')
@@ -149,7 +146,7 @@ describe('PipelineView', () => {
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({
-            status: 'soekt-selv',
+            status: 'applied',
             why: 'Søkte via nettside',
             note: 'Fulgt opp',
             svar: 'Venter',
@@ -172,7 +169,7 @@ describe('PipelineView', () => {
   it('renders a response warning inline with the ⚠ prefix', async () => {
     const user = userEvent.setup()
     const fetchMock = fakeServer(
-      [entry({ orgnr: '1', companyName: 'Acme AS', status: 'funnet', why: '' })],
+      [entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', why: '' })],
       'Ingen NAV-annonse funnet for denne bedriften.'
     )
     renderView(fetchMock)
@@ -201,7 +198,7 @@ describe('PipelineView', () => {
       const method = init?.method ?? 'GET'
       if (url === '/api/pipeline' && method === 'GET') {
         return Promise.resolve(
-          jsonResponse([entry({ orgnr: '1', companyName: 'Acme AS', status: 'funnet', why: '' })])
+          jsonResponse([entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', why: '' })])
         )
       }
       if (method === 'PUT') {

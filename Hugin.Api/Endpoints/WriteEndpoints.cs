@@ -18,7 +18,7 @@ public static class WriteEndpoints
             if (await companies.GetAsync(orgnr) is null)
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr} — synk først, eller bruk hugin track.");
 
-            var result = await pipeline.TrackAsync(orgnr, status, request.Why, request.Note, request.Svar);
+            var result = await pipeline.TrackAsync(orgnr, status, request.Why, request.Note, request.Svar, request.Starred);
             var name = (await companies.GetAsync(orgnr))!.Name;
             return Results.Ok(new TrackResponse(PipelineDto.From(result.Entry, name), result.Warning));
         });

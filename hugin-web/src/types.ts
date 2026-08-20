@@ -1,6 +1,6 @@
 // Mirrors of the C# DTOs, as serialized (camelCase).
 
-export type PipelineStatusSlug = 'funnet' | 'soekt-selv' | 'bedt-get' | 'svar'
+export type PipelineStatusSlug = 'active' | 'applied' | 'answered'
 
 export interface AdDto {
   feedId: string
@@ -45,7 +45,7 @@ export interface PipelineDto {
   orgnr: string
   companyName: string
   status: PipelineStatusSlug
-  route: 'ingen' | 'soekt-selv' | 'bedt-get'
+  starred: boolean
   why: string
   note: string | null
   svar: string | null

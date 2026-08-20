@@ -9,7 +9,7 @@ namespace Hugin.Tests.Api;
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
 public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads);
-public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, string Route);
+public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
     int Companies, int PipelineEntries, List<LinkoutProbe> Linkouts);
 public sealed record LinkoutProbe(string Label, string Url);
@@ -203,16 +203,16 @@ public sealed class ReadEndpointTests
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "1", Status = PipelineStatus.Funnet, Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
+                Orgnr = "1", Status = PipelineStatus.Active, Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
             });
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "2", Status = PipelineStatus.SoektSelv, Route = OutreachRoute.SoektSelv,
+                Orgnr = "2", Status = PipelineStatus.Applied,
                 Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
             });
         }
 
-        var response = await _client.GetAsync("/api/pipeline?status=funnet");
+        var response = await _client.GetAsync("/api/pipeline?status=active");
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var entries = await response.Content.ReadFromJsonAsync<List<PipelineDtoProbe>>();
@@ -229,7 +229,7 @@ public sealed class ReadEndpointTests
                 .UpsertAsync(new RegisterCompany("1", "Eksport AS", null, null, null, false, null), now);
             await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
             {
-                Orgnr = "1", Status = PipelineStatus.SoektSelv, Route = OutreachRoute.SoektSelv, Why = "fordi",
+                Orgnr = "1", Status = PipelineStatus.Applied, Why = "fordi",
                 Created = now, Updated = now,
             });
         }
@@ -239,7 +239,7 @@ public sealed class ReadEndpointTests
         Assert.That(response.Content.Headers.ContentType!.MediaType, Is.EqualTo("text/markdown"));
 
         var body = await response.Content.ReadAsStringAsync();
-        Assert.That(body, Does.Contain("## Søkt selv"));
+        Assert.That(body, Does.Contain("## Søkt"));
     }
 
     [Test]
@@ -255,7 +255,7 @@ public sealed class ReadEndpointTests
                     now, now.AddDays(5), "https://x", true, "IT"), now);
             await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
             {
-                Orgnr = "1", Status = PipelineStatus.Funnet, Created = now, Updated = now,
+                Orgnr = "1", Status = PipelineStatus.Active, Created = now, Updated = now,
             });
         }
 

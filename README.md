@@ -31,7 +31,7 @@ Edit `hugin.json` to set your municipalities, industry codes, and keywords. Keyw
 |---|---|
 | `hugin sync [--full]` | Pulls companies from Brreg and job ads from the NAV feed. `--full` walks the entire feed history — run it once after setup to load every currently-open ad; interrupted runs resume |
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
-| `hugin track <orgnr> <status>` | Sets pipeline status: `funnet`, `soekt-selv`, `bedt-get`, `svar`. Options: `--why`, `--note`, `--svar` |
+| `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory; `--ads [--kommune <nr>]` lists currently-open ads |
 | `hugin export [--since ÅÅÅÅ-MM-DD]` | Writes markdown tables of the week's outreach (defaults to the last 7 days) |
 

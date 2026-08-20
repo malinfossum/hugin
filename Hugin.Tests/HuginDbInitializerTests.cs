@@ -45,4 +45,66 @@ public sealed class HuginDbInitializerTests
         Assert.That(cs, Does.Contain(@"Data Source=C:\x\hugin.db"));
         Assert.That(cs, Does.Contain("Default Timeout=5"));
     }
+
+    [Test]
+    public async Task InitAsync_backs_up_an_existing_db_with_pending_migrations()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-backup-{Guid.NewGuid():N}.db");
+        var backupPath = path + ".bak";
+        try
+        {
+            // A real sqlite file already sitting at the path, with no __EFMigrationsHistory
+            // table yet, has every migration pending — exactly the "real data about to be
+            // migrated" case InitAsync must protect.
+            await using (var seed = new SqliteConnection($"Data Source={path}"))
+            {
+                await seed.OpenAsync();
+                await using var cmd = seed.CreateCommand();
+                cmd.CommandText = "CREATE TABLE Placeholder (Id INTEGER PRIMARY KEY);";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path))
+                .Options;
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db, path);
+
+            Assert.That(File.Exists(backupPath), Is.True);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+            File.Delete(backupPath);
+        }
+    }
+
+    [Test]
+    public async Task InitAsync_does_not_back_up_a_fresh_db()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-fresh-{Guid.NewGuid():N}.db");
+        var backupPath = path + ".bak";
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path))
+                .Options;
+
+            // No file exists at the path yet — nothing to back up.
+            Assert.That(File.Exists(path), Is.False);
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db, path);
+
+            Assert.That(File.Exists(backupPath), Is.False);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+            File.Delete(backupPath);
+        }
+    }
 }

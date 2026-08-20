@@ -24,15 +24,15 @@ public class CommandParserTests
 
     [Test]
     public void Track_full()
-        => Assert.That(CommandParser.Parse(["track", "915787630", "soekt-selv", "--why", "fordi", "--note", "n", "--svar", "s"]),
-            Is.EqualTo(new TrackCommand("915787630", PipelineStatus.SoektSelv, "fordi", "n", "s")));
+        => Assert.That(CommandParser.Parse(["track", "915787630", "applied", "--why", "fordi", "--note", "n", "--svar", "s"]),
+            Is.EqualTo(new TrackCommand("915787630", PipelineStatus.Applied, "fordi", "n", "s")));
 
     [Test]
     public void Track_status_aliases()
     {
-        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "funnet"])).Status, Is.EqualTo(PipelineStatus.Funnet));
-        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "bedt-get"])).Status, Is.EqualTo(PipelineStatus.BedtGetSjekke));
-        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "svar"])).Status, Is.EqualTo(PipelineStatus.Svar));
+        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "active"])).Status, Is.EqualTo(PipelineStatus.Active));
+        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "applied"])).Status, Is.EqualTo(PipelineStatus.Applied));
+        Assert.That(((TrackCommand)CommandParser.Parse(["track", "1", "answered"])).Status, Is.EqualTo(PipelineStatus.Answered));
     }
 
     [Test]

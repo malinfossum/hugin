@@ -20,7 +20,7 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
   }, [refreshKey])
 
   const trenger = ads.filter(
-    (ad) => ad.pipelineStatus === 'funnet' && ad.daysLeft !== null && ad.daysLeft <= 7
+    (ad) => ad.pipelineStatus === 'active' && ad.daysLeft !== null && ad.daysLeft <= 7
   )
 
   if (trenger.length === 0) return null

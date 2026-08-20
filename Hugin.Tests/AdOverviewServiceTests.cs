@@ -63,12 +63,12 @@ public sealed class AdOverviewServiceTests
         var now = DateTimeOffset.UtcNow;
         var ads = AdsWith(MakeAd("a", orgnr: "999888777"), MakeAd("b", orgnr: "111222333"));
         var pipeline = PipelineWith(new PipelineEntry
-            { Orgnr = "999888777", Status = PipelineStatus.Funnet, Created = now, Updated = now });
+            { Orgnr = "999888777", Status = PipelineStatus.Active, Created = now, Updated = now });
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), new FakeCompanyRepository());
 
         var result = await sut.GetAsync();
 
-        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Funnet));
+        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Active));
         Assert.That(result.Single(a => a.FeedId == "b").PipelineStatus, Is.Null);
     }
 
@@ -90,13 +90,13 @@ public sealed class AdOverviewServiceTests
         // NAV's ad carries the parent orgnr; the pipeline entry is stored under the tracked child.
         var now = DateTimeOffset.UtcNow;
         var ads = AdsWith(MakeAd("a", orgnr: "972483672"));
-        var pipeline = PipelineWith(MakeEntry("925836613", PipelineStatus.Funnet, now));
+        var pipeline = PipelineWith(MakeEntry("925836613", PipelineStatus.Active, now));
         var companies = CompaniesWith(MakeCompany("925836613", parentOrgnr: "972483672"));
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
 
         var result = await sut.GetAsync();
 
-        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Funnet));
+        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Active));
     }
 
     [Test]
@@ -104,13 +104,13 @@ public sealed class AdOverviewServiceTests
     {
         var now = DateTimeOffset.UtcNow;
         var ads = AdsWith(MakeAd("a", orgnr: "111111111")); // child, reports up to tracked orgnr
-        var pipeline = PipelineWith(MakeEntry("999999999", PipelineStatus.SoektSelv, now)); // tracked = root
+        var pipeline = PipelineWith(MakeEntry("999999999", PipelineStatus.Applied, now)); // tracked = root
         var companies = CompaniesWith(MakeCompany("111111111", parentOrgnr: "999999999"));
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
 
         var result = await sut.GetAsync();
 
-        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.SoektSelv));
+        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Applied));
     }
 
     [Test]
@@ -118,7 +118,7 @@ public sealed class AdOverviewServiceTests
     {
         var now = DateTimeOffset.UtcNow;
         var ads = AdsWith(MakeAd("a", orgnr: "555555555"));
-        var pipeline = PipelineWith(MakeEntry("999999999", PipelineStatus.Funnet, now));
+        var pipeline = PipelineWith(MakeEntry("999999999", PipelineStatus.Active, now));
         var companies = CompaniesWith(
             MakeCompany("555555555", parentOrgnr: "666666666"),
             MakeCompany("999999999", parentOrgnr: "888888888"));
@@ -137,13 +137,13 @@ public sealed class AdOverviewServiceTests
         // (via ParentOrgnr) also happens to carry a pipeline entry (Funnet). Exact wins.
         var ads = AdsWith(MakeAd("a", orgnr: "111111111"));
         var pipeline = PipelineWith(
-            MakeEntry("111111111", PipelineStatus.Svar, now),
-            MakeEntry("999999999", PipelineStatus.Funnet, now));
+            MakeEntry("111111111", PipelineStatus.Answered, now),
+            MakeEntry("999999999", PipelineStatus.Active, now));
         var companies = CompaniesWith(MakeCompany("111111111", parentOrgnr: "999999999"));
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
 
         var result = await sut.GetAsync();
 
-        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Svar));
+        Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Answered));
     }
 }

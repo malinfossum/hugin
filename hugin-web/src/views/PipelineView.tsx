@@ -4,7 +4,7 @@ import { useAnnounce } from '../components/LiveRegion'
 import { PIPELINE_LABELS } from '../pipelineLabels'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
 
-const SECTIONS: PipelineStatusSlug[] = ['funnet', 'soekt-selv', 'bedt-get', 'svar']
+const SECTIONS: PipelineStatusSlug[] = ['active', 'applied', 'answered']
 
 interface FormState {
   status: PipelineStatusSlug
@@ -101,12 +101,12 @@ export function PipelineView() {
         return (
           <section key={status} aria-labelledby={headingId} className="card stack">
             <h2 id={headingId}>{PIPELINE_LABELS[status]}</h2>
-            {status === 'funnet' && (
-              <p className="muted help">Funnet-oppføringer tas aldri med i eksporten.</p>
+            {status === 'active' && (
+              <p className="muted help">Aktiv-oppføringer tas aldri med i eksporten.</p>
             )}
             <ul className="stack stack-sm">
               {sectionEntries.map((entry) => {
-                const missingWhy = status !== 'funnet' && !entry.why
+                const missingWhy = status !== 'active' && !entry.why
                 const isEditing = editingOrgnr === entry.orgnr
                 return (
                   <li key={entry.orgnr} className="panel stack stack-sm">

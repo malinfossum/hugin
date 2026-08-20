@@ -13,8 +13,7 @@ public class ExportServiceTests
     private static PipelineEntry Entry(string orgnr, DateTimeOffset updated) => new()
     {
         Orgnr = orgnr,
-        Status = PipelineStatus.SoektSelv,
-        Route = OutreachRoute.SoektSelv,
+        Status = PipelineStatus.Applied,
         Why = "fordi",
         Created = updated,
         Updated = updated,
@@ -33,7 +32,7 @@ public class ExportServiceTests
 
         var markdown = await service.ExportAsync();
 
-        Assert.That(markdown, Does.Contain("## Søkt selv"));
+        Assert.That(markdown, Does.Contain("## Søkt"));
         Assert.That(markdown, Does.Contain("Ferskvare AS"));
     }
 

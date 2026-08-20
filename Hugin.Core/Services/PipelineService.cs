@@ -23,7 +23,7 @@ public sealed class PipelineService(
     IClock clock)
 {
     public async Task<TrackResult> TrackAsync(string orgnr, PipelineStatus status,
-        string? why, string? note, string? svar, CancellationToken ct = default)
+        string? why, string? note, string? svar, bool? starred = null, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
         var fetchedFromBrreg = false;
@@ -40,13 +40,13 @@ public sealed class PipelineService(
         var existing = await pipeline.GetByOrgnrAsync(orgnr, ct);
 
         // Options that were not passed leave the stored values alone — re-tracking a company
-        // to move its status must never wipe the begrunnelse written last week.
+        // to move its status must never wipe the begrunnelse written last week, or the star.
         var entry = new PipelineEntry
         {
             Id = existing?.Id ?? 0,
             Orgnr = orgnr,
             Status = status,
-            Route = RouteFor(status, existing?.Route ?? OutreachRoute.Ingen),
+            Starred = starred ?? existing?.Starred ?? false,
             Why = why ?? existing?.Why ?? "",
             Note = note ?? existing?.Note,
             SvarText = svar ?? existing?.SvarText,
@@ -56,21 +56,10 @@ public sealed class PipelineService(
 
         await pipeline.UpsertAsync(entry, ct);
 
-        var warning = status != PipelineStatus.Funnet && string.IsNullOrWhiteSpace(entry.Why)
+        var warning = status != PipelineStatus.Active && string.IsNullOrWhiteSpace(entry.Why)
             ? $"mangler begrunnelse — GET spør om hvorfor {orgnr} er interessant. Legg den til med --why \"...\""
             : null;
 
         return new TrackResult(entry, fetchedFromBrreg, warning);
     }
-
-    /// <summary>
-    /// Only the two outreach statuses set a route; funnet and svar carry forward whatever was
-    /// already recorded, so an answer never rewrites how the company was approached.
-    /// </summary>
-    private static OutreachRoute RouteFor(PipelineStatus status, OutreachRoute existing) => status switch
-    {
-        PipelineStatus.SoektSelv => OutreachRoute.SoektSelv,
-        PipelineStatus.BedtGetSjekke => OutreachRoute.BedtGetSjekke,
-        _ => existing,
-    };
 }

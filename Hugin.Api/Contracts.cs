@@ -45,21 +45,14 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);
 
-public sealed record PipelineDto(string Orgnr, string CompanyName, string Status, string Route,
+public sealed record PipelineDto(string Orgnr, string CompanyName, string Status, bool Starred,
     string Why, string? Note, string? Svar, DateTimeOffset Updated)
 {
     public static PipelineDto From(PipelineEntry e, string companyName) => new(e.Orgnr, companyName,
-        StatusSlug.ToSlug(e.Status), RouteSlug(e.Route), e.Why, e.Note, e.SvarText, e.Updated);
-
-    private static string RouteSlug(OutreachRoute route) => route switch
-    {
-        OutreachRoute.SoektSelv => "soekt-selv",
-        OutreachRoute.BedtGetSjekke => "bedt-get",
-        _ => "ingen",
-    };
+        StatusSlug.ToSlug(e.Status), e.Starred, e.Why, e.Note, e.SvarText, e.Updated);
 }
 
-public sealed record TrackRequest(string Status, string? Why, string? Note, string? Svar);
+public sealed record TrackRequest(string Status, string? Why, string? Note, string? Svar, bool? Starred);
 
 public sealed record SeenRequest(DateTimeOffset AsOf);
 
@@ -75,19 +68,17 @@ public static class StatusSlug
 {
     public static string ToSlug(PipelineStatus status) => status switch
     {
-        PipelineStatus.Funnet => "funnet",
-        PipelineStatus.SoektSelv => "soekt-selv",
-        PipelineStatus.BedtGetSjekke => "bedt-get",
-        PipelineStatus.Svar => "svar",
+        PipelineStatus.Active => "active",
+        PipelineStatus.Applied => "applied",
+        PipelineStatus.Answered => "answered",
         _ => status.ToString().ToLowerInvariant(),
     };
 
     public static PipelineStatus? Parse(string? slug) => slug switch
     {
-        "funnet" => PipelineStatus.Funnet,
-        "soekt-selv" => PipelineStatus.SoektSelv,
-        "bedt-get" => PipelineStatus.BedtGetSjekke,
-        "svar" => PipelineStatus.Svar,
+        "active" => PipelineStatus.Active,
+        "applied" => PipelineStatus.Applied,
+        "answered" => PipelineStatus.Answered,
         _ => null,
     };
 }
