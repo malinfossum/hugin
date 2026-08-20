@@ -142,6 +142,72 @@ describe('SyncHeader', () => {
     expect(screen.getByText('Synk ferdig.')).toBeInTheDocument()
   })
 
+  it('resumes polling after a completed sync and detects a second completion (regression: restart must not depend on onSyncCompleted identity)', async () => {
+    let call = 0
+    const fetchMock = mockFetch({
+      syncStatus: () => {
+        call += 1
+        // 1: idle (initial poll) · 2: running (1st sync) · 3: finished (1st completion)
+        // 4: running (2nd sync) · 5+: finished (2nd completion)
+        if (call === 1) return syncStatus({ running: false })
+        if (call === 2) return syncStatus({ running: true, startedUtc: '2026-08-19T08:00:00Z' })
+        if (call === 3)
+          return syncStatus({
+            running: false,
+            startedUtc: '2026-08-19T08:00:00Z',
+            finishedUtc: '2026-08-19T08:01:00Z',
+            brreg: { succeeded: true, fetched: 10, error: null },
+            nav: { succeeded: true, fetched: 5, error: null },
+          })
+        if (call === 4) return syncStatus({ running: true, startedUtc: '2026-08-19T08:05:00Z' })
+        return syncStatus({
+          running: false,
+          startedUtc: '2026-08-19T08:05:00Z',
+          finishedUtc: '2026-08-19T08:06:00Z',
+          brreg: { succeeded: true, fetched: 1, error: null },
+          nav: { succeeded: true, fetched: 1, error: null },
+        })
+      },
+    })
+    // A fresh callback each render mimics an un-memoized parent — the fix must not rely on it.
+    const onSyncCompleted = renderHeader(fetchMock)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Synk nå' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+    await act(async () => {
+      // +50ms covers the LiveRegionProvider's announce debounce (see LiveRegion.tsx).
+      await vi.advanceTimersByTimeAsync(2050)
+    })
+
+    expect(onSyncCompleted).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Synk ferdig.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Synk nå' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(screen.getByRole('button', { name: /synker/ })).toBeDisabled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2050)
+    })
+
+    expect(onSyncCompleted).toHaveBeenCalledTimes(2)
+  })
+
   it('announces and renders a visible warning banner on partial failure', async () => {
     let call = 0
     const fetchMock = mockFetch({

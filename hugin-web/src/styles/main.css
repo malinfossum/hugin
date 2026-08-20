@@ -13,6 +13,16 @@ main {
   margin-inline: auto;
 }
 
+/* Touch targets ≥44px (a11y spec) — mobile-first, applies at every breakpoint. */
+button,
+select,
+input[type="date"],
+input[type="search"],
+input[type="text"] {
+  min-height: 44px;
+  padding-inline: 0.75rem;
+}
+
 /* Urgency — color never alone; the days-left number always renders beside it. */
 .frist-rod {
   color: var(--danger, #ff6b6b);

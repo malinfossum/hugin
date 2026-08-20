@@ -31,6 +31,10 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
 
   useEffect(loadStatus, [loadStatus])
 
+  // INVARIANT: polling must survive/resume after a completed sync regardless of parent
+  // memoization of onSyncCompleted. The interval is never stopped on completion — only on
+  // unmount — so a later "Synk nå" click is always picked up by the next 2s tick without
+  // depending on the parent handing us a new callback identity to re-trigger this effect.
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
     const poll = async () => {
@@ -39,7 +43,6 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
       setSync(s)
       if (wasRunning.current && !s.running) {
         wasRunning.current = false
-        clearInterval(timer)
         announce(getFailureMessage(s) ?? 'Synk ferdig.')
         loadStatus()
         onSyncCompleted()

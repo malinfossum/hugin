@@ -150,6 +150,16 @@ Since-date picker, the Preparelogg markdown shown **raw in a styled `<pre>`** (w
 1. Phase 3 — cloud: Azure F1 + Static Web Apps per the hosting-stack decisions, Neon PG, auth.
 2. Unify the CLI/dashboard seams (Hidden flag, track-by-fetch).
 
+## Post-implementation corrections (2026-08-20)
+
+Four defects/omissions found after the build, against the running host rather than in review:
+
+1. **Content root anchors to the exe directory.** `WebApplicationOptions.ContentRootPath` defaults to the process's launch cwd, which breaks `wwwroot` lookup when the published exe is started from anywhere other than its own folder (`ASPNETCORE_CONTENTROOT` unset is the common case). Program.cs now defaults content root to `AppContext.BaseDirectory`, with `ASPNETCORE_CONTENTROOT` still overriding when set (so `WebApplicationFactory` test hosts, which set it themselves, are unaffected). Found running the published exe from a different cwd during integration smoke.
+2. **`AdDto` gained `Published`.** The ad-history view (`Bedrifter` company detail) needs the ad's original publish date to answer "how often do they hire?" — the deadline alone doesn't show cadence. Plan omission; both `AdDto.From` and `AdDto.FromAd` now carry it.
+3. **Loopback-only binding test.** The Testing section below promises this asserted by a test; `WebApplicationFactory` swaps Kestrel for an in-memory `TestServer` and structurally cannot exercise the real `Listen(IPAddress.Loopback, port)` call. `Hugin.Tests/Api/RealHostBindingTests.cs` closes the gap by launching the real host as a subprocess and reading the OS's TCP listener table for the port, asserting every bound address is loopback — real Kestrel, no reliance on LAN reachability or firewall behavior.
+4. **KNOWN LIMITATION (user decision pending) — orgnr join for pipeline badges / Trenger handling.** Both join ads to pipeline entries by exact `EmployerOrgnr`, but NAV sometimes reports a different registry unit than the one actually tracked (real case: a Norsk Tipping ad carried orgnr `972483672`, while the company was tracked under `925836613`) — the join misses and the ad shows no pipeline status. Parent-chain matching (`ParentOrgnr`) is a possible phase-2.1 fix, not built.
+5. **Nytt siden sist / Bedrifter show raw kommune numbers.** No municipality-name lookup exists in the web DTOs yet, so both views print `3407` rather than "Gjøvik" — deferred to phase-2.1.
+
 ## Stress-test record (2026-08-19)
 
 Reviewed through the four-lens stress test (security, privacy, accessibility, loopholes); all 13 findings folded into the sections above — the largest being the localhost-API security model (loopback binding, `X-Hugin` write header, Host validation), the sync-proof `Hidden` flag, the `asOf` seen-mark contract, and the async/focus accessibility rules. Accepted non-fixes:
