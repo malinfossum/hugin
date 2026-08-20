@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
+import { CompanyLink } from '../components/CompanyLink'
 import type { CompanyDetailDto } from '../types'
 
 function formatDate(value: string | null): string {
@@ -64,11 +65,11 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
               </>
             )}
           </dl>
-          {detail.company.website && (
-            <a href={detail.company.website} target="_blank" rel="noopener noreferrer">
-              {detail.company.website}
-            </a>
-          )}
+          <CompanyLink
+            name={detail.company.name}
+            kommuneNavn={detail.company.kommuneNavn}
+            website={detail.company.website}
+          />
 
           <h3>Annonsehistorikk</h3>
           {detail.ads.length === 0 ? (

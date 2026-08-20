@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
+import { CompanyLink } from '../components/CompanyLink'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
 
@@ -130,11 +131,12 @@ export function BedrifterView() {
               </span>
               <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
             </button>
-            {c.website && (
-              <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-muted">
-                {c.website}
-              </a>
-            )}
+            <CompanyLink
+              name={c.name}
+              kommuneNavn={c.kommuneNavn}
+              website={c.website}
+              className="text-muted"
+            />
           </li>
         ))}
       </ul>

@@ -8,7 +8,7 @@ describe('App', () => {
     render(<App />)
 
     const nav = screen.getByRole('navigation', { name: 'Hovedmeny' })
-    const buttons = screen.getAllByRole('button', { name: /Dashbord|Pipeline|Bedrifter|Eksport/ })
+    const buttons = screen.getAllByRole('button', { name: /Dashbord|Søknader|Bedrifter|Eksport/ })
     expect(buttons).toHaveLength(4)
     expect(nav).toBeInTheDocument()
 
@@ -16,13 +16,13 @@ describe('App', () => {
     expect(dashbord).toHaveAttribute('aria-current', 'page')
   })
 
-  it('moves aria-current to Pipeline when clicked', async () => {
+  it('moves aria-current to Søknader when clicked', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Pipeline' }))
+    await user.click(screen.getByRole('button', { name: 'Søknader' }))
 
-    expect(screen.getByRole('button', { name: 'Pipeline' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Søknader' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: 'Dashbord' })).not.toHaveAttribute('aria-current')
   })
 })

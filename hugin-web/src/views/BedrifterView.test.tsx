@@ -145,6 +145,77 @@ describe('BedrifterView', () => {
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })
 
+  it('a company with a website shows the plain website link, unchanged', async () => {
+    const companies = [company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' })]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+
+    const link = screen.getByRole('link', { name: 'https://acme.example' })
+    expect(link).toHaveAttribute('href', 'https://acme.example')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.queryByText(/har ikke egen nettside/)).not.toBeInTheDocument()
+  })
+
+  it('a company without a website shows the fallback note and correctly-encoded Google/Proff links', async () => {
+    const companies = [
+      company({
+        orgnr: '1',
+        name: 'Uten Nettside AS',
+        website: null,
+        kommune: '0301',
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Uten Nettside AS')
+
+    expect(screen.getByText(/har ikke egen nettside/)).toBeInTheDocument()
+
+    const google = screen.getByRole('link', { name: 'Google-søk' })
+    expect(google).toHaveAttribute(
+      'href',
+      `https://www.google.com/search?q=${encodeURIComponent('"Uten Nettside AS" Oslo')}`
+    )
+    expect(google).toHaveAttribute('target', '_blank')
+    expect(google).toHaveAttribute('rel', 'noopener noreferrer')
+
+    const proff = screen.getByRole('link', { name: 'Proff' })
+    expect(proff).toHaveAttribute(
+      'href',
+      `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
+    )
+    expect(proff).toHaveAttribute('target', '_blank')
+    expect(proff).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('CompanyDetail shows the fallback links when the selected company has no website', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Uten Nettside AS', website: null, kommuneNavn: 'Oslo' }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '1': { company: companies[0], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Uten Nettside AS')
+    await user.click(screen.getByRole('button', { name: /Uten Nettside AS/ }))
+
+    await screen.findByRole('heading', { name: 'Uten Nettside AS' })
+    expect(screen.getByText(/har ikke egen nettside/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Google-søk' })).toHaveAttribute(
+      'href',
+      `https://www.google.com/search?q=${encodeURIComponent('"Uten Nettside AS" Oslo')}`
+    )
+    expect(screen.getByRole('link', { name: 'Proff' })).toHaveAttribute(
+      'href',
+      `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
+    )
+  })
+
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {
     const companies = [
       company({ orgnr: '915787630', name: 'Acme AS' }),

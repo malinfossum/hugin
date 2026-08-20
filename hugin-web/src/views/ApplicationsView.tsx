@@ -6,6 +6,46 @@ import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
 
 const SECTIONS: PipelineStatusSlug[] = ['active', 'applied', 'answered']
 
+type SortMode = 'starred' | 'updated' | 'name'
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'starred', label: 'Stjerne først' },
+  { value: 'updated', label: 'Sist oppdatert' },
+  { value: 'name', label: 'Navn' },
+]
+
+const SORT_STORAGE_KEY = 'hugin-soknader-sortering'
+
+function loadSortMode(): SortMode {
+  try {
+    const stored = window.localStorage.getItem(SORT_STORAGE_KEY)
+    if (stored === 'starred' || stored === 'updated' || stored === 'name') return stored
+  } catch {
+    /* localStorage unavailable (private mode etc.) — fall back to the default */
+  }
+  return 'starred'
+}
+
+function saveSortMode(mode: SortMode): void {
+  try {
+    window.localStorage.setItem(SORT_STORAGE_KEY, mode)
+  } catch {
+    /* localStorage unavailable — sort choice just won't persist */
+  }
+}
+
+function sortEntries(entries: PipelineDto[], mode: SortMode): PipelineDto[] {
+  const copy = [...entries]
+  switch (mode) {
+    case 'starred':
+      return copy.sort((a, b) => Number(b.starred) - Number(a.starred))
+    case 'updated':
+      return copy.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
+    case 'name':
+      return copy.sort((a, b) => a.companyName.localeCompare(b.companyName, 'nb'))
+  }
+}
+
 interface FormState {
   status: PipelineStatusSlug
   why: string
@@ -26,13 +66,14 @@ function formatUpdated(updated: string): string {
   return new Date(updated).toLocaleDateString('nb-NO')
 }
 
-export function PipelineView() {
+export function ApplicationsView() {
   const [entries, setEntries] = useState<PipelineDto[]>([])
   const [error, setError] = useState<string | null>(null)
   const [editingOrgnr, setEditingOrgnr] = useState<string | null>(null)
   const [form, setForm] = useState<FormState | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [warning, setWarning] = useState<{ orgnr: string; message: string } | null>(null)
+  const [sortMode, setSortMode] = useState<SortMode>(loadSortMode)
   const announce = useAnnounce()
 
   const load = useCallback(() => {
@@ -59,6 +100,11 @@ export function PipelineView() {
     setFormError(null)
   }
 
+  const handleSortChange = (mode: SortMode) => {
+    setSortMode(mode)
+    saveSortMode(mode)
+  }
+
   const handleSubmit = async (orgnr: string, event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!form) return
@@ -82,6 +128,25 @@ export function PipelineView() {
     announce('Lagret.')
   }
 
+  const toggleStar = async (entry: PipelineDto) => {
+    let response: TrackResponse
+    try {
+      response = await api.put<TrackResponse>(`/api/pipeline/${entry.orgnr}`, {
+        status: entry.status,
+        why: entry.why,
+        note: entry.note,
+        svar: entry.svar,
+        starred: !entry.starred,
+      })
+    } catch (err) {
+      announce(err instanceof ApiError ? err.message : 'Kunne ikke oppdatere stjerne.')
+      return
+    }
+    setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
+    await load()
+    announce(entry.starred ? 'Stjerne fjernet.' : 'Stjerne satt.')
+  }
+
   if (error) {
     return (
       <p role="status" className="alert alert-danger cluster cluster-sm">
@@ -94,9 +159,30 @@ export function PipelineView() {
   }
 
   return (
-    <div className="pipeline-view stack stack-lg">
+    <div className="applications-view stack stack-lg">
+      <div className="field">
+        <label className="label" htmlFor="soknader-sortering">
+          Sorter etter
+        </label>
+        <select
+          id="soknader-sortering"
+          className="select"
+          value={sortMode}
+          onChange={(event) => handleSortChange(event.target.value as SortMode)}
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {SECTIONS.map((status) => {
-        const sectionEntries = entries.filter((e) => e.status === status)
+        const sectionEntries = sortEntries(
+          entries.filter((e) => e.status === status),
+          sortMode
+        )
         const headingId = `pipeline-heading-${status}`
         return (
           <section key={status} aria-labelledby={headingId} className="card stack">
@@ -110,7 +196,18 @@ export function PipelineView() {
                 const isEditing = editingOrgnr === entry.orgnr
                 return (
                   <li key={entry.orgnr} className="panel stack stack-sm">
-                    <span className="text-strong">{entry.companyName}</span>
+                    <div className="cluster cluster-sm cluster-between">
+                      <span className="text-strong">{entry.companyName}</span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost icon-btn"
+                        aria-pressed={entry.starred}
+                        aria-label={entry.starred ? 'Fjern stjerne' : 'Gi stjerne'}
+                        onClick={() => toggleStar(entry)}
+                      >
+                        <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
+                      </button>
+                    </div>
                     {!isEditing && (
                       <>
                         <div className="cluster cluster-sm">

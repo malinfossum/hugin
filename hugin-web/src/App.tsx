@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
+import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
 import { EksportView } from './views/EksportView'
-import { PipelineView } from './views/PipelineView'
 import './styles/main.css'
 
-const VIEWS = ['Dashbord', 'Pipeline', 'Bedrifter', 'Eksport'] as const
+const VIEWS = ['Dashbord', 'Søknader', 'Bedrifter', 'Eksport'] as const
 export type ViewName = (typeof VIEWS)[number]
 
 export default function App() {
@@ -39,7 +39,7 @@ export default function App() {
         <main className="container main-content stack stack-lg">
           <h1 className="visually-hidden">Hugin</h1>
           {view === 'Dashbord' && <DashboardView />}
-          {view === 'Pipeline' && <PipelineView />}
+          {view === 'Søknader' && <ApplicationsView />}
           {view === 'Bedrifter' && <BedrifterView />}
           {view === 'Eksport' && <EksportView />}
         </main>

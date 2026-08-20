@@ -68,7 +68,7 @@ input[type="text"] {
 /* Content lists throughout the app are custom-styled rows, never bullet lists. */
 .frister-list ul,
 .nytt-siden-sist ul,
-.pipeline-view ul,
+.applications-view ul,
 .bedrifter-view ul,
 .company-detail ul {
   list-style: none;

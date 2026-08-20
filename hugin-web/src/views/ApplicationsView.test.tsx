@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import type { PipelineDto, TrackResponse } from '../types'
-import { PipelineView } from './PipelineView'
+import { ApplicationsView } from './ApplicationsView'
+
+const SORT_STORAGE_KEY = 'hugin-soknader-sortering'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -44,6 +46,7 @@ function fakeServer(seed: PipelineDto[], warning: string | null = null) {
       target.why = body.why
       target.note = body.note
       target.svar = body.svar
+      if (body.starred !== undefined) target.starred = body.starred
       target.updated = new Date().toISOString()
       const response: TrackResponse = { entry: { ...target }, warning }
       return Promise.resolve(jsonResponse(response))
@@ -57,16 +60,21 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LiveRegionProvider>
-      <PipelineView />
+      <ApplicationsView />
     </LiveRegionProvider>
   )
 }
 
+function namesInSection(section: HTMLElement): (string | null)[] {
+  return Array.from(section.querySelectorAll('.text-strong')).map((el) => el.textContent)
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem(SORT_STORAGE_KEY)
 })
 
-describe('PipelineView', () => {
+describe('ApplicationsView', () => {
   it('groups entries into the three sections with correct membership', async () => {
     const entries = [
       entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active' }),
@@ -214,5 +222,163 @@ describe('PipelineView', () => {
 
     expect(await screen.findByText('Ugyldig status')).toBeInTheDocument()
     expect(screen.getByLabelText('Status')).toBeInTheDocument()
+  })
+
+  describe('starring', () => {
+    it('toggle PUTs starred flipped with the other fields preserved, and aria-pressed updates after refetch', async () => {
+      const user = userEvent.setup()
+      const fetchMock = fakeServer([
+        entry({
+          orgnr: '1',
+          companyName: 'Acme AS',
+          status: 'active',
+          why: 'grunn',
+          note: 'notat',
+          svar: 'svar',
+          starred: false,
+        }),
+      ])
+      renderView(fetchMock)
+
+      await screen.findByText('Acme AS')
+      const starButton = screen.getByRole('button', { name: 'Gi stjerne' })
+      expect(starButton).toHaveAttribute('aria-pressed', 'false')
+
+      await user.click(starButton)
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/pipeline/1',
+          expect.objectContaining({
+            method: 'PUT',
+            body: JSON.stringify({
+              status: 'active',
+              why: 'grunn',
+              note: 'notat',
+              svar: 'svar',
+              starred: true,
+            }),
+          })
+        )
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Fjern stjerne' })).toHaveAttribute(
+          'aria-pressed',
+          'true'
+        )
+      })
+    })
+
+    it('un-toggling a starred entry sends starred: false', async () => {
+      const user = userEvent.setup()
+      const fetchMock = fakeServer([
+        entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', starred: true }),
+      ])
+      renderView(fetchMock)
+
+      await screen.findByText('Acme AS')
+      await user.click(screen.getByRole('button', { name: 'Fjern stjerne' }))
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/pipeline/1',
+          expect.objectContaining({
+            method: 'PUT',
+            body: expect.stringContaining('"starred":false'),
+          })
+        )
+      })
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Gi stjerne' })).toHaveAttribute(
+          'aria-pressed',
+          'false'
+        )
+      })
+    })
+  })
+
+  describe('sorting', () => {
+    it('select is labeled "Sorter etter" and defaults to "Stjerne først"', async () => {
+      renderView(fakeServer([entry({ orgnr: '1', companyName: 'Acme AS' })]))
+      await screen.findByText('Acme AS')
+
+      const select = screen.getByLabelText('Sorter etter') as HTMLSelectElement
+      expect(select.value).toBe('starred')
+    })
+
+    it('"Stjerne først" orders starred entries before unstarred ones within a section', async () => {
+      const entries = [
+        entry({ orgnr: '1', companyName: 'Bertha', status: 'applied', why: 'x', starred: false }),
+        entry({ orgnr: '2', companyName: 'Anna', status: 'applied', why: 'x', starred: true }),
+      ]
+      renderView(fakeServer(entries))
+      await screen.findByText('Anna')
+
+      const section = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
+      if (!section) throw new Error('section not found')
+      expect(namesInSection(section)).toEqual(['Anna', 'Bertha'])
+    })
+
+    it('"Navn" sorts alphabetically within a section', async () => {
+      const user = userEvent.setup()
+      const entries = [
+        entry({ orgnr: '1', companyName: 'Bertha', status: 'applied', why: 'x' }),
+        entry({ orgnr: '2', companyName: 'Anna', status: 'applied', why: 'x' }),
+      ]
+      renderView(fakeServer(entries))
+      await screen.findByText('Bertha')
+
+      await user.selectOptions(screen.getByLabelText('Sorter etter'), 'name')
+
+      const section = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
+      if (!section) throw new Error('section not found')
+      expect(namesInSection(section)).toEqual(['Anna', 'Bertha'])
+    })
+
+    it('"Sist oppdatert" orders the most recently updated entry first within a section', async () => {
+      const user = userEvent.setup()
+      const entries = [
+        entry({
+          orgnr: '1',
+          companyName: 'Eldre',
+          status: 'applied',
+          why: 'x',
+          updated: '2026-08-10T00:00:00Z',
+        }),
+        entry({
+          orgnr: '2',
+          companyName: 'Nyere',
+          status: 'applied',
+          why: 'x',
+          updated: '2026-08-18T00:00:00Z',
+        }),
+      ]
+      renderView(fakeServer(entries))
+      await screen.findByText('Eldre')
+
+      await user.selectOptions(screen.getByLabelText('Sorter etter'), 'updated')
+
+      const section = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
+      if (!section) throw new Error('section not found')
+      expect(namesInSection(section)).toEqual(['Nyere', 'Eldre'])
+    })
+
+    it('persists the chosen sort mode to localStorage and restores it on the next mount', async () => {
+      const user = userEvent.setup()
+      const entries = [entry({ orgnr: '1', companyName: 'Acme AS' })]
+      const { unmount } = renderView(fakeServer(entries))
+      await screen.findByText('Acme AS')
+
+      await user.selectOptions(screen.getByLabelText('Sorter etter'), 'name')
+      expect(window.localStorage.getItem(SORT_STORAGE_KEY)).toBe('name')
+
+      unmount()
+
+      renderView(fakeServer(entries))
+      await screen.findByText('Acme AS')
+      expect((screen.getByLabelText('Sorter etter') as HTMLSelectElement).value).toBe('name')
+    })
   })
 })
