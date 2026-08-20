@@ -12,6 +12,23 @@
 @import url("../../design-system/compositions/index.css");
 @import url("../../design-system/utilities/index.css");
 
+/* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
+   up to 1.75rem) is sized for marketing/hero pages — on a data-dense dashboard it read as way
+   too loud. Hugin's real page title is a visually-hidden h1 (see App.tsx), and every visible
+   section title is an h2 (FristerList, NyttSidenSist, TrengerHandling, ApplicationsView,
+   CompanyDetail), so this is the scale that actually matters here. Steps each level down one
+   DS token rather than picking arbitrary sizes, so it stays consistent with the rest of the
+   type system across every view. */
+h1 {
+  font-size: var(--text-2xl);
+}
+h2 {
+  font-size: var(--text-xl);
+}
+h3 {
+  font-size: var(--text-md);
+}
+
 /* Touch targets ≥44px (a11y spec) — mobile-first, applies at every breakpoint. */
 button,
 select,

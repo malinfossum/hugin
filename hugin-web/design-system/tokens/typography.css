@@ -128,3 +128,18 @@
 	--leading-snug: 1.25;
 	--leading-normal: 1.6;
 }
+
+/*
+ * Default identity (3.0.0): Daily, promoted — display face only.
+ * --font-sans is untouched: Daily's body face is already Figtree, the same
+ * as the :root default above, so there is nothing to override there.
+ * --font-display stays "Sora" in the plain :root above; gold, wend, tidsro
+ * and kenaz never set their own --font-display, so they still derive Sora
+ * from it. This block only wins for the "no palette chosen" state — see the
+ * matching comment in tokens/colors.css for why the selector pair below
+ * never fights a named palette on specificity.
+ */
+[data-palette="default"],
+html:not([data-palette]) {
+	--font-display: "Space Grotesk", "Figtree", sans-serif;
+}

@@ -1,11 +1,22 @@
 /*
- * OLED foundation — shared by the daily + ignite palettes.
- * Both sit on a warm, near-black ground with warm ivory text; only the surface
- * ramp, accent and type differ between them (see daily.css / ignite.css).
+ * OLED foundation — shared by the daily, ignite and hugin palettes, and by the
+ * default identity itself (3.0.0 promoted daily to be what renders with no
+ * data-palette chosen). All four sit on a warm, near-black ground with warm
+ * ivory text; only the surface ramp, accent and type differ between them (see
+ * daily.css / ignite.css / hugin.css and the default block in colors.css).
  * surface-0 is reserved true black for the deepest layer (menus, overlays).
+ *
+ * "[data-palette="default"], html:not([data-palette])" is the same
+ * mutually-exclusive pair used in colors.css/typography.css for the default
+ * block — see the comment there for why it never fights daily/ignite/hugin
+ * (or gold/wend/tidsro/kenaz, which keep resolving text/border from the plain
+ * :root below instead) on specificity.
  */
 [data-palette="daily"],
-[data-palette="ignite"] {
+[data-palette="ignite"],
+[data-palette="hugin"],
+[data-palette="default"],
+html:not([data-palette]) {
 	--surface-0: #000000;
 
 	--text: #faf9f5;
