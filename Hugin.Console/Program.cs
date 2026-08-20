@@ -116,6 +116,7 @@ internal static class Program
         services.AddScoped<IPipelineRepository, EfPipelineRepository>();
         services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
         services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
+        services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 
         services.AddSingleton<IBrregClient>(_ =>
             new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));

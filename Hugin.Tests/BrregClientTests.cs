@@ -70,4 +70,28 @@ public class BrregClientTests
         var client = new BrregClient(HttpFixtures.Client(_ => HttpFixtures.NotFound()));
         Assert.That(await client.GetByOrgnrAsync("000000000"), Is.Null);
     }
+
+    [Test]
+    public async Task GetKommuner_maps_and_normalizes_names()
+    {
+        const string body = """
+            {"_embedded":{"kommuner":[
+                {"nummer":"0301","navn":"OSLO"},
+                {"nummer":"3453","navn":"VÅGÅ"},
+                {"nummer":"3454","navn":"NORD-AURDAL"}
+            ]}}
+            """;
+
+        var client = new BrregClient(HttpFixtures.Client(request =>
+            request.RequestUri!.ToString().Contains("kommuner", StringComparison.Ordinal)
+                ? HttpFixtures.Json(body)
+                : HttpFixtures.NotFound()));
+
+        var result = await client.GetKommunerAsync();
+
+        Assert.That(result.Select(k => k.Number), Is.EquivalentTo(new[] { "0301", "3453", "3454" }));
+        Assert.That(result.Single(k => k.Number == "0301").Name, Is.EqualTo("Oslo"));
+        Assert.That(result.Single(k => k.Number == "3453").Name, Is.EqualTo("Vågå"));
+        Assert.That(result.Single(k => k.Number == "3454").Name, Is.EqualTo("Nord-Aurdal"));
+    }
 }

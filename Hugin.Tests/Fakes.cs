@@ -13,11 +13,16 @@ public sealed class FakeBrregClient : IBrregClient
 {
     public List<RegisterCompany> Companies { get; init; } = [];
     public Dictionary<string, RegisterCompany> ByOrgnr { get; init; } = [];
+    public List<Kommune> Kommuner { get; init; } = [];
     public bool Throws { get; set; }
 
     /// <summary>Makes only GetByOrgnrAsync fail, leaving GetCompaniesAsync (discovery) alone —
     /// for tests isolating employer-enrichment failure from discovery failure.</summary>
     public bool ThrowsOnGetByOrgnr { get; set; }
+
+    /// <summary>Makes only GetKommunerAsync fail — for tests isolating the kommune-register
+    /// fetch from discovery failure.</summary>
+    public bool ThrowsOnGetKommuner { get; set; }
 
     /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
     public List<string> ByOrgnrRequests { get; } = [];
@@ -39,6 +44,13 @@ public sealed class FakeBrregClient : IBrregClient
         if (OnCall is not null) await OnCall();
         if (Throws || ThrowsOnGetByOrgnr) throw new HttpRequestException("brreg utilgjengelig");
         return ByOrgnr.GetValueOrDefault(orgnr);
+    }
+
+    public async Task<IReadOnlyList<Kommune>> GetKommunerAsync(CancellationToken ct = default)
+    {
+        if (OnCall is not null) await OnCall();
+        if (Throws || ThrowsOnGetKommuner) throw new HttpRequestException("brreg utilgjengelig");
+        return Kommuner;
     }
 }
 
@@ -254,6 +266,20 @@ internal sealed class FakeReviewMarkRepository : IReviewMarkRepository
     public Task SetAsync(DateTimeOffset mark, CancellationToken ct = default)
     {
         Mark = mark;
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeKommuneRepository : IKommuneRepository
+{
+    public Dictionary<string, string> Store { get; } = [];
+
+    public Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<string, string>>(Store);
+
+    public Task UpsertManyAsync(IReadOnlyList<Kommune> kommuner, CancellationToken ct = default)
+    {
+        foreach (var kommune in kommuner) Store[kommune.Number] = kommune.Name;
         return Task.CompletedTask;
     }
 }

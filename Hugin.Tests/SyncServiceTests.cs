@@ -23,6 +23,7 @@ public class SyncServiceTests
         FakeBrregClient Brreg,
         FakeNavFeedClient Nav,
         FakeCompanyRepository Companies,
+        FakeKommuneRepository Kommuner,
         FakeAdRepository Ads,
         FakeSyncStateRepository SyncState,
         FakeReviewMarkRepository ReviewMark,
@@ -36,12 +37,13 @@ public class SyncServiceTests
         ads ??= new FakeAdRepository();
 
         var companies = new FakeCompanyRepository();
+        var kommuner = new FakeKommuneRepository();
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
 
-        var service = new SyncService(brreg, nav, companies, ads, syncState, reviewMark, clock, new HuginConfig());
-        return new Harness(service, brreg, nav, companies, ads, syncState, reviewMark, clock);
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, clock, new HuginConfig());
+        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, clock);
     }
 
     [Test]
@@ -206,6 +208,38 @@ public class SyncServiceTests
 
         Assert.That(h.Ads.Store["gammel"].IsActive, Is.False, "past Expires counts as gone even if the feed has not said so");
         Assert.That(h.Ads.Store["fersk"].IsActive, Is.True);
+    }
+
+    [Test]
+    public async Task Kommune_register_is_upserted_after_a_successful_brreg_sync()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner = { new Kommune { Number = "0301", Name = "Oslo" } },
+        };
+
+        var h = Build(brreg: brreg);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True);
+        Assert.That(h.Kommuner.Store["0301"], Is.EqualTo("Oslo"));
+    }
+
+    [Test]
+    public async Task Kommune_fetch_failure_does_not_fail_the_brreg_result()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            ThrowsOnGetKommuner = true,
+        };
+
+        var h = Build(brreg: brreg);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True, "a kommune-register hiccup must not fail company discovery");
+        Assert.That(h.Kommuner.Store, Is.Empty, "names simply stay stale — nothing to upsert on failure");
     }
 
     [Test]

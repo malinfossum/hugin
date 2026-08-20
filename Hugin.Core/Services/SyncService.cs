@@ -20,6 +20,7 @@ public sealed class SyncService(
     IBrregClient brreg,
     INavFeedClient nav,
     ICompanyRepository companies,
+    IKommuneRepository kommuner,
     IAdRepository ads,
     ISyncStateRepository syncState,
     IReviewMarkRepository reviewMark,
@@ -78,11 +79,32 @@ public sealed class SyncService(
                 await companies.UpsertAsync(company, now, ct);
 
             await syncState.SetAsync("brreg", null, now, ct);
+
+            await SyncKommunerAsync(ct);
+
             return new SourceResult(true, fetched.Count, null);
         }
         catch (Exception ex)
         {
             return new SourceResult(false, 0, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// The kommune register is a name lookup, not tracked data — a failure here must never
+    /// fail the brreg result that companies were just synced under. Names simply stay stale
+    /// until the next successful sync.
+    /// </summary>
+    private async Task SyncKommunerAsync(CancellationToken ct)
+    {
+        try
+        {
+            var fetched = await brreg.GetKommunerAsync(ct);
+            await kommuner.UpsertManyAsync(fetched, ct);
+        }
+        catch (Exception)
+        {
+            // Best-effort — see summary above.
         }
     }
 

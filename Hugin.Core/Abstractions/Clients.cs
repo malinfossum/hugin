@@ -21,6 +21,10 @@ public interface IBrregClient
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default);
 
     public Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default);
+
+    /// <summary>The full kommune register (number → display name) — every kommune, not just
+    /// the ones Hugin is configured to track.</summary>
+    public Task<IReadOnlyList<Models.Kommune>> GetKommunerAsync(CancellationToken ct = default);
 }
 
 public interface INavFeedClient

@@ -26,9 +26,15 @@ public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<A
 public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, string? KommuneNavn,
     string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr)
 {
-    public static CompanyDto From(Company c, HuginConfig config) => new(c.Orgnr, c.Name, c.MunicipalityNumber,
-        config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name,
-        c.NaceCode, c.IsBranch, c.Website, c.ParentOrgnr);
+    // Resolution order: the configured municipality list (Hugin's own tracked region) wins
+    // first, then the full Brreg kommune register (covers every number, e.g. a parent or an
+    // enriched ad employer sitting outside the tracked region), then the raw number as a
+    // last resort — null only when the company itself has no kommune number.
+    public static CompanyDto From(Company c, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
+        new(c.Orgnr, c.Name, c.MunicipalityNumber,
+            config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name
+                ?? (c.MunicipalityNumber is { } number ? kommuner.GetValueOrDefault(number, number) : null),
+            c.NaceCode, c.IsBranch, c.Website, c.ParentOrgnr);
 }
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);

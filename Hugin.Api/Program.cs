@@ -41,6 +41,7 @@ builder.Services.AddScoped<IAdRepository, EfAdRepository>();
 builder.Services.AddScoped<IPipelineRepository, EfPipelineRepository>();
 builder.Services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
 builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
+builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 
 builder.Services.AddSingleton<IBrregClient>(_ =>
     new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));

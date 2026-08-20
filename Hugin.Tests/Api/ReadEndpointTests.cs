@@ -80,6 +80,31 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
+    public async Task Companies_list_resolves_kommune_navn_from_the_register_when_config_does_not_have_it()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            // 0301 (Oslo) is outside the configured municipality list — a parent or an
+            // enriched ad employer sitting in the capital, resolved only via the register.
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("111222333", "Oslo-kontoret AS", "0301", "62.100", null, false, null), now);
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Ferskvare AS", "3407", "62.100", null, false, null), now);
+            await scope.ServiceProvider.GetRequiredService<IKommuneRepository>()
+                .UpsertManyAsync([new Kommune { Number = "0301", Name = "Oslo" }]);
+        }
+
+        var response = await _client.GetAsync("/api/companies");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
+        Assert.That(companies!.Single(c => c.Orgnr == "111222333").KommuneNavn, Is.EqualTo("Oslo"));
+        Assert.That(companies!.Single(c => c.Orgnr == "999888777").KommuneNavn, Is.EqualTo("Gjøvik"),
+            "the configured municipality name still wins over the register");
+    }
+
+    [Test]
     public async Task Company_detail_404_for_unknown_orgnr()
     {
         var response = await _client.GetAsync("/api/companies/000000000");

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Hugin.Core.Abstractions;
+using Hugin.Core.Models;
 using Hugin.Core.Services;
 
 namespace Hugin.Infrastructure.Http;
@@ -44,6 +45,27 @@ public sealed class BrregClient(HttpClient http) : IBrregClient
         // stored whatever its industry code (Norsk Tipping is 92, Statens vegvesen 84).
         return await FetchOneAsync($"enheter/{orgnr}", isBranch: false, ct)
             ?? await FetchOneAsync($"underenheter/{orgnr}", isBranch: true, ct);
+    }
+
+    public async Task<IReadOnlyList<Kommune>> GetKommunerAsync(CancellationToken ct = default)
+    {
+        using var response = await http.GetAsync("kommuner?size=400", ct);
+        response.EnsureSuccessStatusCode();
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+        var root = doc.RootElement;
+
+        var results = new List<Kommune>();
+        if (!root.TryGetProperty("_embedded", out var embedded) || !embedded.TryGetProperty("kommuner", out var items))
+            return results;
+
+        foreach (var item in items.EnumerateArray())
+        {
+            if (String(item, "nummer") is not { } number || String(item, "navn") is not { } name) continue;
+            results.Add(new Kommune { Number = number, Name = KommuneNameNormalizer.Normalize(name) });
+        }
+
+        return results;
     }
 
     private async Task<RegisterCompany?> FetchOneAsync(string path, bool isBranch, CancellationToken ct)

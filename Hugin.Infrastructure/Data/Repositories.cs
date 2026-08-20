@@ -188,6 +188,27 @@ public sealed class EfSyncStateRepository(HuginDbContext db) : ISyncStateReposit
     }
 }
 
+public sealed class EfKommuneRepository(HuginDbContext db) : IKommuneRepository
+{
+    public async Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken ct = default) =>
+        await db.Kommuner.ToDictionaryAsync(k => k.Number, k => k.Name, ct);
+
+    public async Task UpsertManyAsync(IReadOnlyList<Kommune> kommuner, CancellationToken ct = default)
+    {
+        foreach (var kommune in kommuner)
+        {
+            var existing = await db.Kommuner.FindAsync([kommune.Number], ct);
+
+            if (existing is null)
+                db.Kommuner.Add(new Kommune { Number = kommune.Number, Name = kommune.Name });
+            else
+                existing.Name = kommune.Name;
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+}
+
 public sealed class EfReviewMarkRepository(HuginDbContext db) : IReviewMarkRepository
 {
     private const int SingletonId = 1;

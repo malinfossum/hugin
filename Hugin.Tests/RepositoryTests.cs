@@ -1,5 +1,6 @@
 using Hugin.Infrastructure.Data;
 using Hugin.Core.Abstractions;
+using Hugin.Core.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -189,6 +190,23 @@ public class RepositoryTests
 
         var ads = await repo.GetByEmployerAsync("999888777");
         Assert.That(ads.Select(a => a.FeedId), Is.EqualTo(new[] { "new", "old" }));
+    }
+
+    [Test]
+    public async Task Kommune_upsert_many_inserts_and_updates()
+    {
+        var repo = new EfKommuneRepository(_db);
+        await repo.UpsertManyAsync([
+            new Kommune { Number = "0301", Name = "Oslo" },
+            new Kommune { Number = "3407", Name = "Gjøvik" },
+        ]);
+        await repo.UpsertManyAsync([
+            new Kommune { Number = "0301", Name = "Oslo (endret)" },
+        ]);
+
+        var all = await repo.GetAllAsync();
+        Assert.That(all["0301"], Is.EqualTo("Oslo (endret)"));
+        Assert.That(all["3407"], Is.EqualTo("Gjøvik"));
     }
 
     [Test]

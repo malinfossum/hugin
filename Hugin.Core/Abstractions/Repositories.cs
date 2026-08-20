@@ -58,3 +58,12 @@ public interface IReviewMarkRepository
 
     public Task SetAsync(DateTimeOffset mark, CancellationToken ct = default);
 }
+
+/// <summary>Brreg's kommune register — number → name, covering every kommune, not just the
+/// configured ones.</summary>
+public interface IKommuneRepository
+{
+    public Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken ct = default);
+
+    public Task UpsertManyAsync(IReadOnlyList<Models.Kommune> kommuner, CancellationToken ct = default);
+}
