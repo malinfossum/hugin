@@ -141,10 +141,55 @@ Commit: `feat: hugin palette via workbench, calmer heading scale`
 - **Did not touch `Hugin.Api`'s built `wwwroot` output** beyond what `npm run build` regenerates —
   no manual edits to generated assets.
 
+## Post-review fix (2026-08-20)
+
+Review flagged one Important gap: the consumer-impact analysis only covered palettes living
+inside the workbench repo. It missed that a real downstream repo, `varde/web` (public, live),
+has **no `data-palette` pin** and is still on design-system **2.0.2** — its next extract would
+have silently flipped it from the pre-3.0.0 default to Daily, with no way back short of
+freezing the whole design system at 2.0.2 forever, since the old default look wasn't preserved
+anywhere as an opt-in.
+
+Fix, all on the `feat/hugin-palette` branch (workbench, not merged):
+
+1. **New opt-in palette `classic.css`** (`data-palette="classic"`): the pre-3.0.0 default
+   identity, restated byte-for-byte from the unedited plain `:root`/`:root[data-theme="light"]`
+   blocks in `colors.css` and `typography.css` — true-black surfaces, cool blue-grey accent,
+   Sora display, dark-ink solid-button formula (`--accent-solid: var(--accent)`, unlike
+   daily/hugin's hardcoded ember ink, since the old accent was light enough to pass AA against
+   dark ink on its own). Registered in `tokens/palettes/index.css`, the gallery switcher button,
+   and the gallery active-highlight rule — the same three touch points every other palette uses.
+   Added to the AA-contrast test loop and the README-needle check in
+   `tools/design-system.test.mjs`.
+2. **PR body rewritten** with the real downstream table: `hugin`/`ignite`/`kenaz`/`tidsro` all
+   pin their own palette explicitly (unaffected); `varde/web` is unpinned on 2.0.2 and will
+   adopt Daily on its next sync — called out as Malin's decision (pin `classic` to keep today's
+   look, or accept the reskin), not acted on here. The `varde` repo itself was not touched, per
+   instruction.
+3. **Fixed an inaccurate aside**: the "Default identity" comment in `colors.css` and the
+   CHANGELOG both claimed none of gold/wend/tidsro/kenaz touch `--on-accent`/`--accent-solid` —
+   false for `kenaz`, which declares its own dark `--on-accent` and light `--accent-solid`
+   (`kenaz.css`). Doesn't change the actual conclusion (the new default selector pair still never
+   matches `[data-palette="kenaz"]`, so kenaz is unaffected regardless of what it declares), but
+   the prose was wrong and now names exactly what kenaz overrides and what it doesn't.
+4. Re-ran `node --test "tools/*.test.mjs"` (**63/63 green** — same count as before; `classic.css`
+   added scopes to the existing contrast-loop test rather than new top-level tests) and
+   `node tools/check-links.mjs` (OK). Both scaffolds re-extracted with `--force` (VERSION stays
+   3.0.0 — this is still-unmerged content on the same unreleased version) and confirmed
+   `current` via `--check`. Pushed `50e1589` to `feat/hugin-palette`; PR #15 updated in place.
+
+Then in Hugin: re-extracted `hugin-web`'s design-system mirror from the updated branch
+(`node tools/extract.mjs design-system <hugin-web> --force`, since the same-version content
+drift halt applies here too) — picks up `classic.css` and the corrected comments. `npm test`
+**74/74 green**, `npm run build` clean. Commit `b60a293`,
+`chore: DS re-extract — classic palette added upstream`.
+
 ## Status contract
 
-Task 5 complete. Workbench: branch `feat/hugin-palette` pushed, PR #15 open, not merged (per
-instructions — merging is Malin's). Hugin: one commit on `main`,
-`feat: hugin palette via workbench, calmer heading scale`. `npm test` 74/74, `npm run build`
-clean, `npx biome check .` 0 errors/3 known warnings, `dotnet test` 206/206 unchanged. No
-`git stash` used in either repo.
+Task 5 complete, including the post-review fix. Workbench: branch `feat/hugin-palette` pushed
+(now at `50e1589`), PR #15 open, not merged. Hugin: two commits on `main` —
+`feat: hugin palette via workbench, calmer heading scale` and
+`chore: DS re-extract — classic palette added upstream`. `npm test` 74/74, `npm run build`
+clean, `npx biome check .` 0 errors/3 known warnings (unchanged by the fix), `dotnet test`
+206/206 unchanged (not re-run for the fix — frontend/design-system-only). No `git stash` used
+in either repo. `varde/web`'s reskin decision is flagged in PR #15, not acted on.
