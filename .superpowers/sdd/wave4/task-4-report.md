@@ -116,3 +116,32 @@ known warnings, `dotnet test` 206/206 green and untouched. One commit created pe
 Every user-facing string in `hugin-web/src` now flows through `useT()`/`pipelineLabel()`; the
 language toggle in the topbar switches instantly, persists to `localStorage`, and keeps
 `<html lang>` in sync; dates format with `nb-NO`/`en-GB` depending on the active language.
+
+## Post-review fix (2026-08-20)
+
+Review flagged one Important issue: `detectLang()` only matched `startsWith('nb')`/`'no'` —
+a Nynorsk browser (`navigator.language` = `nn`/`nn-NO`) fell through to English instead of
+bokmål. Also flagged: the whole `navigator.language` branch was structurally untested, since
+`test-setup.ts`'s `beforeEach` pre-seeds `localStorage['hugin-lang']` on every test, which
+short-circuits `detectLang()` before it ever reaches the browser-language check.
+
+Fix:
+
+1. Added `browserLang.startsWith('nn')` to the Norwegian bucket in `detectLang()`
+   (`hugin-web/src/i18n/index.ts`) alongside the existing `nb`/`no` checks — Nynorsk users now
+   get the bokmål table (the only Norwegian table this app ships), never English.
+2. Exported `detectLang()` (previously module-private) so it can be unit-tested directly rather
+   than only indirectly through `LanguageProvider`'s initial state.
+3. Added a `describe('detectLang (browser fallback, no stored preference)', ...)` block to
+   `hugin-web/src/i18n/index.test.ts`: a `beforeEach` removes the pinned `hugin-lang` localStorage
+   key (undoing `test-setup.ts`'s global pin just for this block) so the navigator-language
+   branch is actually reached, and each test mocks `navigator.language` via
+   `Object.defineProperty(navigator, 'language', { value, configurable: true })`, restored in
+   `afterEach`. Four cases: `nn-NO` → `nb`, `nb-NO` → `nb`, `sv-SE` → `en`, `en-US` → `en`.
+
+Verify: `npm test` — **74/74 green** (was 70; +4 detection tests). `npm run build` — clean.
+`npx biome check .` — 0 errors, the same 3 known warnings (import-order in the new test file
+was auto-fixed by `biome check --write`, no behavior change). `dotnet test` not re-run — this
+fix only touches `hugin-web/src/i18n/`, no backend surface.
+
+Commit: `fix: nynorsk browsers get bokmål, detection path tested`.

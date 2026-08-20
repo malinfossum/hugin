@@ -22,8 +22,11 @@ export function localeFor(lang: Lang): string {
   return LOCALES[lang]
 }
 
-/** localStorage `hugin-lang` wins; otherwise nb/no browsers get nb, everyone else gets en. */
-function detectLang(): Lang {
+/** localStorage `hugin-lang` wins; otherwise nb/nn/no browsers get nb (bokmål is the only
+ * Norwegian table we ship — Nynorsk users still get Norwegian, not English), everyone else
+ * gets en. Exported (not just used internally) so detection can be unit-tested directly
+ * instead of only indirectly through LanguageProvider's initial state. */
+export function detectLang(): Lang {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (stored === 'nb' || stored === 'en') return stored
@@ -31,7 +34,9 @@ function detectLang(): Lang {
     /* localStorage unavailable (private mode etc.) — fall through to browser detection */
   }
   const browserLang = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : ''
-  return browserLang.startsWith('nb') || browserLang.startsWith('no') ? 'nb' : 'en'
+  const isNorwegian =
+    browserLang.startsWith('nb') || browserLang.startsWith('nn') || browserLang.startsWith('no')
+  return isNorwegian ? 'nb' : 'en'
 }
 
 interface LanguageContextValue {
