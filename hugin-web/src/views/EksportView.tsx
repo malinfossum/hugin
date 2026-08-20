@@ -40,9 +40,9 @@ export function EksportView() {
 
   if (error) {
     return (
-      <p role="status">
-        {error}{' '}
-        <button type="button" onClick={() => load(since)}>
+      <p role="status" className="alert alert-danger cluster cluster-sm">
+        {error}
+        <button type="button" className="btn btn-ghost" onClick={() => load(since)}>
           Prøv igjen
         </button>
       </p>
@@ -50,20 +50,27 @@ export function EksportView() {
   }
 
   return (
-    <div className="eksport-view">
-      <div className="eksport-controls">
-        <label htmlFor="eksport-since">Siden dato</label>
-        <input
-          id="eksport-since"
-          type="date"
-          value={since}
-          onChange={(event) => setSince(event.target.value)}
-        />
-        <button type="button" onClick={handleCopy}>
+    <div className="eksport-view stack">
+      <div className="eksport-controls cluster">
+        <div className="field">
+          <label className="label" htmlFor="eksport-since">
+            Siden dato
+          </label>
+          <input
+            id="eksport-since"
+            className="input"
+            type="date"
+            value={since}
+            onChange={(event) => setSince(event.target.value)}
+          />
+        </div>
+        <button type="button" className="btn btn-primary" onClick={handleCopy}>
           Kopier
         </button>
       </div>
-      <pre className="eksport-markdown">{markdown}</pre>
+      <div className="panel">
+        <pre className="eksport-markdown">{markdown}</pre>
+      </div>
     </div>
   )
 }

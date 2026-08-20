@@ -71,9 +71,9 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
   const failureMessage = sync && !sync.running ? getFailureMessage(sync) : null
 
   return (
-    <header className="sync-header">
+    <header className="sync-header card stack">
       <h2 className="visually-hidden">Synkronisering</h2>
-      <dl className="sync-times">
+      <dl className="sync-times cluster text-muted">
         <div>
           <dt>Brreg</dt>
           <dd>{formatLastSync(status?.brreg)}</dd>
@@ -83,11 +83,16 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
           <dd>{formatLastSync(status?.nav)}</dd>
         </div>
       </dl>
-      <p className="sync-counts">
+      <p className="sync-counts text-muted">
         {status?.activeAds ?? 0} aktive annonser · {status?.companies ?? 0} bedrifter ·{' '}
         {status?.pipelineEntries ?? 0} i pipeline
       </p>
-      <button type="button" onClick={startSync} disabled={sync?.running ?? false}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={startSync}
+        disabled={sync?.running ?? false}
+      >
         {sync?.running ? (
           <>
             <span className="spinner" aria-hidden="true" />
@@ -98,7 +103,7 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
         )}
       </button>
       {status && status.linkouts.length > 0 && (
-        <ul className="linkouts">
+        <ul className="linkouts cluster cluster-sm">
           {status.linkouts.map((linkout) => (
             <li key={linkout.url}>
               <a href={linkout.url} target="_blank" rel="noopener noreferrer">
@@ -109,7 +114,7 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
         </ul>
       )}
       {failureMessage && (
-        <p role="status" className="advarsel">
+        <p role="status" className="alert alert-danger">
           {failureMessage}
         </p>
       )}

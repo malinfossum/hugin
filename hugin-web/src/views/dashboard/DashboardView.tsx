@@ -8,7 +8,7 @@ export function DashboardView() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   return (
-    <div className="dashboard">
+    <div className="dashboard stack stack-lg">
       <SyncHeader onSyncCompleted={() => setRefreshKey((k) => k + 1)} />
       <TrengerHandling refreshKey={refreshKey} />
       <FristerList refreshKey={refreshKey} />

@@ -26,7 +26,7 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
   if (trenger.length === 0) return null
 
   return (
-    <section aria-labelledby="trenger-heading" className="trenger-handling">
+    <section aria-labelledby="trenger-heading" className="trenger-handling alert alert-warning">
       <h2 id="trenger-heading">Trenger handling</h2>
       <ul>
         {trenger.map((ad) => (

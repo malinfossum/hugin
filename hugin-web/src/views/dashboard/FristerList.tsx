@@ -11,6 +11,13 @@ function urgencyClass(daysLeft: number | null): string | undefined {
   return undefined
 }
 
+/** Badge treatment for the days-left chip, layered with the urgency color class above. */
+function daysLeftBadgeClass(daysLeft: number | null): string {
+  const badge = daysLeft === null ? 'badge' : daysLeft <= 3 ? 'badge badge-danger' : daysLeft <= 7 ? 'badge badge-warning' : 'badge'
+  const urgency = urgencyClass(daysLeft)
+  return urgency ? `${badge} ${urgency}` : badge
+}
+
 function daysLeftText(daysLeft: number | null): string {
   if (daysLeft === null) return 'ingen frist'
   if (daysLeft < 0) return 'utløpt'
@@ -82,11 +89,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   }
 
   return (
-    <section aria-labelledby="frister-heading" className="frister-list">
+    <section aria-labelledby="frister-heading" className="frister-list card stack">
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
         Frister
       </h2>
-      <label>
+      <label className="cluster cluster-sm">
         <input
           type="checkbox"
           checked={showHidden}
@@ -95,46 +102,53 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
         Vis skjulte
       </label>
       {error && (
-        <p role="status">
-          {error}{' '}
-          <button type="button" onClick={load}>
+        <p role="status" className="alert alert-danger cluster cluster-sm">
+          {error}
+          <button type="button" className="btn btn-ghost" onClick={load}>
             Prøv igjen
           </button>
         </p>
       )}
-      <ul>
+      <ul className="stack stack-sm">
         {ads.map((ad) => (
           <li key={ad.feedId} className="frist-row">
-            {ad.sourceUrl ? (
-              <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
-                {ad.title}
-              </a>
-            ) : (
-              <span>{ad.title}</span>
-            )}
-            <span>{ad.employer}</span>
-            <span>{formatExpires(ad.expires)}</span>
-            <span className={urgencyClass(ad.daysLeft)}>{daysLeftText(ad.daysLeft)}</span>
-            <span>{ad.category}</span>
-            {ad.pipelineStatus && (
-              <span className="pipeline-badge">{PIPELINE_LABELS[ad.pipelineStatus]}</span>
-            )}
-            {ad.hidden ? (
-              <button type="button" onClick={() => handleAngreSkjul(ad.feedId)}>
-                Angre skjul
-              </button>
-            ) : (
-              <button
-                type="button"
-                ref={(el) => {
-                  if (el) skjulRefs.current.set(ad.feedId, el)
-                  else skjulRefs.current.delete(ad.feedId)
-                }}
-                onClick={() => handleSkjul(ad.feedId)}
-              >
-                Skjul
-              </button>
-            )}
+            <div className="frist-row-title stack stack-sm">
+              {ad.sourceUrl ? (
+                <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
+                  {ad.title}
+                </a>
+              ) : (
+                <span>{ad.title}</span>
+              )}
+              <span className="text-muted">{ad.employer}</span>
+            </div>
+            <div className="frist-row-date cluster cluster-sm">
+              <span className="text-muted">{formatExpires(ad.expires)}</span>
+              <span className={daysLeftBadgeClass(ad.daysLeft)}>{daysLeftText(ad.daysLeft)}</span>
+            </div>
+            <span className="text-muted">{ad.category}</span>
+            <div className="frist-row-actions cluster cluster-sm">
+              {ad.pipelineStatus && (
+                <span className="badge badge-accent">{PIPELINE_LABELS[ad.pipelineStatus]}</span>
+              )}
+              {ad.hidden ? (
+                <button type="button" className="btn btn-ghost" onClick={() => handleAngreSkjul(ad.feedId)}>
+                  Angre skjul
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  ref={(el) => {
+                    if (el) skjulRefs.current.set(ad.feedId, el)
+                    else skjulRefs.current.delete(ad.feedId)
+                  }}
+                  onClick={() => handleSkjul(ad.feedId)}
+                >
+                  Skjul
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

@@ -14,25 +14,36 @@ export default function App() {
 
   return (
     <LiveRegionProvider>
-      <nav aria-label="Hovedmeny">
-        {VIEWS.map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => setView(name)}
-            aria-current={view === name ? 'page' : undefined}
-          >
-            {name}
-          </button>
-        ))}
-      </nav>
-      <main>
-        <h1 className="visually-hidden">Hugin</h1>
-        {view === 'Dashbord' && <DashboardView />}
-        {view === 'Pipeline' && <PipelineView />}
-        {view === 'Bedrifter' && <BedrifterView />}
-        {view === 'Eksport' && <EksportView />}
-      </main>
+      <div className="app-shell">
+        <header className="topbar">
+          <div className="container cluster-between">
+            <span className="brand">Hugin</span>
+            <nav aria-label="Hovedmeny">
+              <ul className="nav-list">
+                {VIEWS.map((name) => (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      className="nav-link"
+                      onClick={() => setView(name)}
+                      aria-current={view === name ? 'page' : undefined}
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </header>
+        <main className="container main-content stack stack-lg">
+          <h1 className="visually-hidden">Hugin</h1>
+          {view === 'Dashbord' && <DashboardView />}
+          {view === 'Pipeline' && <PipelineView />}
+          {view === 'Bedrifter' && <BedrifterView />}
+          {view === 'Eksport' && <EksportView />}
+        </main>
+      </div>
     </LiveRegionProvider>
   )
 }

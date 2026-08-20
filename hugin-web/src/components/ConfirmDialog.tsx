@@ -31,14 +31,14 @@ export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, 
   }
 
   return (
-    <dialog ref={ref} onClose={handleClose} aria-label={title}>
+    <dialog ref={ref} className="modal stack" onClose={handleClose} aria-label={title}>
       <h2>{title}</h2>
       {children}
-      <div className="dialog-actions">
-        <button type="button" onClick={onCancel}>
+      <div className="dialog-actions cluster cluster-sm">
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>
           Avbryt
         </button>
-        <button type="button" onClick={onConfirm}>
+        <button type="button" className="btn btn-primary" onClick={onConfirm}>
           {confirmLabel}
         </button>
       </div>

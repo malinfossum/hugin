@@ -65,9 +65,9 @@ export function BedrifterView() {
 
   if (error) {
     return (
-      <p role="status">
-        {error}{' '}
-        <button type="button" onClick={load}>
+      <p role="status" className="alert alert-danger cluster cluster-sm">
+        {error}
+        <button type="button" className="btn btn-ghost" onClick={load}>
           Prøv igjen
         </button>
       </p>
@@ -75,38 +75,49 @@ export function BedrifterView() {
   }
 
   return (
-    <div className="bedrifter-view">
-      <div className="bedrifter-filters">
-        <label htmlFor="bedrifter-kommune">Kommune</label>
-        <select
-          id="bedrifter-kommune"
-          value={kommune}
-          onChange={(event) => setKommune(event.target.value)}
-        >
-          <option value="">Alle</option>
-          {kommuner.map(([number, name]) => (
-            <option key={number} value={number}>
-              {name}
-            </option>
-          ))}
-        </select>
+    <div className="bedrifter-view stack">
+      <div className="bedrifter-filters cluster">
+        <div className="field">
+          <label className="label" htmlFor="bedrifter-kommune">
+            Kommune
+          </label>
+          <select
+            id="bedrifter-kommune"
+            className="select"
+            value={kommune}
+            onChange={(event) => setKommune(event.target.value)}
+          >
+            <option value="">Alle</option>
+            {kommuner.map(([number, name]) => (
+              <option key={number} value={number}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label htmlFor="bedrifter-search">Søk</label>
-        <input
-          id="bedrifter-search"
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        <div className="field">
+          <label className="label" htmlFor="bedrifter-search">
+            Søk
+          </label>
+          <input
+            id="bedrifter-search"
+            className="input"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
       </div>
 
-      <p>{filtered.length} bedrifter</p>
+      <p className="text-muted">{filtered.length} bedrifter</p>
 
-      <ul>
+      <ul className="stack stack-sm">
         {filtered.map((c) => (
-          <li key={c.orgnr}>
+          <li key={c.orgnr} className="stack stack-sm">
             <button
               type="button"
+              className="panel panel-hover bedrifter-row"
               ref={(el) => {
                 if (el) rowRefs.current.set(c.orgnr, el)
                 else rowRefs.current.delete(c.orgnr)
@@ -114,13 +125,13 @@ export function BedrifterView() {
               onClick={() => openDetail(c.orgnr)}
             >
               <span>
-                {c.name}
+                <strong>{c.name}</strong>
                 {c.isBranch && ' [avdeling]'}
               </span>
-              <span>{c.kommuneNavn ?? c.kommune}</span>
+              <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
             </button>
             {c.website && (
-              <a href={c.website} target="_blank" rel="noopener noreferrer">
+              <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-muted">
                 {c.website}
               </a>
             )}

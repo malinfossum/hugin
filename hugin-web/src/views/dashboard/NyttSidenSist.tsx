@@ -76,57 +76,64 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   const hasNew = !!data && (data.companies.length > 0 || data.ads.length > 0)
 
   return (
-    <section aria-labelledby="nytt-heading" className="nytt-siden-sist">
+    <section aria-labelledby="nytt-heading" className="nytt-siden-sist card stack">
       <h2 id="nytt-heading" ref={headingRef} tabIndex={-1}>
         Nytt siden sist
       </h2>
       {error && (
-        <p role="status">
-          {error}{' '}
-          <button type="button" onClick={load}>
+        <p role="status" className="alert alert-danger cluster cluster-sm">
+          {error}
+          <button type="button" className="btn btn-ghost" onClick={load}>
             Prøv igjen
           </button>
         </p>
       )}
-      {!error && loaded && data === undefined && <p>Ingen sync er kjørt ennå — trykk Synk nå.</p>}
+      {!error && loaded && data === undefined && (
+        <p className="empty-hint">Ingen sync er kjørt ennå — trykk Synk nå.</p>
+      )}
       {!error && loaded && data && (
-        <>
-          <h3>Nye bedrifter ({data.companies.length})</h3>
-          {groupByKommune(data.companies).map(([kommune, companies]) => (
-            <div key={kommune}>
-              <h4>{kommune}</h4>
-              <ul>
-                {companies.map((company) => (
-                  <li key={company.orgnr}>
-                    {company.name}
-                    {company.isBranch ? ' [avdeling]' : ''}
+        <div className="stack">
+          <div className="stack stack-sm">
+            <h3>Nye bedrifter ({data.companies.length})</h3>
+            {groupByKommune(data.companies).map(([kommune, companies]) => (
+              <div key={kommune} className="stack stack-sm">
+                <h4 className="text-muted">{kommune}</h4>
+                <ul className="stack stack-sm">
+                  {companies.map((company) => (
+                    <li key={company.orgnr}>
+                      {company.name}
+                      {company.isBranch ? ' [avdeling]' : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="stack stack-sm">
+            <h3>Nye annonser ({data.ads.length})</h3>
+            {data.ads.length > 0 && (
+              <ul className="stack stack-sm">
+                {data.ads.map((ad) => (
+                  <li key={ad.feedId}>
+                    {ad.sourceUrl ? (
+                      <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
+                        {ad.title}
+                      </a>
+                    ) : (
+                      <span>{ad.title}</span>
+                    )}{' '}
+                    — {ad.employer}
                   </li>
                 ))}
               </ul>
-            </div>
-          ))}
-
-          <h3>Nye annonser ({data.ads.length})</h3>
-          {data.ads.length > 0 && (
-            <ul>
-              {data.ads.map((ad) => (
-                <li key={ad.feedId}>
-                  {ad.sourceUrl ? (
-                    <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
-                      {ad.title}
-                    </a>
-                  ) : (
-                    <span>{ad.title}</span>
-                  )}{' '}
-                  — {ad.employer}
-                </li>
-              ))}
-            </ul>
-          )}
+            )}
+          </div>
 
           {hasNew ? (
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={() => {
                 reviewedAsOf.current = data.asOf
                 setConfirmOpen(true)
@@ -135,9 +142,9 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
               Merk som sett
             </button>
           ) : (
-            <p>(ingen nye)</p>
+            <p className="empty-hint">(ingen nye)</p>
           )}
-        </>
+        </div>
       )}
       <ConfirmDialog
         open={confirmOpen}

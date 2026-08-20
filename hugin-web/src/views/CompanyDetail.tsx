@@ -30,15 +30,15 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
   }, [load])
 
   return (
-    <div className="company-detail">
-      <button type="button" onClick={onClose}>
+    <div className="company-detail card stack">
+      <button type="button" className="btn btn-ghost" onClick={onClose}>
         Tilbake
       </button>
 
       {error && (
-        <p role="status">
-          {error}{' '}
-          <button type="button" onClick={load}>
+        <p role="status" className="alert alert-danger cluster cluster-sm">
+          {error}
+          <button type="button" className="btn btn-ghost" onClick={load}>
             Prøv igjen
           </button>
         </p>
@@ -50,7 +50,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             {detail.company.name}
             {detail.company.isBranch && ' [avdeling]'}
           </h2>
-          <dl>
+          <dl className="company-detail-dl">
             <dt>Orgnr</dt>
             <dd>{detail.company.orgnr}</dd>
             <dt>Kommune</dt>
@@ -72,15 +72,17 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
 
           <h3>Annonsehistorikk</h3>
           {detail.ads.length === 0 ? (
-            <p>(ingen annonser)</p>
+            <p className="empty-hint">(ingen annonser)</p>
           ) : (
-            <ul>
+            <ul className="stack stack-sm">
               {detail.ads.map((ad) => (
-                <li key={ad.feedId}>
-                  <span>{ad.title}</span>
-                  {!ad.isActive && <span>[utgått]</span>}
-                  {publishedText(ad.published) && <span>{publishedText(ad.published)}</span>}
-                  <span>Frist: {formatDate(ad.expires)}</span>
+                <li key={ad.feedId} className="panel stack stack-sm">
+                  <span className="text-strong">{ad.title}</span>
+                  {!ad.isActive && <span className="badge">[utgått]</span>}
+                  {publishedText(ad.published) && (
+                    <span className="text-muted">{publishedText(ad.published)}</span>
+                  )}
+                  <span className="help">Frist: {formatDate(ad.expires)}</span>
                   {ad.sourceUrl && (
                     <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
                       Se annonse hos NAV
