@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { LanguageProvider } from '../i18n'
 import { EksportView } from './EksportView'
 
 const BODY_WITH_SCRIPT = '# Rapport\n\n- Acme AS: <script>alert(1)</script>\n'
@@ -26,9 +27,11 @@ function fakeServer(body = BODY_WITH_SCRIPT) {
 function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LiveRegionProvider>
-      <EksportView />
-    </LiveRegionProvider>
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <EksportView />
+      </LiveRegionProvider>
+    </LanguageProvider>
   )
 }
 

@@ -28,6 +28,16 @@ input[type="text"] {
   min-height: 44px;
 }
 
+/* <fieldset> is the semantic grouping element for the NO/EN language toggle (a11y lint
+   prefers it over a bare role="group" div) — strip its default border/padding/min-width so
+   it lays out as a plain button cluster instead of a boxed form section. */
+.lang-toggle {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
 /* Vertical rhythm for <main>; .container already handles inline padding + max-width. */
 .main-content {
   padding-block: var(--space-4);

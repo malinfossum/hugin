@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef } from 'react'
+import { useT } from '../i18n'
 
 interface Props {
   open: boolean
@@ -11,6 +12,7 @@ interface Props {
 
 export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, onCancel }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
+  const t = useT()
   // Latest `open` prop, so the native close handler can tell a user-initiated close
   // (Escape — fires while `open` is still true from the parent's point of view) apart
   // from the close our own effect triggers after the parent already flipped `open` to
@@ -36,7 +38,7 @@ export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, 
       {children}
       <div className="dialog-actions cluster cluster-sm">
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Avbryt
+          {t('common.cancel')}
         </button>
         <button type="button" className="btn btn-primary" onClick={onConfirm}>
           {confirmLabel}

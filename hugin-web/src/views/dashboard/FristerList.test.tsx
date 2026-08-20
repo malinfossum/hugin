@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../types'
 import { FristerList } from './FristerList'
 
@@ -57,9 +58,11 @@ function fakeServer(seed: AdDto[]) {
 function renderList(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LiveRegionProvider>
-      <FristerList refreshKey={refreshKey} />
-    </LiveRegionProvider>
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <FristerList refreshKey={refreshKey} />
+      </LiveRegionProvider>
+    </LanguageProvider>
   )
 }
 

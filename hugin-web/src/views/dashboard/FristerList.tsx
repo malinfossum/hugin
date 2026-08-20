@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
-import { PIPELINE_LABELS } from '../../pipelineLabels'
+import { localeFor, type T, useLang, useT } from '../../i18n'
+import { pipelineLabel } from '../../pipelineLabels'
 import type { AdDto } from '../../types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
@@ -25,15 +26,15 @@ function daysLeftBadgeClass(daysLeft: number | null): string {
   return urgency ? `${badge} ${urgency}` : badge
 }
 
-function daysLeftText(daysLeft: number | null): string {
-  if (daysLeft === null) return 'ingen frist'
-  if (daysLeft < 0) return 'utløpt'
-  if (daysLeft === 0) return 'i dag'
-  return `${daysLeft} dager`
+function daysLeftText(daysLeft: number | null, t: T): string {
+  if (daysLeft === null) return t('frister.none')
+  if (daysLeft < 0) return t('frister.expiredBadge')
+  if (daysLeft === 0) return t('frister.todayBadge')
+  return t('frister.daysBadge', { n: daysLeft })
 }
 
-function formatExpires(expires: string | null): string | null {
-  return expires ? new Date(expires).toLocaleDateString('nb-NO') : null
+function formatExpires(expires: string | null, locale: string): string | null {
+  return expires ? new Date(expires).toLocaleDateString(locale) : null
 }
 
 export function FristerList({ refreshKey }: { refreshKey: number }) {
@@ -41,6 +42,9 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [showHidden, setShowHidden] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
+  const t = useT()
+  const [lang] = useLang()
+  const locale = localeFor(lang)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // undefined: no pending focus move. null: focus the heading. string: focus that row's Skjul button.
@@ -52,8 +56,8 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     return api
       .get<AdDto[]>(path)
       .then(setAds)
-      .catch(() => setError('Kunne ikke laste frister.'))
-  }, [showHidden])
+      .catch(() => setError(t('frister.loadError')))
+  }, [showHidden, t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
   useEffect(() => {
@@ -76,29 +80,29 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     try {
       await api.post(`/api/ads/${feedId}/hide`)
     } catch {
-      setError('Kunne ikke skjule annonsen.')
+      setError(t('frister.hideError'))
       return
     }
     pendingFocus.current = nextFeedId
     await load()
-    announce('Annonsen er skjult.')
+    announce(t('frister.hiddenAnnounce'))
   }
 
   const handleAngreSkjul = async (feedId: string) => {
     try {
       await api.del(`/api/ads/${feedId}/hide`)
     } catch {
-      setError('Kunne ikke gjenopprette annonsen.')
+      setError(t('frister.unhideError'))
       return
     }
     await load()
-    announce('Annonsen vises igjen.')
+    announce(t('frister.unhiddenAnnounce'))
   }
 
   return (
     <section aria-labelledby="frister-heading" className="frister-list card stack">
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
-        Frister
+        {t('frister.heading')}
       </h2>
       <label className="cluster cluster-sm">
         <input
@@ -106,13 +110,13 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
           checked={showHidden}
           onChange={(event) => setShowHidden(event.target.checked)}
         />
-        Vis skjulte
+        {t('frister.showHidden')}
       </label>
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
           <button type="button" className="btn btn-ghost" onClick={load}>
-            Prøv igjen
+            {t('common.retry')}
           </button>
         </p>
       )}
@@ -130,13 +134,15 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               <span className="text-muted">{ad.employer}</span>
             </div>
             <div className="frist-row-date cluster cluster-sm">
-              <span className="text-muted">{formatExpires(ad.expires)}</span>
-              <span className={daysLeftBadgeClass(ad.daysLeft)}>{daysLeftText(ad.daysLeft)}</span>
+              <span className="text-muted">{formatExpires(ad.expires, locale)}</span>
+              <span className={daysLeftBadgeClass(ad.daysLeft)}>
+                {daysLeftText(ad.daysLeft, t)}
+              </span>
             </div>
             <span className="text-muted">{ad.category}</span>
             <div className="frist-row-actions cluster cluster-sm">
               {ad.pipelineStatus && (
-                <span className="badge badge-accent">{PIPELINE_LABELS[ad.pipelineStatus]}</span>
+                <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
               )}
               {ad.hidden ? (
                 <button
@@ -144,7 +150,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   className="btn btn-ghost"
                   onClick={() => handleAngreSkjul(ad.feedId)}
                 >
-                  Angre skjul
+                  {t('frister.undoHide')}
                 </button>
               ) : (
                 <button
@@ -156,7 +162,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   }}
                   onClick={() => handleSkjul(ad.feedId)}
                 >
-                  Skjul
+                  {t('frister.hide')}
                 </button>
               )}
             </div>

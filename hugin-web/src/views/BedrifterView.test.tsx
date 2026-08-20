@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
 
@@ -70,9 +71,11 @@ function fakeServer(companies: CompanyDto[], details: Record<string, CompanyDeta
 function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LiveRegionProvider>
-      <BedrifterView />
-    </LiveRegionProvider>
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <BedrifterView />
+      </LiveRegionProvider>
+    </LanguageProvider>
   )
 }
 

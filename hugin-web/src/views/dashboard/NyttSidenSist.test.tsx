@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { LanguageProvider } from '../../i18n'
 import type { NewDto } from '../../types'
 import { NyttSidenSist } from './NyttSidenSist'
 
@@ -90,9 +91,11 @@ function fakeServer(dto: NewDto | null) {
 function renderView(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LiveRegionProvider>
-      <NyttSidenSist refreshKey={refreshKey} />
-    </LiveRegionProvider>
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <NyttSidenSist refreshKey={refreshKey} />
+      </LiveRegionProvider>
+    </LanguageProvider>
   )
 }
 
@@ -211,9 +214,11 @@ describe('NyttSidenSist', () => {
 
     vi.stubGlobal('fetch', fetchMock)
     const { rerender } = render(
-      <LiveRegionProvider>
-        <NyttSidenSist refreshKey={0} />
-      </LiveRegionProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <NyttSidenSist refreshKey={0} />
+        </LiveRegionProvider>
+      </LanguageProvider>
     )
 
     await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
@@ -244,9 +249,11 @@ describe('NyttSidenSist', () => {
       ],
     })
     rerender(
-      <LiveRegionProvider>
-        <NyttSidenSist refreshKey={1} />
-      </LiveRegionProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <NyttSidenSist refreshKey={1} />
+        </LiveRegionProvider>
+      </LanguageProvider>
     )
 
     // Wait for content that only exists in response B — proves the refetch actually

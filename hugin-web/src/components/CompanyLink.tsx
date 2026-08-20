@@ -1,3 +1,4 @@
+import { useT } from '../i18n'
 import { googleSearchUrl, proffSearchUrl } from '../links'
 
 /** Every company row/detail always offers a working link (spec decision 6): the verified
@@ -13,6 +14,8 @@ export function CompanyLink({
   website: string | null
   className?: string
 }) {
+  const t = useT()
+
   if (website) {
     return (
       <a href={website} target="_blank" rel="noopener noreferrer" className={className}>
@@ -23,12 +26,12 @@ export function CompanyLink({
 
   return (
     <span className={`cluster cluster-sm ${className ?? ''}`.trim()}>
-      har ikke egen nettside —
+      {t('companies.noWebsite')} —
       <a href={googleSearchUrl(name, kommuneNavn)} target="_blank" rel="noopener noreferrer">
-        Google-søk
+        {t('companies.googleSearch')}
       </a>
       <a href={proffSearchUrl(name)} target="_blank" rel="noopener noreferrer">
-        Proff
+        {t('companies.proffSearch')}
       </a>
     </span>
   )

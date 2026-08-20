@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest'
+import { beforeEach } from 'vitest'
 
 // Node 22+ defines its own global `localStorage` getter (returns undefined unless the process
 // was started with --localstorage-file). vitest's jsdom environment only copies a window
@@ -44,3 +45,11 @@ HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
   this.removeAttribute('open')
   this.dispatchEvent(new Event('close'))
 }
+
+// Deterministic language for every test: the existing test suite asserts bokmål strings
+// throughout, and jsdom's navigator.language ('en-US') would otherwise auto-detect English and
+// break all of them. Setting the same localStorage key LanguageProvider reads (src/i18n/index.ts)
+// pins every test to nb unless a test explicitly overrides it (e.g. the language-toggle test).
+beforeEach(() => {
+  window.localStorage.setItem('hugin-lang', 'nb')
+})

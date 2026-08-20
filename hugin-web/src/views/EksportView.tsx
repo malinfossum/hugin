@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
 import { useAnnounce } from '../components/LiveRegion'
+import { type TranslationKey, useT } from '../i18n'
 
 type Scope = 'new' | 'category' | 'all'
 type Format = 'md' | 'txt' | 'json'
 
-const SCOPES: { value: Scope; label: string }[] = [
-  { value: 'new', label: 'Nytt' },
-  { value: 'category', label: 'Kategori' },
-  { value: 'all', label: 'Alt' },
+const SCOPE_KEYS: { value: Scope; labelKey: TranslationKey }[] = [
+  { value: 'new', labelKey: 'export.scopeNew' },
+  { value: 'category', labelKey: 'export.scopeCategory' },
+  { value: 'all', labelKey: 'export.scopeAll' },
 ]
 
-const FORMATS: { value: Format; label: string }[] = [
-  { value: 'md', label: 'Markdown (.md)' },
-  { value: 'txt', label: 'Tekst (.txt)' },
-  { value: 'json', label: 'JSON (.json)' },
+const FORMAT_KEYS: { value: Format; labelKey: TranslationKey }[] = [
+  { value: 'md', labelKey: 'export.formatMd' },
+  { value: 'txt', labelKey: 'export.formatTxt' },
+  { value: 'json', labelKey: 'export.formatJson' },
 ]
 
 function buildUrl(scope: Scope, format: Format, category: string): string {
@@ -30,6 +31,7 @@ export function EksportView() {
   const [preview, setPreview] = useState('')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
+  const t = useT()
 
   const categoryReady = scope !== 'category' || category.trim().length > 0
   const url = buildUrl(scope, format, category.trim())
@@ -43,8 +45,8 @@ export function EksportView() {
     return api
       .getText(url)
       .then(setPreview)
-      .catch(() => setError('Kunne ikke laste eksport.'))
-  }, [url, categoryReady])
+      .catch(() => setError(t('export.loadError')))
+  }, [url, categoryReady, t])
 
   useEffect(() => {
     load()
@@ -53,9 +55,9 @@ export function EksportView() {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(preview)
-      announce('Kopiert til utklippstavlen.')
+      announce(t('export.copiedAnnounce'))
     } catch {
-      announce('Kunne ikke kopiere — merk teksten manuelt.')
+      announce(t('export.copyFailedAnnounce'))
     }
   }
 
@@ -64,7 +66,7 @@ export function EksportView() {
       <p role="status" className="alert alert-danger cluster cluster-sm">
         {error}
         <button type="button" className="btn btn-ghost" onClick={load}>
-          Prøv igjen
+          {t('common.retry')}
         </button>
       </p>
     )
@@ -75,7 +77,7 @@ export function EksportView() {
       <div className="eksport-controls cluster">
         <div className="field">
           <label className="label" htmlFor="eksport-scope">
-            Omfang
+            {t('export.scope')}
           </label>
           <select
             id="eksport-scope"
@@ -83,9 +85,9 @@ export function EksportView() {
             value={scope}
             onChange={(event) => setScope(event.target.value as Scope)}
           >
-            {SCOPES.map((s) => (
+            {SCOPE_KEYS.map((s) => (
               <option key={s.value} value={s.value}>
-                {s.label}
+                {t(s.labelKey)}
               </option>
             ))}
           </select>
@@ -94,7 +96,7 @@ export function EksportView() {
         {scope === 'category' && (
           <div className="field">
             <label className="label" htmlFor="eksport-category">
-              Kategori
+              {t('export.category')}
             </label>
             <input
               id="eksport-category"
@@ -102,14 +104,14 @@ export function EksportView() {
               type="text"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              placeholder="f.eks. IT"
+              placeholder={t('export.categoryPlaceholder')}
             />
           </div>
         )}
 
         <div className="field">
           <label className="label" htmlFor="eksport-format">
-            Format
+            {t('export.format')}
           </label>
           <select
             id="eksport-format"
@@ -117,9 +119,9 @@ export function EksportView() {
             value={format}
             onChange={(event) => setFormat(event.target.value as Format)}
           >
-            {FORMATS.map((f) => (
+            {FORMAT_KEYS.map((f) => (
               <option key={f.value} value={f.value}>
-                {f.label}
+                {t(f.labelKey)}
               </option>
             ))}
           </select>
@@ -132,7 +134,7 @@ export function EksportView() {
             aria-disabled={!categoryReady}
             download
           >
-            Last ned
+            {t('export.download')}
           </a>
           <button
             type="button"
@@ -140,13 +142,13 @@ export function EksportView() {
             onClick={handleCopy}
             disabled={!categoryReady}
           >
-            Kopier
+            {t('export.copy')}
           </button>
         </div>
       </div>
 
       {!categoryReady ? (
-        <p className="text-muted">Skriv inn en kategori for å se forhåndsvisning.</p>
+        <p className="text-muted">{t('export.enterCategoryHint')}</p>
       ) : (
         <div className="panel">
           <pre className="eksport-markdown">{preview}</pre>

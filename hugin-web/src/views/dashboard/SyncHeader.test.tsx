@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { LanguageProvider } from '../../i18n'
 import type { StatusDto, SyncRunStatus } from '../../types'
 import { SyncHeader } from './SyncHeader'
 
@@ -59,9 +60,11 @@ function mockFetch(options: {
 function renderHeader(fetchMock: ReturnType<typeof vi.fn>, onSyncCompleted = vi.fn()) {
   vi.stubGlobal('fetch', fetchMock)
   render(
-    <LiveRegionProvider>
-      <SyncHeader onSyncCompleted={onSyncCompleted} />
-    </LiveRegionProvider>
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <SyncHeader onSyncCompleted={onSyncCompleted} />
+      </LiveRegionProvider>
+    </LanguageProvider>
   )
   return onSyncCompleted
 }

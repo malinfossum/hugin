@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { CompanyLink } from '../components/CompanyLink'
+import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
 
@@ -12,14 +13,15 @@ export function BedrifterView() {
   const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
+  const t = useT()
 
   const load = useCallback(() => {
     setError(null)
     return api
       .get<CompanyDto[]>('/api/companies')
       .then(setCompanies)
-      .catch(() => setError('Kunne ikke laste bedrifter.'))
-  }, [])
+      .catch(() => setError(t('companies.loadError')))
+  }, [t])
 
   useEffect(() => {
     load()
@@ -69,7 +71,7 @@ export function BedrifterView() {
       <p role="status" className="alert alert-danger cluster cluster-sm">
         {error}
         <button type="button" className="btn btn-ghost" onClick={load}>
-          Prøv igjen
+          {t('common.retry')}
         </button>
       </p>
     )
@@ -80,7 +82,7 @@ export function BedrifterView() {
       <div className="bedrifter-filters cluster">
         <div className="field">
           <label className="label" htmlFor="bedrifter-kommune">
-            Kommune
+            {t('companies.kommune')}
           </label>
           <select
             id="bedrifter-kommune"
@@ -88,7 +90,7 @@ export function BedrifterView() {
             value={kommune}
             onChange={(event) => setKommune(event.target.value)}
           >
-            <option value="">Alle</option>
+            <option value="">{t('common.all')}</option>
             {kommuner.map(([number, name]) => (
               <option key={number} value={number}>
                 {name}
@@ -99,7 +101,7 @@ export function BedrifterView() {
 
         <div className="field">
           <label className="label" htmlFor="bedrifter-search">
-            Søk
+            {t('companies.search')}
           </label>
           <input
             id="bedrifter-search"
@@ -111,7 +113,7 @@ export function BedrifterView() {
         </div>
       </div>
 
-      <p className="text-muted">{filtered.length} bedrifter</p>
+      <p className="text-muted">{t('companies.count', { n: filtered.length })}</p>
 
       <ul className="stack stack-sm">
         {filtered.map((c) => (
@@ -127,7 +129,7 @@ export function BedrifterView() {
             >
               <span>
                 <strong>{c.name}</strong>
-                {c.isBranch && ' [avdeling]'}
+                {c.isBranch && ` ${t('common.branchTag')}`}
               </span>
               <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
             </button>

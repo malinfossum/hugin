@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
+import { localeFor, type T, useLang, useT } from '../../i18n'
 import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
 
-function formatLastSync(source: SourceStateDto | null | undefined): string {
-  if (!source) return 'Aldri'
-  return new Date(source.lastSyncUtc).toLocaleString('nb-NO')
+function formatLastSync(source: SourceStateDto | null | undefined, t: T, locale: string): string {
+  if (!source) return t('sync.never')
+  return new Date(source.lastSyncUtc).toLocaleString(locale)
 }
 
-/** null when no source failed; otherwise the bokmål message shared by the announce and the banner. */
-function getFailureMessage(sync: SyncRunStatus): string | null {
+/** null when no source failed; otherwise the message shared by the announce and the banner. */
+function getFailureMessage(sync: SyncRunStatus, t: T): string | null {
   const failed = [sync.brreg, sync.nav].filter((r): r is SourceResultDto => !!r && !r.succeeded)
   if (failed.length === 0) return null
-  if (failed.length === 2) return `Synk feilet: ${failed[0]?.error}`
-  return `Synk delvis feilet: ${failed[0]?.error}`
+  if (failed.length === 2) return t('sync.failedFull', { error: failed[0]?.error ?? '' })
+  return t('sync.failedPartial', { error: failed[0]?.error ?? '' })
 }
 
 export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void }) {
   const [status, setStatus] = useState<StatusDto | null>(null)
   const [sync, setSync] = useState<SyncRunStatus | null>(null)
   const announce = useAnnounce()
+  const t = useT()
+  const [lang] = useLang()
   const wasRunning = useRef(false)
 
   const loadStatus = useCallback(() => {
@@ -43,7 +46,7 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
       setSync(s)
       if (wasRunning.current && !s.running) {
         wasRunning.current = false
-        announce(getFailureMessage(s) ?? 'Synk ferdig.')
+        announce(getFailureMessage(s, t) ?? t('sync.done'))
         loadStatus()
         onSyncCompleted()
       }
@@ -52,7 +55,7 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
     poll()
     timer = setInterval(poll, 2000)
     return () => clearInterval(timer)
-  }, [announce, loadStatus, onSyncCompleted])
+  }, [announce, loadStatus, onSyncCompleted, t])
 
   const startSync = async () => {
     try {
@@ -60,32 +63,36 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
       wasRunning.current = true
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        announce('En synk kjører allerede.')
+        announce(t('sync.alreadyRunning'))
         wasRunning.current = true
       } else {
-        announce('Kunne ikke starte synk — prøv igjen.')
+        announce(t('sync.startFailed'))
       }
     }
   }
 
-  const failureMessage = sync && !sync.running ? getFailureMessage(sync) : null
+  const failureMessage = sync && !sync.running ? getFailureMessage(sync, t) : null
+  const locale = localeFor(lang)
 
   return (
     <header className="sync-header card stack">
-      <h2 className="visually-hidden">Synkronisering</h2>
+      <h2 className="visually-hidden">{t('sync.heading')}</h2>
       <dl className="sync-times cluster text-muted">
         <div>
-          <dt>Brreg</dt>
-          <dd>{formatLastSync(status?.brreg)}</dd>
+          <dt>{t('sync.brregLabel')}</dt>
+          <dd>{formatLastSync(status?.brreg, t, locale)}</dd>
         </div>
         <div>
-          <dt>NAV</dt>
-          <dd>{formatLastSync(status?.nav)}</dd>
+          <dt>{t('sync.navLabel')}</dt>
+          <dd>{formatLastSync(status?.nav, t, locale)}</dd>
         </div>
       </dl>
       <p className="sync-counts text-muted">
-        {status?.activeAds ?? 0} aktive annonser · {status?.companies ?? 0} bedrifter ·{' '}
-        {status?.pipelineEntries ?? 0} i pipeline
+        {t('sync.counts', {
+          activeAds: status?.activeAds ?? 0,
+          companies: status?.companies ?? 0,
+          pipelineEntries: status?.pipelineEntries ?? 0,
+        })}
       </p>
       <button
         type="button"
@@ -96,10 +103,10 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
         {sync?.running ? (
           <>
             <span className="spinner" aria-hidden="true" />
-            synker …
+            {t('sync.syncing')}
           </>
         ) : (
-          'Synk nå'
+          t('sync.now')
         )}
       </button>
       {status && status.linkouts.length > 0 && (

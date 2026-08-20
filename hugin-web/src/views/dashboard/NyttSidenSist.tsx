@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
+import { useT } from '../../i18n'
 import type { CompanyDto, NewDto } from '../../types'
 
 /** Groups companies by kommune, preserving first-seen order of both groups and members. */
@@ -22,6 +23,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const announce = useAnnounce()
+  const t = useT()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const pendingFocus = useRef(false)
   // Snapshot of the asOf the user was actually looking at when they opened the dialog.
@@ -37,8 +39,8 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
         setData(result)
         setLoaded(true)
       })
-      .catch(() => setError('Kunne ikke laste nytt siden sist.'))
-  }, [])
+      .catch(() => setError(t('newSince.loadError')))
+  }, [t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
   useEffect(() => {
@@ -59,13 +61,13 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
     try {
       await api.post('/api/seen', { asOf })
     } catch {
-      setError('Kunne ikke merke som sett.')
+      setError(t('newSince.markError'))
       return
     }
     reviewedAsOf.current = null
     pendingFocus.current = true
     await load()
-    announce('Merket som sett.')
+    announce(t('newSince.markedAnnounce'))
   }
 
   const handleCancel = () => {
@@ -78,23 +80,23 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   return (
     <section aria-labelledby="nytt-heading" className="nytt-siden-sist card stack">
       <h2 id="nytt-heading" ref={headingRef} tabIndex={-1}>
-        Nytt siden sist
+        {t('newSince.heading')}
       </h2>
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
           <button type="button" className="btn btn-ghost" onClick={load}>
-            Prøv igjen
+            {t('common.retry')}
           </button>
         </p>
       )}
       {!error && loaded && data === undefined && (
-        <p className="empty-hint">Ingen sync er kjørt ennå — trykk Synk nå.</p>
+        <p className="empty-hint">{t('newSince.noSyncYet')}</p>
       )}
       {!error && loaded && data && (
         <div className="stack">
           <div className="stack stack-sm">
-            <h3>Nye bedrifter ({data.companies.length})</h3>
+            <h3>{t('newSince.newCompanies', { n: data.companies.length })}</h3>
             {groupByKommune(data.companies).map(([kommune, companies]) => (
               <div key={kommune} className="stack stack-sm">
                 <h4 className="text-muted">{kommune}</h4>
@@ -102,7 +104,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
                   {companies.map((company) => (
                     <li key={company.orgnr}>
                       {company.name}
-                      {company.isBranch ? ' [avdeling]' : ''}
+                      {company.isBranch ? ` ${t('common.branchTag')}` : ''}
                     </li>
                   ))}
                 </ul>
@@ -111,7 +113,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
           </div>
 
           <div className="stack stack-sm">
-            <h3>Nye annonser ({data.ads.length})</h3>
+            <h3>{t('newSince.newAds', { n: data.ads.length })}</h3>
             {data.ads.length > 0 && (
               <ul className="stack stack-sm">
                 {data.ads.map((ad) => (
@@ -139,17 +141,17 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
                 setConfirmOpen(true)
               }}
             >
-              Merk som sett
+              {t('newSince.markSeen')}
             </button>
           ) : (
-            <p className="empty-hint">(ingen nye)</p>
+            <p className="empty-hint">{t('newSince.none')}</p>
           )}
         </div>
       )}
       <ConfirmDialog
         open={confirmOpen}
-        title="Merket flyttes — dette kan ikke angres."
-        confirmLabel="Merk som sett"
+        title={t('newSince.confirmTitle')}
+        confirmLabel={t('newSince.markSeen')}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

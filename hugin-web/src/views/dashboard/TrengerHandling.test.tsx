@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../types'
 import { TrengerHandling } from './TrengerHandling'
 
@@ -35,7 +36,11 @@ function mockFetch(ads: AdDto[]) {
 
 function renderTrenger(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   vi.stubGlobal('fetch', fetchMock)
-  return render(<TrengerHandling refreshKey={refreshKey} />)
+  return render(
+    <LanguageProvider>
+      <TrengerHandling refreshKey={refreshKey} />
+    </LanguageProvider>
+  )
 }
 
 afterEach(() => {

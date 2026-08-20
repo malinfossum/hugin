@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
 import { useAnnounce } from '../components/LiveRegion'
-import { PIPELINE_LABELS } from '../pipelineLabels'
+import { localeFor, type TranslationKey, useLang, useT } from '../i18n'
+import { pipelineLabel } from '../pipelineLabels'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
 
 const SECTIONS: PipelineStatusSlug[] = ['active', 'applied', 'answered']
 
 type SortMode = 'starred' | 'updated' | 'name'
 
-const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: 'starred', label: 'Stjerne først' },
-  { value: 'updated', label: 'Sist oppdatert' },
-  { value: 'name', label: 'Navn' },
+const SORT_OPTION_KEYS: { value: SortMode; labelKey: TranslationKey }[] = [
+  { value: 'starred', labelKey: 'applications.sortStarred' },
+  { value: 'updated', labelKey: 'applications.sortUpdated' },
+  { value: 'name', labelKey: 'applications.sortName' },
 ]
 
 const SORT_STORAGE_KEY = 'hugin-soknader-sortering'
@@ -34,7 +35,7 @@ function saveSortMode(mode: SortMode): void {
   }
 }
 
-function sortEntries(entries: PipelineDto[], mode: SortMode): PipelineDto[] {
+function sortEntries(entries: PipelineDto[], mode: SortMode, locale: string): PipelineDto[] {
   const copy = [...entries]
   switch (mode) {
     case 'starred':
@@ -42,7 +43,7 @@ function sortEntries(entries: PipelineDto[], mode: SortMode): PipelineDto[] {
     case 'updated':
       return copy.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
     case 'name':
-      return copy.sort((a, b) => a.companyName.localeCompare(b.companyName, 'nb'))
+      return copy.sort((a, b) => a.companyName.localeCompare(b.companyName, locale))
   }
 }
 
@@ -62,8 +63,8 @@ function toFormState(entry: PipelineDto): FormState {
   }
 }
 
-function formatUpdated(updated: string): string {
-  return new Date(updated).toLocaleDateString('nb-NO')
+function formatUpdated(updated: string, locale: string): string {
+  return new Date(updated).toLocaleDateString(locale)
 }
 
 export function ApplicationsView() {
@@ -75,14 +76,17 @@ export function ApplicationsView() {
   const [warning, setWarning] = useState<{ orgnr: string; message: string } | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>(loadSortMode)
   const announce = useAnnounce()
+  const t = useT()
+  const [lang] = useLang()
+  const locale = localeFor(lang)
 
   const load = useCallback(() => {
     setError(null)
     return api
       .get<PipelineDto[]>('/api/pipeline')
       .then(setEntries)
-      .catch(() => setError('Kunne ikke laste pipeline.'))
-  }, [])
+      .catch(() => setError(t('applications.loadError')))
+  }, [t])
 
   useEffect(() => {
     load()
@@ -118,14 +122,14 @@ export function ApplicationsView() {
         svar: form.svar,
       })
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : 'Kunne ikke lagre.')
+      setFormError(err instanceof ApiError ? err.message : t('applications.saveError'))
       return
     }
     setWarning(response.warning ? { orgnr, message: response.warning } : null)
     await load()
     setEditingOrgnr(null)
     setForm(null)
-    announce('Lagret.')
+    announce(t('applications.saved'))
   }
 
   const toggleStar = async (entry: PipelineDto) => {
@@ -139,12 +143,12 @@ export function ApplicationsView() {
         starred: !entry.starred,
       })
     } catch (err) {
-      announce(err instanceof ApiError ? err.message : 'Kunne ikke oppdatere stjerne.')
+      announce(err instanceof ApiError ? err.message : t('applications.starError'))
       return
     }
     setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
     await load()
-    announce(entry.starred ? 'Stjerne fjernet.' : 'Stjerne satt.')
+    announce(entry.starred ? t('applications.starRemoved') : t('applications.starSet'))
   }
 
   if (error) {
@@ -152,7 +156,7 @@ export function ApplicationsView() {
       <p role="status" className="alert alert-danger cluster cluster-sm">
         {error}
         <button type="button" className="btn btn-ghost" onClick={load}>
-          Prøv igjen
+          {t('common.retry')}
         </button>
       </p>
     )
@@ -162,7 +166,7 @@ export function ApplicationsView() {
     <div className="applications-view stack stack-lg">
       <div className="field">
         <label className="label" htmlFor="soknader-sortering">
-          Sorter etter
+          {t('applications.sortBy')}
         </label>
         <select
           id="soknader-sortering"
@@ -170,9 +174,9 @@ export function ApplicationsView() {
           value={sortMode}
           onChange={(event) => handleSortChange(event.target.value as SortMode)}
         >
-          {SORT_OPTIONS.map((option) => (
+          {SORT_OPTION_KEYS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {t(option.labelKey)}
             </option>
           ))}
         </select>
@@ -181,15 +185,14 @@ export function ApplicationsView() {
       {SECTIONS.map((status) => {
         const sectionEntries = sortEntries(
           entries.filter((e) => e.status === status),
-          sortMode
+          sortMode,
+          locale
         )
         const headingId = `pipeline-heading-${status}`
         return (
           <section key={status} aria-labelledby={headingId} className="card stack">
-            <h2 id={headingId}>{PIPELINE_LABELS[status]}</h2>
-            {status === 'active' && (
-              <p className="muted help">Aktiv-oppføringer tas aldri med i eksporten.</p>
-            )}
+            <h2 id={headingId}>{pipelineLabel(t, status)}</h2>
+            {status === 'active' && <p className="muted help">{t('applications.activeHint')}</p>}
             <ul className="stack stack-sm">
               {sectionEntries.map((entry) => {
                 const missingWhy = status !== 'active' && !entry.why
@@ -202,7 +205,9 @@ export function ApplicationsView() {
                         type="button"
                         className="btn btn-ghost icon-btn"
                         aria-pressed={entry.starred}
-                        aria-label={entry.starred ? 'Fjern stjerne' : 'Gi stjerne'}
+                        aria-label={
+                          entry.starred ? t('applications.starRemove') : t('applications.starGive')
+                        }
                         onClick={() => toggleStar(entry)}
                       >
                         <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
@@ -212,13 +217,15 @@ export function ApplicationsView() {
                       <>
                         <div className="cluster cluster-sm">
                           {missingWhy ? (
-                            <span className="badge badge-warning">⚠ mangler begrunnelse</span>
+                            <span className="badge badge-warning">
+                              {t('applications.missingWhy')}
+                            </span>
                           ) : (
                             entry.why && <span className="text-muted">{entry.why}</span>
                           )}
                           {entry.note && <span className="text-muted">{entry.note}</span>}
                           {entry.svar && <span className="text-muted">{entry.svar}</span>}
-                          <span className="help">{formatUpdated(entry.updated)}</span>
+                          <span className="help">{formatUpdated(entry.updated, locale)}</span>
                         </div>
                         {warning?.orgnr === entry.orgnr && (
                           <p role="status" className="badge badge-warning">
@@ -230,7 +237,7 @@ export function ApplicationsView() {
                           className="btn btn-ghost"
                           onClick={() => startEdit(entry)}
                         >
-                          Rediger
+                          {t('applications.edit')}
                         </button>
                       </>
                     )}
@@ -241,7 +248,7 @@ export function ApplicationsView() {
                       >
                         <div className="field">
                           <label className="label" htmlFor={`status-${entry.orgnr}`}>
-                            Status
+                            {t('common.status')}
                           </label>
                           <select
                             id={`status-${entry.orgnr}`}
@@ -256,7 +263,7 @@ export function ApplicationsView() {
                           >
                             {SECTIONS.map((slug) => (
                               <option key={slug} value={slug}>
-                                {PIPELINE_LABELS[slug]}
+                                {pipelineLabel(t, slug)}
                               </option>
                             ))}
                           </select>
@@ -264,7 +271,7 @@ export function ApplicationsView() {
 
                         <div className="field">
                           <label className="label" htmlFor={`why-${entry.orgnr}`}>
-                            Begrunnelse
+                            {t('applications.why')}
                           </label>
                           <textarea
                             id={`why-${entry.orgnr}`}
@@ -276,7 +283,7 @@ export function ApplicationsView() {
 
                         <div className="field">
                           <label className="label" htmlFor={`note-${entry.orgnr}`}>
-                            Notat
+                            {t('applications.note')}
                           </label>
                           <input
                             id={`note-${entry.orgnr}`}
@@ -289,7 +296,7 @@ export function ApplicationsView() {
 
                         <div className="field">
                           <label className="label" htmlFor={`svar-${entry.orgnr}`}>
-                            Svar
+                            {t('applications.answer')}
                           </label>
                           <input
                             id={`svar-${entry.orgnr}`}
@@ -308,10 +315,10 @@ export function ApplicationsView() {
 
                         <div className="cluster cluster-sm">
                           <button type="submit" className="btn btn-primary">
-                            Lagre
+                            {t('common.save')}
                           </button>
                           <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                            Avbryt
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </form>
