@@ -15,6 +15,13 @@ public sealed class FakeBrregClient : IBrregClient
     public Dictionary<string, RegisterCompany> ByOrgnr { get; init; } = [];
     public bool Throws { get; set; }
 
+    /// <summary>Makes only GetByOrgnrAsync fail, leaving GetCompaniesAsync (discovery) alone —
+    /// for tests isolating employer-enrichment failure from discovery failure.</summary>
+    public bool ThrowsOnGetByOrgnr { get; set; }
+
+    /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
+    public List<string> ByOrgnrRequests { get; } = [];
+
     /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
     public Func<Task>? OnCall { get; set; }
 
@@ -28,8 +35,9 @@ public sealed class FakeBrregClient : IBrregClient
 
     public async Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
     {
+        ByOrgnrRequests.Add(orgnr);
         if (OnCall is not null) await OnCall();
-        if (Throws) throw new HttpRequestException("brreg utilgjengelig");
+        if (Throws || ThrowsOnGetByOrgnr) throw new HttpRequestException("brreg utilgjengelig");
         return ByOrgnr.GetValueOrDefault(orgnr);
     }
 }

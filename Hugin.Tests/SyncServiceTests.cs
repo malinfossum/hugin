@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
+using Hugin.Core.Models;
 using Hugin.Core.Services;
 
 namespace Hugin.Tests;
@@ -13,6 +14,9 @@ public class SyncServiceTests
 
     private static FeedAd Ad(string id, string title, string? kommune, DateTimeOffset? expires = null) =>
         new(id, title, "Firma AS", null, kommune, Now, expires, null, true);
+
+    private static FeedAd AdWithEmployer(string id, string employerOrgnr, string? kommune = "3403") =>
+        new(id, "Backend-utvikler", "Firma AS", employerOrgnr, kommune, Now, null, null, true);
 
     private sealed record Harness(
         SyncService Service,
@@ -229,5 +233,68 @@ public class SyncServiceTests
         Assert.That(summary.BothFailed, Is.True);
         Assert.That(summary.BaselineSet, Is.False, "a baseline is only set once something actually synced");
         Assert.That(h.ReviewMark.Mark, Is.Null);
+    }
+
+    [Test]
+    public async Task Unknown_ad_employer_is_fetched_from_brreg_and_upserted()
+    {
+        // The NT case: the ad's employerOrgnr is an underenhet the discovery filter never
+        // pulled locally (wrong NACE code), but Brreg still knows it and its ParentOrgnr.
+        var brreg = new FakeBrregClient
+        {
+            ByOrgnr = { ["972483672"] = new RegisterCompany("972483672", "NT avd X", "3403", "92.000", "925836613", true, null) },
+        };
+        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "972483672")], null));
+
+        var h = Build(brreg: brreg, nav: nav);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(h.Companies.Store.ContainsKey("972483672"), Is.True);
+        Assert.That(h.Companies.Store["972483672"].ParentOrgnr, Is.EqualTo("925836613"));
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "972483672" }));
+    }
+
+    [Test]
+    public async Task Known_ad_employer_is_not_looked_up_in_brreg()
+    {
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "934161181")], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS" };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.Empty);
+    }
+
+    [Test]
+    public async Task Brreg_failure_during_enrichment_does_not_fail_sync_or_skip_the_ad()
+    {
+        var brreg = new FakeBrregClient { ThrowsOnGetByOrgnr = true };
+        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "972483672")], null));
+
+        var h = Build(brreg: brreg, nav: nav);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(summary.Brreg.Succeeded, Is.True, "only the employer lookup should have failed, not discovery");
+        Assert.That(h.Ads.Store.ContainsKey("a"), Is.True);
+        Assert.That(h.Companies.Store.ContainsKey("972483672"), Is.False);
+    }
+
+    [Test]
+    public async Task Two_ads_with_the_same_unknown_employer_only_call_brreg_once()
+    {
+        var brreg = new FakeBrregClient
+        {
+            ByOrgnr = { ["972483672"] = new RegisterCompany("972483672", "NT avd X", "3403", "92.000", "925836613", true, null) },
+        };
+        var nav = new FakeNavFeedClient(new FeedPage(
+            [AdWithEmployer("a", "972483672"), AdWithEmployer("b", "972483672")], null));
+
+        var h = Build(brreg: brreg, nav: nav);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "972483672" }));
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a", "b" }));
     }
 }
