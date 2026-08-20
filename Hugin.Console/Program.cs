@@ -127,6 +127,7 @@ internal static class Program
             var config = sp.GetRequiredService<HuginConfig>();
             return new NavFeedClient(http, new NavTokenProvider(http, config.NavToken), config);
         });
+        services.AddSingleton<IWebsiteProber>(_ => new WebsiteProber(WebsiteProber.CreateHttpClient()));
 
         services.AddScoped<SyncService>();
         services.AddScoped<NewItemsService>();
@@ -149,6 +150,9 @@ internal static class Program
 
         Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
         Console.WriteLine(Line("nav", summary.Nav, "annonser"));
+
+        if (summary.WebsitesChecked > 0)
+            Console.WriteLine($"nettsteder: {summary.WebsitesChecked} sjekket, {summary.WebsitesDead} døde");
 
         if (summary.BaselineSet)
             Console.WriteLine("Første sync: nullpunktet er satt nå, så `hugin new` starter tomt. "

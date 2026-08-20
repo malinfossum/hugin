@@ -35,3 +35,20 @@ public interface INavFeedClient
     /// <summary>The feed's oldest page — the entry point for a full backfill.</summary>
     public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default);
 }
+
+/// <summary><paramref name="ResolvedUrl"/> is the variant (https or http) that actually
+/// answered; null when neither did.</summary>
+public sealed record WebsiteProbeResult(bool Ok, string? ResolvedUrl);
+
+/// <summary>
+/// Checks whether a company's register-listed website is actually reachable. Brreg's
+/// `hjemmeside` field is stale for a meaningful slice of companies (dead domains, or
+/// https-prefixed at ingest when the site only serves http) — this is what tells the
+/// dashboard which links are worth rendering.
+/// </summary>
+public interface IWebsiteProber
+{
+    /// <summary>Never throws — any failure (timeout, DNS, non-2xx/3xx) is reported as
+    /// <c>Ok: false</c>, never an exception.</summary>
+    public Task<WebsiteProbeResult> ProbeAsync(string url, CancellationToken ct = default);
+}

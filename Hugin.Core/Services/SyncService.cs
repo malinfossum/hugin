@@ -5,7 +5,8 @@ namespace Hugin.Core.Services;
 
 public sealed record SourceResult(bool Succeeded, int Fetched, string? Error);
 
-public sealed record SyncSummary(SourceResult Brreg, SourceResult Nav, bool BaselineSet)
+public sealed record SyncSummary(SourceResult Brreg, SourceResult Nav, bool BaselineSet,
+    int WebsitesChecked = 0, int WebsitesDead = 0)
 {
     public bool BothFailed => !Brreg.Succeeded && !Nav.Succeeded;
 }
@@ -24,6 +25,7 @@ public sealed class SyncService(
     IAdRepository ads,
     ISyncStateRepository syncState,
     IReviewMarkRepository reviewMark,
+    IWebsiteProber websiteProber,
     IClock clock,
     HuginConfig config)
 {
@@ -32,6 +34,13 @@ public sealed class SyncService(
     // gets a far higher ceiling that only a broken cursor chain could ever reach.
     private const int MaxPagesPerSync = 100;
     private const int MaxPagesFullSync = 20_000;
+
+    // A website check is a "keep it fresh" background nicety, not tracked sync data — a small
+    // daily slice keeps the whole tracked set current within a couple of weeks without ever
+    // making a sync noticeably slower.
+    private const int WebsiteCheckStaleness = 7;
+    private const int WebsiteCheckBatchSize = 40;
+    private const int WebsiteCheckMaxConcurrency = 8;
 
     /// <param name="fullNav">Walk the NAV feed from its oldest page (or the stored cursor)
     /// to the tail, instead of the capped daily pull. First run: the whole history.</param>
@@ -56,6 +65,8 @@ public sealed class SyncService(
             // Nothing to report — the ads simply keep their previous flag until the next run.
         }
 
+        var (websitesChecked, websitesDead) = await SyncWebsitesAsync(now, ct);
+
         var baselineSet = false;
         if ((brregResult.Succeeded || navResult.Succeeded) && await reviewMark.GetAsync(ct) is null)
         {
@@ -65,7 +76,53 @@ public sealed class SyncService(
             baselineSet = true;
         }
 
-        return new SyncSummary(brregResult, navResult, baselineSet);
+        return new SyncSummary(brregResult, navResult, baselineSet, websitesChecked, websitesDead);
+    }
+
+    /// <summary>
+    /// Best-effort like the kommune register: a website's reachability is a display nicety, not
+    /// tracked sync data, so any failure here — the due-query, a probe, storing a result — must
+    /// never fail the sync that just ran. The network probes run with bounded concurrency so a
+    /// batch of dead or slow hosts cannot turn this into dozens of sequential 6-second waits;
+    /// the results are then written back one at a time — the scoped <c>HuginDbContext</c> a
+    /// repository call closes over is not safe to use from more than one task at once.
+    /// </summary>
+    private async Task<(int Checked, int Dead)> SyncWebsitesAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        try
+        {
+            var due = await companies.GetWebsitesDueForCheckAsync(
+                now.AddDays(-WebsiteCheckStaleness), WebsiteCheckBatchSize, ct);
+            if (due.Count == 0) return (0, 0);
+
+            using var gate = new SemaphoreSlim(WebsiteCheckMaxConcurrency);
+
+            var probed = await Task.WhenAll(due.Select(async company =>
+            {
+                await gate.WaitAsync(ct);
+                try
+                {
+                    return (company.Orgnr, Result: await websiteProber.ProbeAsync(company.Website!, ct));
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }));
+
+            var deadCount = 0;
+            foreach (var (orgnr, result) in probed)
+            {
+                await companies.SetWebsiteCheckAsync(orgnr, result.Ok, result.ResolvedUrl, now, ct);
+                if (!result.Ok) deadCount++;
+            }
+
+            return (probed.Length, deadCount);
+        }
+        catch (Exception)
+        {
+            return (0, 0);
+        }
     }
 
     private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, CancellationToken ct)

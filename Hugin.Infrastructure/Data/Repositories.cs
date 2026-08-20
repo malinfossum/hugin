@@ -45,9 +45,40 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
             existing.NaceCode = company.NaceCode;
             existing.ParentOrgnr = company.ParentOrgnr;
             existing.IsBranch = company.IsBranch;
+
+            // A website check is only meaningful for the URL it was run against — a changed
+            // (or removed) website invalidates it, so it must be re-checked on the next sync.
+            if (existing.Website != company.Website)
+            {
+                existing.WebsiteOk = null;
+                existing.WebsiteResolved = null;
+                existing.WebsiteCheckedUtc = null;
+            }
+
             existing.Website = company.Website;
             existing.LastSeenInRegister = seenAt;
         }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Company>> GetWebsitesDueForCheckAsync(DateTimeOffset olderThan, int take,
+        CancellationToken ct = default) =>
+        await db.Companies
+            .Where(c => c.Website != null && (c.WebsiteCheckedUtc == null || c.WebsiteCheckedUtc < olderThan))
+            .OrderBy(c => c.WebsiteCheckedUtc == null ? 0 : 1)
+            .ThenBy(c => c.WebsiteCheckedUtc)
+            .Take(take)
+            .ToListAsync(ct);
+
+    public async Task SetWebsiteCheckAsync(string orgnr, bool ok, string? resolvedUrl, DateTimeOffset checkedUtc,
+        CancellationToken ct = default)
+    {
+        if (await db.Companies.FindAsync([orgnr], ct) is not { } company) return;
+
+        company.WebsiteOk = ok;
+        company.WebsiteResolved = resolvedUrl;
+        company.WebsiteCheckedUtc = checkedUtc;
 
         await db.SaveChangesAsync(ct);
     }

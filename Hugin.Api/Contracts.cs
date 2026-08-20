@@ -34,7 +34,13 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
         new(c.Orgnr, c.Name, c.MunicipalityNumber,
             config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name
                 ?? (c.MunicipalityNumber is { } number ? kommuner.GetValueOrDefault(number, number) : null),
-            c.NaceCode, c.IsBranch, c.Website, c.ParentOrgnr);
+            c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr);
+
+    // A website confirmed dead (WebsiteOk == false) is never rendered as a link — better no
+    // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this
+    // feature existed. A checked-and-reachable site prefers the variant that actually answered
+    // (WebsiteResolved), which may differ from the register's own https-prefixed value.
+    private static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
 }
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);

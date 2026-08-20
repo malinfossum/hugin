@@ -88,6 +88,7 @@ public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
 internal sealed class FakeCompanyRepository : ICompanyRepository
 {
     public Dictionary<string, Company> Store { get; } = [];
+    public bool ThrowOnGetWebsitesDueForCheck { get; set; }
 
     public Task<Company?> GetAsync(string orgnr, CancellationToken ct = default) =>
         Task.FromResult(Store.GetValueOrDefault(orgnr));
@@ -110,6 +111,14 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
             existing.NaceCode = company.NaceCode;
             existing.ParentOrgnr = company.ParentOrgnr;
             existing.IsBranch = company.IsBranch;
+
+            if (existing.Website != company.Website)
+            {
+                existing.WebsiteOk = null;
+                existing.WebsiteResolved = null;
+                existing.WebsiteCheckedUtc = null;
+            }
+
             existing.Website = company.Website;
             existing.LastSeenInRegister = seenAt;
         }
@@ -127,6 +136,32 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
                 FirstSeen = seenAt,
                 LastSeenInRegister = seenAt,
             };
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<Company>> GetWebsitesDueForCheckAsync(DateTimeOffset olderThan, int take,
+        CancellationToken ct = default)
+    {
+        if (ThrowOnGetWebsitesDueForCheck) throw new InvalidOperationException("databasen er utilgjengelig");
+
+        return Task.FromResult<IReadOnlyList<Company>>(Store.Values
+            .Where(c => c.Website != null && (c.WebsiteCheckedUtc == null || c.WebsiteCheckedUtc < olderThan))
+            .OrderBy(c => c.WebsiteCheckedUtc == null ? 0 : 1)
+            .ThenBy(c => c.WebsiteCheckedUtc)
+            .Take(take)
+            .ToList());
+    }
+
+    public Task SetWebsiteCheckAsync(string orgnr, bool ok, string? resolvedUrl, DateTimeOffset checkedUtc,
+        CancellationToken ct = default)
+    {
+        if (Store.TryGetValue(orgnr, out var company))
+        {
+            company.WebsiteOk = ok;
+            company.WebsiteResolved = resolvedUrl;
+            company.WebsiteCheckedUtc = checkedUtc;
         }
 
         return Task.CompletedTask;
@@ -267,6 +302,39 @@ internal sealed class FakeReviewMarkRepository : IReviewMarkRepository
     {
         Mark = mark;
         return Task.CompletedTask;
+    }
+}
+
+public sealed class FakeWebsiteProber : IWebsiteProber
+{
+    public Dictionary<string, WebsiteProbeResult> Results { get; } = [];
+    public WebsiteProbeResult Default { get; set; } = new(true, null);
+
+    /// <summary>Every url ProbeAsync was actually called with, in call order.</summary>
+    public List<string> Requests { get; } = [];
+
+    public int MaxConcurrent { get; private set; }
+    private int _current;
+    private readonly object _gate = new();
+
+    /// <summary>Awaited before every call returns — lets a test hold several probes open at
+    /// once, to observe how many run concurrently.</summary>
+    public Func<Task>? OnCall { get; set; }
+
+    public async Task<WebsiteProbeResult> ProbeAsync(string url, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            Requests.Add(url);
+            _current++;
+            if (_current > MaxConcurrent) MaxConcurrent = _current;
+        }
+
+        if (OnCall is not null) await OnCall();
+
+        lock (_gate) { _current--; }
+
+        return Results.GetValueOrDefault(url, Default);
     }
 }
 

@@ -59,6 +59,112 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task Upsert_preserves_website_check_fields_when_the_website_is_unchanged()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart(), T1);
+        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "http://norkart.no", T1);
+
+        // Same website on the next sync — the check must survive, not be re-cleared to unchecked.
+        await repo.UpsertAsync(Norkart(), T2);
+
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.WebsiteOk, Is.True);
+        Assert.That(c.WebsiteResolved, Is.EqualTo("http://norkart.no"));
+        Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
+    }
+
+    [Test]
+    public async Task Upsert_clears_website_check_fields_when_the_website_changes()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart(), T1);
+        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "https://norkart.no", T1);
+
+        await repo.UpsertAsync(Norkart() with { Website = "https://newsite.no" }, T2);
+
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.EqualTo("https://newsite.no"));
+        Assert.That(c.WebsiteOk, Is.Null);
+        Assert.That(c.WebsiteResolved, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task Upsert_clears_website_check_fields_when_the_website_becomes_null()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
+        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T1);
+
+        await repo.UpsertAsync(Norkart() with { Website = null }, T2);
+
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.Null);
+        Assert.That(c.WebsiteOk, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task Insert_leaves_website_check_fields_null()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart(), T1);
+
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.WebsiteOk, Is.Null);
+        Assert.That(c.WebsiteResolved, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task GetWebsitesDueForCheck_respects_never_checked_staleness_and_null_website()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart("never-checked") with { Website = "https://never.no" }, T1);
+        await repo.UpsertAsync(Norkart("stale") with { Website = "https://stale.no" }, T1);
+        await repo.UpsertAsync(Norkart("fresh") with { Website = "https://fresh.no" }, T1);
+        await repo.UpsertAsync(Norkart("no-website") with { Website = null }, T1);
+
+        await repo.SetWebsiteCheckAsync("stale", ok: true, resolvedUrl: null, T1);
+        await repo.SetWebsiteCheckAsync("fresh", ok: true, resolvedUrl: null, T2);
+
+        var due = await repo.GetWebsitesDueForCheckAsync(olderThan: T1.AddHours(12), take: 10);
+
+        Assert.That(due.Select(c => c.Orgnr), Is.EquivalentTo(new[] { "never-checked", "stale" }));
+    }
+
+    [Test]
+    public async Task GetWebsitesDueForCheck_is_oldest_first_and_capped()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart("a") with { Website = "https://a.no" }, T1);
+        await repo.UpsertAsync(Norkart("b") with { Website = "https://b.no" }, T1);
+        await repo.UpsertAsync(Norkart("c") with { Website = "https://c.no" }, T1);
+        await repo.SetWebsiteCheckAsync("a", ok: true, resolvedUrl: null, T1.AddHours(3));
+        await repo.SetWebsiteCheckAsync("b", ok: true, resolvedUrl: null, T1.AddHours(1));
+        await repo.SetWebsiteCheckAsync("c", ok: true, resolvedUrl: null, T1.AddHours(2));
+
+        var due = await repo.GetWebsitesDueForCheckAsync(olderThan: T2, take: 2);
+
+        Assert.That(due.Select(c => c.Orgnr), Is.EqualTo(new[] { "b", "c" }));
+    }
+
+    [Test]
+    public async Task SetWebsiteCheckAsync_stores_result()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart(), T1);
+
+        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T2);
+
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.WebsiteOk, Is.False);
+        Assert.That(c.WebsiteResolved, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T2));
+    }
+
+    [Test]
     public async Task DeactivateExpired_flips_only_past_expiry()
     {
         var repo = new EfAdRepository(_db);

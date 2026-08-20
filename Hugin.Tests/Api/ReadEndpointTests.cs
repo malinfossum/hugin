@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hugin.Tests.Api;
 
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
-public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn);
+public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, string Route);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
@@ -102,6 +102,60 @@ public sealed class ReadEndpointTests
         Assert.That(companies!.Single(c => c.Orgnr == "111222333").KommuneNavn, Is.EqualTo("Oslo"));
         Assert.That(companies!.Single(c => c.Orgnr == "999888777").KommuneNavn, Is.EqualTo("Gjøvik"),
             "the configured municipality name still wins over the register");
+    }
+
+    [Test]
+    public async Task Companies_list_hides_the_website_when_the_check_marks_it_dead()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("999888777", "Dødt AS", "3407", "62.100", null, false,
+                "https://dodt-firma.no"), now);
+            await repo.SetWebsiteCheckAsync("999888777", ok: false, resolvedUrl: null, now);
+        }
+
+        var response = await _client.GetAsync("/api/companies");
+        var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
+
+        Assert.That(companies!.Single(c => c.Orgnr == "999888777").Website, Is.Null,
+            "a confirmed-dead website must not be rendered as a link");
+    }
+
+    [Test]
+    public async Task Companies_list_prefers_the_resolved_website_when_the_check_confirms_a_different_variant()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("999888777", "Http-firma AS", "3407", "62.100", null, false,
+                "https://httponly.no"), now);
+            await repo.SetWebsiteCheckAsync("999888777", ok: true, resolvedUrl: "http://httponly.no", now);
+        }
+
+        var response = await _client.GetAsync("/api/companies");
+        var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
+
+        Assert.That(companies!.Single(c => c.Orgnr == "999888777").Website, Is.EqualTo("http://httponly.no"));
+    }
+
+    [Test]
+    public async Task Companies_list_shows_the_register_website_when_never_checked()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Ukontrollert AS", "3407", "62.100", null, false,
+                    "https://ukontrollert.no"), now);
+        }
+
+        var response = await _client.GetAsync("/api/companies");
+        var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
+
+        Assert.That(companies!.Single(c => c.Orgnr == "999888777").Website, Is.EqualTo("https://ukontrollert.no"));
     }
 
     [Test]

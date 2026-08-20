@@ -14,6 +14,18 @@ public sealed class Company
     public string? ParentOrgnr { get; set; }
     public bool IsBranch { get; set; }
     public string? Website { get; set; }
+
+    /// <summary>The variant (https or http) that actually answered, when it differs from
+    /// <see cref="Website"/> — e.g. the register lists an https URL that only serves over http.
+    /// Null when the check never ran or the https variant itself answered.</summary>
+    public string? WebsiteResolved { get; set; }
+
+    /// <summary>Null = never checked. False = neither https nor http answered — the dashboard
+    /// must not render a link to a dead site.</summary>
+    public bool? WebsiteOk { get; set; }
+
+    public DateTimeOffset? WebsiteCheckedUtc { get; set; }
+
     public DateTimeOffset FirstSeen { get; set; }
     public DateTimeOffset LastSeenInRegister { get; set; }
 }

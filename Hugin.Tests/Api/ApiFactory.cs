@@ -17,6 +17,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
     public FakeBrregClient Brreg { get; } = new();
     public FakeNavFeedClient Nav { get; } = new();
+    public FakeWebsiteProber Prober { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -29,8 +30,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll(typeof(IBrregClient));
             services.RemoveAll(typeof(INavFeedClient));
+            services.RemoveAll(typeof(IWebsiteProber));
             services.AddSingleton<IBrregClient>(Brreg);
             services.AddSingleton<INavFeedClient>(Nav);
+            services.AddSingleton<IWebsiteProber>(Prober);
 
             // Otherwise-default config, but with one linkout so /api/status's passthrough is observable.
             services.RemoveAll(typeof(HuginConfig));

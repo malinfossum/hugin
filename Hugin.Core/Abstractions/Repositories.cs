@@ -8,8 +8,21 @@ public interface ICompanyRepository
 
     public Task<IReadOnlyList<Models.Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default);
 
-    /// <summary>New row → FirstSeen = seenAt; always → LastSeenInRegister = seenAt plus a field refresh.</summary>
+    /// <summary>New row → FirstSeen = seenAt; always → LastSeenInRegister = seenAt plus a field refresh.
+    /// The website check fields (<see cref="Models.Company.WebsiteOk"/> etc.) are preserved when the
+    /// incoming website equals the stored one, and cleared (re-check next sync) when it differs or
+    /// becomes null — a stale check must never survive a website change.</summary>
     public Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default);
+
+    /// <summary>Companies with a website that has never been checked, or whose last check is
+    /// older than <paramref name="olderThan"/> — oldest-checked first (never-checked first),
+    /// capped at <paramref name="take"/>.</summary>
+    public Task<IReadOnlyList<Models.Company>> GetWebsitesDueForCheckAsync(DateTimeOffset olderThan, int take,
+        CancellationToken ct = default);
+
+    /// <summary>Records the result of a website probe for one company.</summary>
+    public Task SetWebsiteCheckAsync(string orgnr, bool ok, string? resolvedUrl, DateTimeOffset checkedUtc,
+        CancellationToken ct = default);
 }
 
 public interface IAdRepository

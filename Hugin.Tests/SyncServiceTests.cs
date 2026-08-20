@@ -27,23 +27,25 @@ public class SyncServiceTests
         FakeAdRepository Ads,
         FakeSyncStateRepository SyncState,
         FakeReviewMarkRepository ReviewMark,
+        FakeWebsiteProber Prober,
         FakeClock Clock);
 
     private static Harness Build(FakeBrregClient? brreg = null, FakeNavFeedClient? nav = null,
-        FakeAdRepository? ads = null)
+        FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null)
     {
         brreg ??= new FakeBrregClient { Companies = { Company() } };
         nav ??= new FakeNavFeedClient(new FeedPage([], null));
         ads ??= new FakeAdRepository();
+        companies ??= new FakeCompanyRepository();
+        prober ??= new FakeWebsiteProber();
 
-        var companies = new FakeCompanyRepository();
         var kommuner = new FakeKommuneRepository();
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
 
-        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, clock, new HuginConfig());
-        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, clock);
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, new HuginConfig());
+        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock);
     }
 
     [Test]
@@ -330,5 +332,102 @@ public class SyncServiceTests
 
         Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "972483672" }));
         Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a", "b" }));
+    }
+
+    private static Company DueCompany(string orgnr, string website, DateTimeOffset? checkedUtc = null) => new()
+    {
+        Orgnr = orgnr, Name = "Firma AS", Website = website, FirstSeen = Now, LastSeenInRegister = Now,
+        WebsiteCheckedUtc = checkedUtc,
+    };
+
+    [Test]
+    public async Task Due_websites_are_probed_and_results_stored()
+    {
+        var companies = new FakeCompanyRepository();
+        companies.Store["a"] = DueCompany("a", "https://levende.no");
+        companies.Store["b"] = DueCompany("b", "https://dodt.no");
+
+        var prober = new FakeWebsiteProber
+        {
+            Results =
+            {
+                ["https://levende.no"] = new WebsiteProbeResult(true, "https://levende.no"),
+                ["https://dodt.no"] = new WebsiteProbeResult(false, null),
+            },
+        };
+
+        var h = Build(brreg: new FakeBrregClient(), companies: companies, prober: prober);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.WebsitesChecked, Is.EqualTo(2));
+        Assert.That(summary.WebsitesDead, Is.EqualTo(1));
+        Assert.That(h.Companies.Store["a"].WebsiteOk, Is.True);
+        Assert.That(h.Companies.Store["a"].WebsiteCheckedUtc, Is.EqualTo(Now));
+        Assert.That(h.Companies.Store["b"].WebsiteOk, Is.False);
+        Assert.That(h.Companies.Store["b"].WebsiteCheckedUtc, Is.EqualTo(Now));
+    }
+
+    [Test]
+    public async Task Website_check_uses_a_seven_day_staleness_window_and_a_forty_company_cap()
+    {
+        var companies = new FakeCompanyRepository();
+        companies.Store["fresh"] = DueCompany("fresh", "https://x.no", checkedUtc: Now.AddDays(-6));
+        companies.Store["stale"] = DueCompany("stale", "https://y.no", checkedUtc: Now.AddDays(-8));
+
+        var prober = new FakeWebsiteProber();
+        var h = Build(brreg: new FakeBrregClient(), companies: companies, prober: prober);
+        await h.Service.SyncAsync();
+
+        Assert.That(prober.Requests, Is.EqualTo(new[] { "https://y.no" }),
+            "a company checked less than 7 days ago must not be re-probed yet");
+    }
+
+    [Test]
+    public async Task Website_check_never_exceeds_eight_concurrent_probes()
+    {
+        var companies = new FakeCompanyRepository();
+        for (var i = 0; i < 12; i++)
+            companies.Store[$"c{i}"] = DueCompany($"c{i}", $"https://c{i}.no");
+
+        var gate = new SemaphoreSlim(0);
+        var prober = new FakeWebsiteProber
+        {
+            OnCall = async () =>
+            {
+                gate.Release();
+                await Task.Delay(20);
+            },
+        };
+
+        var h = Build(brreg: new FakeBrregClient(), companies: companies, prober: prober);
+        await h.Service.SyncAsync();
+
+        Assert.That(prober.MaxConcurrent, Is.LessThanOrEqualTo(8));
+        Assert.That(prober.Requests, Has.Count.EqualTo(12));
+    }
+
+    [Test]
+    public async Task Website_check_failure_does_not_fail_the_sync()
+    {
+        var companies = new FakeCompanyRepository { ThrowOnGetWebsitesDueForCheck = true };
+        companies.Store["a"] = DueCompany("a", "https://x.no");
+
+        var h = Build(brreg: new FakeBrregClient(), companies: companies);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True, "a website-check hiccup must not fail company discovery");
+        Assert.That(summary.WebsitesChecked, Is.EqualTo(0));
+        Assert.That(summary.WebsitesDead, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task No_due_websites_reports_zero_and_does_not_probe()
+    {
+        var h = Build(brreg: new FakeBrregClient());
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.WebsitesChecked, Is.EqualTo(0));
+        Assert.That(summary.WebsitesDead, Is.EqualTo(0));
+        Assert.That(h.Prober.Requests, Is.Empty);
     }
 }

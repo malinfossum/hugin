@@ -51,6 +51,7 @@ builder.Services.AddSingleton<INavFeedClient>(sp =>
     var config = sp.GetRequiredService<HuginConfig>();
     return new NavFeedClient(http, new NavTokenProvider(http, config.NavToken), config);
 });
+builder.Services.AddSingleton<IWebsiteProber>(_ => new WebsiteProber(WebsiteProber.CreateHttpClient()));
 
 builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<NewItemsService>();
