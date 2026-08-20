@@ -220,29 +220,6 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
-    public async Task Export_returns_markdown_content_type_and_body()
-    {
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var now = DateTimeOffset.UtcNow;
-            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
-                .UpsertAsync(new RegisterCompany("1", "Eksport AS", null, null, null, false, null), now);
-            await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
-            {
-                Orgnr = "1", Status = PipelineStatus.Applied, Why = "fordi",
-                Created = now, Updated = now,
-            });
-        }
-
-        var response = await _client.GetAsync("/api/export");
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(response.Content.Headers.ContentType!.MediaType, Is.EqualTo("text/markdown"));
-
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.That(body, Does.Contain("## Søkt"));
-    }
-
-    [Test]
     public async Task Status_returns_counts_and_configured_linkouts()
     {
         using (var scope = _factory.Services.CreateScope())

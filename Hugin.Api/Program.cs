@@ -57,7 +57,7 @@ builder.Services.AddScoped<SyncService>();
 builder.Services.AddScoped<NewItemsService>();
 builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<AdOverviewService>();
-builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<ExtractService>();
 
 builder.Services.AddSingleton<SyncRunner>();
 builder.Services.AddHostedService<StartupSync>();

@@ -33,7 +33,7 @@ Edit `hugin.json` to set your municipalities, industry codes, and keywords. Keyw
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory; `--ads [--kommune <nr>]` lists currently-open ads |
-| `hugin export [--since ÅÅÅÅ-MM-DD]` | Writes markdown tables of the week's outreach (defaults to the last 7 days) |
+| `hugin export [--format md\|txt\|json] [--scope new\|category\|all] [--category <navn>]` | Writes data to stdout (default: `md`/`all`); `--scope category` requires `--category` |
 
 `--config <path>` points at a different `hugin.json`. The database is created next to it.
 
@@ -48,7 +48,7 @@ Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor prof
 
 ## Web dashboard
 
-A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the pipeline, active ads, and company inventory, track outreach, and export the week's markdown, all from a browser instead of the terminal.
+A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the pipeline, active ads, and company inventory, track outreach, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal.
 
 Build both hosts side by side:
 

@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { EksportView } from './EksportView'
 
-const MARKDOWN_WITH_SCRIPT = '# Rapport\n\n- Acme AS: <script>alert(1)</script>\n'
+const BODY_WITH_SCRIPT = '# Rapport\n\n- Acme AS: <script>alert(1)</script>\n'
 
 function textResponse(body: string, init: { status?: number } = {}) {
   return new Response(body, {
@@ -13,11 +13,11 @@ function textResponse(body: string, init: { status?: number } = {}) {
   })
 }
 
-function fakeServer(markdown = MARKDOWN_WITH_SCRIPT) {
+function fakeServer(body = BODY_WITH_SCRIPT) {
   return vi.fn((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString()
-    if (url.startsWith('/api/export')) {
-      return Promise.resolve(textResponse(markdown))
+    if (url.startsWith('/api/extract')) {
+      return Promise.resolve(textResponse(body))
     }
     return Promise.reject(new Error(`unhandled request ${url}`))
   })
@@ -37,7 +37,7 @@ afterEach(() => {
 })
 
 describe('EksportView', () => {
-  it('renders fetched markdown verbatim as text inside a <pre>, never as markup', async () => {
+  it('renders fetched content verbatim as text inside a <pre>, never as markup', async () => {
     const { container } = renderView(fakeServer())
 
     const pre = await screen.findByText(/Acme AS/, { selector: 'pre' })
@@ -45,25 +45,84 @@ describe('EksportView', () => {
     expect(container.querySelector('script')).toBeNull()
   })
 
-  it('fetches on mount with a default since 7 days ago, and refetches on date change', async () => {
+  it('fetches on mount with the default scope=all&format=md', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
 
     await screen.findByText(/Acme AS/, { selector: 'pre' })
 
     const initialCall = fetchMock.mock.calls[0][0] as string
-    expect(initialCall).toMatch(/^\/api\/export\?since=\d{4}-\d{2}-\d{2}$/)
+    expect(initialCall).toBe('/api/extract?scope=all&format=md')
+  })
 
-    const input = screen.getByLabelText('Siden dato')
-    fireEvent.change(input, { target: { value: '2026-08-01' } })
+  it('refetches when the scope changes', async () => {
+    const fetchMock = fakeServer()
+    const user = userEvent.setup()
+    renderView(fetchMock)
+
+    await screen.findByText(/Acme AS/, { selector: 'pre' })
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Nytt')
 
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
-      expect(urls).toContain('/api/export?since=2026-08-01')
+      expect(urls).toContain('/api/extract?scope=new&format=md')
     })
   })
 
-  it('Kopier writes the exact markdown to the clipboard and announces success', async () => {
+  it('refetches when the format changes', async () => {
+    const fetchMock = fakeServer()
+    const user = userEvent.setup()
+    renderView(fetchMock)
+
+    await screen.findByText(/Acme AS/, { selector: 'pre' })
+    await user.selectOptions(screen.getByLabelText('Format'), 'txt')
+
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=all&format=txt')
+    })
+  })
+
+  it('scope=category only fetches once a category is typed, then includes it in the URL', async () => {
+    const fetchMock = fakeServer()
+    const user = userEvent.setup()
+    renderView(fetchMock)
+
+    await screen.findByText(/Acme AS/, { selector: 'pre' })
+    fetchMock.mockClear()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Kategori')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await user.type(screen.getByLabelText('Kategori'), 'IT')
+
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=category&format=md&category=IT')
+    })
+  })
+
+  it('the download link href matches the current scope and format', async () => {
+    const fetchMock = fakeServer()
+    const user = userEvent.setup()
+    renderView(fetchMock)
+
+    await screen.findByText(/Acme AS/, { selector: 'pre' })
+    expect(screen.getByRole('link', { name: 'Last ned' })).toHaveAttribute(
+      'href',
+      '/api/extract?scope=all&format=md'
+    )
+
+    await user.selectOptions(screen.getByLabelText('Format'), 'json')
+    await vi.waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Last ned' })).toHaveAttribute(
+        'href',
+        '/api/extract?scope=all&format=json'
+      )
+    })
+  })
+
+  it('Kopier writes the exact preview text to the clipboard and announces success', async () => {
     const user = userEvent.setup()
     const writeText = vi.fn(() => Promise.resolve())
     Object.defineProperty(navigator, 'clipboard', {
@@ -75,7 +134,7 @@ describe('EksportView', () => {
     await screen.findByText(/Acme AS/, { selector: 'pre' })
     await user.click(screen.getByRole('button', { name: 'Kopier' }))
 
-    expect(writeText).toHaveBeenCalledWith(MARKDOWN_WITH_SCRIPT)
+    expect(writeText).toHaveBeenCalledWith(BODY_WITH_SCRIPT)
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await vi.waitFor(() => {

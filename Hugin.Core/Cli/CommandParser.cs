@@ -1,5 +1,5 @@
-using System.Globalization;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Core.Cli;
 
@@ -10,6 +10,8 @@ namespace Hugin.Core.Cli;
 public static class CommandParser
 {
     private const string StatusHelp = "active | applied | answered";
+    private const string ScopeHelp = "new | category | all";
+    private const string FormatHelp = "md | txt | json";
 
     // Options that stand alone; everything else expects a following value.
     private static readonly HashSet<string> ValuelessFlags =
@@ -80,18 +82,28 @@ public static class CommandParser
 
     private static Command ParseExport(string[] args)
     {
-        var (options, error) = ReadOptions(args, 1, ["since"]);
+        var (options, error) = ReadOptions(args, 1, ["format", "scope", "category"]);
         if (error is not null) return new InvalidCommand(error);
 
-        DateTimeOffset? since = null;
-        if (options.TryGetValue("since", out var raw))
+        var format = ExtractFormat.Md;
+        if (options.TryGetValue("format", out var rawFormat))
         {
-            if (!TryParseDate(raw, out var parsed))
-                return new InvalidCommand($"ugyldig dato '{raw}' — bruk formatet ÅÅÅÅ-MM-DD");
-            since = parsed;
+            if (!TryParseFormat(rawFormat, out format))
+                return new InvalidCommand($"ukjent format '{rawFormat}' — bruk {FormatHelp}");
         }
 
-        return new ExportCommand(since);
+        var scope = ExtractScope.All;
+        if (options.TryGetValue("scope", out var rawScope))
+        {
+            if (!TryParseScope(rawScope, out scope))
+                return new InvalidCommand($"ukjent scope '{rawScope}' — bruk {ScopeHelp}");
+        }
+
+        var category = options.GetValueOrDefault("category");
+        if (scope == ExtractScope.Category && string.IsNullOrWhiteSpace(category))
+            return new InvalidCommand("mangler --category for scope category");
+
+        return new ExportCommand(format, scope, category);
     }
 
     private static bool TryParseStatus(string? raw, out PipelineStatus status)
@@ -105,9 +117,27 @@ public static class CommandParser
         }
     }
 
-    private static bool TryParseDate(string? raw, out DateTimeOffset date) =>
-        DateTimeOffset.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out date);
+    private static bool TryParseFormat(string? raw, out ExtractFormat format)
+    {
+        switch (raw?.ToLowerInvariant())
+        {
+            case "md": format = ExtractFormat.Md; return true;
+            case "txt": format = ExtractFormat.Txt; return true;
+            case "json": format = ExtractFormat.Json; return true;
+            default: format = default; return false;
+        }
+    }
+
+    private static bool TryParseScope(string? raw, out ExtractScope scope)
+    {
+        switch (raw?.ToLowerInvariant())
+        {
+            case "new": scope = ExtractScope.New; return true;
+            case "category": scope = ExtractScope.Category; return true;
+            case "all": scope = ExtractScope.All; return true;
+            default: scope = default; return false;
+        }
+    }
 
     /// <summary>
     /// Walks "--flag value" pairs from <paramref name="from"/>. Options outside

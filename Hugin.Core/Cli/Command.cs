@@ -1,4 +1,5 @@
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Core.Cli;
 
@@ -12,7 +13,7 @@ public sealed record TrackCommand(string Orgnr, PipelineStatus Status, string? W
 
 public sealed record ListCommand(PipelineStatus? Status, bool Companies, string? Kommune, bool Ads) : Command;
 
-public sealed record ExportCommand(DateTimeOffset? Since) : Command;
+public sealed record ExportCommand(ExtractFormat Format, ExtractScope Scope, string? Category) : Command;
 
 public sealed record HelpCommand : Command;
 

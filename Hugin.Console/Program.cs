@@ -133,6 +133,7 @@ internal static class Program
         services.AddScoped<SyncService>();
         services.AddScoped<NewItemsService>();
         services.AddScoped<PipelineService>();
+        services.AddScoped<ExtractService>();
 
         return builder.Build();
     }
@@ -348,11 +349,18 @@ internal static class Program
 
     private static async Task<int> RunExportAsync(IServiceProvider services, ExportCommand command)
     {
-        var export = new ExportService(services.GetRequiredService<IPipelineRepository>(),
-            services.GetRequiredService<ICompanyRepository>(), services.GetRequiredService<IClock>());
-
-        Console.WriteLine(await export.ExportAsync(command.Since));
-        return 0;
+        try
+        {
+            var extract = services.GetRequiredService<ExtractService>();
+            var result = await extract.ExtractAsync(command.Scope, command.Format, command.Category);
+            Console.WriteLine(result.Content);
+            return 0;
+        }
+        catch (MissingCategoryException ex)
+        {
+            Console.Error.WriteLine($"Feil: {ex.Message}");
+            return 2;
+        }
     }
 
     private static string MunicipalityName(HuginConfig config, string? number) =>
@@ -379,7 +387,8 @@ internal static class Program
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper
               hugin list --ads [--kommune <nr>]   Vis aktive annonser
-              hugin export [--since ÅÅÅÅ-MM-DD]   Skriv Preparelogg-tabeller (standard: siste 7 dager)
+              hugin export [--format md|txt|json] [--scope new|category|all] [--category <navn>]
+                                                  Skriv ut data (standard: md/all); --scope category krever --category
 
             Globalt:
               --config <sti>                      Bruk en annen hugin.json (standard: ved siden av programmet)

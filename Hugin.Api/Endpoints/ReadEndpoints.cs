@@ -52,8 +52,27 @@ public static class ReadEndpoints
             return Results.Ok(result);
         });
 
-        app.MapGet("/api/export", async (ExportService export, DateTimeOffset? since) =>
-            Results.Text(await export.ExportAsync(since), "text/markdown", System.Text.Encoding.UTF8));
+        app.MapGet("/api/extract", async (ExtractService extract, string? scope, string? format, string? category) =>
+        {
+            if (ParseExtractScope(scope) is not { } parsedScope)
+                return Results.Problem(statusCode: 400, title: $"Ukjent scope «{scope}» — bruk new | category | all.");
+
+            if (ParseExtractFormat(format) is not { } parsedFormat)
+                return Results.Problem(statusCode: 400, title: $"Ukjent format «{format}» — bruk md | txt | json.");
+
+            try
+            {
+                var result = await extract.ExtractAsync(parsedScope, parsedFormat, category);
+                // Results.File sets Content-Disposition: attachment; filename=... for us — the
+                // filename is server-chosen (scope/date, no user input reaches it).
+                var bytes = System.Text.Encoding.UTF8.GetBytes(result.Content);
+                return Results.File(bytes, result.ContentType, result.FileName);
+            }
+            catch (MissingCategoryException)
+            {
+                return Results.Problem(statusCode: 400, title: "Mangler category for scope=category.");
+            }
+        });
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
             IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, HuginConfig config) =>
@@ -70,4 +89,20 @@ public static class ReadEndpoints
                 config.Linkouts));
         });
     }
+
+    private static ExtractScope? ParseExtractScope(string? slug) => slug switch
+    {
+        "new" => ExtractScope.New,
+        "category" => ExtractScope.Category,
+        "all" => ExtractScope.All,
+        _ => null,
+    };
+
+    private static ExtractFormat? ParseExtractFormat(string? slug) => slug switch
+    {
+        "md" => ExtractFormat.Md,
+        "txt" => ExtractFormat.Txt,
+        "json" => ExtractFormat.Json,
+        _ => null,
+    };
 }

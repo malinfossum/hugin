@@ -1,5 +1,6 @@
 using Hugin.Core.Cli;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Tests;
 
@@ -45,9 +46,31 @@ public class CommandParserTests
             Is.EqualTo(new ListCommand(null, true, "3405", false)));
 
     [Test]
-    public void Export_with_since()
-        => Assert.That(CommandParser.Parse(["export", "--since", "2026-08-11"]),
-            Is.EqualTo(new ExportCommand(new DateTimeOffset(2026, 8, 11, 0, 0, 0, TimeSpan.Zero))));
+    public void Export_defaults_to_md_and_all()
+        => Assert.That(CommandParser.Parse(["export"]),
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.All, null)));
+
+    [Test]
+    public void Export_with_format_and_scope()
+        => Assert.That(CommandParser.Parse(["export", "--format", "json", "--scope", "new"]),
+            Is.EqualTo(new ExportCommand(ExtractFormat.Json, ExtractScope.New, null)));
+
+    [Test]
+    public void Export_category_scope_carries_the_category()
+        => Assert.That(CommandParser.Parse(["export", "--scope", "category", "--category", "IT"]),
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.Category, "IT")));
+
+    [Test]
+    public void Export_category_scope_without_category_is_invalid()
+        => Assert.That(CommandParser.Parse(["export", "--scope", "category"]), Is.TypeOf<InvalidCommand>());
+
+    [Test]
+    public void Export_bad_format_is_invalid()
+        => Assert.That(CommandParser.Parse(["export", "--format", "pdf"]), Is.TypeOf<InvalidCommand>());
+
+    [Test]
+    public void Export_bad_scope_is_invalid()
+        => Assert.That(CommandParser.Parse(["export", "--scope", "banana"]), Is.TypeOf<InvalidCommand>());
 
     [Test]
     public void Unknown_verb_is_invalid()
