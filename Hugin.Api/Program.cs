@@ -15,7 +15,16 @@ var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
 var loaded = ConfigLoader.Load(configPath);
 if (loaded.Warning is not null) Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
 
-var builder = WebApplication.CreateBuilder(args);
+// Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
+// not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
+// standard ASPNETCORE_CONTENTROOT env var still wins when set, e.g. for test hosts.
+var contentRoot = Environment.GetEnvironmentVariable("ASPNETCORE_CONTENTROOT") ?? AppContext.BaseDirectory;
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = contentRoot,
+});
 
 // Loopback in code, not config: a copied launchSettings must never expose the pipeline on LAN.
 builder.WebHost.ConfigureKestrel(o => o.Listen(System.Net.IPAddress.Loopback, port));
