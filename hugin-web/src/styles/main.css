@@ -1,11 +1,15 @@
 /* Design system — reset, tokens, then base element styling, then the primitive/component/
-   utility layers, in the order the DS's own index files intend (tokens before anything that
-   reads a token; palettes/typeskins import last inside tokens/index.css so they win ties). */
+   composition/utility layers, in the order the DS's own index files intend (tokens before
+   anything that reads a token; palettes/typeskins import last inside tokens/index.css so they
+   win ties; compositions combine primitives+components into higher-level patterns like
+   .app-shell, so they load after components but still before utilities, which stay the final
+   override layer). */
 @import url("../../design-system/base/reset.css");
 @import url("../../design-system/tokens/index.css");
 @import url("../../design-system/base/base.css");
 @import url("../../design-system/primitives/index.css");
 @import url("../../design-system/components/index.css");
+@import url("../../design-system/compositions/index.css");
 @import url("../../design-system/utilities/index.css");
 
 /* Touch targets ≥44px (a11y spec) — mobile-first, applies at every breakpoint. */
@@ -73,7 +77,9 @@ input[type="text"] {
 }
 
 /* Frister list rows: stacked on mobile, a four-column grid from tablet up
-   (title+employer | frist-date + days-chip | category | actions). */
+   (title+employer | frist-date + days-chip | category | actions). The four direct children
+   carry .frist-row-title/-date/-actions purely as structural/BEM markers for the grid's four
+   cells — no rule targets them by name; layout comes from grid auto-placement above. */
 .frist-row {
   display: grid;
   gap: var(--space-2);

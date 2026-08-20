@@ -95,3 +95,39 @@ doesn't compute layout, so this class of regression is invisible to Vitest.
 ## Commit
 
 One commit: `feat: the dashboard dresses in the design system`
+
+## Fix (post-review): compositions layer never imported
+
+Review caught a real integrity gap: `App.tsx` wraps the app in `className="app-shell"`, a
+genuine DS composition (`design-system/compositions/app-shell.css` — `min-height: 100vh`,
+`grid-template-rows: auto 1fr`) — but `main.css` only imported
+`primitives`/`components`/`utilities`, never `compositions/index.css`. The class resolved to
+nothing at runtime; the shell rendered as an unstyled `<div>`.
+
+Fixed by adding `@import url("../../design-system/compositions/index.css");` to `main.css`,
+positioned after `components` and before `utilities` — compositions build on
+primitives+components so they load after both, and utilities stay the final override layer
+per the DS's own layering intent. Updated the file's header comment to document the five-layer
+order explicitly.
+
+Skimmed the rest of `compositions/index.css` (`hero.css`, `dashboard.css`, `settings.css`,
+`empty-state.css`) for collisions before landing the import: `.hero`/`.hero-copy`/`.eyebrow`/
+`.hero-actions`, `.dashboard-grid`/`.kpi-row`, `.settings-section`/`.settings-group`, and
+`.empty-state` — none of these class names are used anywhere in the app (I used `.dashboard`,
+not `.dashboard-grid`; `.empty-hint`, not `.empty-state`), and `.main-shell` from
+`app-shell.css` is likewise never applied (I used `.main-content` on `<main>` instead). No
+composition class silently restyled anything already shipped.
+
+Also addressed the minor: `.frist-row-title`/`.frist-row-date`/`.frist-row-actions` in
+`FristerList.tsx` were pure BEM/structural markers with no matching CSS rule (the grid layout
+comes from `.frist-row`'s `display: grid` auto-placing its four direct children). Added a
+one-line note in `main.css` next to the `.frist-row` rule rather than stripping them, since
+they document which JSX element maps to which grid cell.
+
+Re-verified: `npm test` — 53/53 green. `npm run build` — clean. `npx biome check .` — **0
+errors**, 3 known warnings unchanged (the repo now carries `hugin-web/.gitattributes` forcing
+`eol=lf`, which cleared the CRLF noise reported in the original pass). Confirmed
+`.app-shell{grid-template-rows:auto 1fr;min-height:100vh;display:grid}` is present in the
+built CSS output.
+
+Second commit: `fix: app-shell composition actually imported`
