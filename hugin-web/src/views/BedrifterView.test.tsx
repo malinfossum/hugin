@@ -185,7 +185,7 @@ describe('BedrifterView', () => {
     expect(google).toHaveAttribute('target', '_blank')
     expect(google).toHaveAttribute('rel', 'noopener noreferrer')
 
-    const proff = screen.getByRole('link', { name: 'Proff' })
+    const proff = screen.getByRole('link', { name: 'Proff.no' })
     expect(proff).toHaveAttribute(
       'href',
       `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
@@ -213,7 +213,7 @@ describe('BedrifterView', () => {
       'href',
       `https://www.google.com/search?q=${encodeURIComponent('"Uten Nettside AS" Oslo')}`
     )
-    expect(screen.getByRole('link', { name: 'Proff' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Proff.no' })).toHaveAttribute(
       'href',
       `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
     )

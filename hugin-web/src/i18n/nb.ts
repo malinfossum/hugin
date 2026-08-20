@@ -102,7 +102,7 @@ export const nb = {
   'companies.seeAdAtNav': 'Se annonse hos NAV',
   'companies.noWebsite': 'har ikke egen nettside',
   'companies.googleSearch': 'Google-søk',
-  'companies.proffSearch': 'Proff',
+  'companies.proffSearch': 'Proff.no',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

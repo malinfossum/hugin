@@ -57,7 +57,7 @@ public sealed class PipelineService(
         await pipeline.UpsertAsync(entry, ct);
 
         var warning = status != PipelineStatus.Active && string.IsNullOrWhiteSpace(entry.Why)
-            ? $"mangler begrunnelse — GET spør om hvorfor {orgnr} er interessant. Legg den til med --why \"...\""
+            ? $"mangler begrunnelse — legg til hvorfor {orgnr} er interessant (--why \"...\")"
             : null;
 
         return new TrackResult(entry, fetchedFromBrreg, warning);

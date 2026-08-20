@@ -33,7 +33,7 @@ internal static class ExtractRenderer
                 break;
 
             case "category":
-                AdSection(sb, $"## Aktiv — {document.Category}", document.Ads, md: true);
+                AdSection(sb, $"## Aktiv — {Plain(document.Category)}", document.Ads, md: true);
                 break;
 
             case "all":
@@ -61,7 +61,7 @@ internal static class ExtractRenderer
                 break;
 
             case "category":
-                AdSection(sb, $"Aktiv — {document.Category}", document.Ads, md: false);
+                AdSection(sb, $"Aktiv — {Plain(document.Category)}", document.Ads, md: false);
                 break;
 
             case "all":

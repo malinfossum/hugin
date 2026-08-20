@@ -129,6 +129,25 @@ public class ExtractServiceTests
             await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Md, category: "   "));
     }
 
+    [Test]
+    public async Task Category_scope_flattens_newlines_in_the_category_heading()
+    {
+        var ads = new FakeAdRepository();
+        ads.Store["a1"] = Ad("a1", "Treff", category: "x\ny");
+
+        var service = BuildService(ads: ads);
+
+        var md = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Md, category: "x\ny");
+        var txt = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Txt, category: "x\ny");
+
+        var mdHeadingLine = md.Content.Split('\n')[0].TrimEnd('\r');
+        Assert.That(mdHeadingLine, Is.EqualTo("## Aktiv — x y (1)"));
+
+        var txtHeadingLine = txt.Content.Split('\n')[0].TrimEnd('\r');
+        Assert.That(txtHeadingLine, Is.EqualTo("Aktiv — x y (1)"));
+        Assert.That(txtHeadingLine, Does.Not.Contain("\r"));
+    }
+
     // --- All scope ------------------------------------------------------
 
     [Test]

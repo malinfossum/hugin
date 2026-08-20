@@ -101,7 +101,7 @@ export const en = {
   'companies.seeAdAtNav': 'See ad at NAV',
   'companies.noWebsite': 'no website of their own',
   'companies.googleSearch': 'Google search',
-  'companies.proffSearch': 'Proff',
+  'companies.proffSearch': 'Proff.no',
 
   'export.scope': 'Scope',
   'export.scopeNew': 'New',
