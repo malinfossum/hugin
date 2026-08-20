@@ -9,22 +9,23 @@ public static class ReadEndpoints
 {
     public static void MapReads(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/new", async (NewItemsService service, IClock clock) =>
+        app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config) =>
         {
             if (await service.GetNewAsync() is not { } items) return Results.NoContent();
             return Results.Ok(new NewDto(
-                items.Companies.Select(CompanyDto.From).ToList(),
+                items.Companies.Select(c => CompanyDto.From(c, config)).ToList(),
                 items.Ads.Select(AdDto.FromAd).ToList(),
                 items.Since, clock.UtcNow));
         });
 
-        app.MapGet("/api/companies", async (ICompanyRepository companies, string? kommune) =>
-            Results.Ok((await companies.GetAllAsync(kommune)).Select(CompanyDto.From)));
+        app.MapGet("/api/companies", async (ICompanyRepository companies, HuginConfig config, string? kommune) =>
+            Results.Ok((await companies.GetAllAsync(kommune)).Select(c => CompanyDto.From(c, config))));
 
-        app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads, string orgnr) =>
+        app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
+            HuginConfig config, string orgnr) =>
             await companies.GetAsync(orgnr) is not { } company
                 ? Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.")
-                : Results.Ok(new CompanyDetailDto(CompanyDto.From(company),
+                : Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config),
                     (await ads.GetByEmployerAsync(orgnr)).Select(AdDto.FromAd).ToList())));
 
         app.MapGet("/api/pipeline", async (IPipelineRepository pipeline, ICompanyRepository companies, string? status) =>

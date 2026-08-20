@@ -8,7 +8,7 @@ import type { CompanyDto, NewDto } from '../../types'
 function groupByKommune(companies: CompanyDto[]): [string, CompanyDto[]][] {
   const groups = new Map<string, CompanyDto[]>()
   for (const company of companies) {
-    const key = company.kommune ?? 'Ukjent kommune'
+    const key = company.kommuneNavn ?? company.kommune ?? 'ukjent'
     const group = groups.get(key)
     if (group) group.push(company)
     else groups.set(key, [company])

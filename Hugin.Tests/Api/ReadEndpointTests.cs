@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hugin.Tests.Api;
 
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
-public sealed record CompanyDtoProbe(string Orgnr, string Name);
+public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, string Route);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
@@ -60,6 +60,23 @@ public sealed class ReadEndpointTests
         Assert.That(dto!.Companies.Select(c => c.Orgnr), Is.EqualTo(new[] { "999888777" }));
         Assert.That(dto.Since, Is.EqualTo(since));
         Assert.That(dto.AsOf, Is.GreaterThanOrEqualTo(dto.Since));
+    }
+
+    [Test]
+    public async Task Companies_list_resolves_kommune_navn_from_config()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Ferskvare AS", "3407", "62.100", null, false, null), now);
+        }
+
+        var response = await _client.GetAsync("/api/companies");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
+        Assert.That(companies!.Single(c => c.Orgnr == "999888777").KommuneNavn, Is.EqualTo("Gjøvik"));
     }
 
     [Test]

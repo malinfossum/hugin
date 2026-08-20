@@ -22,6 +22,7 @@ export interface CompanyDto {
   orgnr: string
   name: string
   kommune: string | null
+  kommuneNavn: string | null
   naceCode: string | null
   isBranch: boolean
   website: string | null

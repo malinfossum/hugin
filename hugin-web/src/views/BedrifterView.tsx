@@ -33,10 +33,12 @@ export function BedrifterView() {
   }, [selectedOrgnr])
 
   const kommuner = useMemo(() => {
-    const values = companies
-      .map((c) => c.kommune)
-      .filter((k): k is string => k !== null && k !== '')
-    return Array.from(new Set(values)).sort()
+    const byNumber = new Map<string, string>()
+    for (const c of companies) {
+      if (!c.kommune) continue
+      if (!byNumber.has(c.kommune)) byNumber.set(c.kommune, c.kommuneNavn ?? c.kommune)
+    }
+    return Array.from(byNumber.entries()).sort(([, a], [, b]) => a.localeCompare(b))
   }, [companies])
 
   const filtered = companies.filter((c) => {
@@ -79,9 +81,9 @@ export function BedrifterView() {
           onChange={(event) => setKommune(event.target.value)}
         >
           <option value="">Alle</option>
-          {kommuner.map((k) => (
-            <option key={k} value={k}>
-              {k}
+          {kommuner.map(([number, name]) => (
+            <option key={number} value={number}>
+              {name}
             </option>
           ))}
         </select>
@@ -112,7 +114,7 @@ export function BedrifterView() {
                 {c.name}
                 {c.isBranch && ' [avdeling]'}
               </span>
-              <span>{c.kommune}</span>
+              <span>{c.kommuneNavn ?? c.kommune}</span>
             </button>
             {c.website && (
               <a href={c.website} target="_blank" rel="noopener noreferrer">

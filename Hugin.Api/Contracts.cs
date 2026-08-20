@@ -23,11 +23,12 @@ public sealed record AdDto(string FeedId, string Title, string? Employer, string
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,
     DateTimeOffset Since, DateTimeOffset AsOf);
 
-public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, string? NaceCode,
-    bool IsBranch, string? Website, string? ParentOrgnr)
+public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, string? KommuneNavn,
+    string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr)
 {
-    public static CompanyDto From(Company c) => new(c.Orgnr, c.Name, c.MunicipalityNumber, c.NaceCode,
-        c.IsBranch, c.Website, c.ParentOrgnr);
+    public static CompanyDto From(Company c, HuginConfig config) => new(c.Orgnr, c.Name, c.MunicipalityNumber,
+        config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name,
+        c.NaceCode, c.IsBranch, c.Website, c.ParentOrgnr);
 }
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);

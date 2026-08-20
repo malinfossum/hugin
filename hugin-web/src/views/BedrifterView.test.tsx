@@ -17,6 +17,7 @@ function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
     orgnr: '915787630',
     name: 'Acme AS',
     kommune: '0301',
+    kommuneNavn: null,
     naceCode: '62.010',
     isBranch: false,
     website: 'https://acme.example',

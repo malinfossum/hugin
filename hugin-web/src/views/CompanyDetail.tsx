@@ -54,7 +54,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             <dt>Orgnr</dt>
             <dd>{detail.company.orgnr}</dd>
             <dt>Kommune</dt>
-            <dd>{detail.company.kommune ?? '—'}</dd>
+            <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? '—'}</dd>
             <dt>NACE</dt>
             <dd>{detail.company.naceCode ?? '—'}</dd>
             {detail.company.isBranch && detail.company.parentOrgnr && (
