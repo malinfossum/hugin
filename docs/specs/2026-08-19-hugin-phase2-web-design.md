@@ -152,7 +152,7 @@ Since-date picker, the Preparelogg markdown shown **raw in a styled `<pre>`** (w
 
 ## Post-implementation corrections (2026-08-20)
 
-Four defects/omissions found after the build, against the running host rather than in review:
+Five defects/omissions found after the build, against the running host rather than in review:
 
 1. **Content root anchors to the exe directory.** `WebApplicationOptions.ContentRootPath` defaults to the process's launch cwd, which breaks `wwwroot` lookup when the published exe is started from anywhere other than its own folder (`ASPNETCORE_CONTENTROOT` unset is the common case). Program.cs now defaults content root to `AppContext.BaseDirectory`, with `ASPNETCORE_CONTENTROOT` still overriding when set (so `WebApplicationFactory` test hosts, which set it themselves, are unaffected). Found running the published exe from a different cwd during integration smoke.
 2. **`AdDto` gained `Published`.** The ad-history view (`Bedrifter` company detail) needs the ad's original publish date to answer "how often do they hire?" — the deadline alone doesn't show cadence. Plan omission; both `AdDto.From` and `AdDto.FromAd` now carry it.
