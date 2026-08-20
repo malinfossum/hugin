@@ -13,7 +13,14 @@ function urgencyClass(daysLeft: number | null): string | undefined {
 
 /** Badge treatment for the days-left chip, layered with the urgency color class above. */
 function daysLeftBadgeClass(daysLeft: number | null): string {
-  const badge = daysLeft === null ? 'badge' : daysLeft <= 3 ? 'badge badge-danger' : daysLeft <= 7 ? 'badge badge-warning' : 'badge'
+  const badge =
+    daysLeft === null
+      ? 'badge'
+      : daysLeft <= 3
+        ? 'badge badge-danger'
+        : daysLeft <= 7
+          ? 'badge badge-warning'
+          : 'badge'
   const urgency = urgencyClass(daysLeft)
   return urgency ? `${badge} ${urgency}` : badge
 }
@@ -132,7 +139,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                 <span className="badge badge-accent">{PIPELINE_LABELS[ad.pipelineStatus]}</span>
               )}
               {ad.hidden ? (
-                <button type="button" className="btn btn-ghost" onClick={() => handleAngreSkjul(ad.feedId)}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => handleAngreSkjul(ad.feedId)}
+                >
                   Angre skjul
                 </button>
               ) : (

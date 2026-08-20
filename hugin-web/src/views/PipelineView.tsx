@@ -128,13 +128,20 @@ export function PipelineView() {
                             ⚠ {warning.message}
                           </p>
                         )}
-                        <button type="button" className="btn btn-ghost" onClick={() => startEdit(entry)}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => startEdit(entry)}
+                        >
                           Rediger
                         </button>
                       </>
                     )}
                     {isEditing && form && (
-                      <form className="stack stack-sm" onSubmit={(event) => handleSubmit(entry.orgnr, event)}>
+                      <form
+                        className="stack stack-sm"
+                        onSubmit={(event) => handleSubmit(entry.orgnr, event)}
+                      >
                         <div className="field">
                           <label className="label" htmlFor={`status-${entry.orgnr}`}>
                             Status
