@@ -44,6 +44,33 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 
 Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor proff.no permits scraping — configure them as `linkouts` instead, and Hugin will remind you to check them by hand.
 
+## Web dashboard
+
+A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the pipeline, active ads, and company inventory, track outreach, and export the week's markdown, all from a browser instead of the terminal.
+
+Build both hosts side by side:
+
+```powershell
+.\build.ps1
+```
+
+This runs `npm run build` in `hugin-web`, then publishes `Hugin.Console` and `Hugin.Api` into `publish\`. Run the dashboard:
+
+```bash
+publish\hugin-api.exe --port 5111
+```
+
+`--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI.
+
+For local development, run the API and the Vite dev server side by side:
+
+```bash
+dotnet run --project Hugin.Api
+cd hugin-web && npm run dev
+```
+
+The API binds to loopback only, and every state-changing request (sync, track, mark-seen, hide) requires a header the dashboard's own frontend sets — the API is not reachable, or writable, from anywhere but that page on that machine.
+
 ## Tests
 
 ```bash
