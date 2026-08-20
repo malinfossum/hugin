@@ -129,11 +129,13 @@ body.light {
  *
  * The :root block above is UNCHANGED — it stays the pre-3.0 true-black /
  * cool-blue-grey identity, on purpose. gold, wend, tidsro and kenaz are
- * accent-(and-surface)-only palettes: they never declared their own
- * --surface-1.."5"/--on-accent/--accent-solid, so they've always derived
- * those from this block. If Daily's values were written into :root directly,
- * every one of those palettes would silently repaint with ember surfaces and
- * a hardcoded solid-button fill they never asked for.
+ * accent-(and-surface)-only palettes and none of them override --font-display
+ * or --accent-solid-strong; --on-accent/--accent-solid specifically are only
+ * ever touched by kenaz (its own dark --on-accent and light --accent-solid —
+ * see kenaz.css), never by gold/wend/tidsro. If Daily's values were written
+ * into :root directly, every one of those palettes would have silently
+ * picked up ember surfaces and/or a hardcoded solid-button fill for whichever
+ * channels they don't already override themselves.
  *
  * Instead this block carries Daily's surface + accent + solid-button-ink
  * overrides under a selector that matches exactly the "no palette chosen"
@@ -147,14 +149,19 @@ body.light {
  * --on-accent/--accent-solid/--accent-solid-strong are hardcoded rather than
  * derived from --accent for the same reason daily.css hardcodes them: the
  * ember accent is mid-tone, so the derive-from-accent formula (still live in
- * :root above, still what gold/wend/tidsro/kenaz use) doesn't clear 4.5:1
- * against near-black ink. Light mode only re-tunes --accent-rgb/
- * --accent-strong-rgb, same as daily.css's light block — --accent-solid
- * still resolves through :root[data-theme="light"]'s formula below (higher
- * specificity, so it wins there), which is what daily.css's own comment
- * describes as "light theme resolves the base light accent, which passes on
- * its own". Text/border/surface-0 live in _oled.css (extended to match this
- * same pair of selectors); font-display lives in typography.css.
+ * :root above, still what gold/wend/tidsro use, and what kenaz uses for its
+ * own dark --accent-solid) doesn't clear 4.5:1 against near-black ink. Light
+ * mode only re-tunes --accent-rgb/--accent-strong-rgb, same as daily.css's
+ * light block — --accent-solid still resolves through
+ * :root[data-theme="light"]'s formula below (higher specificity, so it wins
+ * there), which is what daily.css's own comment describes as "light theme
+ * resolves the base light accent, which passes on its own". Text/border/
+ * surface-0 live in _oled.css (extended to match this same pair of
+ * selectors); font-display lives in typography.css.
+ *
+ * The pre-3.0 identity this block replaces isn't gone: it's preserved
+ * byte-for-byte as the opt-in classic.css, for any unpinned consumer that
+ * wants to keep today's look rather than adopt Daily on their next sync.
  *
  * daily.css's own [data-palette="daily"] block restates these exact values —
  * that's now a documented no-op kept for anyone who pins the palette by name.
