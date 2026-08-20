@@ -31,7 +31,7 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
       <ul>
         {trenger.map((ad) => (
           <li key={ad.feedId}>
-            {ad.title} — funnet, ikke søkt — {fristText(ad.daysLeft as number)}
+            {ad.title} — aktiv, ikke søkt — {fristText(ad.daysLeft as number)}
           </li>
         ))}
       </ul>

@@ -43,7 +43,7 @@ afterEach(() => {
 })
 
 describe('TrengerHandling', () => {
-  it('shows only funnet entries with a near frist', async () => {
+  it('shows only active entries with a near frist', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Skal med', pipelineStatus: 'active', daysLeft: 3 }),
       ad({ feedId: 'a2', title: 'Feil status', pipelineStatus: 'applied', daysLeft: 2 }),
@@ -54,25 +54,25 @@ describe('TrengerHandling', () => {
     renderTrenger(mockFetch(ads))
 
     const item = await screen.findByText(/Skal med/)
-    expect(item).toHaveTextContent('funnet, ikke søkt — frist om 3 dager')
+    expect(item).toHaveTextContent('aktiv, ikke søkt — frist om 3 dager')
 
     const today = screen.getByText(/Frist i dag/)
-    expect(today).toHaveTextContent('funnet, ikke søkt — frist i dag')
+    expect(today).toHaveTextContent('aktiv, ikke søkt — frist i dag')
 
     expect(screen.queryByText(/Feil status/)).not.toBeInTheDocument()
     expect(screen.queryByText(/For langt unna/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Ingen frist/)).not.toBeInTheDocument()
   })
 
-  it('shows "frist utløpt" for an overdue (negative daysLeft) funnet entry', async () => {
+  it('shows "frist utløpt" for an overdue (negative daysLeft) active entry', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'active', daysLeft: -1 })]
     renderTrenger(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
-    expect(item).toHaveTextContent('funnet, ikke søkt — frist utløpt')
+    expect(item).toHaveTextContent('aktiv, ikke søkt — frist utløpt')
   })
 
-  it('renders nothing when there are no near-frist funnet entries', async () => {
+  it('renders nothing when there are no near-frist active entries', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Feil status', pipelineStatus: 'applied', daysLeft: 2 }),
       ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),

@@ -94,3 +94,48 @@
   the task scope is the status/starred model, not the de-GET-ify wording pass (later task).
 - CLI does not gain a `--starred` flag — the task's CLI bullet only asked for `track <orgnr>
   active|applied|answered` with existing options; starring is API-only for now.
+
+## Fix pass (review, 2026-08-20)
+
+Code review on the above found two Important issues and two minors; all four fixed in the same
+session, before the first commit's changes had gone anywhere:
+
+1. **(Important) Backup catch too narrow.** `HuginDbInitializer`'s `.bak` copy only caught
+   `IOException`. On Windows an AV lock or a read-only/undeletable existing `.bak` throws
+   `UnauthorizedAccessException`, which would have propagated out of `InitAsync` and crashed the
+   host *before* `MigrateAsync` ran — exactly the opposite of "best-effort, never blocks the
+   migration." Widened to `catch (Exception)`, comment updated to say why (AV lock, read-only
+   file, permissions — whatever the filesystem throws — must not stop the migration).
+
+2. **(Important) Migration remap had zero real coverage.** Every existing test path (the two
+   `HuginDbInitializerTests` backup tests, `InitAsync_migrates_and_enables_wal`) runs the
+   `V3StatusModel` migration against an empty `Pipeline` table, so the `UPDATE ... CASE Status`
+   SQL never touched a row in CI. Added
+   `Hugin.Tests/V3StatusModelMigrationTests.Up_remaps_status_ints_defaults_starred_false_and_drops_route`:
+   migrates a temp db to the migration immediately before `V3StatusModel`
+   (`db.GetService<IMigrator>().MigrateAsync("20260820121936_AddWebsiteCheck")`), seeds five
+   `Pipeline` rows via raw SQL with old Status values `0,1,2,3` plus an out-of-range `99` (to also
+   exercise fix 4's `ELSE 0`), migrates to latest through `HuginDbInitializer.InitAsync`, then
+   asserts: statuses became `0,1,1,2,0`; every row's `Starred` defaulted `false`; and
+   `pragma_table_info('Pipeline')` no longer lists a `Route` column. Passed on the first run.
+
+3. **(Minor) Leftover "funnet" copy.** `TrengerHandling.tsx`'s rendered row text ("… — funnet,
+   ikke søkt — …") still said the old status name even though the filter behind it already checks
+   `pipelineStatus === 'active'`. Changed to "… — aktiv, ikke søkt — …"; updated the three
+   `TrengerHandling.test.tsx` assertions and two `it(...)` descriptions that named "funnet" to
+   match.
+
+4. **(Minor) No defensive ELSE in the remap CASE.** Added `ELSE 0` to both the `Up` and `Down`
+   `CASE Status` statements in `V3StatusModel` (not just `Up`, for the same reason on the reverse
+   path) — an out-of-range or tampered `Status` now falls back to `Active`/`Funnet` instead of
+   being set to `NULL` by SQLite's default `CASE` behavior, which would otherwise break every
+   subsequent read of that row (`PipelineStatus` is a non-nullable enum column). Covered by the
+   `99` row in the new migration test above.
+
+### Verify (fix pass)
+
+- `dotnet build Hugin.slnx` — clean, 0 warnings, 0 errors.
+- `dotnet test Hugin.slnx` — **189/189 green** (188 → 189: the one new migration test).
+- `npm run build` (hugin-web) — clean.
+- `npm test` (hugin-web) — **53/53 green**, unchanged.
+- Committed as `fix: migration hardening — backup catch, populated-db test, funnet sweep`.

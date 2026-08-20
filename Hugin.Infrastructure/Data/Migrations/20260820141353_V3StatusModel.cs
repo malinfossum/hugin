@@ -20,12 +20,16 @@ namespace Hugin.Infrastructure.Data.Migrations
             // Old: Funnet=0, SoektSelv=1, BedtGetSjekke=2, Svar=3.
             // New: Active=0, Applied=1, Answered=2. Both outreach routes collapse into Applied —
             // Route is dropped right after, so the distinction has nowhere left to live.
+            // ELSE 0 is defensive: this is a one-way migration (the pre-migration .bak is the
+            // only way back), so a tampered or out-of-range Status must fall back to Active
+            // instead of NULLing the column and breaking every read afterwards.
             migrationBuilder.Sql(
                 "UPDATE Pipeline SET Status = CASE Status " +
                 "WHEN 0 THEN 0 " +
                 "WHEN 1 THEN 1 " +
                 "WHEN 2 THEN 1 " +
                 "WHEN 3 THEN 2 " +
+                "ELSE 0 " +
                 "END;");
 
             migrationBuilder.DropColumn(
@@ -51,6 +55,7 @@ namespace Hugin.Infrastructure.Data.Migrations
                 "WHEN 0 THEN 0 " +
                 "WHEN 1 THEN 1 " +
                 "WHEN 2 THEN 3 " +
+                "ELSE 0 " +
                 "END;");
 
             migrationBuilder.DropColumn(

@@ -23,10 +23,12 @@ public static class HuginDbInitializer
             && (await db.Database.GetPendingMigrationsAsync(ct)).Any())
         {
             // A schema-changing migration is about to run against real data — keep an
-            // unmigrated copy in case something goes wrong. Best-effort: a backup failure must
-            // never block the migration itself from running.
+            // unmigrated copy in case something goes wrong. Best-effort: a backup failure (an
+            // AV lock, a read-only .bak, permissions, whatever the filesystem throws) must
+            // never block the migration itself from running, so every exception is swallowed
+            // here, not just IOException.
             try { File.Copy(databasePath, databasePath + ".bak", overwrite: true); }
-            catch (IOException) { }
+            catch (Exception) { }
         }
 
         await db.Database.MigrateAsync(ct);
