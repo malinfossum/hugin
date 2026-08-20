@@ -219,24 +219,39 @@ describe('NyttSidenSist', () => {
     await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
     await screen.findByRole('dialog')
 
-    // A sync completes while the dialog is still open: /api/new now has a newer asOf,
-    // and DashboardView would bump refreshKey to trigger this refetch.
-    currentDto = newDto({ asOf: '2026-08-19T10:15:00Z' })
-    const getCallCountBefore = fetchMock.mock.calls.filter(
-      ([u, i]) => u === '/api/new' && (i?.method ?? 'GET') === 'GET'
-    ).length
+    // A sync completes while the dialog is still open: /api/new now has a newer asOf
+    // (and different content — one more ad), and DashboardView would bump refreshKey to
+    // trigger this refetch.
+    currentDto = newDto({
+      asOf: '2026-08-19T10:15:00Z',
+      ads: [
+        ...newDto().ads,
+        {
+          feedId: 'a2',
+          title: 'Ny annonse fra runde to',
+          employer: 'Beta AS',
+          employerOrgnr: '915787632',
+          kommune: '4601',
+          expires: null,
+          daysLeft: null,
+          category: 'IT',
+          sourceUrl: null,
+          pipelineStatus: null,
+          hidden: false,
+          isActive: true,
+          published: '2026-08-19T09:00:00Z',
+        },
+      ],
+    })
     rerender(
       <LiveRegionProvider>
         <NyttSidenSist refreshKey={1} />
       </LiveRegionProvider>
     )
 
-    await waitFor(() => {
-      const getCallCountAfter = fetchMock.mock.calls.filter(
-        ([u, i]) => u === '/api/new' && (i?.method ?? 'GET') === 'GET'
-      ).length
-      expect(getCallCountAfter).toBeGreaterThan(getCallCountBefore)
-    })
+    // Wait for content that only exists in response B — proves the refetch actually
+    // applied, rather than relying on userEvent timing or a fetch-call count.
+    await screen.findByText('Ny annonse fra runde to')
 
     const dialog = screen.getByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Merk som sett' }))

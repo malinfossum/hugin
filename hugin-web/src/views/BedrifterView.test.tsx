@@ -140,7 +140,8 @@ describe('BedrifterView', () => {
     if (!activeRow || !expiredRow) throw new Error('row not found')
     expect(within(activeRow).queryByText('[utgått]')).not.toBeInTheDocument()
     expect(within(expiredRow).getByText('[utgått]')).toBeInTheDocument()
-    expect(within(activeRow).getByText('publisert 2026-08-01')).toBeInTheDocument()
+    const expectedPublished = new Date('2026-08-01T00:00:00Z').toLocaleDateString('nb-NO')
+    expect(within(activeRow).getByText(`publisert ${expectedPublished}`)).toBeInTheDocument()
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })
 

@@ -11,11 +11,12 @@ public static class ReadEndpoints
     {
         app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config) =>
         {
+            var asOf = clock.UtcNow; // captured before the query so it can't drift past what GetNewAsync actually saw
             if (await service.GetNewAsync() is not { } items) return Results.NoContent();
             return Results.Ok(new NewDto(
                 items.Companies.Select(c => CompanyDto.From(c, config)).ToList(),
                 items.Ads.Select(AdDto.FromAd).ToList(),
-                items.Since, clock.UtcNow));
+                items.Since, asOf));
         });
 
         app.MapGet("/api/companies", async (ICompanyRepository companies, HuginConfig config, string? kommune) =>

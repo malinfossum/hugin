@@ -29,6 +29,9 @@ export function BedrifterView() {
     const target = pendingFocusOrgnr.current
     if (!target) return
     pendingFocusOrgnr.current = null
+    // Safe to assume the ref is still mounted: filter inputs are unmounted while detail is
+    // open (not just hidden), so the row list never re-filters behind our back — the
+    // opening row is always present in rowRefs when we return to it.
     rowRefs.current.get(target)?.focus()
   }, [selectedOrgnr])
 

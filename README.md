@@ -69,7 +69,7 @@ dotnet run --project Hugin.Api
 cd hugin-web && npm run dev
 ```
 
-The API binds to loopback only, and every state-changing request (sync, track, mark-seen, hide) requires a header the dashboard's own frontend sets — the API is not reachable, or writable, from anywhere but that page on that machine.
+The API binds to loopback only, so it can't be reached from other machines, and every state-changing request (sync, track, mark-seen, hide) requires a header the dashboard's own frontend sets, so a website in your browser can't drive it either. Any process already running on the machine is trusted.
 
 ## Tests
 

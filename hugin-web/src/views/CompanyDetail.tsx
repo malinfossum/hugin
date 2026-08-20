@@ -7,7 +7,7 @@ function formatDate(value: string | null): string {
 }
 
 function publishedText(published: string | null): string | null {
-  return published ? `publisert ${published.slice(0, 10)}` : null
+  return published ? `publisert ${formatDate(published)}` : null
 }
 
 export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {

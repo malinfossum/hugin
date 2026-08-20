@@ -38,16 +38,21 @@ public sealed class SyncEndpointTests
         var gate = new TaskCompletionSource();
         factory.Nav.OnCall = () => gate.Task;
 
-        var first = await client.PostAsync("/api/sync", null);
-        Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+        try
+        {
+            var first = await client.PostAsync("/api/sync", null);
+            Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
-        var second = await client.PostAsync("/api/sync", null);
-        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            var second = await client.PostAsync("/api/sync", null);
+            Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
 
-        var problem = await second.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
-        Assert.That(problem!.Title, Is.EqualTo("En synk kjører allerede."));
-
-        gate.SetResult();
+            var problem = await second.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+            Assert.That(problem!.Title, Is.EqualTo("En synk kjører allerede."));
+        }
+        finally
+        {
+            gate.SetResult();
+        }
 
         var status = await PollUntilFinished(client);
         Assert.That(status.Running, Is.False);
