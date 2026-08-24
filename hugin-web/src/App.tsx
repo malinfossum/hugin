@@ -72,22 +72,24 @@ function AppShell() {
               </nav>
               <fieldset className="lang-toggle cluster cluster-sm">
                 <legend className="visually-hidden">{t('lang.toggleLabel')}</legend>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  aria-pressed={lang === 'nb'}
-                  onClick={() => setLang('nb')}
-                >
-                  NO
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  aria-pressed={lang === 'en'}
-                  onClick={() => setLang('en')}
-                >
-                  EN
-                </button>
+                <span className="segmented">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    aria-pressed={lang === 'nb'}
+                    onClick={() => setLang('nb')}
+                  >
+                    NO
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    aria-pressed={lang === 'en'}
+                    onClick={() => setLang('en')}
+                  >
+                    EN
+                  </button>
+                </span>
               </fieldset>
             </div>
           </div>
