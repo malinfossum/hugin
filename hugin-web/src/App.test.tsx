@@ -1,7 +1,31 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+/** Fake server covering only what the Companies view needs on mount — the other views mounted
+ * in these tests (Dashboard, Export) either don't fetch (Export has no scope chosen yet) or
+ * already tolerate a rejected fetch by design (Dashboard's own tests cover that). */
+function fakeServer() {
+  return vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    if (url === '/api/companies') {
+      return Promise.resolve(jsonResponse([]))
+    }
+    return Promise.reject(new Error(`unhandled request ${url}`))
+  })
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('App', () => {
   it('renders four nav buttons with Dashbord active by default', () => {
@@ -44,5 +68,22 @@ describe('App', () => {
     expect(noButton).toHaveAttribute('aria-pressed', 'false')
     expect(document.documentElement.lang).toBe('en')
     expect(window.localStorage.getItem('hugin-lang')).toBe('en')
+  })
+
+  it('keeps a view mounted (hidden, not unmounted) when switching away and back', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    const search = await screen.findByLabelText('Søk')
+    await user.type(search, 'Acme')
+    expect(search).toHaveValue('Acme')
+
+    await user.click(screen.getByRole('button', { name: 'Eksport' }))
+    expect(screen.getByLabelText('Søk')).not.toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
   })
 })

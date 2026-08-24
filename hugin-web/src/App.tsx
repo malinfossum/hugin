@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactElement, useLayoutEffect, useRef, useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
 import { ApplicationsView } from './views/ApplicationsView'
@@ -17,10 +17,35 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
   export: 'nav.export',
 }
 
+// Each view mounts once, on first visit, and then stays mounted (just hidden) so filters,
+// an opened detail, and scroll position all survive switching views — everything still resets
+// on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
+// keeps polling while hidden behind another view — intended, since a running sync must finish
+// its announce/refresh cycle regardless of which view is currently visible.
+const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
+  dashboard: () => <DashboardView />,
+  applications: () => <ApplicationsView />,
+  companies: () => <BedrifterView />,
+  export: () => <EksportView />,
+}
+
 function AppShell() {
   const [view, setView] = useState<ViewName>('dashboard')
+  const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set(['dashboard']))
+  const scrollByView = useRef<Map<ViewName, number>>(new Map())
   const t = useT()
   const [lang, setLang] = useLang()
+
+  const switchView = (next: ViewName) => {
+    if (next === view) return
+    scrollByView.current.set(view, window.scrollY)
+    setVisited((prev) => (prev.has(next) ? prev : new Set(prev).add(next)))
+    setView(next)
+  }
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, scrollByView.current.get(view) ?? 0)
+  }, [view])
 
   return (
     <LiveRegionProvider>
@@ -36,7 +61,7 @@ function AppShell() {
                       <button
                         type="button"
                         className="nav-link"
-                        onClick={() => setView(name)}
+                        onClick={() => switchView(name)}
                         aria-current={view === name ? 'page' : undefined}
                       >
                         {t(VIEW_LABEL_KEYS[name])}
@@ -69,10 +94,11 @@ function AppShell() {
         </header>
         <main className="container main-content stack stack-lg">
           <h1 className="visually-hidden">Hugin</h1>
-          {view === 'dashboard' && <DashboardView />}
-          {view === 'applications' && <ApplicationsView />}
-          {view === 'companies' && <BedrifterView />}
-          {view === 'export' && <EksportView />}
+          {VIEWS.filter((name) => visited.has(name)).map((name) => (
+            <div key={name} hidden={name !== view}>
+              {VIEW_COMPONENTS[name]()}
+            </div>
+          ))}
         </main>
       </div>
     </LiveRegionProvider>
