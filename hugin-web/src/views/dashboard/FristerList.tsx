@@ -132,13 +132,13 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               )}
               <span className="text-muted">{ad.employer}</span>
             </div>
-            <div className="frist-row-date cluster cluster-sm">
-              <span className="text-muted">{formatExpires(ad.expires)}</span>
+            <div className="frist-meta">
+              <span className="frist-date text-muted">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
+              <span className="frist-category text-muted">{ad.category}</span>
             </div>
-            <span className="text-muted">{ad.category}</span>
             <div className="frist-row-actions cluster cluster-sm">
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>

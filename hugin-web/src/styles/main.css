@@ -111,10 +111,8 @@ input[type="text"] {
   padding: 0;
 }
 
-/* Frister list rows: stacked on mobile, a four-column grid from tablet up
-   (title+employer | frist-date + days-chip | category | actions). The four direct children
-   carry .frist-row-title/-date/-actions purely as structural/BEM markers for the grid's four
-   cells — no rule targets them by name; layout comes from grid auto-placement above. */
+/* Frister rows: title block + one meta line + actions. The meta line uses fixed
+   column widths so date / days-chip / category align vertically across rows. */
 .frist-row {
   display: grid;
   gap: var(--space-2);
@@ -124,9 +122,20 @@ input[type="text"] {
 .frist-row:last-child {
   border-block-end: 0;
 }
+.frist-meta {
+  display: grid;
+  grid-template-columns: 6.5rem 7.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+.frist-category {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (min-width: 768px) {
   .frist-row {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) auto;
     align-items: center;
     gap: var(--space-4);
   }
