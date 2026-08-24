@@ -11,6 +11,7 @@ export function BedrifterView() {
   const [error, setError] = useState<string | null>(null)
   const [kommune, setKommune] = useState('')
   const [search, setSearch] = useState('')
+  const [hasWebsiteOnly, setHasWebsiteOnly] = useState(false)
   const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
@@ -51,6 +52,7 @@ export function BedrifterView() {
   const filtered = companies.filter((c) => {
     if (kommune && c.kommune !== kommune) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (hasWebsiteOnly && !c.website) return false
     return true
   })
 
@@ -112,13 +114,22 @@ export function BedrifterView() {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+
+        <label className="cluster cluster-sm bedrifter-website-filter">
+          <input
+            type="checkbox"
+            checked={hasWebsiteOnly}
+            onChange={(event) => setHasWebsiteOnly(event.target.checked)}
+          />
+          {t('companies.hasWebsite')}
+        </label>
       </div>
 
       <p className="text-muted">{t('companies.count', { n: filtered.length })}</p>
 
       <ul className="stack stack-sm">
         {filtered.map((c) => (
-          <li key={c.orgnr} className="stack stack-sm">
+          <li key={c.orgnr} className="bedrifter-item">
             <button
               type="button"
               className="panel panel-hover bedrifter-row"
@@ -138,7 +149,7 @@ export function BedrifterView() {
               name={displayCompanyName(c.name)}
               kommuneNavn={c.kommuneNavn}
               website={c.website}
-              className="text-muted"
+              className="text-muted bedrifter-link"
             />
           </li>
         ))}

@@ -106,6 +106,7 @@ export const nb = {
   'companies.noWebsite': 'har ikke egen nettside',
   'companies.googleSearch': 'Google-søk',
   'companies.proffSearch': 'Proff.no',
+  'companies.hasWebsite': 'Har egen nettside',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

@@ -158,6 +158,29 @@ input[type="text"] {
     justify-content: space-between;
   }
 }
+.bedrifter-row strong {
+  font-weight: 500;
+}
+
+/* Bedrifter row container: the row button and its CompanyLink stack on mobile,
+   sit side by side from tablet up. */
+.bedrifter-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+@media (min-width: 768px) {
+  .bedrifter-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+  }
+}
+
+.bedrifter-filters {
+  align-items: flex-end;
+}
 
 /* Company detail — definition list as a two-column term/value grid. */
 .company-detail-dl {

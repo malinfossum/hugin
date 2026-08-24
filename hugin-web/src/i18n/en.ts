@@ -106,6 +106,7 @@ export const en = {
   'companies.noWebsite': 'no website of their own',
   'companies.googleSearch': 'Google search',
   'companies.proffSearch': 'Proff.no',
+  'companies.hasWebsite': 'Has own website',
 
   'export.scope': 'Scope',
   'export.scopeNew': 'New',

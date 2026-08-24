@@ -116,6 +116,23 @@ describe('BedrifterView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
+  it('filters to companies with a website when the has-website checkbox is checked', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' }),
+      company({ orgnr: '2', name: 'Beta Software', website: null }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Har egen nettside' }))
+
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+  })
+
   it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
     const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
