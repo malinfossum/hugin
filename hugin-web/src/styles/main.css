@@ -12,6 +12,14 @@
 @import url("../../design-system/compositions/index.css");
 @import url("../../design-system/utilities/index.css");
 
+/* Native <dialog> hidden-state guard. The DS .stack class sets display:flex on the
+   confirm dialog (ConfirmDialog.tsx), which overrides the UA's dialog:not([open])
+   { display:none } — the v3 design pass made every closed dialog render inline.
+   Restoring the UA rule at author level wins over .stack on specificity (0,1,1 > 0,1,0). */
+dialog:not([open]) {
+  display: none;
+}
+
 /* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
    up to 1.75rem) is sized for marketing/hero pages — on a data-dense dashboard it read as way
    too loud. Hugin's real page title is a visually-hidden h1 (see App.tsx), and every visible
