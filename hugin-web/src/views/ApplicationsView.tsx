@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
+import { displayCompanyName } from '../companyName'
 import { useAnnounce } from '../components/LiveRegion'
 import { formatDate } from '../dates'
 import { localeFor, type TranslationKey, useLang, useT } from '../i18n'
@@ -197,7 +198,7 @@ export function ApplicationsView() {
                 return (
                   <li key={entry.orgnr} className="panel stack stack-sm">
                     <div className="cluster cluster-sm cluster-between">
-                      <span className="text-strong">{entry.companyName}</span>
+                      <span className="text-strong">{displayCompanyName(entry.companyName)}</span>
                       <button
                         type="button"
                         className="btn btn-ghost icon-btn"

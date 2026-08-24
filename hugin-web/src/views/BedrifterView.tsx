@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
+import { displayCompanyName } from '../companyName'
 import { CompanyLink } from '../components/CompanyLink'
 import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
@@ -128,13 +129,13 @@ export function BedrifterView() {
               onClick={() => openDetail(c.orgnr)}
             >
               <span>
-                <strong>{c.name}</strong>
+                <strong>{displayCompanyName(c.name)}</strong>
                 {c.isBranch && ` ${t('common.branchTag')}`}
               </span>
               <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
             </button>
             <CompanyLink
-              name={c.name}
+              name={displayCompanyName(c.name)}
               kommuneNavn={c.kommuneNavn}
               website={c.website}
               className="text-muted"

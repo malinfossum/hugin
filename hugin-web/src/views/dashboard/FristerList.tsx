@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../../api'
+import { displayCompanyName } from '../../companyName'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDate } from '../../dates'
 import { type T, useT } from '../../i18n'
@@ -96,7 +97,8 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
       return
     }
     await load()
-    announce(t('frister.trackedAnnounce', { name: ad.employer ?? ad.employerOrgnr }))
+    const displayName = ad.employer ? displayCompanyName(ad.employer) : ad.employerOrgnr
+    announce(t('frister.trackedAnnounce', { name: displayName }))
   }
 
   const handleAngreSkjul = async (feedId: string) => {
@@ -142,7 +144,9 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               ) : (
                 <span>{ad.title}</span>
               )}
-              <span className="text-muted">{ad.employer}</span>
+              <span className="text-muted">
+                {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+              </span>
             </div>
             <div className="frist-meta">
               <span className="frist-date text-muted">{formatExpires(ad.expires)}</span>

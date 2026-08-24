@@ -220,6 +220,21 @@ describe('BedrifterView', () => {
     )
   })
 
+  it('displays an all-caps Brreg name in title case, in the row and the detail heading', async () => {
+    const companies = [company({ orgnr: '1', name: 'NORSK TIPPING AS', kommuneNavn: 'Oslo' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '1': { company: companies[0], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Norsk Tipping AS/ }))
+    expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
+  })
+
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {
     const companies = [
       company({ orgnr: '915787630', name: 'Acme AS' }),

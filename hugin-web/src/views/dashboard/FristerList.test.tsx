@@ -244,6 +244,31 @@ describe('FristerList', () => {
     })
   })
 
+  it('displays an all-caps Brreg employer name in title case, in the row and the track announce', async () => {
+    const user = userEvent.setup()
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Utvikler',
+        employer: 'NORSK TIPPING AS',
+        employerOrgnr: '972483672',
+        pipelineStatus: null,
+      }),
+    ]
+    renderList(fakeServer(ads))
+
+    const rows = await screen.findAllByRole('listitem')
+    expect(within(rows[0]).getByText('Norsk Tipping AS')).toBeInTheDocument()
+    expect(within(rows[0]).queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+
+    await user.click(within(rows[0]).getByRole('button', { name: 'Følg opp' }))
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Norsk Tipping AS følges nå opp under Søknader.')
+    })
+  })
+
   it('does not show a track button for an already-tracked company', async () => {
     const ads = [ad({ feedId: 'a1', employerOrgnr: '972483672', pipelineStatus: 'active' })]
     renderList(fakeServer(ads))

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
+import { displayCompanyName } from '../companyName'
 import { CompanyLink } from '../components/CompanyLink'
 import { formatDate } from '../dates'
 import { type T, useT } from '../i18n'
@@ -47,7 +48,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       {!error && detail && (
         <>
           <h2>
-            {detail.company.name}
+            {displayCompanyName(detail.company.name)}
             {detail.company.isBranch && ` ${t('common.branchTag')}`}
           </h2>
           <dl className="company-detail-dl">
@@ -65,7 +66,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             )}
           </dl>
           <CompanyLink
-            name={detail.company.name}
+            name={displayCompanyName(detail.company.name)}
             kommuneNavn={detail.company.kommuneNavn}
             website={detail.company.website}
           />
