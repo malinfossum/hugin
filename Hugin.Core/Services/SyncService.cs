@@ -139,6 +139,9 @@ public sealed class SyncService(
     /// </summary>
     private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, MunicipalityScope scope, CancellationToken ct)
     {
+        // Declared outside the try so a later chunk's failure can still report what earlier
+        // chunks already fetched and stored — same convention as SyncNavAsync's `stored`.
+        var fetchedTotal = 0;
         try
         {
             var configured = config.Municipalities.Select(m => m.Number).ToHashSet();
@@ -146,7 +149,6 @@ public sealed class SyncService(
                 ? [scope.AllowedNumbers.ToArray()]
                 : scope.AllowedNumbers.GroupBy(n => n[..2]).Select(g => g.ToArray()).ToList();
 
-            var fetchedTotal = 0;
             foreach (var chunk in chunks)
             {
                 var fetched = await brreg.GetCompaniesAsync(config.Naeringskoder, chunk, ct);
@@ -160,7 +162,7 @@ public sealed class SyncService(
         }
         catch (Exception ex)
         {
-            return new SourceResult(false, 0, ex.Message);
+            return new SourceResult(false, fetchedTotal, ex.Message);
         }
     }
 

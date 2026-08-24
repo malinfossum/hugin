@@ -328,6 +328,47 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Fylke_or_all_of_norway_with_an_empty_register_falls_back_to_a_single_configured_call()
+    {
+        // A first-ever run (or a register outage) leaves the register empty — Fylker/AllOfNorway
+        // then expand nothing, so AllowedNumbers collapses back to the plain configured set and
+        // the SetEquals check takes the single-call path, same as an unscaled config.
+        var brreg = new FakeBrregClient { Companies = { Company() } };
+        var config = new HuginConfig { AllOfNorway = true };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True);
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "empty register — nothing to expand into");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+    }
+
+    [Test]
+    public async Task A_later_chunk_failing_reports_partial_progress_and_keeps_earlier_chunks_stored()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+            },
+            ThrowOnCompaniesCallNumber = 2,
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39", "34"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.Not.Null);
+        Assert.That(summary.Brreg.Fetched, Is.EqualTo(1), "the first chunk's fetch count survives the second chunk's failure");
+        Assert.That(h.Companies.Store, Has.Count.EqualTo(1), "the first chunk's company was already upserted before the failure");
+    }
+
+    [Test]
     public async Task One_source_failing_still_syncs_the_other()
     {
         var brreg = new FakeBrregClient { Throws = true };

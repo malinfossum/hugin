@@ -24,6 +24,10 @@ public sealed class FakeBrregClient : IBrregClient
     /// fetch from discovery failure.</summary>
     public bool ThrowsOnGetKommuner { get; set; }
 
+    /// <summary>1-based call number at which GetCompaniesAsync should throw — earlier calls
+    /// succeed normally. For tests isolating a mid-chunk failure from a first-call failure.</summary>
+    public int? ThrowOnCompaniesCallNumber { get; set; }
+
     /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
     public List<string> ByOrgnrRequests { get; } = [];
 
@@ -40,6 +44,8 @@ public sealed class FakeBrregClient : IBrregClient
         CompaniesRequests.Add(municipalityNumbers.ToArray());
         if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
+        if (ThrowOnCompaniesCallNumber == CompaniesRequests.Count)
+            throw new HttpRequestException("brreg utilgjengelig");
         return Companies;
     }
 
