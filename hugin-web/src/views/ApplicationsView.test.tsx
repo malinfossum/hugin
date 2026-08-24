@@ -108,7 +108,9 @@ describe('ApplicationsView', () => {
 
     await screen.findByText('Aktiv-firma')
 
-    expect(screen.getByText('Aktiv-oppføringer tas aldri med i eksporten.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Aktiv-oppføringer tas bare med i eksporten når du velger det.')
+    ).toBeInTheDocument()
   })
 
   it('shows "⚠ mangler begrunnelse" for a beyond-active entry with empty why', async () => {

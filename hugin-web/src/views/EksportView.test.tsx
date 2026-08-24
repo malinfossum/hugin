@@ -42,28 +42,62 @@ afterEach(() => {
 describe('EksportView', () => {
   it('renders fetched content verbatim as text inside a <pre>, never as markup', async () => {
     const { container } = renderView(fakeServer())
+    const user = userEvent.setup()
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
 
     const pre = await screen.findByText(/Acme AS/, { selector: 'pre' })
     expect(pre).toHaveTextContent('<script>alert(1)</script>')
     expect(container.querySelector('script')).toBeNull()
   })
 
-  it('fetches on mount with the default scope=all&format=md', async () => {
+  it('fires no fetch on initial render and shows the choose-scope hint', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
 
-    await screen.findByText(/Acme AS/, { selector: 'pre' })
+    expect(await screen.findByText('Velg et omfang for å se forhåndsvisning.')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 
-    const initialCall = fetchMock.mock.calls[0][0] as string
-    expect(initialCall).toBe('/api/extract?scope=all&format=md')
+  it('selecting "Alt" fetches /api/extract?scope=all&format=md', async () => {
+    const fetchMock = fakeServer()
+    renderView(fetchMock)
+    const user = userEvent.setup()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
+
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=all&format=md')
+    })
+  })
+
+  it('checking Include Active refetches with includeActive=true', async () => {
+    const fetchMock = fakeServer()
+    renderView(fetchMock)
+    const user = userEvent.setup()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=all&format=md')
+    })
+
+    await user.click(screen.getByLabelText('Inkluder Aktiv-oppføringer'))
+
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=all&format=md&includeActive=true')
+    })
   })
 
   it('refetches when the scope changes', async () => {
     const fetchMock = fakeServer()
-    const user = userEvent.setup()
     renderView(fetchMock)
+    const user = userEvent.setup()
 
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
     await screen.findByText(/Acme AS/, { selector: 'pre' })
+
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Nytt')
 
     await vi.waitFor(() => {
@@ -74,10 +108,12 @@ describe('EksportView', () => {
 
   it('refetches when the format changes', async () => {
     const fetchMock = fakeServer()
-    const user = userEvent.setup()
     renderView(fetchMock)
+    const user = userEvent.setup()
 
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
     await screen.findByText(/Acme AS/, { selector: 'pre' })
+
     await user.selectOptions(screen.getByLabelText('Format'), 'txt')
 
     await vi.waitFor(() => {
@@ -90,9 +126,6 @@ describe('EksportView', () => {
     const fetchMock = fakeServer()
     const user = userEvent.setup()
     renderView(fetchMock)
-
-    await screen.findByText(/Acme AS/, { selector: 'pre' })
-    fetchMock.mockClear()
 
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Kategori')
     expect(fetchMock).not.toHaveBeenCalled()
@@ -107,9 +140,10 @@ describe('EksportView', () => {
 
   it('the download link href matches the current scope and format', async () => {
     const fetchMock = fakeServer()
-    const user = userEvent.setup()
     renderView(fetchMock)
+    const user = userEvent.setup()
 
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
     await screen.findByText(/Acme AS/, { selector: 'pre' })
     expect(screen.getByRole('link', { name: 'Last ned' })).toHaveAttribute(
       'href',
@@ -134,6 +168,7 @@ describe('EksportView', () => {
     })
     renderView(fakeServer())
 
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
     await screen.findByText(/Acme AS/, { selector: 'pre' })
     await user.click(screen.getByRole('button', { name: 'Kopier' }))
 
@@ -154,6 +189,7 @@ describe('EksportView', () => {
     })
     renderView(fakeServer())
 
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
     await screen.findByText(/Acme AS/, { selector: 'pre' })
     await user.click(screen.getByRole('button', { name: 'Kopier' }))
 

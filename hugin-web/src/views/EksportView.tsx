@@ -18,26 +18,28 @@ const FORMAT_KEYS: { value: Format; labelKey: TranslationKey }[] = [
   { value: 'json', labelKey: 'export.formatJson' },
 ]
 
-function buildUrl(scope: Scope, format: Format, category: string): string {
+function buildUrl(scope: Scope, format: Format, category: string, includeActive: boolean): string {
   const params = new URLSearchParams({ scope, format })
   if (scope === 'category') params.set('category', category)
+  if (includeActive) params.set('includeActive', 'true')
   return `/api/extract?${params.toString()}`
 }
 
 export function EksportView() {
-  const [scope, setScope] = useState<Scope>('all')
+  const [scope, setScope] = useState<Scope | ''>('')
   const [format, setFormat] = useState<Format>('md')
   const [category, setCategory] = useState('')
+  const [includeActive, setIncludeActive] = useState(false)
   const [preview, setPreview] = useState('')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
 
-  const categoryReady = scope !== 'category' || category.trim().length > 0
-  const url = buildUrl(scope, format, category.trim())
+  const ready = scope !== '' && (scope !== 'category' || category.trim().length > 0)
+  const url = scope !== '' ? buildUrl(scope, format, category.trim(), includeActive) : ''
 
   const load = useCallback(() => {
-    if (!categoryReady) {
+    if (!ready) {
       setPreview('')
       return Promise.resolve()
     }
@@ -46,7 +48,7 @@ export function EksportView() {
       .getText(url)
       .then(setPreview)
       .catch(() => setError(t('export.loadError')))
-  }, [url, categoryReady, t])
+  }, [url, ready, t])
 
   useEffect(() => {
     load()
@@ -85,6 +87,9 @@ export function EksportView() {
             value={scope}
             onChange={(event) => setScope(event.target.value as Scope)}
           >
+            <option value="" disabled>
+              {t('export.scopeChoose')}
+            </option>
             {SCOPE_KEYS.map((s) => (
               <option key={s.value} value={s.value}>
                 {t(s.labelKey)}
@@ -127,28 +132,34 @@ export function EksportView() {
           </select>
         </div>
 
+        <label className="cluster cluster-sm eksport-include-active">
+          <input
+            type="checkbox"
+            checked={includeActive}
+            onChange={(event) => setIncludeActive(event.target.checked)}
+          />
+          {t('export.includeActive')}
+        </label>
+
         <div className="cluster cluster-sm">
           <a
             className="btn btn-primary"
-            href={categoryReady ? url : undefined}
-            aria-disabled={!categoryReady}
+            href={ready ? url : undefined}
+            aria-disabled={!ready}
             download
           >
             {t('export.download')}
           </a>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={handleCopy}
-            disabled={!categoryReady}
-          >
+          <button type="button" className="btn btn-ghost" onClick={handleCopy} disabled={!ready}>
             {t('export.copy')}
           </button>
         </div>
       </div>
 
-      {!categoryReady ? (
-        <p className="text-muted">{t('export.enterCategoryHint')}</p>
+      {!ready ? (
+        <p className="text-muted">
+          {scope === '' ? t('export.chooseScopeHint') : t('export.enterCategoryHint')}
+        </p>
       ) : (
         <div className="panel">
           <pre className="eksport-markdown">{preview}</pre>

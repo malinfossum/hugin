@@ -200,6 +200,15 @@ input[type="text"] {
   font-family: var(--font-mono);
 }
 
+/* Pickers and the Download/Copy cluster share one baseline (labels above inputs
+   make the naked button cluster sit high without this). */
+.eksport-controls {
+  align-items: flex-end;
+}
+.eksport-controls .eksport-include-active {
+  align-self: center;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
