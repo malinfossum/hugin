@@ -10,3 +10,17 @@ export function googleSearchUrl(name: string, kommuneNavn: string | null): strin
 export function proffSearchUrl(name: string): string {
   return `https://www.proff.no/search?q=${encodeURIComponent(name)}`
 }
+
+/** Header sources row shows short names, not the long linkout labels from config
+ * (spec v3.1 item 7). Unknown domains keep their configured label. */
+export function sourceLabel(url: string, fallback: string): string {
+  let host: string
+  try {
+    host = new URL(url).hostname
+  } catch {
+    return fallback
+  }
+  if (host.endsWith('finn.no')) return 'FINN'
+  if (host.endsWith('linkedin.com')) return 'LinkedIn'
+  return fallback
+}

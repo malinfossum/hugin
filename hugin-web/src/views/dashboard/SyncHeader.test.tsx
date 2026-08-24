@@ -20,7 +20,12 @@ function statusDto(overrides: Partial<StatusDto> = {}): StatusDto {
     activeAds: 3,
     companies: 5,
     pipelineEntries: 2,
-    linkouts: [{ label: 'NAV', url: 'https://nav.no' }],
+    linkouts: [
+      {
+        label: 'Ledige utviklerjobber på FINN Innlandet',
+        url: 'https://www.finn.no/job/search?q=utvikler',
+      },
+    ],
     ...overrides,
   }
 }
@@ -79,17 +84,46 @@ afterEach(() => {
 })
 
 describe('SyncHeader', () => {
-  it('renders linkouts from status', async () => {
+  it('always renders the Brønnøysundregisteret and NAV source links', async () => {
     renderHeader(mockFetch({}))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
     })
 
-    const link = screen.getByRole('link', { name: 'NAV' })
-    expect(link).toHaveAttribute('href', 'https://nav.no')
+    const brreg = screen.getByRole('link', { name: 'Brønnøysundregisteret' })
+    expect(brreg).toHaveAttribute('href', 'https://www.brreg.no')
+    expect(brreg).toHaveAttribute('target', '_blank')
+    expect(brreg).toHaveAttribute('rel', 'noopener noreferrer')
+
+    const nav = screen.getByRole('link', { name: 'NAV' })
+    expect(nav).toHaveAttribute('href', 'https://arbeidsplassen.nav.no/stillinger')
+    expect(nav).toHaveAttribute('target', '_blank')
+    expect(nav).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('renders config linkouts with domain-shortened labels', async () => {
+    renderHeader(mockFetch({}))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    const link = screen.getByRole('link', { name: 'FINN' })
+    expect(link).toHaveAttribute('href', 'https://www.finn.no/job/search?q=utvikler')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('renders the built-in sources even when status has no config linkouts', async () => {
+    renderHeader(mockFetch({ status: () => statusDto({ linkouts: [] }) }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByRole('link', { name: 'Brønnøysundregisteret' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'NAV' })).toBeInTheDocument()
   })
 
   it('POSTs /api/sync and keeps polling when "Synk nå" is clicked', async () => {
