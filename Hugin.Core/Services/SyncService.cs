@@ -58,7 +58,7 @@ public sealed class SyncService(
         var scope = MunicipalityScope.Build(config, await kommuner.GetAllAsync(ct));
 
         var brregResult = await SyncBrregAsync(now, scope, ct);
-        var navResult = await SyncNavAsync(now, fullNav, onNavPage, ct);
+        var navResult = await SyncNavAsync(now, fullNav, scope, onNavPage, ct);
 
         // Expiry is a local sweep, not feed data: an ad past its date is stale whether or not
         // NAV was reachable this morning.
@@ -184,7 +184,7 @@ public sealed class SyncService(
         }
     }
 
-    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, bool full,
+    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, bool full, MunicipalityScope scope,
         Action<int, int>? onPage, CancellationToken ct)
     {
         var stored = 0;
@@ -203,13 +203,13 @@ public sealed class SyncService(
                 // A backfill with no stored position starts at the feed's oldest page; with
                 // one, it resumes — so an interrupted backfill continues instead of restarting.
                 var feedPage = full && firstFetch && cursor is null
-                    ? await nav.GetFirstPageAsync(ct)
-                    : await nav.GetPageAsync(cursor, ct);
+                    ? await nav.GetFirstPageAsync(scope, ct)
+                    : await nav.GetPageAsync(cursor, scope, ct);
                 firstFetch = false;
 
                 foreach (var ad in feedPage.Ads)
                 {
-                    if (!AdFilter.Matches(ad, config)) continue;
+                    if (!AdFilter.Matches(ad, config, scope)) continue;
 
                     await ads.UpsertAsync(ad, now, ct);
                     stored++;

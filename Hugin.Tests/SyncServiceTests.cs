@@ -215,6 +215,41 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Plain_config_nav_gate_matches_todays_behavior()
+    {
+        // Regression pin for H18: with a plain Municipalities config (no Fylker/AllOfNorway)
+        // the resolved/gated NAV set is identical to before the kommune-register scope existed.
+        var nav = new FakeNavFeedClient(new FeedPage(
+            [Ad("keep", "Backend-utvikler", "3403"), Ad("drop", "Utvikler", "0301")], null));
+
+        var h = Build(nav: nav);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "keep" }));
+        Assert.That(summary.Nav.Fetched, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Fylke_config_allows_nav_ads_via_the_kommune_register_scope()
+    {
+        // Before H18 the NAV gate only ever checked config.Municipalities directly, so a
+        // fylke-scoped config (empty Municipalities) rejected every NAV ad outright. The
+        // register-built scope is what makes fylke/all-of-Norway NAV sync actually work.
+        var brreg = new FakeBrregClient
+        {
+            Kommuner = { new Kommune { Number = "3903", Name = "HORTEN" } },
+        };
+        var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3903")], null));
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, nav: nav, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a" }));
+    }
+
+    [Test]
     public async Task Kommune_register_is_upserted_after_a_successful_brreg_sync()
     {
         var brreg = new FakeBrregClient

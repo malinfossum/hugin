@@ -1,3 +1,5 @@
+using Hugin.Core.Services;
+
 namespace Hugin.Core.Abstractions;
 
 /// <summary>A company as the register returns it — before it becomes a stored <see cref="Models.Company"/>.</summary>
@@ -29,11 +31,13 @@ public interface IBrregClient
 
 public interface INavFeedClient
 {
-    /// <summary>A null cursor lands at the newest page — the normal daily entry point.</summary>
-    public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default);
+    /// <summary>A null cursor lands at the newest page — the normal daily entry point.
+    /// <paramref name="scope"/> resolves each ad's municipality name (config first, then the
+    /// kommune register) and gates it against the sync's allowed numbers.</summary>
+    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default);
 
     /// <summary>The feed's oldest page — the entry point for a full backfill.</summary>
-    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default);
+    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default);
 }
 
 /// <summary><paramref name="ResolvedUrl"/> is the variant (https or http) that actually

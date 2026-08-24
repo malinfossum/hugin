@@ -9,10 +9,10 @@ namespace Hugin.Core.Services;
 /// </summary>
 public static class AdFilter
 {
-    public static bool Matches(FeedAd ad, HuginConfig config)
+    public static bool Matches(FeedAd ad, HuginConfig config, MunicipalityScope scope)
     {
         if (ad.MunicipalityNumber is null) return false;
-        if (!config.Municipalities.Any(m => m.Number == ad.MunicipalityNumber)) return false;
+        if (!(scope.AllOfNorway || scope.AllowedNumbers.Contains(ad.MunicipalityNumber))) return false;
 
         return config.Keywords.Count == 0
             || config.Keywords.Any(k => ad.Title.Contains(k, StringComparison.OrdinalIgnoreCase));

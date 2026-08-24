@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Tests;
 
@@ -73,18 +74,24 @@ public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
     public bool FirstPageRequested { get; private set; }
     public bool Throws { get; set; }
 
+    /// <summary>Every scope GetPageAsync/GetFirstPageAsync was actually called with, in call
+    /// order — lets a test assert the sync-built scope reached the client.</summary>
+    public List<MunicipalityScope> RequestedScopes { get; } = [];
+
     /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
     public Func<Task>? OnCall { get; set; }
 
-    public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
+    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default)
     {
         RequestedCursors.Add(cursor);
+        RequestedScopes.Add(scope);
         return NextPage();
     }
 
-    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default)
+    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default)
     {
         FirstPageRequested = true;
+        RequestedScopes.Add(scope);
         return NextPage();
     }
 
