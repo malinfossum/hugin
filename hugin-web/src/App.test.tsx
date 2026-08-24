@@ -70,6 +70,25 @@ describe('App', () => {
     expect(window.localStorage.getItem('hugin-lang')).toBe('en')
   })
 
+  it('toggles the theme between dark and light, persisting the choice to localStorage', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const themeButton = screen.getByRole('button', { name: 'Bytt til lyst tema' })
+    expect(document.documentElement.dataset.theme).not.toBe('light')
+
+    await user.click(themeButton)
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(window.localStorage.getItem('theme')).toBe('light')
+    expect(screen.getByRole('button', { name: 'Bytt til mørkt tema' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Bytt til mørkt tema' }))
+
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(window.localStorage.getItem('theme')).toBe('dark')
+  })
+
   it('keeps a view mounted (hidden, not unmounted) when switching away and back', async () => {
     vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()

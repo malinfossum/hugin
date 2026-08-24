@@ -9,6 +9,9 @@ export const nb = {
 
   'lang.toggleLabel': 'Språk',
 
+  'theme.toggleToLight': 'Bytt til lyst tema',
+  'theme.toggleToDark': 'Bytt til mørkt tema',
+
   'common.retry': 'Prøv igjen',
   'common.save': 'Lagre',
   'common.cancel': 'Avbryt',

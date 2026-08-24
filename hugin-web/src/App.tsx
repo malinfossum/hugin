@@ -35,6 +35,20 @@ function AppShell() {
   const scrollByView = useRef<Map<ViewName, number>>(new Map())
   const t = useT()
   const [lang, setLang] = useLang()
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  )
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    document.documentElement.dataset.theme = next
+    try {
+      window.localStorage.setItem('theme', next)
+    } catch {
+      /* choice just won't persist */
+    }
+    setTheme(next)
+  }
 
   const switchView = (next: ViewName) => {
     if (next === view) return
@@ -91,6 +105,14 @@ function AppShell() {
                   </button>
                 </span>
               </fieldset>
+              <button
+                type="button"
+                className="btn btn-ghost icon-btn"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
+              >
+                <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+              </button>
             </div>
           </div>
         </header>

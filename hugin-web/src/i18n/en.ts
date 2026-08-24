@@ -9,6 +9,9 @@ export const en = {
 
   'lang.toggleLabel': 'Language',
 
+  'theme.toggleToLight': 'Switch to light theme',
+  'theme.toggleToDark': 'Switch to dark theme',
+
   'common.retry': 'Try again',
   'common.save': 'Save',
   'common.cancel': 'Cancel',
