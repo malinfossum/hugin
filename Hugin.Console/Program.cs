@@ -387,7 +387,7 @@ internal static class Program
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper
               hugin list --ads [--kommune <nr>]   Vis aktive annonser
-              hugin export [--format md|txt|json] [--scope new|category|all] [--category <navn>]
+              hugin export [--format md|txt|json] [--scope new|category|all] [--category <navn>] [--include-active]
                                                   Skriv ut data (standard: md/all); --scope category krever --category
 
             Globalt:
