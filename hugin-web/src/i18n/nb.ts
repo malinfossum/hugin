@@ -22,11 +22,11 @@ export const nb = {
   'status.answered': 'Svar',
 
   'sync.heading': 'Synkronisering',
-  'sync.brregLabel': 'Brreg',
+  'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Aldri',
   'sync.counts':
-    '{activeAds} aktive annonser · {companies} bedrifter · {pipelineEntries} i pipeline',
+    '{activeAds} aktive annonser · {companies} bedrifter · {pipelineEntries} i Søknader',
   'sync.now': 'Synk nå',
   'sync.syncing': 'synker …',
   'sync.alreadyRunning': 'En synk kjører allerede.',

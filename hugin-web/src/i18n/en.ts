@@ -22,10 +22,11 @@ export const en = {
   'status.answered': 'Answered',
 
   'sync.heading': 'Sync',
-  'sync.brregLabel': 'Brreg',
+  'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Never',
-  'sync.counts': '{activeAds} active ads · {companies} companies · {pipelineEntries} in pipeline',
+  'sync.counts':
+    '{activeAds} active ads · {companies} companies · {pipelineEntries} in Applications',
   'sync.now': 'Sync now',
   'sync.syncing': 'syncing …',
   'sync.alreadyRunning': 'A sync is already running.',
