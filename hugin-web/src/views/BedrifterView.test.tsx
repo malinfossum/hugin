@@ -297,6 +297,74 @@ describe('BedrifterView', () => {
     ).toBeInTheDocument()
   })
 
+  it('does not treat a branch-of-a-branch as its own group main (guards non-two-tier chains)', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+      company({
+        orgnr: '111222333',
+        name: 'NORSK TIPPING AS AVDELING OSLO SENTRUM',
+        parentOrgnr: '972483672', // parent is itself a branch — not a valid hovedenhet
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Norsk Tipping AS')
+
+    // B renders once, nested under A's group — the count stays "1 avdeling", not 2.
+    expect(screen.getByText('1 avdeling')).toBeInTheDocument()
+
+    // C falls back to a standalone row, since its "parent" B is itself a branch.
+    expect(screen.getByText('Norsk Tipping AS Avdeling Oslo Sentrum')).toBeInTheDocument()
+  })
+
+  it('Tilbake to a branch detail reopens its group and refocuses the branch row', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '972483672': { company: companies[1], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    await user.click(screen.getByText('1 avdeling'))
+
+    const branchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    await user.click(branchButton)
+
+    const back = await screen.findByRole('button', { name: 'Tilbake' })
+    await user.click(back)
+
+    const reopenedBranchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    const detailsEl = reopenedBranchButton.closest('details')
+    if (!detailsEl) throw new Error('branches <details> not found')
+    await waitFor(() => {
+      expect(detailsEl).toHaveAttribute('open')
+      expect(document.activeElement).toBe(reopenedBranchButton)
+    })
+  })
+
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {
     const companies = [
       company({ orgnr: '915787630', name: 'Acme AS' }),

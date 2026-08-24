@@ -13,13 +13,20 @@ interface CompanyGroup {
 
 /** Groups branches under their parent when the parent is in the list; parents keep
  * first-seen list order (API orders by name). A branch without a loaded parent is
- * its own group (enrichment usually loads parents, but never guaranteed). */
+ * its own group (enrichment usually loads parents, but never guaranteed).
+ *
+ * Assumes Brreg's register is strictly two-tier (hovedenhet + underenheter — no
+ * underenhet is itself the parent of another underenhet). `!parent.isBranch` guards
+ * that assumption: a branch whose `parentOrgnr` points at another branch (a chain, or
+ * a mutual pair pointing at each other) does not get treated as a group main — it
+ * falls back to its own standalone row instead of being duplicated as both a nested
+ * branch and a top-level group. */
 function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
   const byOrgnr = new Map(companies.map((c) => [c.orgnr, c]))
   const groups = new Map<string, CompanyGroup>()
   for (const c of companies) {
     const parent = c.parentOrgnr ? byOrgnr.get(c.parentOrgnr) : undefined
-    if (parent && parent.orgnr !== c.orgnr) {
+    if (parent && parent.orgnr !== c.orgnr && !parent.isBranch) {
       const g = groups.get(parent.orgnr) ?? { main: parent, branches: [] }
       g.branches.push(c)
       groups.set(parent.orgnr, g)
@@ -61,7 +68,16 @@ export function BedrifterView() {
     // Safe to assume the ref is still mounted: filter inputs are unmounted while detail is
     // open (not just hidden), so the row list never re-filters behind our back — the
     // opening row is always present in rowRefs when we return to it.
-    rowRefs.current.get(target)?.focus()
+    const el = rowRefs.current.get(target)
+    if (!el) return
+    // A branch row's <details> remounts closed on back-navigation. Non-summary content of a
+    // closed <details> is unfocusable in real browsers (jsdom doesn't enforce this, which is
+    // why it wouldn't show up in tests otherwise) — open every ancestor <details> first, both
+    // to make the row focusable and to restore the user's visual context (the group re-opens).
+    for (let ancestor = el.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (ancestor instanceof HTMLDetailsElement) ancestor.open = true
+    }
+    el.focus()
   }, [selectedOrgnr])
 
   const kommuner = useMemo(() => {
