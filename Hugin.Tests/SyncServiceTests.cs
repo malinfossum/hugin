@@ -31,20 +31,22 @@ public class SyncServiceTests
         FakeClock Clock);
 
     private static Harness Build(FakeBrregClient? brreg = null, FakeNavFeedClient? nav = null,
-        FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null)
+        FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null,
+        HuginConfig? config = null, FakeKommuneRepository? kommuner = null)
     {
         brreg ??= new FakeBrregClient { Companies = { Company() } };
         nav ??= new FakeNavFeedClient(new FeedPage([], null));
         ads ??= new FakeAdRepository();
         companies ??= new FakeCompanyRepository();
         prober ??= new FakeWebsiteProber();
+        config ??= new HuginConfig();
 
-        var kommuner = new FakeKommuneRepository();
+        kommuner ??= new FakeKommuneRepository();
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
 
-        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, new HuginConfig());
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, config);
         return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock);
     }
 
@@ -242,6 +244,87 @@ public class SyncServiceTests
 
         Assert.That(summary.Brreg.Succeeded, Is.True, "a kommune-register hiccup must not fail company discovery");
         Assert.That(h.Kommuner.Store, Is.Empty, "names simply stay stale — nothing to upsert on failure");
+    }
+
+    [Test]
+    public async Task Plain_config_makes_exactly_one_brreg_call_with_the_configured_numbers()
+    {
+        var h = Build();
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "pins today's behavior — no chunking without scaling");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+    }
+
+    [Test]
+    public async Task Fylke_config_chunks_the_brreg_query_per_fylke()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3905", Name = "TØNSBERG" },
+                new Kommune { Number = "0301", Name = "OSLO" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True);
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "one chunk — every allowed number shares the '39' prefix");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3903", "3905" }));
+    }
+
+    [Test]
+    public async Task Multi_fylke_config_makes_one_brreg_call_per_fylke_chunk()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3905", Name = "TØNSBERG" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+                new Kommune { Number = "0301", Name = "OSLO" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39", "34"] };
+
+        var h = Build(brreg: brreg, config: config);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(2), "one call per fylke prefix chunk");
+        var chunks = h.Brreg.CompaniesRequests.Select(c => c.ToHashSet()).ToList();
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3903", "3905" }));
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3403" }));
+    }
+
+    [Test]
+    public async Task All_of_norway_config_chunks_by_fylke_prefix()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], AllOfNorway = true };
+
+        var h = Build(brreg: brreg, config: config);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(2));
+        var chunks = h.Brreg.CompaniesRequests.Select(c => c.ToHashSet()).ToList();
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3903" }));
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3403" }));
     }
 
     [Test]

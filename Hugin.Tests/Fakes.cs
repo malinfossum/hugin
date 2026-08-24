@@ -27,12 +27,17 @@ public sealed class FakeBrregClient : IBrregClient
     /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
     public List<string> ByOrgnrRequests { get; } = [];
 
+    /// <summary>Every municipality-number set GetCompaniesAsync was actually called with, in
+    /// call order — one entry per chunk when discovery is scaled to fylker/all-Norway.</summary>
+    public List<IReadOnlyList<string>> CompaniesRequests { get; } = [];
+
     /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
     public Func<Task>? OnCall { get; set; }
 
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
     {
+        CompaniesRequests.Add(municipalityNumbers.ToArray());
         if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
         return Companies;

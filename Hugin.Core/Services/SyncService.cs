@@ -51,7 +51,13 @@ public sealed class SyncService(
     {
         var now = clock.UtcNow;
 
-        var brregResult = await SyncBrregAsync(now, ct);
+        // The register must be current before the scope is built from it — a first-ever run
+        // with an unreachable register simply degrades to config-only scope (kommuner.GetAllAsync
+        // returns whatever is already stored, empty on a fresh database).
+        await SyncKommunerAsync(ct);
+        var scope = MunicipalityScope.Build(config, await kommuner.GetAllAsync(ct));
+
+        var brregResult = await SyncBrregAsync(now, scope, ct);
         var navResult = await SyncNavAsync(now, fullNav, onNavPage, ct);
 
         // Expiry is a local sweep, not feed data: an ad past its date is stale whether or not
@@ -125,21 +131,32 @@ public sealed class SyncService(
         }
     }
 
-    private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, CancellationToken ct)
+    /// <summary>
+    /// One <see cref="IBrregClient.GetCompaniesAsync"/> call when the scope is still the plain
+    /// configured municipalities (today's behavior, byte-identical). When the scope was expanded
+    /// — fylker or all-of-Norway — the allowed numbers are chunked by 2-char fylke prefix so
+    /// each query stays under Brreg's pagination window.
+    /// </summary>
+    private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, MunicipalityScope scope, CancellationToken ct)
     {
         try
         {
-            var municipalities = config.Municipalities.Select(m => m.Number).ToArray();
-            var fetched = await brreg.GetCompaniesAsync(config.Naeringskoder, municipalities, ct);
+            var configured = config.Municipalities.Select(m => m.Number).ToHashSet();
+            var chunks = scope.AllowedNumbers.SetEquals(configured)
+                ? [scope.AllowedNumbers.ToArray()]
+                : scope.AllowedNumbers.GroupBy(n => n[..2]).Select(g => g.ToArray()).ToList();
 
-            foreach (var company in fetched)
-                await companies.UpsertAsync(company, now, ct);
+            var fetchedTotal = 0;
+            foreach (var chunk in chunks)
+            {
+                var fetched = await brreg.GetCompaniesAsync(config.Naeringskoder, chunk, ct);
+                foreach (var company in fetched) await companies.UpsertAsync(company, now, ct);
+                fetchedTotal += fetched.Count;
+            }
 
             await syncState.SetAsync("brreg", null, now, ct);
 
-            await SyncKommunerAsync(ct);
-
-            return new SourceResult(true, fetched.Count, null);
+            return new SourceResult(true, fetchedTotal, null);
         }
         catch (Exception ex)
         {
