@@ -50,6 +50,12 @@ function fakeServer(seed: AdDto[]) {
       if (target) target.hidden = method === 'POST'
       return Promise.resolve(jsonResponse(undefined, { status: 204 }))
     }
+    const pipelineMatch = url.match(/^\/api\/pipeline\/(.+)$/)
+    if (pipelineMatch && method === 'PUT') {
+      const target = ads.find((a) => a.employerOrgnr === pipelineMatch[1])
+      if (target) target.pipelineStatus = 'active'
+      return Promise.resolve(jsonResponse(undefined, { status: 204 }))
+    }
     return Promise.reject(new Error(`unhandled request ${method} ${url}`))
   })
   return fetchMock
@@ -202,5 +208,47 @@ describe('FristerList', () => {
 
     const retry = await screen.findByRole('button', { name: 'Prøv igjen' })
     expect(retry).toBeInTheDocument()
+  })
+
+  it('tracks a company on Følg opp, PUTs the pipeline endpoint and announces', async () => {
+    const user = userEvent.setup()
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Utvikler',
+        employer: 'Norsk Tipping AS',
+        employerOrgnr: '972483672',
+        pipelineStatus: null,
+      }),
+    ]
+    const fetchMock = fakeServer(ads)
+    renderList(fetchMock)
+
+    await screen.findAllByRole('listitem')
+    await user.click(screen.getByRole('button', { name: 'Følg opp' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/pipeline/972483672',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: expect.objectContaining({ 'X-Hugin': '1' }),
+          body: JSON.stringify({ status: 'active' }),
+        })
+      )
+    })
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Norsk Tipping AS følges nå opp under Søknader.')
+    })
+  })
+
+  it('does not show a track button for an already-tracked company', async () => {
+    const ads = [ad({ feedId: 'a1', employerOrgnr: '972483672', pipelineStatus: 'active' })]
+    renderList(fakeServer(ads))
+
+    await screen.findAllByRole('listitem')
+    expect(screen.queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
   })
 })

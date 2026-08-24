@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../../api'
+import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDate } from '../../dates'
 import { type T, useT } from '../../i18n'
@@ -87,6 +87,18 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     announce(t('frister.hiddenAnnounce'))
   }
 
+  const handleTrack = async (ad: AdDto) => {
+    if (!ad.employerOrgnr) return
+    try {
+      await api.put(`/api/pipeline/${ad.employerOrgnr}`, { status: 'active' })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('frister.trackError'))
+      return
+    }
+    await load()
+    announce(t('frister.trackedAnnounce', { name: ad.employer ?? ad.employerOrgnr }))
+  }
+
   const handleAngreSkjul = async (feedId: string) => {
     try {
       await api.del(`/api/ads/${feedId}/hide`)
@@ -142,6 +154,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
             <div className="frist-row-actions cluster cluster-sm">
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
+              )}
+              {!ad.pipelineStatus && ad.employerOrgnr && (
+                <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
+                  {t('frister.track')}
+                </button>
               )}
               {ad.hidden ? (
                 <button
