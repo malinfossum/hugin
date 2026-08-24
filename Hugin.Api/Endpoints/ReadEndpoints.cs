@@ -52,7 +52,8 @@ public static class ReadEndpoints
             return Results.Ok(result);
         });
 
-        app.MapGet("/api/extract", async (ExtractService extract, string? scope, string? format, string? category) =>
+        app.MapGet("/api/extract", async (ExtractService extract, string? scope, string? format, string? category,
+            bool includeActive = false) =>
         {
             if (ParseExtractScope(scope) is not { } parsedScope)
                 return Results.Problem(statusCode: 400, title: $"Ukjent scope «{scope}» — bruk new | category | all.");
@@ -62,7 +63,7 @@ public static class ReadEndpoints
 
             try
             {
-                var result = await extract.ExtractAsync(parsedScope, parsedFormat, category);
+                var result = await extract.ExtractAsync(parsedScope, parsedFormat, category, includeActive);
                 // Results.File sets Content-Disposition: attachment; filename=... for us — the
                 // filename is server-chosen (scope/date, no user input reaches it).
                 var bytes = System.Text.Encoding.UTF8.GetBytes(result.Content);

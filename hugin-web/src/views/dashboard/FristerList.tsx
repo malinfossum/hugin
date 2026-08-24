@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../../api'
+import { ApiError, api } from '../../api'
+import { displayCompanyName } from '../../companyName'
 import { useAnnounce } from '../../components/LiveRegion'
-import { localeFor, type T, useLang, useT } from '../../i18n'
+import { formatDate } from '../../dates'
+import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
 import type { AdDto } from '../../types'
 
@@ -33,8 +35,8 @@ function daysLeftText(daysLeft: number | null, t: T): string {
   return t('frister.daysBadge', { n: daysLeft })
 }
 
-function formatExpires(expires: string | null, locale: string): string | null {
-  return expires ? new Date(expires).toLocaleDateString(locale) : null
+function formatExpires(expires: string | null): string | null {
+  return expires ? formatDate(expires) : null
 }
 
 export function FristerList({ refreshKey }: { refreshKey: number }) {
@@ -43,8 +45,6 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
-  const [lang] = useLang()
-  const locale = localeFor(lang)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // undefined: no pending focus move. null: focus the heading. string: focus that row's Skjul button.
@@ -86,6 +86,19 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     pendingFocus.current = nextFeedId
     await load()
     announce(t('frister.hiddenAnnounce'))
+  }
+
+  const handleTrack = async (ad: AdDto) => {
+    if (!ad.employerOrgnr) return
+    try {
+      await api.put(`/api/pipeline/${ad.employerOrgnr}`, { status: 'active' })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('frister.trackError'))
+      return
+    }
+    await load()
+    const displayName = ad.employer ? displayCompanyName(ad.employer) : ad.employerOrgnr
+    announce(t('frister.trackedAnnounce', { name: displayName }))
   }
 
   const handleAngreSkjul = async (feedId: string) => {
@@ -131,18 +144,25 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               ) : (
                 <span>{ad.title}</span>
               )}
-              <span className="text-muted">{ad.employer}</span>
+              <span className="text-muted">
+                {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+              </span>
             </div>
-            <div className="frist-row-date cluster cluster-sm">
-              <span className="text-muted">{formatExpires(ad.expires, locale)}</span>
+            <div className="frist-meta">
+              <span className="frist-date text-muted">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
+              <span className="frist-category text-muted">{ad.category}</span>
             </div>
-            <span className="text-muted">{ad.category}</span>
             <div className="frist-row-actions cluster cluster-sm">
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
+              )}
+              {!ad.pipelineStatus && ad.employerOrgnr && (
+                <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
+                  {t('frister.track')}
+                </button>
               )}
               {ad.hidden ? (
                 <button

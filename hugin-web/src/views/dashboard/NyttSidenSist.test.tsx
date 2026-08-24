@@ -129,6 +129,47 @@ describe('NyttSidenSist', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('displays all-caps Brreg company and employer names in title case', async () => {
+    const dto = newDto({
+      companies: [
+        {
+          orgnr: '915787630',
+          name: 'NORSK TIPPING AS',
+          kommune: '0301',
+          kommuneNavn: null,
+          naceCode: '62.010',
+          isBranch: false,
+          website: null,
+          parentOrgnr: null,
+        },
+      ],
+      ads: [
+        {
+          feedId: 'a1',
+          title: 'Utvikler',
+          employer: 'NORSK TIPPING AS',
+          employerOrgnr: '915787630',
+          kommune: '0301',
+          expires: null,
+          daysLeft: null,
+          category: 'IT',
+          sourceUrl: null,
+          pipelineStatus: null,
+          hidden: false,
+          isActive: true,
+          published: '2026-08-10T00:00:00Z',
+        },
+      ],
+    })
+    renderView(fakeServer(dto))
+
+    expect(await screen.findByText('Norsk Tipping AS')).toBeInTheDocument()
+    const adRow = (await screen.findByText('Utvikler')).closest('li')
+    if (!adRow) throw new Error('row not found')
+    expect(adRow).toHaveTextContent('Norsk Tipping AS')
+    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+  })
+
   it('POSTs the exact asOf string from the fetched NewDto when the dialog is confirmed', async () => {
     const user = userEvent.setup()
     const dto = newDto({ asOf: '2026-08-19T09:30:00Z' })

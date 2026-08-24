@@ -125,65 +125,75 @@ body.light {
 }
 
 /*
- * Default identity (3.0.0): Daily, promoted.
+ * Default identity (3.0.0): a Kenaz/Gold blend.
  *
  * The :root block above is UNCHANGED — it stays the pre-3.0 true-black /
- * cool-blue-grey identity, on purpose. gold, wend, tidsro and kenaz are
- * accent-(and-surface)-only palettes and none of them override --font-display
- * or --accent-solid-strong; --on-accent/--accent-solid specifically are only
- * ever touched by kenaz (its own dark --on-accent and light --accent-solid —
- * see kenaz.css), never by gold/wend/tidsro. If Daily's values were written
- * into :root directly, every one of those palettes would have silently
- * picked up ember surfaces and/or a hardcoded solid-button fill for whichever
+ * cool-blue-grey identity, on purpose. gold, wend, tidsro never carry their
+ * own surfaces or --font-display, so they still derive Sora and the
+ * cool-blue-grey ramp from :root directly. If this block's values were
+ * written into :root itself, every one of those palettes would silently pick
+ * up warm Kenaz surfaces and/or a hardcoded solid-button ink for whichever
  * channels they don't already override themselves.
  *
- * Instead this block carries Daily's surface + accent + solid-button-ink
+ * Instead this block carries the blend's surface + text + border + accent
  * overrides under a selector that matches exactly the "no palette chosen"
  * state and nothing else: "[data-palette="default"]" (what the init snippet
  * writes when nothing is saved — see theme/theme-init-snippet.html) or
  * "html:not([data-palette])" (the attribute genuinely absent — static
  * markup, no JS). Both are mutually exclusive with every named palette
- * selector by construction, so this can never fight [data-palette="gold"]
+ * selector by construction, so this can never fight [data-palette="kenaz"]
  * etc. for specificity — it simply never matches the same element.
  *
- * --on-accent/--accent-solid/--accent-solid-strong are hardcoded rather than
- * derived from --accent for the same reason daily.css hardcodes them: the
- * ember accent is mid-tone, so the derive-from-accent formula (still live in
- * :root above, still what gold/wend/tidsro use, and what kenaz uses for its
- * own dark --accent-solid) doesn't clear 4.5:1 against near-black ink. Light
- * mode only re-tunes --accent-rgb/--accent-strong-rgb, same as daily.css's
- * light block — --accent-solid still resolves through
- * :root[data-theme="light"]'s formula below (higher specificity, so it wins
- * there), which is what daily.css's own comment describes as "light theme
- * resolves the base light accent, which passes on its own". Text/border/
- * surface-0 live in _oled.css (extended to match this same pair of
- * selectors); font-display lives in typography.css.
+ * Surfaces, text and borders are Kenaz's, unaltered (Gold is accent-only —
+ * it has no surface/text/border ramp to blend against). The accent is the
+ * arithmetic midpoint of Kenaz's amber (217 154 78) and Gold's gold
+ * (227 179 65): 222 166 72. --on-accent is hardcoded rather than derived
+ * from --accent for the same reason kenaz.css hardcodes its own: the blend
+ * accent is light enough that dark ink reads better than the :root formula's
+ * near-black default. Light mode only re-tunes --accent-rgb/
+ * --accent-strong-rgb/--accent-solid — same shape as kenaz.css's light
+ * block. No dark-mode --accent-solid/--accent-solid-strong override is
+ * needed: with a light amber accent and dark ink, the derive-from-accent
+ * formula in :root above already clears 4.5:1 (same reasoning as kenaz.css).
+ * Text/border/surface-0 live in _oled.css no longer — the blend now supplies
+ * its own values here instead of sharing that file's OLED foundation.
  *
- * The pre-3.0 identity this block replaces isn't gone: it's preserved
+ * The pre-3.0 identity this block used to replace isn't gone: it's preserved
  * byte-for-byte as the opt-in classic.css, for any unpinned consumer that
- * wants to keep today's look rather than adopt Daily on their next sync.
- *
- * daily.css's own [data-palette="daily"] block restates these exact values —
- * that's now a documented no-op kept for anyone who pins the palette by name.
+ * wants to keep the 2.x look. Daily is likewise unaffected: its own
+ * [data-palette="daily"] block in daily.css is load-bearing again, not a
+ * no-op — it's a standalone opt-in palette, no longer the default's source.
  */
 [data-palette="default"],
 html:not([data-palette]) {
-	--surface-1: #0f0c09;
-	--surface-2: #17120e;
-	--surface-3: #1c1813;
-	--surface-4: #241e17;
-	--surface-5: #2e271e;
+	/* Kenaz ground — true-black page, warm near-black surfaces. */
+	--surface-0: #000000;
+	--surface-1: #000000;
+	--surface-2: #0b0a09;
+	--surface-3: #14110d;
+	--surface-4: #1d1811;
+	--surface-5: #262016;
 
-	--accent-rgb: 190 85 38;
-	--accent-strong-rgb: 210 100 50;
+	/* Kenaz text + borders (border #322b22 holds WCAG 1.4.11 parity — see kenaz.css). */
+	--text: #f4efe6;
+	--text-muted: #b8ada0;
+	--text-faint: #8f8578;
+	--border: #322b22;
+	--border-strong: #3a3226;
+	--border-soft: #1c1813;
 
-	--on-accent: #ffffff;
-	--accent-solid: #943c16;
-	--accent-solid-strong: #a8481e;
+	/* Accent: midpoint of Kenaz (217 154 78) and Gold (227 179 65). */
+	--accent-rgb: 222 166 72;
+	--accent-strong-rgb: 234 186 98;
+
+	/* Amber is light enough for dark ink (same reasoning as kenaz.css). */
+	--on-accent: #241704;
 }
 
 [data-theme="light"][data-palette="default"],
 html[data-theme="light"]:not([data-palette]) {
-	--accent-rgb: 168 70 28;
-	--accent-strong-rgb: 140 56 20;
+	/* Midpoint of the kenaz and gold light-mode accents. */
+	--accent-rgb: 163 112 26;
+	--accent-strong-rgb: 134 90 18;
+	--accent-solid: #8c6016;
 }

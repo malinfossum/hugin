@@ -108,7 +108,9 @@ describe('ApplicationsView', () => {
 
     await screen.findByText('Aktiv-firma')
 
-    expect(screen.getByText('Aktiv-oppføringer tas aldri med i eksporten.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Aktiv-oppføringer tas bare med i eksporten når du velger det.')
+    ).toBeInTheDocument()
   })
 
   it('shows "⚠ mangler begrunnelse" for a beyond-active entry with empty why', async () => {
@@ -129,6 +131,15 @@ describe('ApplicationsView', () => {
     await screen.findByText('Aktiv-firma')
 
     expect(screen.queryByText('⚠ mangler begrunnelse')).not.toBeInTheDocument()
+  })
+
+  it('displays an all-caps Brreg company name in title case', async () => {
+    renderView(
+      fakeServer([entry({ orgnr: '1', companyName: 'NORSK TIPPING AS', status: 'active' })])
+    )
+
+    expect(await screen.findByText('Norsk Tipping AS')).toBeInTheDocument()
+    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
   })
 
   it('edit-submit PUTs the right body and announces "Lagret."', async () => {

@@ -352,7 +352,7 @@ internal static class Program
         try
         {
             var extract = services.GetRequiredService<ExtractService>();
-            var result = await extract.ExtractAsync(command.Scope, command.Format, command.Category);
+            var result = await extract.ExtractAsync(command.Scope, command.Format, command.Category, command.IncludeActive);
             Console.WriteLine(result.Content);
             return 0;
         }
@@ -387,7 +387,7 @@ internal static class Program
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper
               hugin list --ads [--kommune <nr>]   Vis aktive annonser
-              hugin export [--format md|txt|json] [--scope new|category|all] [--category <navn>]
+              hugin export [--format md|txt|json] [--scope new|category|all] [--category <navn>] [--include-active]
                                                   Skriv ut data (standard: md/all); --scope category krever --category
 
             Globalt:

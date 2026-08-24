@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Tests;
 
@@ -24,8 +25,16 @@ public sealed class FakeBrregClient : IBrregClient
     /// fetch from discovery failure.</summary>
     public bool ThrowsOnGetKommuner { get; set; }
 
+    /// <summary>1-based call number at which GetCompaniesAsync should throw — earlier calls
+    /// succeed normally. For tests isolating a mid-chunk failure from a first-call failure.</summary>
+    public int? ThrowOnCompaniesCallNumber { get; set; }
+
     /// <summary>Every orgnr GetByOrgnrAsync was actually called with, in call order.</summary>
     public List<string> ByOrgnrRequests { get; } = [];
+
+    /// <summary>Every municipality-number set GetCompaniesAsync was actually called with, in
+    /// call order — one entry per chunk when discovery is scaled to fylker/all-Norway.</summary>
+    public List<IReadOnlyList<string>> CompaniesRequests { get; } = [];
 
     /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
     public Func<Task>? OnCall { get; set; }
@@ -33,8 +42,11 @@ public sealed class FakeBrregClient : IBrregClient
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
     {
+        CompaniesRequests.Add(municipalityNumbers.ToArray());
         if (OnCall is not null) await OnCall();
         if (Throws) throw new HttpRequestException("brreg utilgjengelig");
+        if (ThrowOnCompaniesCallNumber == CompaniesRequests.Count)
+            throw new HttpRequestException("brreg utilgjengelig");
         return Companies;
     }
 
@@ -62,18 +74,24 @@ public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
     public bool FirstPageRequested { get; private set; }
     public bool Throws { get; set; }
 
+    /// <summary>Every scope GetPageAsync/GetFirstPageAsync was actually called with, in call
+    /// order — lets a test assert the sync-built scope reached the client.</summary>
+    public List<MunicipalityScope> RequestedScopes { get; } = [];
+
     /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
     public Func<Task>? OnCall { get; set; }
 
-    public Task<FeedPage> GetPageAsync(string? cursor, CancellationToken ct = default)
+    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default)
     {
         RequestedCursors.Add(cursor);
+        RequestedScopes.Add(scope);
         return NextPage();
     }
 
-    public Task<FeedPage> GetFirstPageAsync(CancellationToken ct = default)
+    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default)
     {
         FirstPageRequested = true;
+        RequestedScopes.Add(scope);
         return NextPage();
     }
 
@@ -112,14 +130,18 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
             existing.ParentOrgnr = company.ParentOrgnr;
             existing.IsBranch = company.IsBranch;
 
-            if (existing.Website != company.Website)
+            if (company.Website is not null)
             {
-                existing.WebsiteOk = null;
-                existing.WebsiteResolved = null;
-                existing.WebsiteCheckedUtc = null;
+                if (existing.Website != company.Website)
+                {
+                    existing.WebsiteOk = null;
+                    existing.WebsiteResolved = null;
+                    existing.WebsiteCheckedUtc = null;
+                }
+
+                existing.Website = company.Website;
             }
 
-            existing.Website = company.Website;
             existing.LastSeenInRegister = seenAt;
         }
         else
@@ -165,6 +187,18 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default)
+    {
+        if (!Store.TryGetValue(orgnr, out var company)) return Task.FromResult(false);
+        if (company.Website is not null && company.WebsiteOk != false) return Task.FromResult(false);
+
+        company.Website = website;
+        company.WebsiteOk = null;
+        company.WebsiteResolved = null;
+        company.WebsiteCheckedUtc = null;
+        return Task.FromResult(true);
     }
 }
 

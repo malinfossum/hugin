@@ -14,6 +14,13 @@ public sealed class HuginConfig
     public List<MunicipalityRef> Municipalities { get; init; } =
         [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405"), new("Ringsaker", "3411")];
 
+    // 2-digit fylke prefixes (e.g. "39" = Vestfold og Telemark) — expands discovery to every
+    // kommune in the fylke, resolved against the kommune register at sync time.
+    public List<string> Fylker { get; init; } = [];
+
+    // Expands discovery to every kommune in the register — the widest scope, for national reach.
+    public bool AllOfNorway { get; init; }
+
     // SN2025 codes; the prefix "62" matches all sub-codes (the old "62.010" returns zero results).
     public List<string> Naeringskoder { get; init; } = ["62"];
 

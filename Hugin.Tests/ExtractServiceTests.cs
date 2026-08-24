@@ -199,6 +199,28 @@ public class ExtractServiceTests
     }
 
     [Test]
+    public async Task All_scope_includes_active_entries_when_includeActive_is_true()
+    {
+        var companies = new FakeCompanyRepository();
+        companies.Store["1"] = Company("1", "Aktiv AS");
+        companies.Store["2"] = Company("2", "Sokt AS");
+
+        var pipeline = new FakePipelineRepository();
+        pipeline.Store.Add(Entry("1", PipelineStatus.Active));
+        pipeline.Store.Add(Entry("2", PipelineStatus.Applied));
+
+        var service = BuildService(companies: companies, pipeline: pipeline);
+
+        var result = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Json, includeActive: true);
+
+        using var doc = JsonDocument.Parse(result.Content);
+        var tracker = doc.RootElement.GetProperty("tracker");
+        var names = tracker.EnumerateArray().Select(r => r.GetProperty("companyName").GetString()).ToList();
+        Assert.That(names, Does.Contain("Aktiv AS"));
+        Assert.That(names, Does.Contain("Sokt AS"));
+    }
+
+    [Test]
     public async Task Empty_why_gets_the_warning_marker_in_the_tracker()
     {
         var companies = new FakeCompanyRepository();

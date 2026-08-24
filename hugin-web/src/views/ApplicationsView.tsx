@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
+import { displayCompanyName } from '../companyName'
 import { useAnnounce } from '../components/LiveRegion'
+import { formatDate } from '../dates'
 import { localeFor, type TranslationKey, useLang, useT } from '../i18n'
 import { pipelineLabel } from '../pipelineLabels'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
@@ -61,10 +63,6 @@ function toFormState(entry: PipelineDto): FormState {
     note: entry.note ?? '',
     svar: entry.svar ?? '',
   }
-}
-
-function formatUpdated(updated: string, locale: string): string {
-  return new Date(updated).toLocaleDateString(locale)
 }
 
 export function ApplicationsView() {
@@ -200,7 +198,7 @@ export function ApplicationsView() {
                 return (
                   <li key={entry.orgnr} className="panel stack stack-sm">
                     <div className="cluster cluster-sm cluster-between">
-                      <span className="text-strong">{entry.companyName}</span>
+                      <span className="text-strong">{displayCompanyName(entry.companyName)}</span>
                       <button
                         type="button"
                         className="btn btn-ghost icon-btn"
@@ -225,7 +223,7 @@ export function ApplicationsView() {
                           )}
                           {entry.note && <span className="text-muted">{entry.note}</span>}
                           {entry.svar && <span className="text-muted">{entry.svar}</span>}
-                          <span className="help">{formatUpdated(entry.updated, locale)}</span>
+                          <span className="help">{formatDate(entry.updated)}</span>
                         </div>
                         {warning?.orgnr === entry.orgnr && (
                           <p role="status" className="badge badge-warning">

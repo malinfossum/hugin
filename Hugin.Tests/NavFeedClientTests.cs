@@ -2,12 +2,19 @@ using System.Net;
 using System.Text;
 using Hugin.Infrastructure.Http;
 using Hugin.Core.Config;
+using Hugin.Core.Services;
 
 namespace Hugin.Tests;
 
 public class NavFeedClientTests
 {
     private const string NavBase = "https://pam-stilling-feed.nav.no/";
+
+    // Config-only scope (empty kommune register) — every existing test fixture uses names
+    // that are configured directly (HAMAR, RINGSAKER), so this is byte-identical to the old
+    // config-only resolution.
+    private static readonly MunicipalityScope ConfigScope =
+        MunicipalityScope.Build(new HuginConfig(), new Dictionary<string, string>());
 
     private static readonly string TokenBody =
         "Current public token for Nav Job Vacancy Feed:\n" +
@@ -41,7 +48,7 @@ public class NavFeedClientTests
     [Test]
     public async Task Maps_fixture_page_to_feed_ads()
     {
-        var page = await Client(ServeFeed).GetPageAsync(null);
+        var page = await Client(ServeFeed).GetPageAsync(null, ConfigScope);
 
         // Oslo (wrong municipality) and "Sykepleier natt" (no keyword) are filtered out.
         Assert.That(page.Ads.Select(a => a.FeedId), Is.EquivalentTo(new[]
@@ -58,6 +65,7 @@ public class NavFeedClientTests
         Assert.That(active.Expires, Is.Not.Null);
         Assert.That(active.IsActive, Is.True);
         Assert.That(active.Category, Is.EqualTo("IT / Utvikling"));
+        Assert.That(active.EmployerHomepage, Is.EqualTo("https://agreed.no"));
 
         var gone = page.Ads.Single(a => a.FeedId.StartsWith("2222", StringComparison.Ordinal));
         Assert.That(gone.IsActive, Is.False, "the feed reporting INACTIVE must flip the ad");
@@ -93,9 +101,95 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/6666", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null);
+        }).GetPageAsync(null, ConfigScope);
 
         Assert.That(result.Ads, Is.Empty);
+    }
+
+    [Test]
+    public async Task Municipality_resolves_via_the_kommune_register_when_allowed()
+    {
+        // LARVIK is not one of the configured Innlandet municipalities — only the register
+        // (via a fylke prefix) knows it. Before H18 NAV ads could never reach names like this.
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Larvik Software AS",
+             "municipal":"LARVIK","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-larvik"}
+            """;
+        const string detail = """
+            {"uuid":"88888888-8888-8888-8888-888888888888","status":"ACTIVE",
+             "sistEndret":"2026-08-18T09:00:00+02:00",
+             "ad_content":{"uuid":"88888888-8888-8888-8888-888888888888",
+              "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/8",
+              "employer":{"name":"Larvik Software AS"},
+              "workLocations":[{"municipal":"LARVIK"}],
+              "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
+            """;
+
+        var register = new Dictionary<string, string> { ["3909"] = "LARVIK" };
+        var scope = MunicipalityScope.Build(new HuginConfig { Fylker = ["39"] }, register);
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/8888", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null, scope);
+
+        Assert.That(result.Ads.Single().MunicipalityNumber, Is.EqualTo("3909"));
+    }
+
+    [Test]
+    public async Task Municipality_unresolved_under_a_config_only_scope_is_filtered_out()
+    {
+        // Same LARVIK ad, but the scope only knows the plain Innlandet config — no fylke, no
+        // register entry for Larvik — so the name resolves to nothing and the ad is dropped.
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Larvik Software AS",
+             "municipal":"LARVIK","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-larvik"}
+            """;
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null, ConfigScope);
+
+        Assert.That(result.Ads, Is.Empty);
+    }
+
+    [Test]
+    public async Task Employer_without_homepage_maps_to_null()
+    {
+        // Norsk Tipping-shaped fixture: employer object present, but with no homepage field —
+        // this must not throw and must not fall back to some other URL.
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"77777777-7777-7777-7777-777777777777",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Norsk Tipping AS",
+             "municipal":"HAMAR","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-z"}
+            """;
+        const string detail = """
+            {"uuid":"77777777-7777-7777-7777-777777777777","status":"ACTIVE",
+             "sistEndret":"2026-08-18T09:00:00+02:00",
+             "ad_content":{"uuid":"77777777-7777-7777-7777-777777777777",
+              "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/7",
+              "employer":{"name":"Norsk Tipping AS","orgnr":"917365908"},
+              "workLocations":[{"municipal":"HAMAR"}],
+              "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
+            """;
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/7777", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null, ConfigScope);
+
+        Assert.That(result.Ads.Single().EmployerHomepage, Is.Null);
     }
 
     [Test]
@@ -120,7 +214,7 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/5555", StringComparison.Ordinal)) return HttpFixtures.Json(stub);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null);
+        }).GetPageAsync(null, ConfigScope);
 
         Assert.That(result.Ads.Single().IsActive, Is.False,
             "an ad NAV has stripped is gone now, whatever the historical entry said");
@@ -134,7 +228,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetPageAsync("1df27f1c-2a02-4077-9ef0-d5e45f4c77f1");
+        }).GetPageAsync("1df27f1c-2a02-4077-9ef0-d5e45f4c77f1", ConfigScope);
 
         Assert.That(requested.Any(u => u.EndsWith("api/v1/feed/1df27f1c-2a02-4077-9ef0-d5e45f4c77f1", StringComparison.Ordinal)),
             Is.True, "a stored cursor must be requested as a feed page id");
@@ -149,7 +243,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetPageAsync(null);
+        }).GetPageAsync(null, ConfigScope);
 
         Assert.That(requested.Any(u => u.Contains("last=true", StringComparison.Ordinal)), Is.True,
             "a first sync must not walk the feed from 2019");
@@ -163,7 +257,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetFirstPageAsync();
+        }).GetFirstPageAsync(ConfigScope);
 
         var feedRequest = requested.First(u => u.Contains("api/v1/feed", StringComparison.Ordinal));
         Assert.That(feedRequest, Does.EndWith("api/v1/feed"),
@@ -184,7 +278,7 @@ public class NavFeedClientTests
 
             feedCalls++;
             return feedCalls == 1 ? Unauthorized() : ServeFeed(request);
-        }).GetPageAsync(null);
+        }).GetPageAsync(null, ConfigScope);
 
         Assert.That(feedCalls, Is.EqualTo(2), "exactly one retry");
         Assert.That(tokenCalls, Is.EqualTo(2), "the token is refetched before the retry");
@@ -199,7 +293,7 @@ public class NavFeedClientTests
                 ? Text(TokenBody)
                 : Unauthorized());
 
-        Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null));
+        Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null, ConfigScope));
     }
 
     [Test]

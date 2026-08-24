@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { formatDate } from '../dates'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
@@ -115,6 +116,23 @@ describe('BedrifterView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
+  it('filters to companies with a website when the has-website checkbox is checked', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' }),
+      company({ orgnr: '2', name: 'Beta Software', website: null }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Har egen nettside' }))
+
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+  })
+
   it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
     const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
@@ -143,7 +161,7 @@ describe('BedrifterView', () => {
     if (!activeRow || !expiredRow) throw new Error('row not found')
     expect(within(activeRow).queryByText('[utgått]')).not.toBeInTheDocument()
     expect(within(expiredRow).getByText('[utgått]')).toBeInTheDocument()
-    const expectedPublished = new Date('2026-08-01T00:00:00Z').toLocaleDateString('nb-NO')
+    const expectedPublished = formatDate('2026-08-01T00:00:00Z')
     expect(within(activeRow).getByText(`publisert ${expectedPublished}`)).toBeInTheDocument()
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })
@@ -217,6 +235,175 @@ describe('BedrifterView', () => {
       'href',
       `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
     )
+  })
+
+  it('displays an all-caps Brreg name in title case, in the row and the detail heading', async () => {
+    const companies = [company({ orgnr: '1', name: 'NORSK TIPPING AS', kommuneNavn: 'Oslo' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '1': { company: companies[0], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Norsk Tipping AS/ }))
+    expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
+  })
+
+  it('groups a branch under its hovedenhet, collapsed until expanded', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+      company({ orgnr: '3', name: 'Standalone AS' }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '972483672': { company: companies[1], ads: [] },
+    }
+    const user = userEvent.setup()
+    const { container } = renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    expect(screen.getByText('Standalone AS')).toBeInTheDocument()
+
+    // The branch is not its own top-level group row: the outer list has one group per
+    // hovedenhet/standalone (2), not one row per unit (3).
+    const outerList = container.querySelector('.bedrifter-view > ul')
+    if (!outerList) throw new Error('outer companies list not found')
+    expect(outerList.children).toHaveLength(2)
+
+    const detailsEl = screen.getByText('1 avdeling').closest('details')
+    if (!detailsEl) throw new Error('branches <details> not found')
+    expect(detailsEl).not.toHaveAttribute('open')
+
+    await user.click(screen.getByText('1 avdeling'))
+    expect(detailsEl).toHaveAttribute('open')
+
+    const branchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    expect(branchButton).toBeInTheDocument()
+
+    await user.click(branchButton)
+    expect(
+      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
+    ).toBeInTheDocument()
+  })
+
+  it('does not treat a branch-of-a-branch as its own group main (guards non-two-tier chains)', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+      company({
+        orgnr: '111222333',
+        name: 'NORSK TIPPING AS AVDELING OSLO SENTRUM',
+        parentOrgnr: '972483672', // parent is itself a branch — not a valid hovedenhet
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Norsk Tipping AS')
+
+    // B renders once, nested under A's group — the count stays "1 avdeling", not 2.
+    expect(screen.getByText('1 avdeling')).toBeInTheDocument()
+
+    // C falls back to a standalone row, since its "parent" B is itself a branch.
+    expect(screen.getByText('Norsk Tipping AS Avdeling Oslo Sentrum')).toBeInTheDocument()
+  })
+
+  it('a standalone branch (parent not loaded) is tagged [branch] at top level', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    const companies = [
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613', // parent org number is not in the loaded companies list
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    expect(
+      await screen.findByRole('button', { name: /Norsk Tipping AS Avdeling Oslo \[branch\]/ })
+    ).toBeInTheDocument()
+  })
+
+  it('a branch nested inside its expanded group is not tagged (the group already says so)', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Norsk Tipping AS')
+    await user.click(screen.getByText('1 avdeling'))
+
+    expect(await screen.findByText('Norsk Tipping AS Avdeling Oslo')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Norsk Tipping AS Avdeling Oslo \[avdeling\]/)
+    ).not.toBeInTheDocument()
+  })
+
+  it('Tilbake to a branch detail reopens its group and refocuses the branch row', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '972483672': { company: companies[1], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    await user.click(screen.getByText('1 avdeling'))
+
+    const branchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    await user.click(branchButton)
+
+    const back = await screen.findByRole('button', { name: 'Tilbake' })
+    await user.click(back)
+
+    const reopenedBranchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    const detailsEl = reopenedBranchButton.closest('details')
+    if (!detailsEl) throw new Error('branches <details> not found')
+    await waitFor(() => {
+      expect(detailsEl).toHaveAttribute('open')
+      expect(document.activeElement).toBe(reopenedBranchButton)
+    })
   })
 
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {

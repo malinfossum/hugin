@@ -15,7 +15,7 @@ public static class CommandParser
 
     // Options that stand alone; everything else expects a following value.
     private static readonly HashSet<string> ValuelessFlags =
-        new(StringComparer.OrdinalIgnoreCase) { "seen", "companies", "full", "ads" };
+        new(StringComparer.OrdinalIgnoreCase) { "seen", "companies", "full", "ads", "include-active" };
 
     public static Command Parse(string[] args)
     {
@@ -82,7 +82,7 @@ public static class CommandParser
 
     private static Command ParseExport(string[] args)
     {
-        var (options, error) = ReadOptions(args, 1, ["format", "scope", "category"]);
+        var (options, error) = ReadOptions(args, 1, ["format", "scope", "category", "include-active"]);
         if (error is not null) return new InvalidCommand(error);
 
         var format = ExtractFormat.Md;
@@ -103,7 +103,7 @@ public static class CommandParser
         if (scope == ExtractScope.Category && string.IsNullOrWhiteSpace(category))
             return new InvalidCommand("mangler --category for scope category");
 
-        return new ExportCommand(format, scope, category);
+        return new ExportCommand(format, scope, category, options.ContainsKey("include-active"));
     }
 
     private static bool TryParseStatus(string? raw, out PipelineStatus status)

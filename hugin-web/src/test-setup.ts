@@ -46,6 +46,16 @@ HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
   this.dispatchEvent(new Event('close'))
 }
 
+// jsdom doesn't implement window.scrollTo — it logs a "Not implemented" console error instead
+// of the no-op real browsers give it in a headless context. App.tsx's view-switcher calls it to
+// restore per-view scroll position, so give it a minimal polyfill that actually tracks scrollY
+// (assignable in jsdom, matching the spec's [Replaceable] scrollY) rather than just swallowing
+// the call — that way a test can assert on scroll restoration if it ever needs to.
+window.scrollTo = ((x?: number | ScrollToOptions, y?: number) => {
+  const top = typeof x === 'object' ? (x.top ?? window.scrollY) : (y ?? window.scrollY)
+  window.scrollY = top
+}) as typeof window.scrollTo
+
 // Deterministic language for every test: the existing test suite asserts bokmål strings
 // throughout, and jsdom's navigator.language ('en-US') would otherwise auto-detect English and
 // break all of them. Setting the same localStorage key LanguageProvider reads (src/i18n/index.ts)

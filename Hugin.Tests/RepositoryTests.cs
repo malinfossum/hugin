@@ -91,8 +91,14 @@ public class RepositoryTests
     }
 
     [Test]
-    public async Task Upsert_clears_website_check_fields_when_the_website_becomes_null()
+    public async Task Upsert_preserves_an_existing_website_when_the_register_offers_none()
     {
+        // v3.1 item 24 changes this deliberately: the register going silent on a website is
+        // not a correction — a company can drop off Brreg's `hjemmeside` field for reasons
+        // unrelated to the site dying, and by the time item 24 shipped that website might
+        // have been *adopted* from a NAV ad rather than sourced from the register at all.
+        // Erasing it on every "no website this sync" would undo the adoption. A register that
+        // reports a genuinely DIFFERENT website still wins outright (see the test above).
         var repo = new EfCompanyRepository(_db);
         await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
         await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T1);
@@ -100,9 +106,9 @@ public class RepositoryTests
         await repo.UpsertAsync(Norkart() with { Website = null }, T2);
 
         var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.Null);
-        Assert.That(c.WebsiteOk, Is.Null);
-        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "absence is not a correction");
+        Assert.That(c.WebsiteOk, Is.False, "the prior check state survives too — nothing changed");
+        Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
     }
 
     [Test]
@@ -115,6 +121,76 @@ public class RepositoryTests
         Assert.That(c!.WebsiteOk, Is.Null);
         Assert.That(c.WebsiteResolved, Is.Null);
         Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task AdoptWebsite_fills_a_gap_when_the_company_has_no_website()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart(), T1);
+
+        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://norkart.no");
+
+        Assert.That(adopted, Is.True);
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"));
+        Assert.That(c.WebsiteOk, Is.Null);
+        Assert.That(c.WebsiteResolved, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task AdoptWebsite_replaces_a_confirmed_dead_register_website()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart() with { Website = "https://dead.no" }, T1);
+        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T1);
+
+        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://norkart.no");
+
+        Assert.That(adopted, Is.True);
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "the ad's website replaces the confirmed-dead one");
+        Assert.That(c.WebsiteOk, Is.Null, "reset so the weekly checker probes the adopted URL");
+        Assert.That(c.WebsiteResolved, Is.Null);
+        Assert.That(c.WebsiteCheckedUtc, Is.Null);
+    }
+
+    [Test]
+    public async Task AdoptWebsite_does_nothing_when_the_company_already_has_a_healthy_website()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
+        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "https://norkart.no", T1);
+
+        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://other.no");
+
+        Assert.That(adopted, Is.False);
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "a healthy register website always outranks an ad's claim");
+        Assert.That(c.WebsiteOk, Is.True);
+        Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
+    }
+
+    [Test]
+    public async Task AdoptWebsite_does_nothing_when_the_website_is_unchecked_but_non_null()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
+
+        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://other.no");
+
+        Assert.That(adopted, Is.False, "an unprobed register website is not treated as dead");
+        var c = await repo.GetAsync("934161181");
+        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"));
+    }
+
+    [Test]
+    public async Task AdoptWebsite_returns_false_for_an_unknown_orgnr()
+    {
+        var repo = new EfCompanyRepository(_db);
+
+        Assert.That(await repo.AdoptWebsiteAsync("000000000", "https://nowhere.no"), Is.False);
     }
 
     [Test]

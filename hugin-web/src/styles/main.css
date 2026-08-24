@@ -12,6 +12,14 @@
 @import url("../../design-system/compositions/index.css");
 @import url("../../design-system/utilities/index.css");
 
+/* Native <dialog> hidden-state guard. The DS .stack class sets display:flex on the
+   confirm dialog (ConfirmDialog.tsx), which overrides the UA's dialog:not([open])
+   { display:none } — the v3 design pass made every closed dialog render inline.
+   Restoring the UA rule at author level wins over .stack on specificity (0,1,1 > 0,1,0). */
+dialog:not([open]) {
+  display: none;
+}
+
 /* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
    up to 1.75rem) is sized for marketing/hero pages — on a data-dense dashboard it read as way
    too loud. Hugin's real page title is a visually-hidden h1 (see App.tsx), and every visible
@@ -53,6 +61,26 @@ input[type="text"] {
   margin: 0;
   padding: 0;
   min-width: 0;
+}
+
+/* One segmented control instead of two floating buttons (spec v3.1 item 22).
+   Buttons keep aria-pressed; the active segment gets the accent-soft fill. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segmented .btn {
+  border-radius: 0;
+  border: 0;
+}
+.segmented .btn + .btn {
+  border-inline-start: 1px solid var(--border-strong);
+}
+.segmented .btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 /* Vertical rhythm for <main>; .container already handles inline padding + max-width. */
@@ -103,10 +131,14 @@ input[type="text"] {
   padding: 0;
 }
 
-/* Frister list rows: stacked on mobile, a four-column grid from tablet up
-   (title+employer | frist-date + days-chip | category | actions). The four direct children
-   carry .frist-row-title/-date/-actions purely as structural/BEM markers for the grid's four
-   cells — no rule targets them by name; layout comes from grid auto-placement above. */
+/* Applications: entries lift off their section card (item 11 — verified live:
+   .panel and section.card both resolved to surface-3 before this). */
+.applications-view .panel {
+  background: var(--elevated-bg);
+}
+
+/* Frister rows: title block + one meta line + actions. The meta line uses fixed
+   column widths so date / days-chip / category align vertically across rows. */
 .frist-row {
   display: grid;
   gap: var(--space-2);
@@ -116,9 +148,20 @@ input[type="text"] {
 .frist-row:last-child {
   border-block-end: 0;
 }
+.frist-meta {
+  display: grid;
+  grid-template-columns: 6.5rem 7.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+.frist-category {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (min-width: 768px) {
   .frist-row {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) auto;
     align-items: center;
     gap: var(--space-4);
   }
@@ -140,6 +183,40 @@ input[type="text"] {
     align-items: center;
     justify-content: space-between;
   }
+}
+.bedrifter-row strong {
+  font-weight: 500;
+}
+
+/* Bedrifter row container: the row button and its CompanyLink stack on mobile,
+   sit side by side from tablet up. */
+.bedrifter-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+@media (min-width: 768px) {
+  .bedrifter-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+  }
+}
+
+.bedrifter-filters {
+  align-items: flex-end;
+}
+
+.bedrifter-branches {
+  margin-inline-start: var(--space-5);
+}
+.bedrifter-branches summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 /* Company detail — definition list as a two-column term/value grid. */
@@ -181,6 +258,15 @@ input[type="text"] {
 .eksport-markdown {
   overflow-x: auto;
   font-family: var(--font-mono);
+}
+
+/* Pickers and the Download/Copy cluster share one baseline (labels above inputs
+   make the naked button cluster sit high without this). */
+.eksport-controls {
+  align-items: flex-end;
+}
+.eksport-controls .eksport-include-active {
+  align-self: center;
 }
 
 .visually-hidden {

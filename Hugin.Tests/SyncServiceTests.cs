@@ -31,20 +31,22 @@ public class SyncServiceTests
         FakeClock Clock);
 
     private static Harness Build(FakeBrregClient? brreg = null, FakeNavFeedClient? nav = null,
-        FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null)
+        FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null,
+        HuginConfig? config = null, FakeKommuneRepository? kommuner = null)
     {
         brreg ??= new FakeBrregClient { Companies = { Company() } };
         nav ??= new FakeNavFeedClient(new FeedPage([], null));
         ads ??= new FakeAdRepository();
         companies ??= new FakeCompanyRepository();
         prober ??= new FakeWebsiteProber();
+        config ??= new HuginConfig();
 
-        var kommuner = new FakeKommuneRepository();
+        kommuner ??= new FakeKommuneRepository();
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
 
-        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, new HuginConfig());
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, config);
         return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock);
     }
 
@@ -213,6 +215,41 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Plain_config_nav_gate_matches_todays_behavior()
+    {
+        // Regression pin for H18: with a plain Municipalities config (no Fylker/AllOfNorway)
+        // the resolved/gated NAV set is identical to before the kommune-register scope existed.
+        var nav = new FakeNavFeedClient(new FeedPage(
+            [Ad("keep", "Backend-utvikler", "3403"), Ad("drop", "Utvikler", "0301")], null));
+
+        var h = Build(nav: nav);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "keep" }));
+        Assert.That(summary.Nav.Fetched, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Fylke_config_allows_nav_ads_via_the_kommune_register_scope()
+    {
+        // Before H18 the NAV gate only ever checked config.Municipalities directly, so a
+        // fylke-scoped config (empty Municipalities) rejected every NAV ad outright. The
+        // register-built scope is what makes fylke/all-of-Norway NAV sync actually work.
+        var brreg = new FakeBrregClient
+        {
+            Kommuner = { new Kommune { Number = "3903", Name = "HORTEN" } },
+        };
+        var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3903")], null));
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, nav: nav, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a" }));
+    }
+
+    [Test]
     public async Task Kommune_register_is_upserted_after_a_successful_brreg_sync()
     {
         var brreg = new FakeBrregClient
@@ -242,6 +279,128 @@ public class SyncServiceTests
 
         Assert.That(summary.Brreg.Succeeded, Is.True, "a kommune-register hiccup must not fail company discovery");
         Assert.That(h.Kommuner.Store, Is.Empty, "names simply stay stale — nothing to upsert on failure");
+    }
+
+    [Test]
+    public async Task Plain_config_makes_exactly_one_brreg_call_with_the_configured_numbers()
+    {
+        var h = Build();
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "pins today's behavior — no chunking without scaling");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+    }
+
+    [Test]
+    public async Task Fylke_config_chunks_the_brreg_query_per_fylke()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3905", Name = "TØNSBERG" },
+                new Kommune { Number = "0301", Name = "OSLO" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True);
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "one chunk — every allowed number shares the '39' prefix");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3903", "3905" }));
+    }
+
+    [Test]
+    public async Task Multi_fylke_config_makes_one_brreg_call_per_fylke_chunk()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3905", Name = "TØNSBERG" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+                new Kommune { Number = "0301", Name = "OSLO" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39", "34"] };
+
+        var h = Build(brreg: brreg, config: config);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(2), "one call per fylke prefix chunk");
+        var chunks = h.Brreg.CompaniesRequests.Select(c => c.ToHashSet()).ToList();
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3903", "3905" }));
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3403" }));
+    }
+
+    [Test]
+    public async Task All_of_norway_config_chunks_by_fylke_prefix()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+            },
+        };
+        var config = new HuginConfig { Municipalities = [], AllOfNorway = true };
+
+        var h = Build(brreg: brreg, config: config);
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(2));
+        var chunks = h.Brreg.CompaniesRequests.Select(c => c.ToHashSet()).ToList();
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3903" }));
+        Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3403" }));
+    }
+
+    [Test]
+    public async Task Fylke_or_all_of_norway_with_an_empty_register_falls_back_to_a_single_configured_call()
+    {
+        // A first-ever run (or a register outage) leaves the register empty — Fylker/AllOfNorway
+        // then expand nothing, so AllowedNumbers collapses back to the plain configured set and
+        // the SetEquals check takes the single-call path, same as an unscaled config.
+        var brreg = new FakeBrregClient { Companies = { Company() } };
+        var config = new HuginConfig { AllOfNorway = true };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.True);
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "empty register — nothing to expand into");
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+    }
+
+    [Test]
+    public async Task A_later_chunk_failing_reports_partial_progress_and_keeps_earlier_chunks_stored()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner =
+            {
+                new Kommune { Number = "3903", Name = "HORTEN" },
+                new Kommune { Number = "3403", Name = "HAMAR" },
+            },
+            ThrowOnCompaniesCallNumber = 2,
+        };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39", "34"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.Not.Null);
+        Assert.That(summary.Brreg.Fetched, Is.EqualTo(1), "the first chunk's fetch count survives the second chunk's failure");
+        Assert.That(h.Companies.Store, Has.Count.EqualTo(1), "the first chunk's company was already upserted before the failure");
     }
 
     [Test]
@@ -300,6 +459,57 @@ public class SyncServiceTests
         await h.Service.SyncAsync();
 
         Assert.That(h.Brreg.ByOrgnrRequests, Is.Empty);
+    }
+
+    [Test]
+    public async Task Ad_with_employer_homepage_adopts_the_website_for_a_company_with_none()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://norkart.no"));
+    }
+
+    [Test]
+    public async Task Ad_with_bare_host_homepage_adopts_it_as_an_https_url()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "www.norsk-tipping.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://www.norsk-tipping.no"));
+    }
+
+    [Test]
+    public async Task Ad_with_a_javascript_scheme_homepage_is_never_adopted()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "javascript:alert(1)" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.Null);
+    }
+
+    [Test]
+    public async Task Ad_website_adoption_never_fails_the_sync()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        // No stored company for this orgnr — AdoptWebsiteAsync on the fake returns false rather
+        // than throwing, but the wiring itself is wrapped in try/catch (same rule as employer
+        // enrichment) so a repository failure here must never take the NAV sync down with it.
+
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(h.Ads.Store.ContainsKey("a"), Is.True);
     }
 
     [Test]

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
+import { displayCompanyName } from '../../companyName'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
 import { useT } from '../../i18n'
@@ -103,7 +104,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
                 <ul className="stack stack-sm">
                   {companies.map((company) => (
                     <li key={company.orgnr}>
-                      {company.name}
+                      {displayCompanyName(company.name)}
                       {company.isBranch ? ` ${t('common.branchTag')}` : ''}
                     </li>
                   ))}
@@ -125,7 +126,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
                     ) : (
                       <span>{ad.title}</span>
                     )}{' '}
-                    — {ad.employer}
+                    — {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
                   </li>
                 ))}
               </ul>

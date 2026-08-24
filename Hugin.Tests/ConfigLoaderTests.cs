@@ -48,6 +48,32 @@ public class ConfigLoaderTests
     }
 
     [Test]
+    public void Reads_fylker_and_all_of_norway()
+    {
+        const string json = """
+            {
+              "fylker": ["39"],
+              "allOfNorway": false
+            }
+            """;
+
+        var config = ConfigLoader.Parse(json, out var warning);
+
+        Assert.That(warning, Is.Null);
+        Assert.That(config.Fylker, Is.EqualTo(new[] { "39" }));
+        Assert.That(config.AllOfNorway, Is.False);
+    }
+
+    [Test]
+    public void Missing_fylker_and_all_of_norway_keep_their_defaults()
+    {
+        var config = ConfigLoader.Parse("""{ "keywords": ["rust"] }""", out _);
+
+        Assert.That(config.Fylker, Is.Empty);
+        Assert.That(config.AllOfNorway, Is.False);
+    }
+
+    [Test]
     public void Property_names_are_case_insensitive()
     {
         var config = ConfigLoader.Parse("""{ "Naeringskoder": ["70"], "NAVTOKEN": "x" }""", out _);
