@@ -21,7 +21,9 @@ const FORMAT_KEYS: { value: Format; labelKey: TranslationKey }[] = [
 function buildUrl(scope: Scope, format: Format, category: string, includeActive: boolean): string {
   const params = new URLSearchParams({ scope, format })
   if (scope === 'category') params.set('category', category)
-  if (includeActive) params.set('includeActive', 'true')
+  // The include-Active checkbox only exists (and only applies) for the All scope — the
+  // Søkt/tracker section it controls isn't part of the new/category exports.
+  if (scope === 'all' && includeActive) params.set('includeActive', 'true')
   return `/api/extract?${params.toString()}`
 }
 
@@ -132,14 +134,16 @@ export function EksportView() {
           </select>
         </div>
 
-        <label className="cluster cluster-sm eksport-include-active">
-          <input
-            type="checkbox"
-            checked={includeActive}
-            onChange={(event) => setIncludeActive(event.target.checked)}
-          />
-          {t('export.includeActive')}
-        </label>
+        {scope === 'all' && (
+          <label className="cluster cluster-sm eksport-include-active">
+            <input
+              type="checkbox"
+              checked={includeActive}
+              onChange={(event) => setIncludeActive(event.target.checked)}
+            />
+            {t('export.includeActive')}
+          </label>
+        )}
 
         <div className="cluster cluster-sm">
           <a

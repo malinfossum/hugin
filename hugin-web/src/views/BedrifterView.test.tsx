@@ -326,6 +326,47 @@ describe('BedrifterView', () => {
     expect(screen.getByText('Norsk Tipping AS Avdeling Oslo Sentrum')).toBeInTheDocument()
   })
 
+  it('a standalone branch (parent not loaded) is tagged [branch] at top level', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    const companies = [
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613', // parent org number is not in the loaded companies list
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    expect(
+      await screen.findByRole('button', { name: /Norsk Tipping AS Avdeling Oslo \[branch\]/ })
+    ).toBeInTheDocument()
+  })
+
+  it('a branch nested inside its expanded group is not tagged (the group already says so)', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Norsk Tipping AS')
+    await user.click(screen.getByText('1 avdeling'))
+
+    expect(await screen.findByText('Norsk Tipping AS Avdeling Oslo')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Norsk Tipping AS Avdeling Oslo \[avdeling\]/)
+    ).not.toBeInTheDocument()
+  })
+
   it('Tilbake to a branch detail reopens its group and refocuses the branch row', async () => {
     const companies = [
       company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),

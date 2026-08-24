@@ -25,7 +25,7 @@ Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory; `--ads [--kommune <nr>]` lists currently-open ads |
-| `hugin export [--format md\|txt\|json] [--scope new\|category\|all] [--category <navn>] [--include-active]` | Writes data to stdout (default: `md`/`all`); `--scope category` requires `--category`; `--include-active` adds currently-open ads already in the pipeline |
+| `hugin export [--format md\|txt\|json] [--scope new\|category\|all] [--category <navn>] [--include-active]` | Writes data to stdout (default: `md`/`all`); `--scope category` requires `--category`; `--include-active` includes pipeline entries with status `Active` in the Søkt/tracker section (excluded by default) |
 
 `--config <path>` points at a different `hugin.json`. The database is created next to it.
 
@@ -33,7 +33,7 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 
 ## The localhost API as a machine interface
 
-`hugin-api.exe` (or `Hugin.exe`) also exposes its data as a plain HTTP API over the same `hugin.db` — JSON in, JSON out, suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, so nothing outside the machine can reach it, and every state-changing request requires an `X-Hugin: 1` header (the dashboard's own frontend sets it; a stray browser tab can't).
+`hugin-api.exe` (or `Hugin.exe`) also exposes its data as a plain HTTP API over the same `hugin.db` — JSON in, JSON out, suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, so nothing outside the machine can reach it, and every state-changing request requires an `X-Hugin: 1` header (the dashboard's own frontend sets it; a stray browser tab can't). This is CSRF protection, not authentication — any process already running on the machine is trusted.
 
 | Endpoint | What it does |
 |---|---|

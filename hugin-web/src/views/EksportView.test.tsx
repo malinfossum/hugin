@@ -90,6 +90,43 @@ describe('EksportView', () => {
     })
   })
 
+  it('the include-Active checkbox only renders for the All scope', async () => {
+    const fetchMock = fakeServer()
+    renderView(fetchMock)
+    const user = userEvent.setup()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Nytt')
+    expect(screen.queryByLabelText('Inkluder Aktiv-oppføringer')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
+    expect(screen.getByLabelText('Inkluder Aktiv-oppføringer')).toBeInTheDocument()
+  })
+
+  it('leaving the All scope after checking Include Active drops includeActive from the URL', async () => {
+    const fetchMock = fakeServer()
+    renderView(fetchMock)
+    const user = userEvent.setup()
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
+    await user.click(screen.getByLabelText('Inkluder Aktiv-oppføringer'))
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=all&format=md&includeActive=true')
+    })
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Nytt')
+
+    await vi.waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u)
+      expect(urls).toContain('/api/extract?scope=new&format=md')
+      // The checkbox state persists (it's just not rendered), but the URL for the new scope
+      // must not carry the stale includeActive flag.
+      expect(urls.filter((u) => u.startsWith('/api/extract?scope=new'))).toEqual([
+        '/api/extract?scope=new&format=md',
+      ])
+    })
+  })
+
   it('refetches when the scope changes', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)

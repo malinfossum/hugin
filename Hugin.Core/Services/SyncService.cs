@@ -216,11 +216,11 @@ public sealed class SyncService(
 
                     await EnrichEmployerAsync(ad.EmployerOrgnr, attemptedEmployerOrgnrs, now, ct);
 
-                    if (ad.EmployerOrgnr is { } orgnr && !string.IsNullOrWhiteSpace(ad.EmployerHomepage))
+                    if (ad.EmployerOrgnr is { } orgnr && UrlGuard.Website(ad.EmployerHomepage) is { } homepage)
                     {
                         try
                         {
-                            await companies.AdoptWebsiteAsync(orgnr, ad.EmployerHomepage, ct);
+                            await companies.AdoptWebsiteAsync(orgnr, homepage, ct);
                         }
                         catch (Exception)
                         {

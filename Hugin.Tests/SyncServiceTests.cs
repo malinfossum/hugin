@@ -474,6 +474,30 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Ad_with_bare_host_homepage_adopts_it_as_an_https_url()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "www.norsk-tipping.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://www.norsk-tipping.no"));
+    }
+
+    [Test]
+    public async Task Ad_with_a_javascript_scheme_homepage_is_never_adopted()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "javascript:alert(1)" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.Null);
+    }
+
+    [Test]
     public async Task Ad_website_adoption_never_fails_the_sync()
     {
         var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };

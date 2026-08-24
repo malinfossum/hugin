@@ -5,6 +5,8 @@
     { "name": "Lillehammer", "number": "3405" },
     { "name": "Ringsaker", "number": "3411" }
   ],
+  "fylker": [],
+  "allOfNorway": false,
   "naeringskoder": ["62"],
   "keywords": [
     "utvikler",

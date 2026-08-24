@@ -114,7 +114,10 @@ export function BedrifterView() {
     setSelectedOrgnr(null)
   }
 
-  const renderRow = (c: CompanyDto) => (
+  // A branch rendered as a standalone group main (its parent isn't loaded) still needs the
+  // tag — the group context that would otherwise convey it doesn't exist. Branch rows nested
+  // inside an expanded group skip it: the "N branches" summary above already says so.
+  const renderRow = (c: CompanyDto, standalone: boolean) => (
     <div className="bedrifter-item">
       <button
         type="button"
@@ -127,6 +130,7 @@ export function BedrifterView() {
       >
         <span>
           <strong>{displayCompanyName(c.name)}</strong>
+          {standalone && c.isBranch && ` ${t('common.branchTag')}`}
         </span>
         <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
       </button>
@@ -204,7 +208,7 @@ export function BedrifterView() {
       <ul className="stack stack-sm">
         {visibleGroups.map((g) => (
           <li key={g.main.orgnr} className="stack stack-sm">
-            {renderRow(g.main)}
+            {renderRow(g.main, true)}
             {g.branches.length > 0 && (
               <details className="bedrifter-branches">
                 <summary>
@@ -214,7 +218,7 @@ export function BedrifterView() {
                 </summary>
                 <ul className="stack stack-sm">
                   {g.branches.map((b) => (
-                    <li key={b.orgnr}>{renderRow(b)}</li>
+                    <li key={b.orgnr}>{renderRow(b, false)}</li>
                   ))}
                 </ul>
               </details>
