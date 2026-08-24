@@ -131,6 +131,12 @@ input[type="text"] {
   padding: 0;
 }
 
+/* Applications: entries lift off their section card (item 11 — verified live:
+   .panel and section.card both resolved to surface-3 before this). */
+.applications-view .panel {
+  background: var(--elevated-bg);
+}
+
 /* Frister rows: title block + one meta line + actions. The meta line uses fixed
    column widths so date / days-chip / category align vertically across rows. */
 .frist-row {
