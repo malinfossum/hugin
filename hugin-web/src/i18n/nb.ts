@@ -93,6 +93,8 @@ export const nb = {
   'companies.kommune': 'Kommune',
   'companies.search': 'Søk',
   'companies.count': '{n} bedrifter',
+  'companies.branchCount': '{n} avdelinger',
+  'companies.branchCountOne': '1 avdeling',
   'companies.detailLoadError': 'Kunne ikke laste bedriften.',
   'companies.orgnr': 'Orgnr',
   'companies.nace': 'NACE',

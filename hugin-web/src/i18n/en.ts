@@ -93,6 +93,8 @@ export const en = {
   'companies.kommune': 'Municipality',
   'companies.search': 'Search',
   'companies.count': '{n} companies',
+  'companies.branchCount': '{n} branches',
+  'companies.branchCountOne': '1 branch',
   'companies.detailLoadError': 'Could not load the company.',
   'companies.orgnr': 'Org. no.',
   'companies.nace': 'NACE',

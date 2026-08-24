@@ -252,6 +252,51 @@ describe('BedrifterView', () => {
     expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
   })
 
+  it('groups a branch under its hovedenhet, collapsed until expanded', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+      company({ orgnr: '3', name: 'Standalone AS' }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '972483672': { company: companies[1], ads: [] },
+    }
+    const user = userEvent.setup()
+    const { container } = renderView(fakeServer(companies, details))
+
+    await screen.findByText('Norsk Tipping AS')
+    expect(screen.getByText('Standalone AS')).toBeInTheDocument()
+
+    // The branch is not its own top-level group row: the outer list has one group per
+    // hovedenhet/standalone (2), not one row per unit (3).
+    const outerList = container.querySelector('.bedrifter-view > ul')
+    if (!outerList) throw new Error('outer companies list not found')
+    expect(outerList.children).toHaveLength(2)
+
+    const detailsEl = screen.getByText('1 avdeling').closest('details')
+    if (!detailsEl) throw new Error('branches <details> not found')
+    expect(detailsEl).not.toHaveAttribute('open')
+
+    await user.click(screen.getByText('1 avdeling'))
+    expect(detailsEl).toHaveAttribute('open')
+
+    const branchButton = await screen.findByRole('button', {
+      name: /Norsk Tipping AS Avdeling Oslo/,
+    })
+    expect(branchButton).toBeInTheDocument()
+
+    await user.click(branchButton)
+    expect(
+      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
+    ).toBeInTheDocument()
+  })
+
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {
     const companies = [
       company({ orgnr: '915787630', name: 'Acme AS' }),

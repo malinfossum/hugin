@@ -182,6 +182,17 @@ input[type="text"] {
   align-items: flex-end;
 }
 
+.bedrifter-branches {
+  margin-inline-start: var(--space-5);
+}
+.bedrifter-branches summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
 /* Company detail — definition list as a two-column term/value grid. */
 .company-detail-dl {
   display: grid;

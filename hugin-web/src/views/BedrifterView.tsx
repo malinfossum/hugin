@@ -6,6 +6,30 @@ import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
 
+interface CompanyGroup {
+  main: CompanyDto
+  branches: CompanyDto[]
+}
+
+/** Groups branches under their parent when the parent is in the list; parents keep
+ * first-seen list order (API orders by name). A branch without a loaded parent is
+ * its own group (enrichment usually loads parents, but never guaranteed). */
+function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
+  const byOrgnr = new Map(companies.map((c) => [c.orgnr, c]))
+  const groups = new Map<string, CompanyGroup>()
+  for (const c of companies) {
+    const parent = c.parentOrgnr ? byOrgnr.get(c.parentOrgnr) : undefined
+    if (parent && parent.orgnr !== c.orgnr) {
+      const g = groups.get(parent.orgnr) ?? { main: parent, branches: [] }
+      g.branches.push(c)
+      groups.set(parent.orgnr, g)
+    } else if (!groups.has(c.orgnr)) {
+      groups.set(c.orgnr, { main: c, branches: [] })
+    }
+  }
+  return [...groups.values()]
+}
+
 export function BedrifterView() {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +80,15 @@ export function BedrifterView() {
     return true
   })
 
+  // Group over the full list (not `filtered`) so a group whose main doesn't match but whose
+  // branch does (or vice versa) still renders — matching is applied per-unit, then a group
+  // renders when the main or any branch matches. Non-matching branches inside a visible group
+  // still render, as context, when the group is expanded.
+  const matchingOrgnrs = new Set(filtered.map((c) => c.orgnr))
+  const visibleGroups = groupCompanies(companies).filter(
+    (g) => matchingOrgnrs.has(g.main.orgnr) || g.branches.some((b) => matchingOrgnrs.has(b.orgnr))
+  )
+
   const openDetail = (orgnr: string) => {
     pendingFocusOrgnr.current = orgnr
     setSelectedOrgnr(orgnr)
@@ -64,6 +97,31 @@ export function BedrifterView() {
   const closeDetail = () => {
     setSelectedOrgnr(null)
   }
+
+  const renderRow = (c: CompanyDto) => (
+    <div className="bedrifter-item">
+      <button
+        type="button"
+        className="panel panel-hover bedrifter-row"
+        ref={(el) => {
+          if (el) rowRefs.current.set(c.orgnr, el)
+          else rowRefs.current.delete(c.orgnr)
+        }}
+        onClick={() => openDetail(c.orgnr)}
+      >
+        <span>
+          <strong>{displayCompanyName(c.name)}</strong>
+        </span>
+        <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
+      </button>
+      <CompanyLink
+        name={displayCompanyName(c.name)}
+        kommuneNavn={c.kommuneNavn}
+        website={c.website}
+        className="text-muted bedrifter-link"
+      />
+    </div>
+  )
 
   if (selectedOrgnr) {
     return <CompanyDetail orgnr={selectedOrgnr} onClose={closeDetail} />
@@ -128,29 +186,23 @@ export function BedrifterView() {
       <p className="text-muted">{t('companies.count', { n: filtered.length })}</p>
 
       <ul className="stack stack-sm">
-        {filtered.map((c) => (
-          <li key={c.orgnr} className="bedrifter-item">
-            <button
-              type="button"
-              className="panel panel-hover bedrifter-row"
-              ref={(el) => {
-                if (el) rowRefs.current.set(c.orgnr, el)
-                else rowRefs.current.delete(c.orgnr)
-              }}
-              onClick={() => openDetail(c.orgnr)}
-            >
-              <span>
-                <strong>{displayCompanyName(c.name)}</strong>
-                {c.isBranch && ` ${t('common.branchTag')}`}
-              </span>
-              <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
-            </button>
-            <CompanyLink
-              name={displayCompanyName(c.name)}
-              kommuneNavn={c.kommuneNavn}
-              website={c.website}
-              className="text-muted bedrifter-link"
-            />
+        {visibleGroups.map((g) => (
+          <li key={g.main.orgnr} className="stack stack-sm">
+            {renderRow(g.main)}
+            {g.branches.length > 0 && (
+              <details className="bedrifter-branches">
+                <summary>
+                  {g.branches.length === 1
+                    ? t('companies.branchCountOne')
+                    : t('companies.branchCount', { n: g.branches.length })}
+                </summary>
+                <ul className="stack stack-sm">
+                  {g.branches.map((b) => (
+                    <li key={b.orgnr}>{renderRow(b)}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </li>
         ))}
       </ul>
