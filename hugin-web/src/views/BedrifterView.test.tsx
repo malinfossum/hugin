@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { formatDate } from '../dates'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
@@ -143,7 +144,7 @@ describe('BedrifterView', () => {
     if (!activeRow || !expiredRow) throw new Error('row not found')
     expect(within(activeRow).queryByText('[utgått]')).not.toBeInTheDocument()
     expect(within(expiredRow).getByText('[utgått]')).toBeInTheDocument()
-    const expectedPublished = new Date('2026-08-01T00:00:00Z').toLocaleDateString('nb-NO')
+    const expectedPublished = formatDate('2026-08-01T00:00:00Z')
     expect(within(activeRow).getByText(`publisert ${expectedPublished}`)).toBeInTheDocument()
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })

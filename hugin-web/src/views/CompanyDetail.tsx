@@ -1,23 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
 import { CompanyLink } from '../components/CompanyLink'
-import { localeFor, type T, useLang, useT } from '../i18n'
+import { formatDate } from '../dates'
+import { type T, useT } from '../i18n'
 import type { CompanyDetailDto } from '../types'
 
-function formatDate(value: string | null, locale: string): string {
-  return value ? new Date(value).toLocaleDateString(locale) : '—'
-}
-
-function publishedText(published: string | null, locale: string, t: T): string | null {
-  return published ? t('companies.published', { date: formatDate(published, locale) }) : null
+function publishedText(published: string | null, t: T): string | null {
+  return published ? t('companies.published', { date: formatDate(published) }) : null
 }
 
 export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {
   const [detail, setDetail] = useState<CompanyDetailDto | null>(null)
   const [error, setError] = useState<string | null>(null)
   const t = useT()
-  const [lang] = useLang()
-  const locale = localeFor(lang)
 
   const load = useCallback(() => {
     setError(null)
@@ -84,11 +79,13 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
                 <li key={ad.feedId} className="panel stack stack-sm">
                   <span className="text-strong">{ad.title}</span>
                   {!ad.isActive && <span className="badge">{t('companies.expiredTag')}</span>}
-                  {publishedText(ad.published, locale, t) && (
-                    <span className="text-muted">{publishedText(ad.published, locale, t)}</span>
+                  {publishedText(ad.published, t) && (
+                    <span className="text-muted">{publishedText(ad.published, t)}</span>
                   )}
                   <span className="help">
-                    {t('companies.deadlineLabel', { date: formatDate(ad.expires, locale) })}
+                    {t('companies.deadlineLabel', {
+                      date: ad.expires ? formatDate(ad.expires) : '—',
+                    })}
                   </span>
                   {ad.sourceUrl && (
                     <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
-import { localeFor, type T, useLang, useT } from '../../i18n'
+import { formatDateTime } from '../../dates'
+import { type T, useT } from '../../i18n'
 import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
 
-function formatLastSync(source: SourceStateDto | null | undefined, t: T, locale: string): string {
-  if (!source) return t('sync.never')
-  return new Date(source.lastSyncUtc).toLocaleString(locale)
+function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
+  return source ? formatDateTime(source.lastSyncUtc) : t('sync.never')
 }
 
 /** null when no source failed; otherwise the message shared by the announce and the banner. */
@@ -22,7 +22,6 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
   const [sync, setSync] = useState<SyncRunStatus | null>(null)
   const announce = useAnnounce()
   const t = useT()
-  const [lang] = useLang()
   const wasRunning = useRef(false)
 
   const loadStatus = useCallback(() => {
@@ -72,7 +71,6 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
   }
 
   const failureMessage = sync && !sync.running ? getFailureMessage(sync, t) : null
-  const locale = localeFor(lang)
 
   return (
     <header className="sync-header card stack">
@@ -80,11 +78,11 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
       <dl className="sync-times cluster text-muted">
         <div>
           <dt>{t('sync.brregLabel')}</dt>
-          <dd>{formatLastSync(status?.brreg, t, locale)}</dd>
+          <dd>{formatLastSync(status?.brreg, t)}</dd>
         </div>
         <div>
           <dt>{t('sync.navLabel')}</dt>
-          <dd>{formatLastSync(status?.nav, t, locale)}</dd>
+          <dd>{formatLastSync(status?.nav, t)}</dd>
         </div>
       </dl>
       <p className="sync-counts text-muted">

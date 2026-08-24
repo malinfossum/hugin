@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
-import { localeFor, type T, useLang, useT } from '../../i18n'
+import { formatDate } from '../../dates'
+import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
 import type { AdDto } from '../../types'
 
@@ -33,8 +34,8 @@ function daysLeftText(daysLeft: number | null, t: T): string {
   return t('frister.daysBadge', { n: daysLeft })
 }
 
-function formatExpires(expires: string | null, locale: string): string | null {
-  return expires ? new Date(expires).toLocaleDateString(locale) : null
+function formatExpires(expires: string | null): string | null {
+  return expires ? formatDate(expires) : null
 }
 
 export function FristerList({ refreshKey }: { refreshKey: number }) {
@@ -43,8 +44,6 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
-  const [lang] = useLang()
-  const locale = localeFor(lang)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // undefined: no pending focus move. null: focus the heading. string: focus that row's Skjul button.
@@ -134,7 +133,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               <span className="text-muted">{ad.employer}</span>
             </div>
             <div className="frist-row-date cluster cluster-sm">
-              <span className="text-muted">{formatExpires(ad.expires, locale)}</span>
+              <span className="text-muted">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
