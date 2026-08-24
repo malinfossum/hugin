@@ -20,7 +20,7 @@ export function sourceLabel(url: string, fallback: string): string {
   } catch {
     return fallback
   }
-  if (host.endsWith('finn.no')) return 'FINN'
-  if (host.endsWith('linkedin.com')) return 'LinkedIn'
+  if (host === 'finn.no' || host.endsWith('.finn.no')) return 'FINN'
+  if (host === 'linkedin.com' || host.endsWith('.linkedin.com')) return 'LinkedIn'
   return fallback
 }
