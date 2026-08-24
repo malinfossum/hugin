@@ -78,7 +78,7 @@ input[type="text"] {
 .segmented .btn + .btn {
   border-inline-start: 1px solid var(--border-strong);
 }
-.segmented .btn[aria-pressed='true'] {
+.segmented .btn[aria-pressed="true"] {
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
