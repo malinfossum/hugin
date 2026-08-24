@@ -48,17 +48,27 @@ public class CommandParserTests
     [Test]
     public void Export_defaults_to_md_and_all()
         => Assert.That(CommandParser.Parse(["export"]),
-            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.All, null)));
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.All, null, false)));
 
     [Test]
     public void Export_with_format_and_scope()
         => Assert.That(CommandParser.Parse(["export", "--format", "json", "--scope", "new"]),
-            Is.EqualTo(new ExportCommand(ExtractFormat.Json, ExtractScope.New, null)));
+            Is.EqualTo(new ExportCommand(ExtractFormat.Json, ExtractScope.New, null, false)));
 
     [Test]
     public void Export_category_scope_carries_the_category()
         => Assert.That(CommandParser.Parse(["export", "--scope", "category", "--category", "IT"]),
-            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.Category, "IT")));
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.Category, "IT", false)));
+
+    [Test]
+    public void Export_include_active_sets_the_flag()
+        => Assert.That(CommandParser.Parse(["export", "--include-active"]),
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.All, null, true)));
+
+    [Test]
+    public void Export_without_include_active_leaves_it_false()
+        => Assert.That(CommandParser.Parse(["export"]),
+            Is.EqualTo(new ExportCommand(ExtractFormat.Md, ExtractScope.All, null, false)));
 
     [Test]
     public void Export_category_scope_without_category_is_invalid()

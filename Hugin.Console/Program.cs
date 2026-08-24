@@ -352,7 +352,7 @@ internal static class Program
         try
         {
             var extract = services.GetRequiredService<ExtractService>();
-            var result = await extract.ExtractAsync(command.Scope, command.Format, command.Category);
+            var result = await extract.ExtractAsync(command.Scope, command.Format, command.Category, command.IncludeActive);
             Console.WriteLine(result.Content);
             return 0;
         }

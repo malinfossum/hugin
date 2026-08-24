@@ -46,7 +46,7 @@ public sealed class ExtractService(
     IClock clock)
 {
     public async Task<ExtractResult> ExtractAsync(ExtractScope scope, ExtractFormat format,
-        string? category = null, CancellationToken ct = default)
+        string? category = null, bool includeActive = false, CancellationToken ct = default)
     {
         if (scope == ExtractScope.Category && string.IsNullOrWhiteSpace(category))
             throw new MissingCategoryException();
@@ -81,7 +81,7 @@ public sealed class ExtractService(
             case ExtractScope.All:
                 companyRows = (await companies.GetAllAsync(ct: ct)).Select(c => ToCompanyRow(c, kommuner)).ToList();
                 adRows = (await ads.GetActiveAsync(ct: ct)).Select(ToAdRow).ToList();
-                trackerRows = await BuildTrackerAsync(ct);
+                trackerRows = await BuildTrackerAsync(includeActive, ct);
                 break;
         }
 
@@ -100,14 +100,16 @@ public sealed class ExtractService(
             ContentType(format));
     }
 
-    private async Task<IReadOnlyList<ExtractTrackerRow>> BuildTrackerAsync(CancellationToken ct)
+    private async Task<IReadOnlyList<ExtractTrackerRow>> BuildTrackerAsync(bool includeActive, CancellationToken ct)
     {
         var entries = await pipeline.GetAllAsync(ct: ct);
         var rows = new List<ExtractTrackerRow>();
 
-        // Active is pre-outreach: it only appears in the tracker once something was actually
-        // applied to (same rule the old MarkdownExporter enforced).
-        foreach (var entry in entries.Where(e => e.Status >= PipelineStatus.Applied).OrderBy(e => e.Updated))
+        // Active is pre-outreach and excluded by default (same rule the old MarkdownExporter
+        // enforced) — v3.1 makes inclusion an option via includeActive.
+        foreach (var entry in entries
+            .Where(e => e.Status >= PipelineStatus.Applied || (includeActive && e.Status == PipelineStatus.Active))
+            .OrderBy(e => e.Updated))
         {
             var company = await companies.GetAsync(entry.Orgnr, ct);
             rows.Add(new ExtractTrackerRow(entry.Updated, company?.Name ?? entry.Orgnr, company?.Website,

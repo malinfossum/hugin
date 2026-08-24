@@ -135,6 +135,47 @@ public sealed class ExtractEndpointTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
+    private async Task SeedActiveEntryAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var now = DateTimeOffset.UtcNow;
+        await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+            .UpsertAsync(new RegisterCompany("2", "Aktiv AS", null, null, null, false, null), now);
+        await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
+        {
+            Orgnr = "2", Status = PipelineStatus.Active, Why = "fordi",
+            Created = now, Updated = now,
+        });
+    }
+
+    [Test]
+    public async Task IncludeActive_true_returns_the_active_row_in_the_tracker()
+    {
+        await SeedActiveEntryAsync();
+
+        var response = await _client.GetAsync("/api/extract?scope=all&format=json&includeActive=true");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var names = doc.RootElement.GetProperty("tracker").EnumerateArray()
+            .Select(r => r.GetProperty("companyName").GetString()).ToList();
+        Assert.That(names, Does.Contain("Aktiv AS"));
+    }
+
+    [Test]
+    public async Task IncludeActive_omitted_excludes_the_active_row()
+    {
+        await SeedActiveEntryAsync();
+
+        var response = await _client.GetAsync("/api/extract?scope=all&format=json");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var names = doc.RootElement.GetProperty("tracker").EnumerateArray()
+            .Select(r => r.GetProperty("companyName").GetString()).ToList();
+        Assert.That(names, Does.Not.Contain("Aktiv AS"));
+    }
+
     [Test]
     public async Task Old_export_endpoint_is_gone()
     {
