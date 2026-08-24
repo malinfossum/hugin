@@ -112,14 +112,18 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
             existing.ParentOrgnr = company.ParentOrgnr;
             existing.IsBranch = company.IsBranch;
 
-            if (existing.Website != company.Website)
+            if (company.Website is not null)
             {
-                existing.WebsiteOk = null;
-                existing.WebsiteResolved = null;
-                existing.WebsiteCheckedUtc = null;
+                if (existing.Website != company.Website)
+                {
+                    existing.WebsiteOk = null;
+                    existing.WebsiteResolved = null;
+                    existing.WebsiteCheckedUtc = null;
+                }
+
+                existing.Website = company.Website;
             }
 
-            existing.Website = company.Website;
             existing.LastSeenInRegister = seenAt;
         }
         else
@@ -165,6 +169,18 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default)
+    {
+        if (!Store.TryGetValue(orgnr, out var company)) return Task.FromResult(false);
+        if (company.Website is not null && company.WebsiteOk != false) return Task.FromResult(false);
+
+        company.Website = website;
+        company.WebsiteOk = null;
+        company.WebsiteResolved = null;
+        company.WebsiteCheckedUtc = null;
+        return Task.FromResult(true);
     }
 }
 

@@ -196,6 +196,18 @@ public sealed class SyncService(
                     stored++;
 
                     await EnrichEmployerAsync(ad.EmployerOrgnr, attemptedEmployerOrgnrs, now, ct);
+
+                    if (ad.EmployerOrgnr is { } orgnr && !string.IsNullOrWhiteSpace(ad.EmployerHomepage))
+                    {
+                        try
+                        {
+                            await companies.AdoptWebsiteAsync(orgnr, ad.EmployerHomepage, ct);
+                        }
+                        catch (Exception)
+                        {
+                            // Best-effort, same rule as employer enrichment — never fails the NAV sync.
+                        }
+                    }
                 }
 
                 // Cursor after commit: everything on this page is stored before we move on.

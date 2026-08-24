@@ -303,6 +303,33 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Ad_with_employer_homepage_adopts_the_website_for_a_company_with_none()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://norkart.no"));
+    }
+
+    [Test]
+    public async Task Ad_website_adoption_never_fails_the_sync()
+    {
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
+        // No stored company for this orgnr — AdoptWebsiteAsync on the fake returns false rather
+        // than throwing, but the wiring itself is wrapped in try/catch (same rule as employer
+        // enrichment) so a repository failure here must never take the NAV sync down with it.
+
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Nav.Succeeded, Is.True);
+        Assert.That(h.Ads.Store.ContainsKey("a"), Is.True);
+    }
+
+    [Test]
     public async Task Brreg_failure_during_enrichment_does_not_fail_sync_or_skip_the_ad()
     {
         var brreg = new FakeBrregClient { ThrowsOnGetByOrgnr = true };

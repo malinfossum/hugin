@@ -129,6 +129,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
                 ? Sanitizer.Clean(Text(employer, "name") ?? ad.EmployerName)
                 : ad.EmployerName,
             EmployerOrgnr = employer.ValueKind == JsonValueKind.Object ? Text(employer, "orgnr") : null,
+            EmployerHomepage = employer.ValueKind == JsonValueKind.Object ? Text(employer, "homepage")?.Trim() : null,
             MunicipalityNumber = MunicipalityFromLocations(content) ?? ad.MunicipalityNumber,
             Published = Timestamp(content, "published"),
             Expires = Timestamp(content, "expires"),

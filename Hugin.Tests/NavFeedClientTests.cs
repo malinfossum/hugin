@@ -58,6 +58,7 @@ public class NavFeedClientTests
         Assert.That(active.Expires, Is.Not.Null);
         Assert.That(active.IsActive, Is.True);
         Assert.That(active.Category, Is.EqualTo("IT / Utvikling"));
+        Assert.That(active.EmployerHomepage, Is.EqualTo("https://agreed.no"));
 
         var gone = page.Ads.Single(a => a.FeedId.StartsWith("2222", StringComparison.Ordinal));
         Assert.That(gone.IsActive, Is.False, "the feed reporting INACTIVE must flip the ad");
@@ -96,6 +97,37 @@ public class NavFeedClientTests
         }).GetPageAsync(null);
 
         Assert.That(result.Ads, Is.Empty);
+    }
+
+    [Test]
+    public async Task Employer_without_homepage_maps_to_null()
+    {
+        // Norsk Tipping-shaped fixture: employer object present, but with no homepage field —
+        // this must not throw and must not fall back to some other URL.
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"77777777-7777-7777-7777-777777777777",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Norsk Tipping AS",
+             "municipal":"HAMAR","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-z"}
+            """;
+        const string detail = """
+            {"uuid":"77777777-7777-7777-7777-777777777777","status":"ACTIVE",
+             "sistEndret":"2026-08-18T09:00:00+02:00",
+             "ad_content":{"uuid":"77777777-7777-7777-7777-777777777777",
+              "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/7",
+              "employer":{"name":"Norsk Tipping AS","orgnr":"917365908"},
+              "workLocations":[{"municipal":"HAMAR"}],
+              "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
+            """;
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/7777", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null);
+
+        Assert.That(result.Ads.Single().EmployerHomepage, Is.Null);
     }
 
     [Test]

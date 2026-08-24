@@ -9,9 +9,11 @@ public interface ICompanyRepository
     public Task<IReadOnlyList<Models.Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default);
 
     /// <summary>New row → FirstSeen = seenAt; always → LastSeenInRegister = seenAt plus a field refresh.
-    /// The website check fields (<see cref="Models.Company.WebsiteOk"/> etc.) are preserved when the
-    /// incoming website equals the stored one, and cleared (re-check next sync) when it differs or
-    /// becomes null — a stale check must never survive a website change.</summary>
+    /// The incoming website only overwrites the stored one when it is non-null: a different
+    /// non-null value wins and clears the website check fields (re-check next sync), an equal
+    /// one leaves them untouched, and the register offering no website at all is not a
+    /// correction — the stored website (register-sourced or ad-adopted) and its check state
+    /// are left exactly as they were.</summary>
     public Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default);
 
     /// <summary>Companies with a website that has never been checked, or whose last check is
@@ -23,6 +25,13 @@ public interface ICompanyRepository
     /// <summary>Records the result of a website probe for one company.</summary>
     public Task SetWebsiteCheckAsync(string orgnr, bool ok, string? resolvedUrl, DateTimeOffset checkedUtc,
         CancellationToken ct = default);
+
+    /// <summary>Adopts a website sourced from a NAV ad — only when the company has no website,
+    /// or its register-listed one is confirmed dead (<see cref="Models.Company.WebsiteOk"/> is
+    /// false). A healthy or not-yet-checked register website always outranks an ad's claim.
+    /// Resets the check trio so the weekly checker probes the adopted URL. Returns whether it
+    /// adopted.</summary>
+    public Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default);
 }
 
 public interface IAdRepository

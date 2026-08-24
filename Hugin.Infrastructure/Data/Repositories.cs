@@ -46,16 +46,22 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
             existing.ParentOrgnr = company.ParentOrgnr;
             existing.IsBranch = company.IsBranch;
 
-            // A website check is only meaningful for the URL it was run against — a changed
-            // (or removed) website invalidates it, so it must be re-checked on the next sync.
-            if (existing.Website != company.Website)
+            // The register offering no website must not erase one adopted from an ad
+            // (v3.1 item 24) — absence is not a correction, a different value is.
+            if (company.Website is not null)
             {
-                existing.WebsiteOk = null;
-                existing.WebsiteResolved = null;
-                existing.WebsiteCheckedUtc = null;
+                // A website check is only meaningful for the URL it was run against — a
+                // changed website invalidates it, so it must be re-checked on the next sync.
+                if (existing.Website != company.Website)
+                {
+                    existing.WebsiteOk = null;
+                    existing.WebsiteResolved = null;
+                    existing.WebsiteCheckedUtc = null;
+                }
+
+                existing.Website = company.Website;
             }
 
-            existing.Website = company.Website;
             existing.LastSeenInRegister = seenAt;
         }
 
@@ -81,6 +87,21 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
         company.WebsiteCheckedUtc = checkedUtc;
 
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default)
+    {
+        if (await db.Companies.FindAsync([orgnr], ct) is not { } company) return false;
+        // Only fill a gap or replace a confirmed-dead register link — a healthy register
+        // website always outranks what an ad happens to claim.
+        if (company.Website is not null && company.WebsiteOk != false) return false;
+
+        company.Website = website;
+        company.WebsiteOk = null;
+        company.WebsiteResolved = null;
+        company.WebsiteCheckedUtc = null;
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 }
 
