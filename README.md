@@ -8,26 +8,16 @@ Named after Odin's raven of thought, who flies out each morning and returns with
 
 C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a React + TypeScript frontend (Vite, Vitest). Layered: `Hugin.Core` holds the domain and has no I/O; `Hugin.Infrastructure` is the I/O boundary (database, HTTP clients, config); `Hugin.Console` and `Hugin.Api` are thin hosts; `Hugin.Tests` covers it all.
 
-## Download
+## Quick start
 
 Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
-- **`Hugin.exe`** — single self-contained file, dashboard only, frontend included. No .NET install needed. Put it anywhere, add a `hugin.json` beside it (start from `hugin.json.example`), run it.
-- **Zip** — `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
-- **Build from source** — needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and Node for the frontend:
+- **`Hugin.exe`** — single self-contained file, dashboard only, frontend included. No .NET install needed. Put it anywhere, add a `hugin.json` beside it (start from `hugin.json.example`), double-click it. The dashboard opens in your browser at `http://localhost:5111`.
+- **Zip** — `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0). Double-click `hugin-api.exe` for the dashboard, or use `hugin.exe` from a terminal.
 
-```bash
-git clone https://github.com/malinfossum/hugin.git
-cd hugin
-cp hugin.json.example hugin.json
-dotnet run --project Hugin.Console -- sync
-```
+`hugin.json` and the `hugin.db` database are gitignored — the pipeline holds your own outreach history. See [Configuration](#configuration) below.
 
-Edit `hugin.json` to set your municipalities, industry codes, and keywords. Keywords are the recall net and can stay broad — `categories` (NAV's occupation categories, default `["IT"]`) filters out keyword coincidences like *prosjektutvikler massivtre*; ads NAV has not categorized always pass. `hugin list --ads` groups results by that category. Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400); industry codes are SN2025, where a prefix such as `62` matches every sub-code beneath it.
-
-`hugin.json` and the `hugin.db` database are gitignored — the pipeline holds your own outreach history.
-
-## Commands
+## CLI-only usage
 
 | Command | What it does |
 |---|---|
@@ -35,11 +25,48 @@ Edit `hugin.json` to set your municipalities, industry codes, and keywords. Keyw
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies [--kommune <nr>]` browses the full synced inventory; `--ads [--kommune <nr>]` lists currently-open ads |
-| `hugin export [--format md\|txt\|json] [--scope new\|category\|all] [--category <navn>]` | Writes data to stdout (default: `md`/`all`); `--scope category` requires `--category` |
+| `hugin export [--format md\|txt\|json] [--scope new\|category\|all] [--category <navn>] [--include-active]` | Writes data to stdout (default: `md`/`all`); `--scope category` requires `--category`; `--include-active` adds currently-open ads already in the pipeline |
 
 `--config <path>` points at a different `hugin.json`. The database is created next to it.
 
 The first sync sets a baseline, so `hugin new` starts empty rather than listing every company in the register. Use `hugin list --companies` to browse that initial inventory, and `hugin sync --full` once to backfill every open job ad from the feed's history — after that, plain `hugin sync` keeps up day to day.
+
+## The localhost API as a machine interface
+
+`hugin-api.exe` (or `Hugin.exe`) also exposes its data as a plain HTTP API over the same `hugin.db` — JSON in, JSON out, suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, so nothing outside the machine can reach it, and every state-changing request requires an `X-Hugin: 1` header (the dashboard's own frontend sets it; a stray browser tab can't).
+
+| Endpoint | What it does |
+|---|---|
+| `GET /api/status` | Sync timestamps, review mark, active-ad/company/pipeline counts, configured linkouts |
+| `GET /api/ads` | Active ads (`?kommune`, `?hidden`) |
+| `GET /api/new` | Companies and ads first seen since the last review mark |
+| `GET /api/companies` | Full synced company inventory (`?kommune`) |
+| `GET /api/companies/{orgnr}` | One company plus its ads |
+| `GET /api/pipeline` | Pipeline entries (`?status`) |
+| `GET /api/extract` | Downloadable data extract (`?scope`, `?format`, `?category`, `?includeActive`) |
+| `GET /api/sync/status` | Whether a background sync is currently running |
+| `PUT /api/pipeline/{orgnr}` | Sets pipeline status for a company |
+| `POST /api/ads/{feedId}/hide` | Hides an ad from the dashboard view |
+| `DELETE /api/ads/{feedId}/hide` | Unhides an ad |
+| `POST /api/seen` | Advances the review mark |
+| `POST /api/sync` | Starts a background sync run |
+
+## Configuration
+
+`hugin.json` sits beside the exe (start from `hugin.json.example`):
+
+| Field | What it does |
+|---|---|
+| `municipalities` | Array of `{ "name", "number" }` — Brreg kommune numbers to watch. Add one by appending an entry, e.g. `{ "name": "Larvik", "number": "3909" }` |
+| `fylker` | 2-digit fylke codes (e.g. `"39"` for Vestfold og Telemark) — expands discovery to every kommune in the fylke, resolved against the synced kommune register |
+| `allOfNorway` | `true` watches every kommune in the register — the widest scope |
+| `naeringskoder` | SN2025 industry codes; a prefix such as `"62"` matches every sub-code beneath it |
+| `keywords` | The ad-title recall net — can stay broad, `categories` narrows it |
+| `categories` | NAV's occupation categories (default `["IT"]`) filters out keyword coincidences like *prosjektutvikler massivtre*; ads NAV hasn't categorized always pass. `hugin list --ads` groups results by category |
+| `linkouts` | `{ "label", "url" }` pairs for sources Hugin can't fetch itself (finn.no, proff.no) — shown as a manual-check reminder in `hugin new` and the dashboard |
+| `navToken` | `null` fetches NAV's rotating public token automatically; set a registered token here instead |
+
+Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400).
 
 ## Data sources
 
@@ -50,9 +77,26 @@ Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor prof
 
 ## Web dashboard
 
-A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the **Applications** (Søknader) view, active ads, and company inventory, track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, sort the list, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal. English and Norwegian (bokmål) are both built in — the dashboard picks one from your browser's language on first visit, and a toggle in the topbar switches and remembers your choice.
+A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the **Applications** (Søknader) view, active ads, and company inventory, track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, sort the list, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal. English and Norwegian (bokmål) are both built in, and a dark/light theme toggle sits next to the language switch in the topbar — both pick a default from your browser and remember your choice after that.
 
-Build both hosts side by side, plus the single-file exe:
+`--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI; `--no-browser` skips the automatic browser launch. Closing the console window stops it.
+
+For local development, run the API and the Vite dev server side by side:
+
+```bash
+dotnet run --project Hugin.Api
+cd hugin-web && npm run dev
+```
+
+## Build from source
+
+Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and Node for the frontend:
+
+```bash
+git clone https://github.com/malinfossum/hugin.git
+cd hugin
+cp hugin.json.example hugin.json
+```
 
 ```powershell
 .\build.ps1
@@ -65,17 +109,6 @@ publish\hugin-api.exe
 # or, the single-file build:
 publish-single\Hugin.exe
 ```
-
-That's the whole start-up: the dashboard opens in your default browser by itself, and closing the console window stops it. `--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI; `--no-browser` skips the automatic browser launch.
-
-For local development, run the API and the Vite dev server side by side:
-
-```bash
-dotnet run --project Hugin.Api
-cd hugin-web && npm run dev
-```
-
-The API binds to loopback only, so it can't be reached from other machines, and every state-changing request (sync, track, mark-seen, hide) requires a header the dashboard's own frontend sets, so a website in your browser can't drive it either. Any process already running on the machine is trusted.
 
 ## Tests
 
