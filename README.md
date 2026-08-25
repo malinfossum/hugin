@@ -43,7 +43,7 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 | `GET /api/ads` | Active ads (`?kommune`, `?hidden`) |
 | `GET /api/new` | Companies and ads first seen since the last review mark |
 | `GET /api/companies` | Full synced company inventory (`?kommune`) |
-| `GET /api/companies/{orgnr}` | One company plus its ads |
+| `GET /api/companies/{orgnr}` | One company plus its ads and branch units |
 | `GET /api/pipeline` | Pipeline entries (`?status`) |
 | `GET /api/extract` | Downloadable data extract (`?scope`, `?format`, `?category`, `?includeActive`) |
 | `GET /api/sync/status` | Whether a background sync is currently running |
