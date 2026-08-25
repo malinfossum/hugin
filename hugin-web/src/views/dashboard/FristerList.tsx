@@ -144,7 +144,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
       <ul className="stack stack-sm">
         {ads.map((ad) => (
           <li key={ad.feedId} className="frist-row">
-            <div className="frist-row-title stack stack-sm">
+            <div className="stack stack-sm">
               {ad.sourceUrl ? (
                 <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
                   {ad.title}
@@ -157,13 +157,13 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               </span>
             </div>
             <div className="frist-meta">
-              <span className="frist-date text-muted">{formatExpires(ad.expires)}</span>
+              <span className="text-muted">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
               <span className="frist-category text-muted">{ad.category}</span>
             </div>
-            <div className="frist-row-actions cluster cluster-sm">
+            <div className="cluster cluster-sm">
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
               )}

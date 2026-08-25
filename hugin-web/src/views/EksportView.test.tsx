@@ -122,7 +122,7 @@ describe('EksportView', () => {
       expect(urls).toContain('/api/extract?scope=new&format=md')
       // The select state persists (it's just not rendered), but the URL for the new scope
       // must not carry the stale includeActive flag.
-      expect(urls.filter((u) => u.startsWith('/api/extract?scope=new'))).toEqual([
+      expect(urls.filter((u) => String(u).startsWith('/api/extract?scope=new'))).toEqual([
         '/api/extract?scope=new&format=md',
       ])
     })

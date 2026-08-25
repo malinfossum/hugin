@@ -108,6 +108,25 @@ describe('App', () => {
     expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
   })
 
+  it('keeps the typed search filter after toggling the language (keep-mounted state survives re-render)', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    const search = await screen.findByLabelText('Søk')
+    await user.type(search, 'Acme')
+    expect(search).toHaveValue('Acme')
+
+    await user.click(screen.getByRole('button', { name: 'EN' }))
+
+    expect(screen.getByLabelText('Search')).toHaveValue('Acme')
+
+    await user.click(screen.getByRole('button', { name: 'NO' }))
+
+    expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
+  })
+
   it('clicking a nav entry pushes history so the URL reflects the view', async () => {
     vi.stubGlobal('fetch', fakeServer())
     window.history.replaceState(null, '', '/')

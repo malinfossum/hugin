@@ -8,7 +8,9 @@
     <script>
       // Inline so the theme lands before first paint (no light-flash). Dark is default.
       (() => {
-        document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+        let theme = 'dark';
+        try { theme = localStorage.getItem('theme') || 'dark'; } catch { /* storage blocked — keep dark */ }
+        document.documentElement.dataset.theme = theme;
       })();
     </script>
   </head>
