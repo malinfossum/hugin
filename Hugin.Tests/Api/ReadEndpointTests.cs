@@ -11,8 +11,7 @@ public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneN
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
-    int Companies, int PipelineEntries, List<LinkoutProbe> Linkouts);
-public sealed record LinkoutProbe(string Label, string Url);
+    int Companies, int PipelineEntries);
 
 [TestFixture]
 public sealed class ReadEndpointTests
@@ -220,7 +219,7 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
-    public async Task Status_returns_counts_and_configured_linkouts()
+    public async Task Status_returns_counts()
     {
         using (var scope = _factory.Services.CreateScope())
         {
@@ -243,6 +242,5 @@ public sealed class ReadEndpointTests
         Assert.That(dto!.ActiveAds, Is.EqualTo(1));
         Assert.That(dto.Companies, Is.EqualTo(1));
         Assert.That(dto.PipelineEntries, Is.EqualTo(1));
-        Assert.That(dto.Linkouts.Select(l => l.Label), Is.EqualTo(new[] { "Finn.no" }));
     }
 }

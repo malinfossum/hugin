@@ -61,7 +61,16 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries, IReadOnlyList<Linkout> Linkouts);
+    int ActiveAds, int Companies, int PipelineEntries);
+
+public sealed record SourceDto(int Id, string Label, string Url, int Position)
+{
+    public static SourceDto From(Source s) => new(s.Id, s.Label, s.Url, s.Position);
+}
+
+public sealed record SourceWriteRequest(string Label, string Url);
+
+public sealed record ReorderRequest(IReadOnlyList<int> Ids);
 
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
