@@ -293,6 +293,15 @@ public sealed class EfSourceRepository(HuginDbContext db) : ISourceRepository
         if (await db.Sources.FindAsync([id], ct) is not { } source) return false;
 
         db.Sources.Remove(source);
+
+        // ISourceRepository documents Position as 1-based and dense after every write that
+        // changes the set — a delete must close the gap it would otherwise leave, not just
+        // shrink the set, or a downstream consumer inferring position from list index would
+        // silently desync from the stored value.
+        var remaining = await db.Sources.Where(s => s.Id != id).OrderBy(s => s.Position).ToListAsync(ct);
+        for (var i = 0; i < remaining.Count; i++)
+            remaining[i].Position = i + 1;
+
         await db.SaveChangesAsync(ct);
         return true;
     }

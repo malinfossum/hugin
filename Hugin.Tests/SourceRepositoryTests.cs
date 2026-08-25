@@ -86,6 +86,23 @@ public sealed class SourceRepositoryTests
     }
 
     [Test]
+    public async Task DeleteAsync_renumbers_remaining_sources_to_stay_dense()
+    {
+        // ISourceRepository documents Position as 1-based and dense after every write that
+        // changes the set — deleting the middle of {1,2,3} must leave {1,2}, not {1,3}.
+        var repo = new EfSourceRepository(_db);
+        var a = await repo.AddAsync("A", "https://a.no", CancellationToken.None);
+        var b = await repo.AddAsync("B", "https://b.no", CancellationToken.None);
+        var c = await repo.AddAsync("C", "https://c.no", CancellationToken.None);
+
+        Assert.That(await repo.DeleteAsync(b.Id, CancellationToken.None), Is.True);
+
+        var remaining = await repo.GetAllAsync(CancellationToken.None);
+        Assert.That(remaining.Select(s => s.Id), Is.EqualTo(new[] { a.Id, c.Id }));
+        Assert.That(remaining.Select(s => s.Position), Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    [Test]
     public async Task DeleteAsync_returns_false_for_an_unknown_id()
     {
         var repo = new EfSourceRepository(_db);
