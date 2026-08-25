@@ -114,8 +114,6 @@ export const nb = {
   'companies.kommune': 'Kommune',
   'companies.search': 'Søk',
   'companies.count': '{n} bedrifter',
-  'companies.branchCount': '{n} avdelinger',
-  'companies.branchCountOne': '1 avdeling',
   'companies.detailLoadError': 'Kunne ikke laste bedriften.',
   'companies.orgnr': 'Orgnr',
   'companies.nace': 'NACE',
@@ -132,6 +130,8 @@ export const nb = {
   'companies.websiteHas': 'Har nettside',
   'companies.websiteNone': 'Uten nettside',
   'companies.websiteRow': 'Nettside',
+  'companies.mainUnit': 'Hovedenhet',
+  'companies.unitTabs': 'Enheter',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

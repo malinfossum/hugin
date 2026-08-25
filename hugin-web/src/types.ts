@@ -32,6 +32,7 @@ export interface CompanyDto {
 export interface CompanyDetailDto {
   company: CompanyDto
   ads: AdDto[]
+  branches: CompanyDto[]
 }
 
 export interface NewDto {

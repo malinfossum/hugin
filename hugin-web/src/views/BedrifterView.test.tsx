@@ -173,6 +173,7 @@ describe('BedrifterView', () => {
           }),
           ad({ feedId: 'a2', title: 'Utgått annonse', isActive: false, published: null }),
         ],
+        branches: [],
       },
     }
     const user = userEvent.setup()
@@ -210,7 +211,7 @@ describe('BedrifterView', () => {
   it('CompanyDetail shows a Nettside row with the website link when present', async () => {
     const companies = [company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' })]
     const details: Record<string, CompanyDetailDto> = {
-      '1': { company: companies[0], ads: [] },
+      '1': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
@@ -231,7 +232,7 @@ describe('BedrifterView', () => {
       company({ orgnr: '1', name: 'Uten Nettside AS', website: null, kommuneNavn: 'Oslo' }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '1': { company: companies[0], ads: [] },
+      '1': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
@@ -252,7 +253,7 @@ describe('BedrifterView', () => {
   it('displays an all-caps Brreg name in title case, in the row and the detail heading', async () => {
     const companies = [company({ orgnr: '1', name: 'NORSK TIPPING AS', kommuneNavn: 'Oslo' })]
     const details: Record<string, CompanyDetailDto> = {
-      '1': { company: companies[0], ads: [] },
+      '1': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
@@ -264,7 +265,7 @@ describe('BedrifterView', () => {
     expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
   })
 
-  it('groups a branch under its hovedenhet, collapsed until expanded', async () => {
+  it('renders exactly one list row for a company with branches — branches moved into CompanyDetail', async () => {
     const companies = [
       company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
       company({
@@ -277,7 +278,7 @@ describe('BedrifterView', () => {
       company({ orgnr: '3', name: 'Standalone AS' }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '972483672': { company: companies[1], ads: [] },
+      '925836613': { company: companies[0], ads: [], branches: [companies[1]] },
     }
     const user = userEvent.setup()
     const { container } = renderView(fakeServer(companies, details))
@@ -285,28 +286,22 @@ describe('BedrifterView', () => {
     await screen.findByText('Norsk Tipping AS')
     expect(screen.getByText('Standalone AS')).toBeInTheDocument()
 
-    // The branch is not its own top-level group row: the outer list has one group per
-    // hovedenhet/standalone (2), not one row per unit (3).
+    // One group per hovedenhet/standalone (2), not one row per unit (3) — and no branch row
+    // hiding inside a nested list either.
     const outerList = container.querySelector('.bedrifter-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
-
-    const detailsEl = screen.getByText('1 avdeling').closest('details')
-    if (!detailsEl) throw new Error('branches <details> not found')
-    expect(detailsEl).not.toHaveAttribute('open')
-
-    await user.click(screen.getByText('1 avdeling'))
-    expect(detailsEl).toHaveAttribute('open')
-
-    const branchButton = await screen.findByRole('button', {
-      name: /Norsk Tipping AS Avdeling Oslo/,
-    })
-    expect(branchButton).toBeInTheDocument()
-
-    await user.click(branchButton)
     expect(
-      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
-    ).toBeInTheDocument()
+      screen.queryByText('Norsk Tipping AS Avdeling Oslo', { exact: false })
+    ).not.toBeInTheDocument()
+    expect(container.querySelector('details')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Norsk Tipping AS/ }))
+
+    // The branch now surfaces as a tab inside the detail, not a row in the list.
+    expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
+    const tablist = screen.getByRole('tablist')
+    expect(within(tablist).getByRole('tab', { name: 'Oslo' })).toBeInTheDocument()
   })
 
   it('does not treat a branch-of-a-branch as its own group main (guards non-two-tier chains)', async () => {
@@ -327,12 +322,14 @@ describe('BedrifterView', () => {
         kommuneNavn: 'Oslo',
       }),
     ]
-    renderView(fakeServer(companies, {}))
+    const { container } = renderView(fakeServer(companies, {}))
 
     await screen.findByText('Norsk Tipping AS')
 
-    // B renders once, nested under A's group — the count stays "1 avdeling", not 2.
-    expect(screen.getByText('1 avdeling')).toBeInTheDocument()
+    // A's group (with B nested, invisible in the list) + C's standalone row — 2 groups, not 3.
+    const outerList = container.querySelector('.bedrifter-view > ul')
+    if (!outerList) throw new Error('outer companies list not found')
+    expect(outerList.children).toHaveLength(2)
 
     // C falls back to a standalone row, since its "parent" B is itself a branch.
     expect(screen.getByText('Norsk Tipping AS Avdeling Oslo Sentrum')).toBeInTheDocument()
@@ -356,9 +353,11 @@ describe('BedrifterView', () => {
     ).toBeInTheDocument()
   })
 
-  it('a branch nested inside its expanded group is not tagged (the group already says so)', async () => {
+  it("groups appear at the MAIN unit's position, not a branch's earlier position in the source list", async () => {
     const companies = [
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      // The branch is listed before its own hovedenhet here — a naive first-seen-position
+      // grouping would surface "Norsk Tipping AS" first (its branch is seen at index 0).
+      // The fix orders by the main's own index, so "Mellomstor AS" (index 1) comes first.
       company({
         orgnr: '972483672',
         name: 'NORSK TIPPING AS AVDELING OSLO',
@@ -366,20 +365,22 @@ describe('BedrifterView', () => {
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
+      company({ orgnr: 'mellomstor', name: 'Mellomstor AS' }),
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
     ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
+    const { container } = renderView(fakeServer(companies, {}))
 
     await screen.findByText('Norsk Tipping AS')
-    await user.click(screen.getByText('1 avdeling'))
 
-    expect(await screen.findByText('Norsk Tipping AS Avdeling Oslo')).toBeInTheDocument()
-    expect(
-      screen.queryByText(/Norsk Tipping AS Avdeling Oslo \[avdeling\]/)
-    ).not.toBeInTheDocument()
+    const outerList = container.querySelector('.bedrifter-view > ul')
+    if (!outerList) throw new Error('outer companies list not found')
+    const rowNames = Array.from(outerList.querySelectorAll('.bedrifter-row strong')).map(
+      (el) => el.textContent
+    )
+    expect(rowNames).toEqual(['Mellomstor AS', 'Norsk Tipping AS'])
   })
 
-  it('Tilbake to a branch detail reopens its group and refocuses the branch row', async () => {
+  it('Tilbake from a branch tab returns to the list and refocuses the main row', async () => {
     const companies = [
       company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
       company({
@@ -391,30 +392,28 @@ describe('BedrifterView', () => {
       }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '972483672': { company: companies[1], ads: [] },
+      '925836613': { company: companies[0], ads: [], branches: [companies[1]] },
+      '972483672': { company: companies[1], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
 
     await screen.findByText('Norsk Tipping AS')
-    await user.click(screen.getByText('1 avdeling'))
+    const mainRow = screen.getByRole('button', { name: /Norsk Tipping AS/ })
+    await user.click(mainRow)
 
-    const branchButton = await screen.findByRole('button', {
-      name: /Norsk Tipping AS Avdeling Oslo/,
-    })
-    await user.click(branchButton)
+    const branchTab = await screen.findByRole('tab', { name: 'Oslo' })
+    await user.click(branchTab)
+    expect(
+      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
+    ).toBeInTheDocument()
 
     const back = await screen.findByRole('button', { name: 'Tilbake' })
     await user.click(back)
 
-    const reopenedBranchButton = await screen.findByRole('button', {
-      name: /Norsk Tipping AS Avdeling Oslo/,
-    })
-    const detailsEl = reopenedBranchButton.closest('details')
-    if (!detailsEl) throw new Error('branches <details> not found')
+    const reopenedRow = await screen.findByRole('button', { name: /Norsk Tipping AS/ })
     await waitFor(() => {
-      expect(detailsEl).toHaveAttribute('open')
-      expect(document.activeElement).toBe(reopenedBranchButton)
+      expect(document.activeElement).toBe(reopenedRow)
     })
   })
 
@@ -424,7 +423,7 @@ describe('BedrifterView', () => {
       company({ orgnr: '999888777', name: 'Beta Software' }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [] },
+      '915787630': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
@@ -445,7 +444,7 @@ describe('BedrifterView', () => {
   it('deep-links straight into a detail when selectedOrgnr is set on mount (route-driven, no click)', async () => {
     const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [] },
+      '915787630': { company: companies[0], ads: [], branches: [] },
     }
     vi.stubGlobal('fetch', fakeServer(companies, details))
 
@@ -468,7 +467,7 @@ describe('BedrifterView', () => {
   it('calls onCloseCompany (not internal state) when Tilbake is clicked', async () => {
     const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [] },
+      '915787630': { company: companies[0], ads: [], branches: [] },
     }
     vi.stubGlobal('fetch', fakeServer(companies, details))
     const onCloseCompany = vi.fn()
