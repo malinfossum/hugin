@@ -1,11 +1,26 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { formatDate } from '../dates'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
+
+/** BedrifterView no longer owns selection state (App/routing does) — this harness stands in
+ * for that, so the existing click-through tests can drive open/close the same way a user
+ * would, without each test wiring its own useState. */
+function BedrifterViewHarness() {
+  const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
+  return (
+    <BedrifterView
+      selectedOrgnr={selectedOrgnr}
+      onOpenCompany={setSelectedOrgnr}
+      onCloseCompany={() => setSelectedOrgnr(null)}
+    />
+  )
+}
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -74,7 +89,7 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <BedrifterView />
+        <BedrifterViewHarness />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -428,5 +443,55 @@ describe('BedrifterView', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(reopenedRow)
     })
+  })
+
+  it('deep-links straight into a detail when selectedOrgnr is set on mount (route-driven, no click)', async () => {
+    const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '915787630': { company: companies[0], ads: [] },
+    }
+    vi.stubGlobal('fetch', fakeServer(companies, details))
+
+    render(
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <BedrifterView
+            selectedOrgnr="915787630"
+            onOpenCompany={vi.fn()}
+            onCloseCompany={vi.fn()}
+          />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Søk')).not.toBeInTheDocument()
+  })
+
+  it('calls onCloseCompany (not internal state) when Tilbake is clicked', async () => {
+    const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '915787630': { company: companies[0], ads: [] },
+    }
+    vi.stubGlobal('fetch', fakeServer(companies, details))
+    const onCloseCompany = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <BedrifterView
+            selectedOrgnr="915787630"
+            onOpenCompany={vi.fn()}
+            onCloseCompany={onCloseCompany}
+          />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    )
+
+    const back = await screen.findByRole('button', { name: 'Tilbake' })
+    await user.click(back)
+
+    expect(onCloseCompany).toHaveBeenCalledTimes(1)
   })
 })

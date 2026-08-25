@@ -1,6 +1,7 @@
-import { type ReactElement, useLayoutEffect, useRef, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
+import { parseRoute, type Route, routePath } from './routing'
 import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
@@ -20,9 +21,14 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 }
 
 function AppShell() {
-  const [view, setView] = useState<ViewName>('dashboard')
-  const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set(['dashboard']))
+  const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
+  const view = route.view
+  const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set([route.view]))
   const scrollByView = useRef<Map<ViewName, number>>(new Map())
+  // popstate fires after the URL has already changed, so by the time the handler runs
+  // `route` (the closed-over state) is the OUTGOING view — exactly what scroll memory needs.
+  // A ref mirrors the latest route for that handler without re-subscribing it on every render.
+  const routeRef = useRef(route)
   const t = useT()
   const [lang, setLang] = useLang()
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
@@ -53,19 +59,53 @@ function AppShell() {
   const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
     dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
     applications: () => <ApplicationsView />,
-    companies: () => <BedrifterView />,
+    companies: () => (
+      <BedrifterView
+        selectedOrgnr={route.company}
+        onOpenCompany={(orgnr) => navigate({ view: 'companies', company: orgnr })}
+        onCloseCompany={() => navigate({ view: 'companies', company: null })}
+      />
+    ),
     export: () => <EksportView />,
     settings: () => (
       <SettingsView theme={theme} onToggleTheme={toggleTheme} onSourcesChanged={bumpSources} />
     ),
   }
 
-  const switchView = (next: ViewName) => {
-    if (next === view) return
-    scrollByView.current.set(view, window.scrollY)
-    setVisited((prev) => (prev.has(next) ? prev : new Set(prev).add(next)))
-    setView(next)
+  // Applies a parsed/target route to state: marks its view visited (for keep-mounted) and
+  // updates both the live route state and the ref popstate/navigate read scroll-memory from.
+  // Wrapped in useCallback (stable identity, all deps are stable setters/refs) so the popstate
+  // effect below can list it as a dependency without re-subscribing on every render.
+  const apply = useCallback((next: Route) => {
+    setVisited((prev) => (prev.has(next.view) ? prev : new Set(prev).add(next.view)))
+    routeRef.current = next
+    setRouteState(next)
+  }, [])
+
+  const navigate = (next: Route) => {
+    if (routePath(next) === routePath(routeRef.current)) return
+    scrollByView.current.set(routeRef.current.view, window.scrollY)
+    window.history.pushState(null, '', routePath(next))
+    apply(next)
   }
+
+  const switchView = (next: ViewName) => navigate({ view: next, company: null })
+
+  // Normalizes the initial URL (e.g. an unknown path collapses to '/') without adding a
+  // history entry, so a stray Back right after load doesn't land on a path the app never
+  // actually rendered.
+  useEffect(() => {
+    window.history.replaceState(null, '', routePath(routeRef.current))
+  }, [])
+
+  useEffect(() => {
+    const onPopState = () => {
+      scrollByView.current.set(routeRef.current.view, window.scrollY)
+      apply(parseRoute(window.location.pathname))
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [apply])
 
   useLayoutEffect(() => {
     window.scrollTo(0, scrollByView.current.get(view) ?? 0)

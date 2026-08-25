@@ -37,13 +37,22 @@ function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
   return [...groups.values()]
 }
 
-export function BedrifterView() {
+interface BedrifterViewProps {
+  selectedOrgnr: string | null
+  onOpenCompany: (orgnr: string) => void
+  onCloseCompany: () => void
+}
+
+export function BedrifterView({
+  selectedOrgnr,
+  onOpenCompany,
+  onCloseCompany,
+}: BedrifterViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
   const [kommune, setKommune] = useState('')
   const [search, setSearch] = useState('')
   const [hasWebsiteOnly, setHasWebsiteOnly] = useState(false)
-  const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
@@ -107,11 +116,7 @@ export function BedrifterView() {
 
   const openDetail = (orgnr: string) => {
     pendingFocusOrgnr.current = orgnr
-    setSelectedOrgnr(orgnr)
-  }
-
-  const closeDetail = () => {
-    setSelectedOrgnr(null)
+    onOpenCompany(orgnr)
   }
 
   // A branch rendered as a standalone group main (its parent isn't loaded) still needs the
@@ -144,7 +149,7 @@ export function BedrifterView() {
   )
 
   if (selectedOrgnr) {
-    return <CompanyDetail orgnr={selectedOrgnr} onClose={closeDetail} />
+    return <CompanyDetail orgnr={selectedOrgnr} onClose={onCloseCompany} />
   }
 
   if (error) {

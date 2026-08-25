@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -106,5 +106,67 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
     expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
+  })
+
+  it('clicking a nav entry pushes history so the URL reflects the view', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    window.history.replaceState(null, '', '/')
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+
+    expect(window.location.pathname).toBe('/companies')
+  })
+
+  it('Back (popstate) returns to the previous view and keeps the other mounted-hidden', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    window.history.replaceState(null, '', '/')
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    const search = await screen.findByLabelText('Søk')
+    await user.type(search, 'Acme')
+    expect(window.location.pathname).toBe('/companies')
+
+    // Simulate Back deterministically instead of relying on jsdom's async history traversal:
+    // set the URL directly, then fire the same popstate event the real browser would dispatch.
+    window.history.replaceState(null, '', '/')
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(screen.getByRole('button', { name: 'Dashbord' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByLabelText('Søk')).not.toBeVisible()
+    expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
+  })
+
+  it('deep-loads straight into a company detail from /companies/<orgnr>', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url === '/api/companies') {
+          return Promise.resolve(jsonResponse([{ orgnr: '915787630', name: 'Acme AS' }]))
+        }
+        if (url === '/api/companies/915787630') {
+          return Promise.resolve(
+            jsonResponse({ company: { orgnr: '915787630', name: 'Acme AS' }, ads: [] })
+          )
+        }
+        return Promise.reject(new Error(`unhandled request ${url}`))
+      })
+    )
+    window.history.replaceState(null, '', '/companies/915787630')
+
+    render(<App />)
+
+    expect(screen.getByRole('button', { name: 'Bedrifter' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/companies/915787630')
   })
 })
