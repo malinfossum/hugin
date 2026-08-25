@@ -116,7 +116,18 @@ function AppShell() {
       <div className="app-shell">
         <header className="topbar">
           <div className="container cluster-between">
-            <span className="brand">Hugin</span>
+            <span className="brand">
+              {/* Raven mark colored via CSS (currentColor) — var() never resolves in an
+                  SVG presentation attribute, so the fill must not be hardcoded. */}
+              <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  fillRule="evenodd"
+                  d="M9 24.5 Q6 17 7.8 11.2 Q10 5.6 16 5.8 Q18.6 6 20.2 7.4 L29.2 11.6 Q29.8 12.2 29 13 L20.4 15.4 Q18.4 17.6 15.6 18.6 L16.8 20.6 L13 22 Q11.6 23 11.4 24.5 Z M18.7 10.4 a1.9 1.9 0 1 1 -3.8 0 a1.9 1.9 0 1 1 3.8 0 Z"
+                />
+              </svg>
+              Hugin
+            </span>
             <div className="topbar-controls cluster cluster-sm">
               <nav aria-label={t('nav.ariaLabel')}>
                 <ul className="nav-list">

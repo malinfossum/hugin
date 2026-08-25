@@ -1,5 +1,7 @@
 # Hugin
 
+![Hugin — job radar for the Norwegian developer market](docs/brand/banner.png)
+
 Hugin is a job radar for the Norwegian developer job market: it watches public registries for new companies and job ads in your region and tracks your outreach pipeline — from the command line or a local web dashboard.
 
 Named after Odin's raven of thought, who flies out each morning and returns with tidings — while his sibling Munin remembers.
