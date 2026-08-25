@@ -372,6 +372,51 @@ public sealed class FakeWebsiteProber : IWebsiteProber
     }
 }
 
+internal sealed class FakeSourceRepository : ISourceRepository
+{
+    public List<Source> Store { get; } = [];
+
+    public Task<IReadOnlyList<Source>> GetAllAsync(CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Source>>(Store.OrderBy(s => s.Position).ToList());
+
+    public Task<Source?> GetAsync(int id, CancellationToken ct) =>
+        Task.FromResult(Store.FirstOrDefault(s => s.Id == id));
+
+    public Task<Source> AddAsync(string label, string url, CancellationToken ct)
+    {
+        var source = new Source { Id = Store.Count + 1, Label = label, Url = url, Position = Store.Count + 1 };
+        Store.Add(source);
+        return Task.FromResult(source);
+    }
+
+    public Task<bool> UpdateAsync(int id, string label, string url, CancellationToken ct)
+    {
+        if (Store.FirstOrDefault(s => s.Id == id) is not { } source) return Task.FromResult(false);
+        source.Label = label;
+        source.Url = url;
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteAsync(int id, CancellationToken ct)
+    {
+        var source = Store.FirstOrDefault(s => s.Id == id);
+        if (source is null) return Task.FromResult(false);
+        Store.Remove(source);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ReorderAsync(IReadOnlyList<int> orderedIds, CancellationToken ct)
+    {
+        if (Store.Count != orderedIds.Count || !Store.Select(s => s.Id).ToHashSet().SetEquals(orderedIds))
+            return Task.FromResult(false);
+
+        for (var i = 0; i < orderedIds.Count; i++)
+            Store.First(s => s.Id == orderedIds[i]).Position = i + 1;
+
+        return Task.FromResult(true);
+    }
+}
+
 internal sealed class FakeKommuneRepository : IKommuneRepository
 {
     public Dictionary<string, string> Store { get; } = [];
