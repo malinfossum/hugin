@@ -6,6 +6,7 @@ export const nb = {
   'nav.applications': 'Søknader',
   'nav.companies': 'Bedrifter',
   'nav.export': 'Eksport',
+  'nav.settings': 'Innstillinger',
 
   'lang.toggleLabel': 'Språk',
 
@@ -39,6 +40,21 @@ export const nb = {
   'sync.failedPartial': 'Synk delvis feilet: {error}',
 
   'sources.title': 'Kilder',
+
+  'settings.sourcesHeading': 'Kilder',
+  'settings.sourcesHint':
+    'Brønnøysundregisteret og NAV er faste datakilder. Lenkene under kan du endre.',
+  'settings.addSource': 'Legg til lenke',
+  'settings.label': 'Etikett',
+  'settings.url': 'URL',
+  'settings.save': 'Lagre',
+  'settings.edit': 'Rediger',
+  'settings.remove': 'Fjern',
+  'settings.moveUp': 'Flytt opp',
+  'settings.moveDown': 'Flytt ned',
+  'settings.confirmRemove': 'Fjerne «{label}»?',
+  'settings.languageHeading': 'Språk',
+  'settings.themeHeading': 'Tema',
 
   'trenger.heading': 'Trenger handling',
   'trenger.notApplied': 'aktiv, ikke søkt',

@@ -6,6 +6,7 @@ export const en = {
   'nav.applications': 'Applications',
   'nav.companies': 'Companies',
   'nav.export': 'Export',
+  'nav.settings': 'Settings',
 
   'lang.toggleLabel': 'Language',
 
@@ -39,6 +40,21 @@ export const en = {
   'sync.failedPartial': 'Sync partially failed: {error}',
 
   'sources.title': 'Sources',
+
+  'settings.sourcesHeading': 'Sources',
+  'settings.sourcesHint':
+    'Brønnøysundregisteret and NAV are fixed data sources. The links below are yours to change.',
+  'settings.addSource': 'Add link',
+  'settings.label': 'Label',
+  'settings.url': 'URL',
+  'settings.save': 'Save',
+  'settings.edit': 'Edit',
+  'settings.remove': 'Remove',
+  'settings.moveUp': 'Move up',
+  'settings.moveDown': 'Move down',
+  'settings.confirmRemove': 'Remove “{label}”?',
+  'settings.languageHeading': 'Language',
+  'settings.themeHeading': 'Theme',
 
   'trenger.heading': 'Needs action',
   'trenger.notApplied': 'active, not applied',

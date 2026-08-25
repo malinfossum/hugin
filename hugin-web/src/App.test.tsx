@@ -28,12 +28,14 @@ afterEach(() => {
 })
 
 describe('App', () => {
-  it('renders four nav buttons with Dashbord active by default', () => {
+  it('renders five nav buttons with Dashbord active by default', () => {
     render(<App />)
 
     const nav = screen.getByRole('navigation', { name: 'Hovedmeny' })
-    const buttons = screen.getAllByRole('button', { name: /Dashbord|Søknader|Bedrifter|Eksport/ })
-    expect(buttons).toHaveLength(4)
+    const buttons = screen.getAllByRole('button', {
+      name: /Dashbord|Søknader|Bedrifter|Eksport|Innstillinger/,
+    })
+    expect(buttons).toHaveLength(5)
     expect(nav).toBeInTheDocument()
 
     const dashbord = screen.getByRole('button', { name: 'Dashbord' })

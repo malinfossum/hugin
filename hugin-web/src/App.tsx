@@ -5,9 +5,10 @@ import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
 import { EksportView } from './views/EksportView'
+import { SettingsView } from './views/SettingsView'
 import './styles/main.css'
 
-const VIEWS = ['dashboard', 'applications', 'companies', 'export'] as const
+const VIEWS = ['dashboard', 'applications', 'companies', 'export', 'settings'] as const
 export type ViewName = (typeof VIEWS)[number]
 
 const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
@@ -15,18 +16,7 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
   applications: 'nav.applications',
   companies: 'nav.companies',
   export: 'nav.export',
-}
-
-// Each view mounts once, on first visit, and then stays mounted (just hidden) so filters,
-// an opened detail, and scroll position all survive switching views — everything still resets
-// on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
-// keeps polling while hidden behind another view — intended, since a running sync must finish
-// its announce/refresh cycle regardless of which view is currently visible.
-const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
-  dashboard: () => <DashboardView />,
-  applications: () => <ApplicationsView />,
-  companies: () => <BedrifterView />,
-  export: () => <EksportView />,
+  settings: 'nav.settings',
 }
 
 function AppShell() {
@@ -38,6 +28,10 @@ function AppShell() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   )
+  // Bumped after any Settings sources mutation; forwarded to the dashboard's SourcesCard as
+  // refreshToken so it refetches without the two views needing any direct coupling.
+  const [sourcesVersion, setSourcesVersion] = useState(0)
+  const bumpSources = () => setSourcesVersion((v) => v + 1)
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -48,6 +42,22 @@ function AppShell() {
       /* choice just won't persist */
     }
     setTheme(next)
+  }
+
+  // Each view mounts once, on first visit, and then stays mounted (just hidden) so filters,
+  // an opened detail, and scroll position all survive switching views — everything still resets
+  // on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
+  // keeps polling while hidden behind another view — intended, since a running sync must finish
+  // its announce/refresh cycle regardless of which view is currently visible. Declared inside
+  // AppShell (not module scope) so the thunks can close over theme/lang state and callbacks.
+  const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
+    dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
+    applications: () => <ApplicationsView />,
+    companies: () => <BedrifterView />,
+    export: () => <EksportView />,
+    settings: () => (
+      <SettingsView theme={theme} onToggleTheme={toggleTheme} onSourcesChanged={bumpSources} />
+    ),
   }
 
   const switchView = (next: ViewName) => {
