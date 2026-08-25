@@ -11,7 +11,7 @@ public class MunicipalityScopeTests
         ["3407"] = "GJØVIK",
         ["3405"] = "LILLEHAMMER",
         ["3411"] = "RINGSAKER",
-        ["0709"] = "LARVIK",
+        ["3909"] = "LARVIK",
     };
 
     [Test]
@@ -35,8 +35,8 @@ public class MunicipalityScopeTests
         Assert.That(scope.ResolveName("hamar"), Is.EqualTo("3403"));
 
         // Register-only name (config-absent) still resolves — resolution and gating are separate.
-        Assert.That(scope.ResolveName("LARVIK"), Is.EqualTo("0709"));
-        Assert.That(scope.ResolveName("larvik"), Is.EqualTo("0709"));
+        Assert.That(scope.ResolveName("LARVIK"), Is.EqualTo("3909"));
+        Assert.That(scope.ResolveName("larvik"), Is.EqualTo("3909"));
 
         // Unknown name resolves to null.
         Assert.That(scope.ResolveName("Nonexistent"), Is.Null);
@@ -50,7 +50,7 @@ public class MunicipalityScopeTests
         var scope = MunicipalityScope.Build(config, Register);
 
         var larvikNumber = scope.ResolveName("LARVIK");
-        Assert.That(larvikNumber, Is.EqualTo("0709"), "resolves even though Larvik is not in scope");
+        Assert.That(larvikNumber, Is.EqualTo("3909"), "resolves even though Larvik is not in scope");
         Assert.That(scope.AllOfNorway || scope.AllowedNumbers.Contains(larvikNumber!), Is.False,
             "the gate excludes it — resolution and gating are separate concerns");
 
