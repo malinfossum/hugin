@@ -255,9 +255,6 @@ input[type="text"] {
 .eksport-controls {
   align-items: flex-end;
 }
-.eksport-controls .eksport-include-active {
-  align-self: center;
-}
 
 .visually-hidden {
   position: absolute;

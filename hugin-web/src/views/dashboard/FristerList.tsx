@@ -39,9 +39,11 @@ function formatExpires(expires: string | null): string | null {
   return expires ? formatDate(expires) : null
 }
 
+type Show = 'active' | 'all'
+
 export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
-  const [showHidden, setShowHidden] = useState(false)
+  const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
@@ -52,12 +54,12 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
 
   const load = useCallback(() => {
     setError(null)
-    const path = showHidden ? '/api/ads?hidden=true' : '/api/ads'
+    const path = show === 'all' ? '/api/ads?hidden=true' : '/api/ads'
     return api
       .get<AdDto[]>(path)
       .then(setAds)
       .catch(() => setError(t('frister.loadError')))
-  }, [showHidden, t])
+  }, [show, t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
   useEffect(() => {
@@ -117,14 +119,20 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
         {t('frister.heading')}
       </h2>
-      <label className="cluster cluster-sm">
-        <input
-          type="checkbox"
-          checked={showHidden}
-          onChange={(event) => setShowHidden(event.target.checked)}
-        />
-        {t('frister.showHidden')}
-      </label>
+      <div className="field">
+        <label className="label" htmlFor="frister-show">
+          {t('frister.showLabel')}
+        </label>
+        <select
+          id="frister-show"
+          className="select"
+          value={show}
+          onChange={(event) => setShow(event.target.value as Show)}
+        >
+          <option value="active">{t('frister.showDefault')}</option>
+          <option value="all">{t('frister.showAll')}</option>
+        </select>
+      </div>
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}

@@ -71,7 +71,7 @@ describe('EksportView', () => {
     })
   })
 
-  it('checking Include Active refetches with includeActive=true', async () => {
+  it('choosing Inkluder aktive refetches with includeActive=true', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
     const user = userEvent.setup()
@@ -82,7 +82,8 @@ describe('EksportView', () => {
       expect(urls).toContain('/api/extract?scope=all&format=md')
     })
 
-    await user.click(screen.getByLabelText('Inkluder Aktiv-oppføringer'))
+    expect(screen.getByLabelText('Oppføringer')).toHaveValue('default')
+    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder aktive')
 
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
@@ -90,25 +91,25 @@ describe('EksportView', () => {
     })
   })
 
-  it('the include-Active checkbox only renders for the All scope', async () => {
+  it('the entries select only renders for the All scope', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
     const user = userEvent.setup()
 
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Nytt')
-    expect(screen.queryByLabelText('Inkluder Aktiv-oppføringer')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Oppføringer')).not.toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
-    expect(screen.getByLabelText('Inkluder Aktiv-oppføringer')).toBeInTheDocument()
+    expect(screen.getByLabelText('Oppføringer')).toBeInTheDocument()
   })
 
-  it('leaving the All scope after checking Include Active drops includeActive from the URL', async () => {
+  it('leaving the All scope after choosing Inkluder aktive drops includeActive from the URL', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
     const user = userEvent.setup()
 
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
-    await user.click(screen.getByLabelText('Inkluder Aktiv-oppføringer'))
+    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder aktive')
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
       expect(urls).toContain('/api/extract?scope=all&format=md&includeActive=true')
@@ -119,12 +120,21 @@ describe('EksportView', () => {
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
       expect(urls).toContain('/api/extract?scope=new&format=md')
-      // The checkbox state persists (it's just not rendered), but the URL for the new scope
+      // The select state persists (it's just not rendered), but the URL for the new scope
       // must not carry the stale includeActive flag.
       expect(urls.filter((u) => u.startsWith('/api/extract?scope=new'))).toEqual([
         '/api/extract?scope=new&format=md',
       ])
     })
+  })
+
+  it('the download link has no href and is aria-disabled when no scope is chosen (9c)', async () => {
+    const fetchMock = fakeServer()
+    renderView(fetchMock)
+
+    const link = screen.getByText('Last ned')
+    expect(link).toHaveAttribute('aria-disabled', 'true')
+    expect(link).not.toHaveAttribute('href')
   })
 
   it('refetches when the scope changes', async () => {

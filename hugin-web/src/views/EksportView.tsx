@@ -5,6 +5,7 @@ import { type TranslationKey, useT } from '../i18n'
 
 type Scope = 'new' | 'category' | 'all'
 type Format = 'md' | 'txt' | 'json'
+type Entries = 'default' | 'all'
 
 const SCOPE_KEYS: { value: Scope; labelKey: TranslationKey }[] = [
   { value: 'new', labelKey: 'export.scopeNew' },
@@ -31,12 +32,13 @@ export function EksportView() {
   const [scope, setScope] = useState<Scope | ''>('')
   const [format, setFormat] = useState<Format>('md')
   const [category, setCategory] = useState('')
-  const [includeActive, setIncludeActive] = useState(false)
+  const [entries, setEntries] = useState<Entries>('default')
   const [preview, setPreview] = useState('')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
 
+  const includeActive = entries === 'all'
   const ready = scope !== '' && (scope !== 'category' || category.trim().length > 0)
   const url = scope !== '' ? buildUrl(scope, format, category.trim(), includeActive) : ''
 
@@ -135,14 +137,20 @@ export function EksportView() {
         </div>
 
         {scope === 'all' && (
-          <label className="cluster cluster-sm eksport-include-active">
-            <input
-              type="checkbox"
-              checked={includeActive}
-              onChange={(event) => setIncludeActive(event.target.checked)}
-            />
-            {t('export.includeActive')}
-          </label>
+          <div className="field">
+            <label className="label" htmlFor="eksport-entries">
+              {t('export.entriesLabel')}
+            </label>
+            <select
+              id="eksport-entries"
+              className="select"
+              value={entries}
+              onChange={(event) => setEntries(event.target.value as Entries)}
+            >
+              <option value="default">{t('export.entriesDefault')}</option>
+              <option value="all">{t('export.entriesAll')}</option>
+            </select>
+          </div>
         )}
 
         <div className="cluster cluster-sm">
