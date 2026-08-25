@@ -43,7 +43,7 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
     private static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
 }
 
-public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);
+public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads, IReadOnlyList<CompanyDto> Branches);
 
 public sealed record PipelineDto(string Orgnr, string CompanyName, string Status, bool Starred,
     string Why, string? Note, string? Svar, DateTimeOffset Updated)

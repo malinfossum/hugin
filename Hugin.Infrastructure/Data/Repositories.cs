@@ -18,6 +18,13 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
     public async Task<IReadOnlyList<Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         await db.Companies.Where(c => c.FirstSeen > after).OrderBy(c => c.Name).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default) =>
+        await db.Companies
+            .Where(c => c.IsBranch && c.ParentOrgnr == orgnr)
+            .OrderBy(c => c.MunicipalityNumber)
+            .ThenBy(c => c.Name)
+            .ToListAsync(ct);
+
     public async Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default)
     {
         var existing = await db.Companies.FindAsync([company.Orgnr], ct);

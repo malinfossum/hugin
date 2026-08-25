@@ -120,6 +120,13 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
     public Task<IReadOnlyList<Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Company>>(Store.Values.Where(c => c.FirstSeen > after).ToList());
 
+    public Task<IReadOnlyList<Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Company>>(Store.Values
+            .Where(c => c.IsBranch && c.ParentOrgnr == orgnr)
+            .OrderBy(c => c.MunicipalityNumber)
+            .ThenBy(c => c.Name)
+            .ToList());
+
     public Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default)
     {
         if (Store.TryGetValue(company.Orgnr, out var existing))

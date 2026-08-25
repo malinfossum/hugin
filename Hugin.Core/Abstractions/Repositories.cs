@@ -6,6 +6,11 @@ public interface ICompanyRepository
 
     public Task<IReadOnlyList<Models.Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default);
 
+    /// <summary>Branch units of one hovedenhet (<c>IsBranch &amp;&amp; ParentOrgnr == orgnr</c>),
+    /// ordered by municipality number then name — kommune-name ordering is a display-layer concern
+    /// (the endpoint resolves that name the same way it does for every other company).</summary>
+    public Task<IReadOnlyList<Models.Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default);
+
     public Task<IReadOnlyList<Models.Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default);
 
     /// <summary>New row → FirstSeen = seenAt; always → LastSeenInRegister = seenAt plus a field refresh.
