@@ -132,6 +132,8 @@ describe('SettingsView', () => {
       )
     })
     await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
+    // Outcome, not just the request: the refetched list must actually show the new row.
+    expect(await screen.findByText('Vitae')).toBeInTheDocument()
   })
 
   it('edit switches a row to inputs and PUTs', async () => {
@@ -161,6 +163,10 @@ describe('SettingsView', () => {
       )
     })
     await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
+    // Outcome, not just the request: the row reverts to view mode showing the new label,
+    // and the stale label is gone.
+    expect(await screen.findByText('FINN.no')).toBeInTheDocument()
+    expect(screen.queryByText('FINN')).not.toBeInTheDocument()
   })
 
   it('remove opens ConfirmDialog, confirm DELETEs', async () => {
@@ -184,6 +190,8 @@ describe('SettingsView', () => {
       )
     })
     await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
+    // Outcome, not just the request: the removed row is actually gone after the refetch.
+    await waitFor(() => expect(screen.queryByText('FINN')).not.toBeInTheDocument())
   })
 
   it('move-down on the first row POSTs /api/sources/reorder with the swapped id order', async () => {
@@ -209,6 +217,11 @@ describe('SettingsView', () => {
       )
     })
     await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
+    // Outcome, not just the request: the refetched list must actually render in the new order.
+    await waitFor(() => {
+      const links = screen.getAllByRole('link', { name: /FINN|LinkedIn/ })
+      expect(links.map((l) => l.textContent)).toEqual(['LinkedIn', 'FINN'])
+    })
   })
 
   it('move-up disabled on first row, move-down disabled on last', async () => {

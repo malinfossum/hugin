@@ -115,8 +115,8 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   }
 
   return (
-    <div className="settings-view stack stack-lg">
-      <section aria-labelledby="settings-sources-heading" className="card stack">
+    <div className="settings-view settings-section">
+      <section aria-labelledby="settings-sources-heading" className="card settings-group">
         <h2 id="settings-sources-heading">{t('settings.sourcesHeading')}</h2>
         <p className="help">{t('settings.sourcesHint')}</p>
 
@@ -257,7 +257,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         </form>
       </section>
 
-      <section aria-labelledby="settings-language-heading" className="card stack">
+      <section aria-labelledby="settings-language-heading" className="card settings-group">
         <h2 id="settings-language-heading">{t('settings.languageHeading')}</h2>
         <fieldset className="lang-toggle cluster cluster-sm">
           <legend className="visually-hidden">{t('lang.toggleLabel')}</legend>
@@ -282,7 +282,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         </fieldset>
       </section>
 
-      <section aria-labelledby="settings-theme-heading" className="card stack">
+      <section aria-labelledby="settings-theme-heading" className="card settings-group">
         <h2 id="settings-theme-heading">{t('settings.themeHeading')}</h2>
         <button
           type="button"
