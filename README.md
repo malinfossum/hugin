@@ -37,7 +37,7 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 
 | Endpoint | What it does |
 |---|---|
-| `GET /api/status` | Sync timestamps, review mark, active-ad/company/pipeline counts, configured linkouts |
+| `GET /api/status` | Sync timestamps, review mark, active-ad/company/pipeline counts |
 | `GET /api/ads` | Active ads (`?kommune`, `?hidden`) |
 | `GET /api/new` | Companies and ads first seen since the last review mark |
 | `GET /api/companies` | Full synced company inventory (`?kommune`) |
@@ -45,6 +45,11 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 | `GET /api/pipeline` | Pipeline entries (`?status`) |
 | `GET /api/extract` | Downloadable data extract (`?scope`, `?format`, `?category`, `?includeActive`) |
 | `GET /api/sync/status` | Whether a background sync is currently running |
+| `GET /api/sources` | Configured link-out sources, in display order |
+| `POST /api/sources` | Adds a source (`{ label, url }`) |
+| `PUT /api/sources/{id}` | Updates a source's label/URL |
+| `POST /api/sources/reorder` | Sets display order (`{ ids }`, the full set, in the new order) |
+| `DELETE /api/sources/{id}` | Removes a source |
 | `PUT /api/pipeline/{orgnr}` | Sets pipeline status for a company |
 | `POST /api/ads/{feedId}/hide` | Hides an ad from the dashboard view |
 | `DELETE /api/ads/{feedId}/hide` | Unhides an ad |
@@ -63,7 +68,7 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 | `naeringskoder` | SN2025 industry codes; a prefix such as `"62"` matches every sub-code beneath it |
 | `keywords` | The ad-title recall net — can stay broad, `categories` narrows it |
 | `categories` | NAV's occupation categories (default `["IT"]`) filters out keyword coincidences like *prosjektutvikler massivtre*; ads NAV hasn't categorized always pass. `hugin list --ads` groups results by category |
-| `linkouts` | `{ "label", "url" }` pairs for sources Hugin can't fetch itself (finn.no, proff.no) — shown as a manual-check reminder in `hugin new` and the dashboard |
+| `linkouts` | `{ "label", "url" }` pairs for sources Hugin can't fetch itself — imported into the dashboard's Sources on first run only; manage them under Settings afterwards (this field is otherwise inert) |
 | `navToken` | `null` fetches NAV's rotating public token automatically; set a registered token here instead |
 
 Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400).
@@ -73,11 +78,11 @@ Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/
 - **Enhetsregisteret** (Brønnøysundregistrene) — open company data, no authentication. Both hovedenheter and underenheter are read, because regional branch offices are registered as underenheter of parents elsewhere.
 - **NAV stillingsfeed** (arbeidsplassen.no) — job ads under the [API terms](https://arbeidsplassen.nav.no/vilkar-api). Hugin stores the deep-link NAV requires, marks ads inactive as the feed reports them gone, and never presents an expired ad as active. A rotating public token is fetched automatically; a registered token can be set as `navToken`.
 
-Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor proff.no permits scraping — configure them as `linkouts` instead, and Hugin will remind you to check them by hand.
+Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor proff.no permits scraping — Hugin lists them (plus LinkedIn) as **Sources**: a link-out reminder to check by hand, managed from the dashboard's Settings view rather than `hugin.json`.
 
 ## Web dashboard
 
-A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the **Applications** (Søknader) view, active ads, and company inventory, track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, sort the list, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal. English and Norwegian (bokmål) are both built in, and a dark/light theme toggle sits next to the language switch in the topbar — both pick a default from your browser and remember your choice after that.
+A localhost dashboard over the same `hugin.json` / `hugin.db` as the CLI — browse the **Applications** (Søknader) view, active ads, and company inventory (one row per company, branches as tabs on its detail page), track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, sort and filter the list, and download a data extract (`.md`/`.txt`/`.json`), all from a browser instead of the terminal. A **Settings** view manages the link-out Sources (add, edit, reorder, remove) alongside language and theme. Browser back/forward and reload work as expected — each view (`/applications`, `/companies`, `/companies/{orgnr}`, `/export`, `/settings`) is a real, deep-linkable URL. English and Norwegian (bokmål) are both built in, and a dark/light theme toggle sits next to the language switch in the topbar — both pick a default from your browser and remember your choice after that.
 
 `--port` picks the listening port (default `5111`); `--config <path>` points at a different `hugin.json`, same as the CLI; `--no-browser` skips the automatic browser launch. Closing the console window stops it.
 
