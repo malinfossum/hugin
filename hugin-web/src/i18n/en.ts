@@ -38,6 +38,8 @@ export const en = {
   'sync.failedFull': 'Sync failed: {error}',
   'sync.failedPartial': 'Sync partially failed: {error}',
 
+  'sources.title': 'Sources',
+
   'trenger.heading': 'Needs action',
   'trenger.notApplied': 'active, not applied',
   'trenger.item': '{title} — {status} — {deadline}',

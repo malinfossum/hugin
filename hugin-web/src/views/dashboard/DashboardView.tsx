@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FristerList } from './FristerList'
 import { NyttSidenSist } from './NyttSidenSist'
+import { SourcesCard } from './SourcesCard'
 import { SyncHeader } from './SyncHeader'
 import { TrengerHandling } from './TrengerHandling'
 
@@ -10,6 +11,7 @@ export function DashboardView() {
   return (
     <div className="dashboard stack stack-lg">
       <SyncHeader onSyncCompleted={() => setRefreshKey((k) => k + 1)} />
+      <SourcesCard refreshToken={0} />
       <TrengerHandling refreshKey={refreshKey} />
       <FristerList refreshKey={refreshKey} />
       <NyttSidenSist refreshKey={refreshKey} />

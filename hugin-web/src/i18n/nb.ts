@@ -38,6 +38,8 @@ export const nb = {
   'sync.failedFull': 'Synk feilet: {error}',
   'sync.failedPartial': 'Synk delvis feilet: {error}',
 
+  'sources.title': 'Kilder',
+
   'trenger.heading': 'Trenger handling',
   'trenger.notApplied': 'aktiv, ikke søkt',
   'trenger.item': '{title} — {status} — {deadline}',

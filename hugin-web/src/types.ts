@@ -61,9 +61,11 @@ export interface SourceStateDto {
   lastSyncUtc: string
 }
 
-export interface LinkoutDto {
+export interface SourceDto {
+  id: number
   label: string
   url: string
+  position: number
 }
 
 export interface StatusDto {
@@ -73,7 +75,6 @@ export interface StatusDto {
   activeAds: number
   companies: number
   pipelineEntries: number
-  linkouts: LinkoutDto[]
 }
 
 export interface SourceResultDto {
