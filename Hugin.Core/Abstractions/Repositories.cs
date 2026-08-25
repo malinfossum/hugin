@@ -89,3 +89,20 @@ public interface IKommuneRepository
 
     public Task UpsertManyAsync(IReadOnlyList<Models.Kommune> kommuner, CancellationToken ct = default);
 }
+
+/// <summary>Dashboard header links — db-backed since v3.2 (was config-only). Position is
+/// 1-based and dense; every write that changes the set keeps it that way.</summary>
+public interface ISourceRepository
+{
+    Task<IReadOnlyList<Models.Source>> GetAllAsync(CancellationToken ct);       // ordered by Position
+
+    Task<Models.Source?> GetAsync(int id, CancellationToken ct);
+
+    Task<Models.Source> AddAsync(string label, string url, CancellationToken ct); // Position = max+1
+
+    Task<bool> UpdateAsync(int id, string label, string url, CancellationToken ct);
+
+    Task<bool> DeleteAsync(int id, CancellationToken ct);
+
+    Task<bool> ReorderAsync(IReadOnlyList<int> orderedIds, CancellationToken ct); // false if id set mismatch
+}

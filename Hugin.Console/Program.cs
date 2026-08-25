@@ -54,8 +54,9 @@ internal static class Program
 
         await using (var scope = host.Services.CreateAsyncScope())
         {
-            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>(),
-                loaded.DatabasePath);
+            var initServices = scope.ServiceProvider;
+            await HuginDbInitializer.InitAsync(initServices.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+                loaded.Config, initServices.GetRequiredService<IClock>().UtcNow);
         }
 
         await using var runScope = host.Services.CreateAsyncScope();

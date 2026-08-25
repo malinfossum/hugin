@@ -66,7 +66,11 @@ builder.Services.AddHostedService<StartupSync>();
 var app = builder.Build();
 
 await using (var scope = app.Services.CreateAsyncScope())
-    await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>(), loaded.DatabasePath);
+{
+    var services = scope.ServiceProvider;
+    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+        loaded.Config, services.GetRequiredService<IClock>().UtcNow);
+}
 
 app.UseHuginSecurity();
 

@@ -11,6 +11,7 @@ public sealed class HuginDbContext(DbContextOptions<HuginDbContext> options) : D
     public DbSet<SyncState> SyncStates => Set<SyncState>();
     public DbSet<ReviewMarkRow> ReviewMarks => Set<ReviewMarkRow>();
     public DbSet<Kommune> Kommuner => Set<Kommune>();
+    public DbSet<Source> Sources => Set<Source>();
 
     // SQLite has no DateTimeOffset type; without a converter to a comparable column, EF
     // cannot translate comparisons or ordering at all ("could not be translated"). The
@@ -30,6 +31,7 @@ public sealed class HuginDbContext(DbContextOptions<HuginDbContext> options) : D
         b.Entity<SyncState>().HasKey(s => s.Source);
         b.Entity<ReviewMarkRow>().HasKey(r => r.Id);
         b.Entity<Kommune>().HasKey(k => k.Number);
+        b.Entity<Source>().HasKey(s => s.Id);
     }
 }
 
