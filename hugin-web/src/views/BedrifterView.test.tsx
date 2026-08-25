@@ -131,7 +131,7 @@ describe('BedrifterView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
-  it('filters to companies with a website when the has-website checkbox is checked', async () => {
+  it('filters by website select: All shows both, Has website only companies with a website, No website only those without', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' }),
       company({ orgnr: '2', name: 'Beta Software', website: null }),
@@ -142,10 +142,21 @@ describe('BedrifterView', () => {
     await screen.findByText('Acme AS')
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('checkbox', { name: 'Har egen nettside' }))
+    const websiteFilter = screen.getByLabelText('Nettside')
+    await user.selectOptions(websiteFilter, 'Har nettside')
 
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+
+    await user.selectOptions(websiteFilter, 'Uten nettside')
+
+    expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+
+    await user.selectOptions(websiteFilter, 'Alle')
+
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
   it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
@@ -181,53 +192,41 @@ describe('BedrifterView', () => {
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
   })
 
-  it('a company with a website shows the plain website link, unchanged', async () => {
-    const companies = [company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' })]
+  it('list rows no longer show website links or the no-website note', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' }),
+      company({ orgnr: '2', name: 'Uten Nettside AS', website: null }),
+    ]
     renderView(fakeServer(companies, {}))
 
     await screen.findByText('Acme AS')
+    await screen.findByText('Uten Nettside AS')
 
+    expect(screen.queryByRole('link', { name: 'https://acme.example' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/har ikke egen nettside/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Google-søk' })).not.toBeInTheDocument()
+  })
+
+  it('CompanyDetail shows a Nettside row with the website link when present', async () => {
+    const companies = [company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '1': { company: companies[0], ads: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Acme AS')
+    await user.click(screen.getByRole('button', { name: /Acme AS/ }))
+
+    await screen.findByRole('heading', { name: 'Acme AS' })
+    expect(screen.getByText('Nettside')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'https://acme.example' })
     expect(link).toHaveAttribute('href', 'https://acme.example')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
-    expect(screen.queryByText(/har ikke egen nettside/)).not.toBeInTheDocument()
   })
 
-  it('a company without a website shows the fallback note and correctly-encoded Google/Proff links', async () => {
-    const companies = [
-      company({
-        orgnr: '1',
-        name: 'Uten Nettside AS',
-        website: null,
-        kommune: '0301',
-        kommuneNavn: 'Oslo',
-      }),
-    ]
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Uten Nettside AS')
-
-    expect(screen.getByText(/har ikke egen nettside/)).toBeInTheDocument()
-
-    const google = screen.getByRole('link', { name: 'Google-søk' })
-    expect(google).toHaveAttribute(
-      'href',
-      `https://www.google.com/search?q=${encodeURIComponent('"Uten Nettside AS" Oslo')}`
-    )
-    expect(google).toHaveAttribute('target', '_blank')
-    expect(google).toHaveAttribute('rel', 'noopener noreferrer')
-
-    const proff = screen.getByRole('link', { name: 'Proff.no' })
-    expect(proff).toHaveAttribute(
-      'href',
-      `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
-    )
-    expect(proff).toHaveAttribute('target', '_blank')
-    expect(proff).toHaveAttribute('rel', 'noopener noreferrer')
-  })
-
-  it('CompanyDetail shows the fallback links when the selected company has no website', async () => {
+  it('CompanyDetail shows the missing-website note and a Google fallback link when there is no website — no Proff anywhere', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Uten Nettside AS', website: null, kommuneNavn: 'Oslo' }),
     ]
@@ -246,10 +245,8 @@ describe('BedrifterView', () => {
       'href',
       `https://www.google.com/search?q=${encodeURIComponent('"Uten Nettside AS" Oslo')}`
     )
-    expect(screen.getByRole('link', { name: 'Proff.no' })).toHaveAttribute(
-      'href',
-      `https://www.proff.no/search?q=${encodeURIComponent('Uten Nettside AS')}`
-    )
+    expect(screen.queryByText(/proff/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /proff/i })).not.toBeInTheDocument()
   })
 
   it('displays an all-caps Brreg name in title case, in the row and the detail heading', async () => {

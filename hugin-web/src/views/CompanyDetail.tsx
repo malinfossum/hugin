@@ -64,12 +64,15 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
                 <dd>{detail.company.parentOrgnr}</dd>
               </>
             )}
+            <dt>{t('companies.websiteRow')}</dt>
+            <dd>
+              <CompanyLink
+                name={displayCompanyName(detail.company.name)}
+                kommuneNavn={detail.company.kommuneNavn}
+                website={detail.company.website}
+              />
+            </dd>
           </dl>
-          <CompanyLink
-            name={displayCompanyName(detail.company.name)}
-            kommuneNavn={detail.company.kommuneNavn}
-            website={detail.company.website}
-          />
 
           <h3>{t('companies.adHistory')}</h3>
           {detail.ads.length === 0 ? (

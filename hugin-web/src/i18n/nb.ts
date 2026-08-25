@@ -128,8 +128,10 @@ export const nb = {
   'companies.seeAdAtNav': 'Se annonse hos NAV',
   'companies.noWebsite': 'har ikke egen nettside',
   'companies.googleSearch': 'Google-søk',
-  'companies.proffSearch': 'Proff.no',
-  'companies.hasWebsite': 'Har egen nettside',
+  'companies.websiteFilterLabel': 'Nettside',
+  'companies.websiteHas': 'Har nettside',
+  'companies.websiteNone': 'Uten nettside',
+  'companies.websiteRow': 'Nettside',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

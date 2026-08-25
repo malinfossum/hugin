@@ -1,8 +1,9 @@
 import { useT } from '../i18n'
-import { googleSearchUrl, proffSearchUrl } from '../links'
+import { googleSearchUrl } from '../links'
 
-/** Every company row/detail always offers a working link (spec decision 6): the verified
- * website when present, else a muted note plus Google and Proff.no search fallbacks. */
+/** Every company row/detail always offers a working link (spec decision 6, amended v3.2):
+ * the verified website when present, else a muted note plus a Google search fallback.
+ * Proff dropped from the fallback in v3.2 — it lives on only as a seeded header source. */
 export function CompanyLink({
   name,
   kommuneNavn,
@@ -29,9 +30,6 @@ export function CompanyLink({
       {t('companies.noWebsite')} —
       <a href={googleSearchUrl(name, kommuneNavn)} target="_blank" rel="noopener noreferrer">
         {t('companies.googleSearch')}
-      </a>
-      <a href={proffSearchUrl(name)} target="_blank" rel="noopener noreferrer">
-        {t('companies.proffSearch')}
       </a>
     </span>
   )

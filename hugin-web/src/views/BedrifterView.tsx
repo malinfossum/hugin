@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { displayCompanyName } from '../companyName'
-import { CompanyLink } from '../components/CompanyLink'
 import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
@@ -52,7 +51,7 @@ export function BedrifterView({
   const [error, setError] = useState<string | null>(null)
   const [kommune, setKommune] = useState('')
   const [search, setSearch] = useState('')
-  const [hasWebsiteOnly, setHasWebsiteOnly] = useState(false)
+  const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
@@ -101,7 +100,8 @@ export function BedrifterView({
   const filtered = companies.filter((c) => {
     if (kommune && c.kommune !== kommune) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (hasWebsiteOnly && !c.website) return false
+    if (websiteFilter === 'has' && !c.website) return false
+    if (websiteFilter === 'none' && c.website) return false
     return true
   })
 
@@ -139,12 +139,6 @@ export function BedrifterView({
         </span>
         <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
       </button>
-      <CompanyLink
-        name={displayCompanyName(c.name)}
-        kommuneNavn={c.kommuneNavn}
-        website={c.website}
-        className="text-muted bedrifter-link"
-      />
     </div>
   )
 
@@ -198,14 +192,21 @@ export function BedrifterView({
           />
         </div>
 
-        <label className="cluster cluster-sm bedrifter-website-filter">
-          <input
-            type="checkbox"
-            checked={hasWebsiteOnly}
-            onChange={(event) => setHasWebsiteOnly(event.target.checked)}
-          />
-          {t('companies.hasWebsite')}
-        </label>
+        <div className="field">
+          <label className="label" htmlFor="bedrifter-website-filter">
+            {t('companies.websiteFilterLabel')}
+          </label>
+          <select
+            id="bedrifter-website-filter"
+            className="select"
+            value={websiteFilter}
+            onChange={(event) => setWebsiteFilter(event.target.value as '' | 'has' | 'none')}
+          >
+            <option value="">{t('common.all')}</option>
+            <option value="has">{t('companies.websiteHas')}</option>
+            <option value="none">{t('companies.websiteNone')}</option>
+          </select>
+        </div>
       </div>
 
       <p className="text-muted">{t('companies.count', { n: filtered.length })}</p>

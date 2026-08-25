@@ -128,8 +128,10 @@ export const en = {
   'companies.seeAdAtNav': 'See ad at NAV',
   'companies.noWebsite': 'no website of their own',
   'companies.googleSearch': 'Google search',
-  'companies.proffSearch': 'Proff.no',
-  'companies.hasWebsite': 'Has own website',
+  'companies.websiteFilterLabel': 'Website',
+  'companies.websiteHas': 'Has website',
+  'companies.websiteNone': 'No website',
+  'companies.websiteRow': 'Website',
 
   'export.scope': 'Scope',
   'export.scopeNew': 'New',
