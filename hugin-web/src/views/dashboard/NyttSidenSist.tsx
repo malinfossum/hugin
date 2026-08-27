@@ -96,7 +96,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
       )}
       {!error && loaded && data && (
         <div className="stack">
-          <div className="stack stack-sm">
+          <div className="panel stack stack-sm">
             <h3>{t('newSince.newCompanies', { n: data.companies.length })}</h3>
             {groupByKommune(data.companies).map(([kommune, companies]) => (
               <div key={kommune} className="stack stack-sm">
@@ -113,7 +113,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
             ))}
           </div>
 
-          <div className="stack stack-sm">
+          <div className="panel stack stack-sm">
             <h3>{t('newSince.newAds', { n: data.ads.length })}</h3>
             {data.ads.length > 0 && (
               <ul className="stack stack-sm">

@@ -43,6 +43,7 @@ builder.Services.AddScoped<IPipelineRepository, EfPipelineRepository>();
 builder.Services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
 builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
 builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
+builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
 builder.Services.AddSingleton<IBrregClient>(_ =>
     new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
@@ -66,7 +67,14 @@ builder.Services.AddHostedService<StartupSync>();
 var app = builder.Build();
 
 await using (var scope = app.Services.CreateAsyncScope())
-    await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>(), loaded.DatabasePath);
+{
+    var services = scope.ServiceProvider;
+    // DI-resolved, not the outer `loaded.Config` local — same instance in production, but this
+    // is what lets a test host (ApiFactory) override HuginConfig and have the override actually
+    // reach seeding.
+    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+        services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
+}
 
 app.UseHuginSecurity();
 
@@ -96,6 +104,7 @@ app.MapAds();
 app.MapReads();
 app.MapWrites();
 app.MapSync();
+app.MapSources();
 
 // SPA fallback — but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
 app.MapFallback(async context =>

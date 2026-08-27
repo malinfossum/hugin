@@ -3,7 +3,6 @@ import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDateTime } from '../../dates'
 import { type T, useT } from '../../i18n'
-import { sourceLabel } from '../../links'
 import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
 
 function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
@@ -108,29 +107,6 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
           t('sync.now')
         )}
       </button>
-      <ul className="linkouts cluster cluster-sm">
-        <li>
-          <a href="https://www.brreg.no" target="_blank" rel="noopener noreferrer">
-            {t('sync.brregLabel')}
-          </a>
-        </li>
-        <li>
-          <a
-            href="https://arbeidsplassen.nav.no/stillinger"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            NAV
-          </a>
-        </li>
-        {(status?.linkouts ?? []).map((linkout) => (
-          <li key={linkout.url}>
-            <a href={linkout.url} target="_blank" rel="noopener noreferrer">
-              {sourceLabel(linkout.url, linkout.label)}
-            </a>
-          </li>
-        ))}
-      </ul>
       {failureMessage && (
         <p role="status" className="alert alert-danger">
           {failureMessage}

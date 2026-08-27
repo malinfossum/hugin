@@ -6,7 +6,7 @@ describe('formatDate', () => {
     expect(formatDate('2026-08-23T10:00:00')).toBe('23.08.2026')
   })
   it('pads day and month', () => {
-    expect(formatDate('2026-01-05T12:00:00Z')).toBe('05.01.2026')
+    expect(formatDate('2026-01-05T12:00:00')).toBe('05.01.2026')
   })
 })
 

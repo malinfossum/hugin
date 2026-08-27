@@ -54,8 +54,9 @@ internal static class Program
 
         await using (var scope = host.Services.CreateAsyncScope())
         {
-            await HuginDbInitializer.InitAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>(),
-                loaded.DatabasePath);
+            var initServices = scope.ServiceProvider;
+            await HuginDbInitializer.InitAsync(initServices.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+                loaded.Config, initServices.GetRequiredService<IClock>().UtcNow);
         }
 
         await using var runScope = host.Services.CreateAsyncScope();
@@ -118,6 +119,7 @@ internal static class Program
         services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
         services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
         services.AddScoped<IKommuneRepository, EfKommuneRepository>();
+        services.AddScoped<ISourceRepository, EfSourceRepository>();
 
         services.AddSingleton<IBrregClient>(_ =>
             new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
@@ -225,13 +227,13 @@ internal static class Program
             }
         }
 
-        if (config.Linkouts.Count > 0)
+        if (items.Sources.Count > 0)
         {
             Console.WriteLine();
             Console.WriteLine("## Husk å sjekke manuelt");
             Console.WriteLine();
-            foreach (var linkout in config.Linkouts)
-                Console.WriteLine($"  {linkout.Label}: {linkout.Url}");
+            foreach (var source in items.Sources)
+                Console.WriteLine($"  {source.Label}: {source.Url}");
         }
 
         if (command.MarkSeen)

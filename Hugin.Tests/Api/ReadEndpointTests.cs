@@ -8,11 +8,11 @@ namespace Hugin.Tests.Api;
 
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
 public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
-public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads);
+public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads,
+    List<CompanyDtoProbe> Branches);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
-    int Companies, int PipelineEntries, List<LinkoutProbe> Linkouts);
-public sealed record LinkoutProbe(string Label, string Url);
+    int Companies, int PipelineEntries);
 
 [TestFixture]
 public sealed class ReadEndpointTests
@@ -189,6 +189,51 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
+    public async Task Company_detail_lists_branches_ordered_by_kommune_then_name()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("925836613", "Norsk Tipping AS", "3407", "62.100", null,
+                false, null), now);
+            // Muni 4601 sorts after 0301 — asserting on kommune order, not insertion order, catches an
+            // impl that accidentally orders by name only (which would put these two the other way).
+            await repo.UpsertAsync(new RegisterCompany("111111111", "Norsk Tipping AS Avd B", "4601", "62.100",
+                "925836613", true, null), now);
+            await repo.UpsertAsync(new RegisterCompany("222222222", "Norsk Tipping AS Avd A", "0301", "62.100",
+                "925836613", true, null), now);
+        }
+
+        var response = await _client.GetAsync("/api/companies/925836613");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var dto = await response.Content.ReadFromJsonAsync<CompanyDetailDtoProbe>();
+        Assert.That(dto!.Branches.Select(b => b.Orgnr), Is.EqualTo(new[] { "222222222", "111111111" }),
+            "0301 (muni) sorts before 4601 regardless of name");
+    }
+
+    [Test]
+    public async Task Company_detail_branches_empty_when_the_requested_orgnr_is_itself_a_branch()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("925836613", "Norsk Tipping AS", "3407", "62.100", null,
+                false, null), now);
+            await repo.UpsertAsync(new RegisterCompany("111111111", "Norsk Tipping AS Avd B", "4601", "62.100",
+                "925836613", true, null), now);
+        }
+
+        var response = await _client.GetAsync("/api/companies/111111111");
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var dto = await response.Content.ReadFromJsonAsync<CompanyDetailDtoProbe>();
+        Assert.That(dto!.Branches, Is.Empty);
+    }
+
+    [Test]
     public async Task Pipeline_unknown_status_returns_400()
     {
         var response = await _client.GetAsync("/api/pipeline?status=tull");
@@ -220,7 +265,7 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
-    public async Task Status_returns_counts_and_configured_linkouts()
+    public async Task Status_returns_counts()
     {
         using (var scope = _factory.Services.CreateScope())
         {
@@ -243,6 +288,5 @@ public sealed class ReadEndpointTests
         Assert.That(dto!.ActiveAds, Is.EqualTo(1));
         Assert.That(dto.Companies, Is.EqualTo(1));
         Assert.That(dto.PipelineEntries, Is.EqualTo(1));
-        Assert.That(dto.Linkouts.Select(l => l.Label), Is.EqualTo(new[] { "Finn.no" }));
     }
 }

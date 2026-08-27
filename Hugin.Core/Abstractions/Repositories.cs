@@ -6,6 +6,11 @@ public interface ICompanyRepository
 
     public Task<IReadOnlyList<Models.Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default);
 
+    /// <summary>Branch units of one hovedenhet (<c>IsBranch &amp;&amp; ParentOrgnr == orgnr</c>),
+    /// ordered by municipality number then name — kommune-name ordering is a display-layer concern
+    /// (the endpoint resolves that name the same way it does for every other company).</summary>
+    public Task<IReadOnlyList<Models.Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default);
+
     public Task<IReadOnlyList<Models.Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default);
 
     /// <summary>New row → FirstSeen = seenAt; always → LastSeenInRegister = seenAt plus a field refresh.
@@ -88,4 +93,21 @@ public interface IKommuneRepository
     public Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken ct = default);
 
     public Task UpsertManyAsync(IReadOnlyList<Models.Kommune> kommuner, CancellationToken ct = default);
+}
+
+/// <summary>Dashboard header links — db-backed since v3.2 (was config-only). Position is
+/// 1-based and dense; every write that changes the set keeps it that way.</summary>
+public interface ISourceRepository
+{
+    Task<IReadOnlyList<Models.Source>> GetAllAsync(CancellationToken ct);       // ordered by Position
+
+    Task<Models.Source?> GetAsync(int id, CancellationToken ct);
+
+    Task<Models.Source> AddAsync(string label, string url, CancellationToken ct); // Position = max+1
+
+    Task<bool> UpdateAsync(int id, string label, string url, CancellationToken ct);
+
+    Task<bool> DeleteAsync(int id, CancellationToken ct);
+
+    Task<bool> ReorderAsync(IReadOnlyList<int> orderedIds, CancellationToken ct); // false if id set mismatch
 }

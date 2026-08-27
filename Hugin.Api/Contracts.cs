@@ -43,7 +43,7 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
     private static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
 }
 
-public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads);
+public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads, IReadOnlyList<CompanyDto> Branches);
 
 public sealed record PipelineDto(string Orgnr, string CompanyName, string Status, bool Starred,
     string Why, string? Note, string? Svar, DateTimeOffset Updated)
@@ -61,7 +61,16 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries, IReadOnlyList<Linkout> Linkouts);
+    int ActiveAds, int Companies, int PipelineEntries);
+
+public sealed record SourceDto(int Id, string Label, string Url, int Position)
+{
+    public static SourceDto From(Source s) => new(s.Id, s.Label, s.Url, s.Position);
+}
+
+public sealed record SourceWriteRequest(string Label, string Url);
+
+public sealed record ReorderRequest(IReadOnlyList<int> Ids);
 
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug

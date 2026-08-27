@@ -1,13 +1,15 @@
-import { type ReactElement, useLayoutEffect, useRef, useState } from 'react'
+import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
+import { parseRoute, type Route, routePath } from './routing'
 import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
 import { EksportView } from './views/EksportView'
+import { SettingsView } from './views/SettingsView'
 import './styles/main.css'
 
-const VIEWS = ['dashboard', 'applications', 'companies', 'export'] as const
+const VIEWS = ['dashboard', 'applications', 'companies', 'export', 'settings'] as const
 export type ViewName = (typeof VIEWS)[number]
 
 const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
@@ -15,29 +17,27 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
   applications: 'nav.applications',
   companies: 'nav.companies',
   export: 'nav.export',
-}
-
-// Each view mounts once, on first visit, and then stays mounted (just hidden) so filters,
-// an opened detail, and scroll position all survive switching views — everything still resets
-// on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
-// keeps polling while hidden behind another view — intended, since a running sync must finish
-// its announce/refresh cycle regardless of which view is currently visible.
-const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
-  dashboard: () => <DashboardView />,
-  applications: () => <ApplicationsView />,
-  companies: () => <BedrifterView />,
-  export: () => <EksportView />,
+  settings: 'nav.settings',
 }
 
 function AppShell() {
-  const [view, setView] = useState<ViewName>('dashboard')
-  const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set(['dashboard']))
+  const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
+  const view = route.view
+  const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set([route.view]))
   const scrollByView = useRef<Map<ViewName, number>>(new Map())
+  // popstate fires after the URL has already changed, so by the time the handler runs
+  // `route` (the closed-over state) is the OUTGOING view — exactly what scroll memory needs.
+  // A ref mirrors the latest route for that handler without re-subscribing it on every render.
+  const routeRef = useRef(route)
   const t = useT()
   const [lang, setLang] = useLang()
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   )
+  // Bumped after any Settings sources mutation; forwarded to the dashboard's SourcesCard as
+  // refreshToken so it refetches without the two views needing any direct coupling.
+  const [sourcesVersion, setSourcesVersion] = useState(0)
+  const bumpSources = () => setSourcesVersion((v) => v + 1)
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light'
@@ -50,12 +50,62 @@ function AppShell() {
     setTheme(next)
   }
 
-  const switchView = (next: ViewName) => {
-    if (next === view) return
-    scrollByView.current.set(view, window.scrollY)
-    setVisited((prev) => (prev.has(next) ? prev : new Set(prev).add(next)))
-    setView(next)
+  // Each view mounts once, on first visit, and then stays mounted (just hidden) so filters,
+  // an opened detail, and scroll position all survive switching views — everything still resets
+  // on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
+  // keeps polling while hidden behind another view — intended, since a running sync must finish
+  // its announce/refresh cycle regardless of which view is currently visible. Declared inside
+  // AppShell (not module scope) so the thunks can close over theme/lang state and callbacks.
+  const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
+    dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
+    applications: () => <ApplicationsView />,
+    companies: () => (
+      <BedrifterView
+        selectedOrgnr={route.company}
+        onOpenCompany={(orgnr) => navigate({ view: 'companies', company: orgnr })}
+        onCloseCompany={() => navigate({ view: 'companies', company: null })}
+      />
+    ),
+    export: () => <EksportView />,
+    settings: () => (
+      <SettingsView theme={theme} onToggleTheme={toggleTheme} onSourcesChanged={bumpSources} />
+    ),
   }
+
+  // Applies a parsed/target route to state: marks its view visited (for keep-mounted) and
+  // updates both the live route state and the ref popstate/navigate read scroll-memory from.
+  // Wrapped in useCallback (stable identity, all deps are stable setters/refs) so the popstate
+  // effect below can list it as a dependency without re-subscribing on every render.
+  const apply = useCallback((next: Route) => {
+    setVisited((prev) => (prev.has(next.view) ? prev : new Set(prev).add(next.view)))
+    routeRef.current = next
+    setRouteState(next)
+  }, [])
+
+  const navigate = (next: Route) => {
+    if (routePath(next) === routePath(routeRef.current)) return
+    scrollByView.current.set(routeRef.current.view, window.scrollY)
+    window.history.pushState(null, '', routePath(next))
+    apply(next)
+  }
+
+  const switchView = (next: ViewName) => navigate({ view: next, company: null })
+
+  // Normalizes the initial URL (e.g. an unknown path collapses to '/') without adding a
+  // history entry, so a stray Back right after load doesn't land on a path the app never
+  // actually rendered.
+  useEffect(() => {
+    window.history.replaceState(null, '', routePath(routeRef.current))
+  }, [])
+
+  useEffect(() => {
+    const onPopState = () => {
+      scrollByView.current.set(routeRef.current.view, window.scrollY)
+      apply(parseRoute(window.location.pathname))
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [apply])
 
   useLayoutEffect(() => {
     window.scrollTo(0, scrollByView.current.get(view) ?? 0)
@@ -66,7 +116,18 @@ function AppShell() {
       <div className="app-shell">
         <header className="topbar">
           <div className="container cluster-between">
-            <span className="brand">Hugin</span>
+            <span className="brand">
+              {/* Raven mark colored via CSS (currentColor) — var() never resolves in an
+                  SVG presentation attribute, so the fill must not be hardcoded. */}
+              <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                <path
+                  fill="currentColor"
+                  fillRule="evenodd"
+                  d="M9 24.5 Q6 17 7.8 11.2 Q10 5.6 16 5.8 Q18.6 6 20.2 7.4 L29.2 11.6 Q29.8 12.2 29 13 L20.4 15.4 Q18.4 17.6 15.6 18.6 L16.8 20.6 L13 22 Q11.6 23 11.4 24.5 Z M18.7 10.4 a1.9 1.9 0 1 1 -3.8 0 a1.9 1.9 0 1 1 3.8 0 Z"
+                />
+              </svg>
+              Hugin
+            </span>
             <div className="topbar-controls cluster cluster-sm">
               <nav aria-label={t('nav.ariaLabel')}>
                 <ul className="nav-list">

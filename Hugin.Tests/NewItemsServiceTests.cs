@@ -1,4 +1,5 @@
 using Hugin.Core.Abstractions;
+using Hugin.Core.Models;
 using Hugin.Core.Services;
 
 namespace Hugin.Tests;
@@ -18,7 +19,7 @@ public class NewItemsServiceTests
     public async Task Null_when_never_synced()
     {
         var service = new NewItemsService(new FakeCompanyRepository(), new FakeAdRepository(),
-            new FakeReviewMarkRepository(), new FakeClock(Later));
+            new FakeSourceRepository(), new FakeReviewMarkRepository(), new FakeClock(Later));
 
         Assert.That(await service.GetNewAsync(), Is.Null);
     }
@@ -34,7 +35,7 @@ public class NewItemsServiceTests
         await ads.UpsertAsync(Ad("gammel-annonse"), Mark);
         await ads.UpsertAsync(Ad("ny-annonse"), Later);
 
-        var service = new NewItemsService(companies, ads,
+        var service = new NewItemsService(companies, ads, new FakeSourceRepository(),
             new FakeReviewMarkRepository { Mark = Mark }, new FakeClock(Later));
 
         var result = await service.GetNewAsync();
@@ -46,11 +47,31 @@ public class NewItemsServiceTests
     }
 
     [Test]
+    public async Task Returns_sources_from_the_repository_in_position_order()
+    {
+        var sources = new FakeSourceRepository();
+        await sources.AddAsync("LinkedIn", "https://www.linkedin.com/jobs/", CancellationToken.None);
+        await sources.AddAsync("FINN", "https://www.finn.no/job", CancellationToken.None);
+
+        var service = new NewItemsService(new FakeCompanyRepository(), new FakeAdRepository(), sources,
+            new FakeReviewMarkRepository { Mark = Mark }, new FakeClock(Later));
+
+        var result = await service.GetNewAsync();
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Sources.Select(s => (s.Label, s.Url)), Is.EqualTo(new[]
+        {
+            ("LinkedIn", "https://www.linkedin.com/jobs/"),
+            ("FINN", "https://www.finn.no/job"),
+        }));
+    }
+
+    [Test]
     public async Task MarkSeen_advances_to_now()
     {
         var reviewMark = new FakeReviewMarkRepository { Mark = Mark };
         var service = new NewItemsService(new FakeCompanyRepository(), new FakeAdRepository(),
-            reviewMark, new FakeClock(Later));
+            new FakeSourceRepository(), reviewMark, new FakeClock(Later));
 
         await service.MarkSeenAsync();
 

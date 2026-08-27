@@ -158,6 +158,28 @@ namespace Hugin.Infrastructure.Data.Migrations
                     b.ToTable("Pipeline");
                 });
 
+            modelBuilder.Entity("Hugin.Core.Models.Source", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Sources");
+                });
+
             modelBuilder.Entity("Hugin.Core.Models.SyncState", b =>
                 {
                     b.Property<string>("Source")

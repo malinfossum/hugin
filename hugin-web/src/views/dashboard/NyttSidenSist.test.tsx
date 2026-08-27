@@ -238,6 +238,19 @@ describe('NyttSidenSist', () => {
     expect(retry).toBeInTheDocument()
   })
 
+  it('renders the new-companies and new-ads subsections inside distinct panel wrappers', async () => {
+    renderView(fakeServer(newDto()))
+
+    const companiesHeading = await screen.findByRole('heading', { name: 'Nye bedrifter (3)' })
+    const adsHeading = screen.getByRole('heading', { name: 'Nye annonser (1)' })
+
+    const companiesPanel = companiesHeading.closest('.panel')
+    const adsPanel = adsHeading.closest('.panel')
+    expect(companiesPanel).toBeInTheDocument()
+    expect(adsPanel).toBeInTheDocument()
+    expect(companiesPanel).not.toBe(adsPanel)
+  })
+
   it('posts the asOf shown when the dialog opened, not a newer asOf from a refetch while it was still open (regression)', async () => {
     const user = userEvent.setup()
     let currentDto = newDto({ asOf: '2026-08-19T09:30:00Z' })

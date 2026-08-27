@@ -39,9 +39,11 @@ function formatExpires(expires: string | null): string | null {
   return expires ? formatDate(expires) : null
 }
 
+type Show = 'active' | 'all'
+
 export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
-  const [showHidden, setShowHidden] = useState(false)
+  const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
@@ -52,12 +54,12 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
 
   const load = useCallback(() => {
     setError(null)
-    const path = showHidden ? '/api/ads?hidden=true' : '/api/ads'
+    const path = show === 'all' ? '/api/ads?hidden=true' : '/api/ads'
     return api
       .get<AdDto[]>(path)
       .then(setAds)
       .catch(() => setError(t('frister.loadError')))
-  }, [showHidden, t])
+  }, [show, t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
   useEffect(() => {
@@ -117,14 +119,20 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
         {t('frister.heading')}
       </h2>
-      <label className="cluster cluster-sm">
-        <input
-          type="checkbox"
-          checked={showHidden}
-          onChange={(event) => setShowHidden(event.target.checked)}
-        />
-        {t('frister.showHidden')}
-      </label>
+      <div className="field">
+        <label className="label" htmlFor="frister-show">
+          {t('frister.showLabel')}
+        </label>
+        <select
+          id="frister-show"
+          className="select"
+          value={show}
+          onChange={(event) => setShow(event.target.value as Show)}
+        >
+          <option value="active">{t('frister.showDefault')}</option>
+          <option value="all">{t('frister.showAll')}</option>
+        </select>
+      </div>
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
@@ -136,7 +144,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
       <ul className="stack stack-sm">
         {ads.map((ad) => (
           <li key={ad.feedId} className="frist-row">
-            <div className="frist-row-title stack stack-sm">
+            <div className="stack stack-sm">
               {ad.sourceUrl ? (
                 <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
                   {ad.title}
@@ -149,13 +157,13 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               </span>
             </div>
             <div className="frist-meta">
-              <span className="frist-date text-muted">{formatExpires(ad.expires)}</span>
+              <span className="text-muted">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
               <span className="frist-category text-muted">{ad.category}</span>
             </div>
-            <div className="frist-row-actions cluster cluster-sm">
+            <div className="cluster cluster-sm">
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
               )}

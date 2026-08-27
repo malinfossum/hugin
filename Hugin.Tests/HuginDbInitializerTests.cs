@@ -1,3 +1,4 @@
+using Hugin.Core.Config;
 using Hugin.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -105,6 +106,98 @@ public sealed class HuginDbInitializerTests
             SqliteConnection.ClearAllPools();
             File.Delete(path);
             File.Delete(backupPath);
+        }
+    }
+
+    [Test]
+    public async Task InitAsync_seeds_default_sources_then_config_linkouts_in_order()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-seed-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path))
+                .Options;
+
+            var config = new HuginConfig { Linkouts = [new Linkout("kodejobb", "kodejobb.no")] };
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db, config: config);
+
+            await using var check = new HuginDbContext(options);
+            var sources = await check.Sources.OrderBy(s => s.Position).ToListAsync();
+
+            Assert.That(sources.Select(s => (s.Label, s.Url, s.Position)), Is.EqualTo(new[]
+            {
+                ("FINN", "https://www.finn.no/job", 1),
+                ("LinkedIn", "https://www.linkedin.com/jobs/", 2),
+                ("Proff", "https://www.proff.no", 3),
+                ("kodejobb", "https://kodejobb.no", 4),
+            }));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public async Task InitAsync_does_not_reseed_sources_on_a_second_run()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-seed-twice-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path))
+                .Options;
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db);
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db);
+
+            await using var check = new HuginDbContext(options);
+            Assert.That(await check.Sources.CountAsync(), Is.EqualTo(3), "the marker row must stop a second seed");
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+        }
+    }
+
+    [Test]
+    public async Task InitAsync_does_not_reseed_after_every_source_is_deleted()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-seed-deleted-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path))
+                .Options;
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db);
+
+            await using (var db = new HuginDbContext(options))
+            {
+                db.Sources.RemoveRange(db.Sources);
+                await db.SaveChangesAsync();
+            }
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db);
+
+            await using var check = new HuginDbContext(options);
+            Assert.That(await check.Sources.CountAsync(), Is.Zero,
+                "seed is once-ever via the marker row, not when-empty — deleting everything must not resurrect it");
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
         }
     }
 }

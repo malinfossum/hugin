@@ -53,6 +53,20 @@ input[type="text"] {
   min-height: 44px;
 }
 
+/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent
+   through `color` (the SVG uses fill="currentColor" — var() in a fill attribute
+   would silently not resolve). */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.brand-mark {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: rgb(var(--accent-rgb));
+}
+
 /* <fieldset> is the semantic grouping element for the NO/EN language toggle (a11y lint
    prefers it over a bare role="group" div) — strip its default border/padding/min-width so
    it lays out as a plain button cluster instead of a boxed form section. */
@@ -125,7 +139,8 @@ input[type="text"] {
 .nytt-siden-sist ul,
 .applications-view ul,
 .bedrifter-view ul,
-.company-detail ul {
+.company-detail ul,
+.sources-card ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -208,17 +223,6 @@ input[type="text"] {
   align-items: flex-end;
 }
 
-.bedrifter-branches {
-  margin-inline-start: var(--space-5);
-}
-.bedrifter-branches summary {
-  cursor: pointer;
-  color: var(--text-muted);
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-}
-
 /* Company detail — definition list as a two-column term/value grid. */
 .company-detail-dl {
   display: grid;
@@ -264,9 +268,6 @@ input[type="text"] {
    make the naked button cluster sit high without this). */
 .eksport-controls {
   align-items: flex-end;
-}
-.eksport-controls .eksport-include-active {
-  align-self: center;
 }
 
 .visually-hidden {

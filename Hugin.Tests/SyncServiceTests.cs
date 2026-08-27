@@ -380,6 +380,59 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Malformed_configured_kommune_number_fails_with_a_clear_message_under_a_fylke_expanded_scope()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner = { new Kommune { Number = "3903", Name = "HORTEN" } },
+        };
+        var config = new HuginConfig
+        {
+            Municipalities = [new MunicipalityRef("Ugyldig", "37")],
+            Fylker = ["39"],
+        };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37» — må være 4 sifre"));
+        Assert.That(h.Brreg.CompaniesRequests, Is.Empty,
+            "validation runs before any brreg call — chunking must never throw a raw ArgumentOutOfRangeException");
+    }
+
+    [Test]
+    public async Task Malformed_configured_kommune_number_fails_the_same_way_in_a_plain_unscaled_config()
+    {
+        // The plain-config branch (SetEquals) skips chunking entirely, so it would otherwise
+        // never hit the ArgumentOutOfRangeException path — but a malformed number is just as
+        // wrong here, so validation must not be scoped to only the fylke-expanded branch.
+        var config = new HuginConfig { Municipalities = [new MunicipalityRef("Ugyldig", "37")] };
+
+        var h = Build(config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37» — må være 4 sifre"));
+        Assert.That(h.Brreg.CompaniesRequests, Is.Empty);
+    }
+
+    [Test]
+    public async Task Non_digit_configured_kommune_number_fails_with_a_clear_message()
+    {
+        // Wrong-length ("37") and non-digit-but-4-char ("ABCD") are both invalid shapes the
+        // same validation must catch.
+        var config = new HuginConfig { Municipalities = [new MunicipalityRef("Ugyldig", "ABCD")] };
+
+        var h = Build(config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «ABCD» — må være 4 sifre"));
+    }
+
+    [Test]
     public async Task A_later_chunk_failing_reports_partial_progress_and_keeps_earlier_chunks_stored()
     {
         var brreg = new FakeBrregClient
@@ -495,6 +548,25 @@ public class SyncServiceTests
         await h.Service.SyncAsync();
 
         Assert.That(h.Companies.Store["934161181"].Website, Is.Null);
+    }
+
+    [Test]
+    public async Task Two_ads_for_the_same_employer_with_different_homepages_pin_the_first_one_adopted()
+    {
+        // Pinned rule (first-write-wins within a run): AdoptWebsiteAsync only fills a website
+        // that is currently null (or a confirmed-dead one) — so once the first ad in this page
+        // has claimed the empty slot, the second ad's different homepage sees a filled slot and
+        // backs off. This is a pin of today's upsert behavior, not a new rule.
+        var adA = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://forste.no" };
+        var adB = AdWithEmployer("b", "934161181") with { EmployerHomepage = "https://andre.no" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([adA, adB], null)));
+        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://forste.no"),
+            "pinned: first ad in the page wins the empty website slot; the second ad's different " +
+            "homepage is dropped because AdoptWebsiteAsync only adopts into a null/confirmed-dead website");
     }
 
     [Test]

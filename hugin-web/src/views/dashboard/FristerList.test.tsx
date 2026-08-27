@@ -178,7 +178,7 @@ describe('FristerList', () => {
     expect(document.activeElement).toBe(heading)
   })
 
-  it('refetches with hidden=true when "Vis skjulte" is checked and shows Angre skjul', async () => {
+  it('defaults the "Vis" select to "Aktive frister" and refetches with hidden=true when "Også skjulte" is chosen, showing Angre skjul', async () => {
     const user = userEvent.setup()
     const ads = [
       ad({ feedId: 'a1', title: 'Synlig', hidden: false }),
@@ -188,9 +188,10 @@ describe('FristerList', () => {
     renderList(fetchMock)
 
     await screen.findAllByRole('listitem')
+    expect(screen.getByLabelText('Vis')).toHaveValue('active')
     expect(screen.queryByText('Skjult')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('checkbox', { name: 'Vis skjulte' }))
+    await user.selectOptions(screen.getByLabelText('Vis'), 'Også skjulte')
 
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([u]) => u === '/api/ads?hidden=true')).toBe(true)

@@ -3,7 +3,8 @@ using Hugin.Core.Models;
 
 namespace Hugin.Core.Services;
 
-public sealed record NewItems(IReadOnlyList<Company> Companies, IReadOnlyList<Ad> Ads, DateTimeOffset Since);
+public sealed record NewItems(IReadOnlyList<Company> Companies, IReadOnlyList<Ad> Ads, DateTimeOffset Since,
+    IReadOnlyList<Source> Sources);
 
 /// <summary>
 /// Answers "what has turned up since I last looked". The mark moves only when Malin says so
@@ -12,6 +13,7 @@ public sealed record NewItems(IReadOnlyList<Company> Companies, IReadOnlyList<Ad
 public sealed class NewItemsService(
     ICompanyRepository companies,
     IAdRepository ads,
+    ISourceRepository sources,
     IReviewMarkRepository reviewMark,
     IClock clock)
 {
@@ -23,7 +25,8 @@ public sealed class NewItemsService(
         return new NewItems(
             await companies.GetFirstSeenAfterAsync(since, ct),
             await ads.GetFirstSeenAfterAsync(since, ct),
-            since);
+            since,
+            await sources.GetAllAsync(ct));
     }
 
     public Task MarkSeenAsync(CancellationToken ct = default) => reviewMark.SetAsync(clock.UtcNow, ct);

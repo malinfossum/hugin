@@ -35,8 +35,16 @@ public static class ReadEndpoints
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.");
 
             var kommuner = await kommuneRepo.GetAllAsync();
+
+            // A branch's own detail never lists branches — Brreg's register is two-tier, so a
+            // branch has none of its own, and showing its parent's siblings here would just be
+            // the same tab strip one level removed from where the user actually is.
+            var branches = company.IsBranch
+                ? []
+                : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner)).ToList();
+
             return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner),
-                (await ads.GetByEmployerAsync(orgnr)).Select(AdDto.FromAd).ToList()));
+                (await ads.GetByEmployerAsync(orgnr)).Select(AdDto.FromAd).ToList(), branches));
         });
 
         app.MapGet("/api/pipeline", async (IPipelineRepository pipeline, ICompanyRepository companies, string? status) =>
@@ -76,7 +84,7 @@ public static class ReadEndpoints
         });
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
-            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, HuginConfig config) =>
+            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline) =>
         {
             var brreg = await syncState.GetAsync("brreg");
             var nav = await syncState.GetAsync("nav");
@@ -86,8 +94,7 @@ public static class ReadEndpoints
                 await mark.GetAsync(),
                 (await ads.GetActiveAsync()).Count,
                 (await companies.GetAllAsync()).Count,
-                (await pipeline.GetAllAsync()).Count,
-                config.Linkouts));
+                (await pipeline.GetAllAsync()).Count));
         });
     }
 

@@ -18,6 +18,13 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
     public async Task<IReadOnlyList<Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         await db.Companies.Where(c => c.FirstSeen > after).OrderBy(c => c.Name).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default) =>
+        await db.Companies
+            .Where(c => c.IsBranch && c.ParentOrgnr == orgnr)
+            .OrderBy(c => c.MunicipalityNumber)
+            .ThenBy(c => c.Name)
+            .ToListAsync(ct);
+
     public async Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default)
     {
         var existing = await db.Companies.FindAsync([company.Orgnr], ct);
@@ -258,6 +265,68 @@ public sealed class EfKommuneRepository(HuginDbContext db) : IKommuneRepository
         }
 
         await db.SaveChangesAsync(ct);
+    }
+}
+
+public sealed class EfSourceRepository(HuginDbContext db) : ISourceRepository
+{
+    public async Task<IReadOnlyList<Source>> GetAllAsync(CancellationToken ct) =>
+        await db.Sources.OrderBy(s => s.Position).ToListAsync(ct);
+
+    public async Task<Source?> GetAsync(int id, CancellationToken ct) =>
+        await db.Sources.FindAsync([id], ct);
+
+    public async Task<Source> AddAsync(string label, string url, CancellationToken ct)
+    {
+        var maxPosition = await db.Sources.Select(s => (int?)s.Position).MaxAsync(ct) ?? 0;
+        var source = new Source { Label = label, Url = url, Position = maxPosition + 1 };
+        db.Sources.Add(source);
+        await db.SaveChangesAsync(ct);
+        return source;
+    }
+
+    public async Task<bool> UpdateAsync(int id, string label, string url, CancellationToken ct)
+    {
+        if (await db.Sources.FindAsync([id], ct) is not { } source) return false;
+
+        source.Label = label;
+        source.Url = url;
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
+    {
+        if (await db.Sources.FindAsync([id], ct) is not { } source) return false;
+
+        db.Sources.Remove(source);
+
+        // ISourceRepository documents Position as 1-based and dense after every write that
+        // changes the set — a delete must close the gap it would otherwise leave, not just
+        // shrink the set, or a downstream consumer inferring position from list index would
+        // silently desync from the stored value.
+        var remaining = await db.Sources.Where(s => s.Id != id).OrderBy(s => s.Position).ToListAsync(ct);
+        for (var i = 0; i < remaining.Count; i++)
+            remaining[i].Position = i + 1;
+
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> ReorderAsync(IReadOnlyList<int> orderedIds, CancellationToken ct)
+    {
+        var sources = await db.Sources.ToListAsync(ct);
+
+        // Every existing id must appear exactly once — a mismatch (missing or extra) leaves
+        // positions untouched rather than silently dropping or orphaning a source.
+        if (sources.Count != orderedIds.Count || !sources.Select(s => s.Id).ToHashSet().SetEquals(orderedIds))
+            return false;
+
+        for (var i = 0; i < orderedIds.Count; i++)
+            sources.First(s => s.Id == orderedIds[i]).Position = i + 1;
+
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 }
 

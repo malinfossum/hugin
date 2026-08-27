@@ -144,6 +144,16 @@ public sealed class SyncService(
         var fetchedTotal = 0;
         try
         {
+            // Every scope number must be a real 4-digit kommunenummer before it is used to
+            // chunk or query Brreg. Checked ahead of the branch below, for both branches —
+            // a malformed configured number (too short, too long, non-digit) is just as wrong
+            // in a plain unscaled config as in a fylke-expanded one, and either way it must
+            // surface as this clear message instead of an ArgumentOutOfRangeException from
+            // GroupBy(n => n[..2]) or a confusing failure once it reaches Brreg.
+            if (scope.AllowedNumbers.FirstOrDefault(n => !IsValidKommuneNumber(n)) is { } invalid)
+                return new SourceResult(false, 0,
+                    $"Ugyldig kommunenummer i konfigurasjonen: «{invalid}» — må være 4 sifre");
+
             var configured = config.Municipalities.Select(m => m.Number).ToHashSet();
             var chunks = scope.AllowedNumbers.SetEquals(configured)
                 ? [scope.AllowedNumbers.ToArray()]
@@ -165,6 +175,8 @@ public sealed class SyncService(
             return new SourceResult(false, fetchedTotal, ex.Message);
         }
     }
+
+    private static bool IsValidKommuneNumber(string n) => n.Length == 4 && n.All(char.IsAsciiDigit);
 
     /// <summary>
     /// The kommune register is a name lookup, not tracked data — a failure here must never
