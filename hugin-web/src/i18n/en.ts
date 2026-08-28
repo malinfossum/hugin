@@ -26,6 +26,7 @@ export const en = {
   'status.answered': 'Answered',
 
   'sync.heading': 'Sync',
+  'sync.statusError': 'Could not load sync status.',
   'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Never',
@@ -40,6 +41,7 @@ export const en = {
   'sync.failedPartial': 'Sync partially failed: {error}',
 
   'sources.title': 'Sources',
+  'sources.loadError': 'Could not load sources.',
 
   'settings.sourcesHeading': 'Sources',
   'settings.sourcesHint':
@@ -57,6 +59,7 @@ export const en = {
   'settings.themeHeading': 'Theme',
 
   'trenger.heading': 'Needs action',
+  'trenger.loadError': 'Could not load ads.',
   'trenger.notApplied': 'active, not applied',
   'trenger.item': '{title} — {status} — {deadline}',
   'trenger.deadlineToday': 'due today',

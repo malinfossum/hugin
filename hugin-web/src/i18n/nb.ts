@@ -26,6 +26,7 @@ export const nb = {
   'status.answered': 'Svar',
 
   'sync.heading': 'Synkronisering',
+  'sync.statusError': 'Kunne ikke laste synk-status.',
   'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Aldri',
@@ -40,6 +41,7 @@ export const nb = {
   'sync.failedPartial': 'Synk delvis feilet: {error}',
 
   'sources.title': 'Kilder',
+  'sources.loadError': 'Kunne ikke laste kilder.',
 
   'settings.sourcesHeading': 'Kilder',
   'settings.sourcesHint':
@@ -57,6 +59,7 @@ export const nb = {
   'settings.themeHeading': 'Tema',
 
   'trenger.heading': 'Trenger handling',
+  'trenger.loadError': 'Kunne ikke laste annonser.',
   'trenger.notApplied': 'aktiv, ikke søkt',
   'trenger.item': '{title} — {status} — {deadline}',
   'trenger.deadlineToday': 'frist i dag',

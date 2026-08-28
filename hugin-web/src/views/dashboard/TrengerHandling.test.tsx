@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../types'
@@ -89,5 +90,29 @@ describe('TrengerHandling', () => {
       expect(fetchMock).toHaveBeenCalled()
     })
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('shows a load error with retry on fetch failure, and the section does not vanish', async () => {
+    const user = userEvent.setup()
+    const failing = vi.fn(() => Promise.reject(new Error('network down')))
+    vi.stubGlobal('fetch', failing)
+    render(
+      <LanguageProvider>
+        <TrengerHandling refreshKey={0} />
+      </LanguageProvider>
+    )
+
+    expect(await screen.findByText('Kunne ikke laste annonser.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+    expect(retry).toBeInTheDocument()
+
+    const ads = [ad({ feedId: 'a1', title: 'Kom tilbake', pipelineStatus: 'active', daysLeft: 3 })]
+    vi.stubGlobal('fetch', mockFetch(ads))
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Kunne ikke laste annonser.')).not.toBeInTheDocument()
+    })
+    expect(await screen.findByText(/Kom tilbake/)).toBeInTheDocument()
   })
 })
