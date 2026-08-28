@@ -167,4 +167,11 @@ export const en = {
   'export.loadError': 'Could not load export.',
   'export.copiedAnnounce': 'Copied to clipboard.',
   'export.copyFailedAnnounce': 'Could not copy — select the text manually.',
+
+  'focus.title': 'What do you want to follow?',
+  'focus.intro': 'This becomes your starting filter — change it anytime in Settings.',
+  'focus.allOfNorway': 'All of Norway',
+  'focus.categoriesLegend': 'Categories',
+  'focus.categoriesHint': 'None selected = all.',
+  'focus.start': 'Start',
 } as const

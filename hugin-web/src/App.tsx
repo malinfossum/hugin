@@ -1,6 +1,8 @@
 import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
+import { FocusProvider, useFocus } from './focus'
 import { LanguageProvider, type TranslationKey, useT } from './i18n'
 import { parseRoute, type Route, routePath } from './routing'
 import { ApplicationsView } from './views/ApplicationsView'
@@ -22,6 +24,9 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 }
 
 function AppShell() {
+  const { focus, setFocus } = useFocus()
+  const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
+  const h1Ref = useRef<HTMLHeadingElement>(null)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
   const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set([route.view]))
@@ -151,7 +156,9 @@ function AppShell() {
           </div>
         </header>
         <main className="container main-content stack stack-lg">
-          <h1 className="visually-hidden">Hugin</h1>
+          <h1 ref={h1Ref} tabIndex={-1} className="visually-hidden">
+            Hugin
+          </h1>
           {VIEWS.filter((name) => visited.has(name)).map((name) => (
             <div key={name} hidden={name !== view}>
               {VIEW_COMPONENTS[name]()}
@@ -159,6 +166,17 @@ function AppShell() {
           ))}
         </main>
       </div>
+      <FirstRunDialog
+        open={focus === null && !focusPromptDismissed}
+        onSave={(f) => {
+          setFocus(f)
+          h1Ref.current?.focus()
+        }}
+        onDismiss={() => {
+          setFocusPromptDismissed(true)
+          h1Ref.current?.focus()
+        }}
+      />
     </LiveRegionProvider>
   )
 }
@@ -166,7 +184,9 @@ function AppShell() {
 export default function App() {
   return (
     <LanguageProvider>
-      <AppShell />
+      <FocusProvider>
+        <AppShell />
+      </FocusProvider>
     </LanguageProvider>
   )
 }

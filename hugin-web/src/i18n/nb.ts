@@ -167,4 +167,12 @@ export const nb = {
   'export.loadError': 'Kunne ikke laste eksport.',
   'export.copiedAnnounce': 'Kopiert til utklippstavlen.',
   'export.copyFailedAnnounce': 'Kunne ikke kopiere — merk teksten manuelt.',
+
+  'focus.title': 'Hva vil du følge?',
+  'focus.intro':
+    'Valget blir startfilteret ditt — du kan endre det når som helst under Innstillinger.',
+  'focus.allOfNorway': 'Hele landet',
+  'focus.categoriesLegend': 'Kategorier',
+  'focus.categoriesHint': 'Ingen valgt = alle.',
+  'focus.start': 'Start',
 } as const
