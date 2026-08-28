@@ -2,7 +2,7 @@
 
 Hugin is Odin's raven of thought — it flies out each morning and returns with tidings. The identity is a responsive two-mark system: a watchful raven in profile, scanning ahead.
 
-**Source of truth:** Hugin Brand Pack v1.0.0 (local: `Development\Assets\Brand_Project_Design\Hugin-Brand-Pack\`). This folder holds only the copies the repo references; regenerate nothing here — re-export from the pack. Full usage rules live in the pack's `07-guidelines/brand-guidelines.md`.
+**Source of truth:** Hugin Brand Pack v1.0.0 (local: `Development\Assets\Brand_Project_Design\Hugin-Brand-Pack\`). This folder holds only the copies the repo references; regenerate nothing here — re-export from the pack. Full usage rules live in [brand-guidelines.md](brand-guidelines.md) (vendored from the pack's `07-guidelines/`).
 
 ## The two marks
 
@@ -15,7 +15,7 @@ Hugin is Odin's raven of thought — it flies out each morning and returns with 
 - `banner.png` — README hero, 1280×320 (pack `04-github/readme-banner-1280x320.png`).
 - `social-preview.png` — GitHub social preview / OG card, 1280×640 (pack `04-github/social-preview-1280x640.png`). Upload under repo Settings → General → Social preview; `index.html`'s `og:image` points at this file on `main`.
 - `src/cdp-shot.mjs` — zero-dependency Brave-CDP screenshotter, kept as a general visual-verification tool (the old raster sources it rendered are gone — rasters now come from the pack).
-- In the app: `hugin-web/public/` carries the pack's web set (favicon.svg/.ico, apple-touch-icon, PWA icons, site.webmanifest); the topbar uses `hugin-web/src/components/HuginMark.tsx` (micro variant, colored by `.brand-mark` in `main.css`).
+- In the app: `hugin-web/public/` carries the pack's web set (favicon.svg/.ico, apple-touch-icon, PWA icons, site.webmanifest); the topbar uses `hugin-web/src/components/HuginMark.tsx` (primary variant at 2rem/32 px — the primary mark's minimum — colored by `.brand-mark` in `main.css`).
 
 ## Color and type
 
