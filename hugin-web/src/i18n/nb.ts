@@ -122,6 +122,7 @@ export const nb = {
   'applications.starError': 'Kunne ikke oppdatere stjerne.',
 
   'companies.loadError': 'Kunne ikke laste bedrifter.',
+  'companies.fylke': 'Fylke',
   'companies.kommune': 'Kommune',
   'companies.search': 'Søk',
   'companies.count': '{n} bedrifter',

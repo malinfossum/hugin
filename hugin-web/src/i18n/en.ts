@@ -122,6 +122,7 @@ export const en = {
   'applications.starError': 'Could not update star.',
 
   'companies.loadError': 'Could not load companies.',
+  'companies.fylke': 'County',
   'companies.kommune': 'Municipality',
   'companies.search': 'Search',
   'companies.count': '{n} companies',

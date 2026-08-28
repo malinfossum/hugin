@@ -155,6 +155,63 @@ describe('BedrifterView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
+  it('offers a Fylke select with options derived from loaded companies', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const fylke = screen.getByLabelText('Fylke')
+    const optionLabels = within(fylke)
+      .getAllByRole('option')
+      .map((o) => o.textContent)
+    expect(optionLabels).toEqual(['Alle', 'Innlandet', 'Oslo'])
+  })
+
+  it('choosing a fylke hides companies outside it and narrows the kommune options', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', name: 'Gamle AS', kommune: '3405', kommuneNavn: 'Lillehammer' }),
+      company({ orgnr: '3', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.getByText('Gamle AS')).toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+
+    const kommuneOptions = within(screen.getByLabelText('Kommune'))
+      .getAllByRole('option')
+      .map((o) => o.textContent)
+    expect(kommuneOptions).toEqual(['Alle', 'Hamar', 'Lillehammer'])
+  })
+
+  it('switching fylke resets an incompatible kommune filter', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.selectOptions(screen.getByLabelText('Kommune'), '3403')
+
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Oslo')
+
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+    expect((screen.getByLabelText('Kommune') as HTMLSelectElement).value).toBe('')
+  })
+
   it('filters by website select: All shows both, Has website only companies with a website, No website only those without', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example' }),

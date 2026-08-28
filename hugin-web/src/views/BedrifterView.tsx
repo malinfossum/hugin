@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { displayCompanyName } from '../companyName'
+import { fylkeName, fylkeOf } from '../fylker'
 import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
@@ -56,6 +57,7 @@ export function BedrifterView({
 }: BedrifterViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [fylke, setFylke] = useState('')
   const [kommune, setKommune] = useState('')
   const [search, setSearch] = useState('')
   const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
@@ -90,16 +92,29 @@ export function BedrifterView({
     el.focus()
   }, [selectedOrgnr])
 
+  const fylker = useMemo(() => {
+    const present = new Set<string>()
+    for (const c of companies) {
+      const f = fylkeOf(c.kommune)
+      if (f) present.add(f)
+    }
+    return [...present]
+      .map((nr) => [nr, fylkeName(nr)] as const)
+      .sort(([, a], [, b]) => a.localeCompare(b))
+  }, [companies])
+
   const kommuner = useMemo(() => {
     const byNumber = new Map<string, string>()
     for (const c of companies) {
       if (!c.kommune) continue
+      if (fylke && fylkeOf(c.kommune) !== fylke) continue
       if (!byNumber.has(c.kommune)) byNumber.set(c.kommune, c.kommuneNavn ?? c.kommune)
     }
     return Array.from(byNumber.entries()).sort(([, a], [, b]) => a.localeCompare(b))
-  }, [companies])
+  }, [companies, fylke])
 
   const filtered = companies.filter((c) => {
+    if (fylke && fylkeOf(c.kommune) !== fylke) return false
     if (kommune && c.kommune !== kommune) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
     if (websiteFilter === 'has' && !c.website) return false
@@ -162,6 +177,29 @@ export function BedrifterView({
   return (
     <div className="bedrifter-view stack">
       <div className="bedrifter-filters cluster">
+        <div className="field">
+          <label className="label" htmlFor="bedrifter-fylke">
+            {t('companies.fylke')}
+          </label>
+          <select
+            id="bedrifter-fylke"
+            className="select"
+            value={fylke}
+            onChange={(event) => {
+              const next = event.target.value
+              setFylke(next)
+              if (next && kommune && fylkeOf(kommune) !== next) setKommune('')
+            }}
+          >
+            <option value="">{t('common.all')}</option>
+            {fylker.map(([number, name]) => (
+              <option key={number} value={number}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="field">
           <label className="label" htmlFor="bedrifter-kommune">
             {t('companies.kommune')}
