@@ -53,17 +53,33 @@ input[type="text"] {
   min-height: 44px;
 }
 
+/* Brand typography. The hugin palette ships Space Grotesk (500/700) + Figtree (400/500/600)
+   only — any other weight gets browser-synthesized and renders blurry, so every rule here
+   pins text to a bundled face. The design-system is read-only; --weight-display (root
+   default 600, missing in Space Grotesk) is overridden at the palette scope instead —
+   fold into the workbench hugin palette on the next design-system pass. */
+[data-palette='hugin'] {
+  --weight-display: 700;
+}
+th,
+strong,
+b {
+  font-weight: 600; /* browser default 700 has no Figtree face */
+}
+
 /* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent
    through `color` (the SVG uses fill="currentColor" — var() in a fill attribute
-   would silently not resolve). */
+   would silently not resolve). The wordmark matches the banner lockup: Space Grotesk 700. */
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
 }
 .brand-mark {
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 2rem;
+  height: 2rem;
   color: rgb(var(--accent-rgb));
 }
 
