@@ -22,10 +22,14 @@
 
 	/* Stronger borders so cards/inputs read as edges, not smudges.
 	   --border nudged from #3a3126 (1.48:1 on --surface-2) to #3b3227
-	   (1.50:1) to clear the WCAG 1.4.11 non-text floor kenaz.css documents. */
+	   (1.50:1) to clear the WCAG 1.4.11 non-text floor. */
 	--border: #3b3227;
 	--border-strong: #4a3f2e;
 	--border-soft: #241d15;
+
+	/* Control boundary (SC 1.4.11, see colors.css) — 3.35:1 on the page,
+	   3.16:1 on the --surface-2 field. */
+	--control-border: #726147;
 
 	/* Ember accent, turned up. */
 	--accent-rgb: 214 106 48;

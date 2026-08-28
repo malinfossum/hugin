@@ -1,6 +1,6 @@
 /*
  * Classic — the pre-3.0.0 default identity, preserved as an opt-in.
- * 3.0.0 changes what "no data-palette" renders to a Kenaz/Gold blend (see the
+ * 3.0.0 changes what "no data-palette" renders to the house amber-gold (see the
  * "Default identity" comment in tokens/colors.css), replacing the 2.x default.
  * Before that, "no palette" meant this: true-black surfaces, cool blue-grey
  * accent, Sora display over Figtree body. Nothing here is new — every value is
@@ -8,6 +8,11 @@
  * in colors.css and typography.css, which are unchanged and still declare
  * them; this file just gives an unpinned consumer that wants to keep the 2.x
  * look a name to pin instead of freezing at design-system@2.x.
+ *
+ * kenaz.css carries these same values, and that duplication is deliberate.
+ * This file is frozen history — it must keep matching the plain :root blocks
+ * forever, and a test enforces that. Kenaz is a living brand that may move.
+ * Do not collapse one into the other.
  * Opt in with <html data-palette="classic">.
  */
 [data-palette="classic"] {

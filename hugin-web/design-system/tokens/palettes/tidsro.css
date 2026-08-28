@@ -32,6 +32,11 @@
 	--border-strong: #78726b;
 	--border-soft: #262626;
 
+	/* Control boundary (SC 1.4.11, see colors.css) — border-strong IS tidsro's
+	   control affordance (see above) and already clears the gate: 4.17:1 on the
+	   page, 3.88:1 on the --surface-2 field. */
+	--control-border: var(--border-strong);
+
 	/* Brass — the gold that already sits in Tidsro's pine-in-hourglass mark. The UI follows the
 	   icon, not the reverse; do not drift one without the other. */
 	--accent-rgb: 227 179 65;
