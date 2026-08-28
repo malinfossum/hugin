@@ -1,5 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Hugin.Core.Abstractions;
+using Hugin.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hugin.Tests.Api;
 
@@ -98,6 +102,24 @@ public sealed class SourcesEndpointTests
     }
 
     [Test]
+    public async Task Put_races_with_a_concurrent_delete_and_returns_404()
+    {
+        var fakeSources = new FakeSourceRepository { RemoveAfterUpdate = true };
+        fakeSources.Store.Add(new Source { Id = 1, Label = "X", Url = "https://x.no", Position = 1 });
+
+        using var raceFactory = _factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll(typeof(ISourceRepository));
+            services.AddSingleton<ISourceRepository>(fakeSources);
+        }));
+        using var client = raceFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Hugin", "1");
+
+        var response = await client.PutAsJsonAsync("/api/sources/1", new { label = "Y", url = "https://y.no" });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [Test]
     public async Task Reorder_happy_path_changes_get_order()
     {
         var ids = (await GetSources()).Select(s => s.Id).ToList();
@@ -108,6 +130,13 @@ public sealed class SourcesEndpointTests
 
         var after = await GetSources();
         Assert.That(after.Select(s => s.Id), Is.EqualTo(reversed));
+    }
+
+    [Test]
+    public async Task Reorder_WithNullIds_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/sources/reorder", new { });
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]

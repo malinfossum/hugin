@@ -28,13 +28,19 @@ public static class SourcesEndpoints
             if (!await sources.UpdateAsync(id, normalized.Label, normalized.Url, ct))
                 return Results.Problem(statusCode: 404, title: $"Fant ikke kilde {id}.");
 
-            return Results.Ok(SourceDto.From((await sources.GetAsync(id, ct))!));
+            return await sources.GetAsync(id, ct) is { } updated
+                ? Results.Ok(SourceDto.From(updated))
+                : Results.Problem(statusCode: 404, title: $"Fant ikke kilde {id}.");
         });
 
         app.MapPost("/api/sources/reorder", async (ISourceRepository sources, ReorderRequest request, CancellationToken ct) =>
-            await sources.ReorderAsync(request.Ids, ct)
+        {
+            if (request.Ids is null) return Results.Problem(statusCode: 400, title: "Mangler id-liste.");
+
+            return await sources.ReorderAsync(request.Ids, ct)
                 ? Results.NoContent()
-                : Results.Problem(statusCode: 400, title: "Rekkefølgen stemmer ikke med lagrede kilder."));
+                : Results.Problem(statusCode: 400, title: "Rekkefølgen stemmer ikke med lagrede kilder.");
+        });
 
         app.MapDelete("/api/sources/{id:int}", async (ISourceRepository sources, int id, CancellationToken ct) =>
             await sources.DeleteAsync(id, ct)
