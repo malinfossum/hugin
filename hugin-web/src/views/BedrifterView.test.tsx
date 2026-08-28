@@ -628,6 +628,21 @@ describe('BedrifterView', () => {
     expect(loadFocus()).toEqual({ fylke: '34', kommune: '3403', categories: [] })
   })
 
+  it('choosing a kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '0301', kommuneNavn: 'Oslo' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
+    await user.selectOptions(screen.getByLabelText('Kommune'), '0301')
+
+    expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
+  })
+
   it('write-back happens even when no focus was stored yet (a manual choice is an answer)', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),

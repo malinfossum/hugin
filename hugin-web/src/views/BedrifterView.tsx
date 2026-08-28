@@ -75,9 +75,12 @@ export function BedrifterView({
   // A manual region choice here IS an answer to the first-run question — write it back to the
   // shared focus even when focus was still null, so the dialog doesn't reopen next launch.
   // Categories are preserved as-is; this view never edits them (Settings owns that).
+  // A kommune picked while fylke is still '' (the all-of-Norway option) needs its fylke derived
+  // before storing — loadFocus rejects a kommune without a matching fylke, so the raw shape
+  // would round-trip as null on the next boot and silently drop the choice.
   const writeBackRegion = (nextFylke: string, nextKommune: string) => {
     setFocus({
-      fylke: nextFylke || null,
+      fylke: nextFylke || fylkeOf(nextKommune),
       kommune: nextKommune || null,
       categories: focus?.categories ?? [],
     })

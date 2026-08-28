@@ -422,6 +422,24 @@ describe('SettingsView', () => {
     })
   })
 
+  it('choosing a Fokus kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
+    const user = userEvent.setup()
+    const companies = [
+      company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
+      company({ orgnr: '2', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    renderView(fakeServer([], companies))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
+    await waitFor(() => {
+      expect(within(screen.getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(3)
+    })
+    await user.selectOptions(screen.getByLabelText('Kommune'), '0301')
+
+    expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
+  })
+
   it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: [] })

@@ -83,9 +83,12 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     announce(t('settings.focusUpdated'))
   }
 
+  // A kommune picked while focus.fylke is still unset needs its fylke derived before storing —
+  // loadFocus rejects a kommune without a matching fylke, so the raw shape would round-trip as
+  // null on the next boot and silently drop the choice.
   const handleFocusKommuneChange = (nextKommune: string) => {
     setFocus({
-      fylke: focus?.fylke ?? null,
+      fylke: focus?.fylke ?? fylkeOf(nextKommune),
       kommune: nextKommune || null,
       categories: focus?.categories ?? [],
     })
