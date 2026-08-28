@@ -256,4 +256,14 @@ describe('App first-run focus dialog', () => {
       categories: [],
     })
   })
+
+  it('moves focus to the app heading once the dialog closes after Start', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Hugin' }))
+  })
 })
