@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
@@ -225,6 +225,40 @@ describe('EksportView', () => {
     await vi.waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kopiert til utklippstavlen.')
     })
+  })
+
+  it('ignores a stale preview response that resolves after a newer request', async () => {
+    const user = userEvent.setup()
+    let resolveStale: (response: Response) => void = () => {}
+    const stalePromise = new Promise<Response>((resolve) => {
+      resolveStale = resolve
+    })
+    let callIndex = 0
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (!url.startsWith('/api/extract')) return Promise.reject(new Error(`unhandled ${url}`))
+      callIndex += 1
+      if (callIndex === 1) return Promise.resolve(textResponse('INITIAL'))
+      if (callIndex === 2) return stalePromise
+      return Promise.resolve(textResponse('NEW'))
+    })
+    renderView(fetchMock)
+
+    await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
+    await screen.findByText('INITIAL', { selector: 'pre' })
+
+    // Two rapid format flips: the first request (OLD) stalls, the second (NEW) resolves first.
+    await user.selectOptions(screen.getByLabelText('Format'), 'txt')
+    await user.selectOptions(screen.getByLabelText('Format'), 'json')
+
+    await screen.findByText('NEW', { selector: 'pre' })
+
+    resolveStale(textResponse('OLD'))
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(screen.getByText('NEW', { selector: 'pre' })).toBeInTheDocument()
+    expect(screen.queryByText('OLD', { selector: 'pre' })).not.toBeInTheDocument()
   })
 
   it('announces a manual-copy fallback when the clipboard write fails', async () => {

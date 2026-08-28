@@ -1,6 +1,8 @@
 import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
+import { FocusProvider, useFocus } from './focus'
 import { LanguageProvider, type TranslationKey, useT } from './i18n'
 import { parseRoute, type Route, routePath } from './routing'
 import { ApplicationsView } from './views/ApplicationsView'
@@ -22,6 +24,11 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 }
 
 function AppShell() {
+  const { focus, setFocus } = useFocus()
+  const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
+  const h1Ref = useRef<HTMLHeadingElement>(null)
+  const focusDialogOpen = focus === null && !focusPromptDismissed
+  const prevFocusDialogOpen = useRef(focusDialogOpen)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
   const [visited, setVisited] = useState<ReadonlySet<ViewName>>(new Set([route.view]))
@@ -111,6 +118,16 @@ function AppShell() {
     window.scrollTo(0, scrollByView.current.get(view) ?? 0)
   }, [view])
 
+  // FirstRunDialog is a native <dialog> — while it's open+modal, everything outside it is
+  // inert, so focusing the h1 from onSave/onDismiss while the dialog is still open is a no-op.
+  // Instead watch the dialog-open boolean's true->false transition: child effects run before
+  // parent effects, so FirstRunDialog has already called dialog.close() by the time this fires,
+  // for both the Start (onSave) and Esc (onDismiss) paths alike.
+  useEffect(() => {
+    if (prevFocusDialogOpen.current && !focusDialogOpen) h1Ref.current?.focus()
+    prevFocusDialogOpen.current = focusDialogOpen
+  }, [focusDialogOpen])
+
   return (
     <LiveRegionProvider>
       <div className="app-shell">
@@ -151,7 +168,9 @@ function AppShell() {
           </div>
         </header>
         <main className="container main-content stack stack-lg">
-          <h1 className="visually-hidden">Hugin</h1>
+          <h1 ref={h1Ref} tabIndex={-1} className="visually-hidden">
+            Hugin
+          </h1>
           {VIEWS.filter((name) => visited.has(name)).map((name) => (
             <div key={name} hidden={name !== view}>
               {VIEW_COMPONENTS[name]()}
@@ -159,6 +178,11 @@ function AppShell() {
           ))}
         </main>
       </div>
+      <FirstRunDialog
+        open={focusDialogOpen}
+        onSave={(f) => setFocus(f)}
+        onDismiss={() => setFocusPromptDismissed(true)}
+      />
     </LiveRegionProvider>
   )
 }
@@ -166,7 +190,9 @@ function AppShell() {
 export default function App() {
   return (
     <LanguageProvider>
-      <AppShell />
+      <FocusProvider>
+        <AppShell />
+      </FocusProvider>
     </LanguageProvider>
   )
 }

@@ -383,6 +383,10 @@ internal sealed class FakeSourceRepository : ISourceRepository
 {
     public List<Source> Store { get; } = [];
 
+    /// <summary>When set, UpdateAsync succeeds but removes the row before returning — simulates
+    /// a concurrent delete landing between the endpoint's UpdateAsync and its re-fetch.</summary>
+    public bool RemoveAfterUpdate { get; set; }
+
     public Task<IReadOnlyList<Source>> GetAllAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Source>>(Store.OrderBy(s => s.Position).ToList());
 
@@ -401,6 +405,7 @@ internal sealed class FakeSourceRepository : ISourceRepository
         if (Store.FirstOrDefault(s => s.Id == id) is not { } source) return Task.FromResult(false);
         source.Label = label;
         source.Url = url;
+        if (RemoveAfterUpdate) Store.Remove(source);
         return Task.FromResult(true);
     }
 

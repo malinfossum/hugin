@@ -1,8 +1,11 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useAnnounce } from '../components/LiveRegion'
+import { KNOWN_CATEGORIES, useFocus } from '../focus'
+import { FYLKER, fylkeOf } from '../fylker'
 import { useLang, useT } from '../i18n'
-import type { SourceDto } from '../types'
+import type { CompanyDto, SourceDto } from '../types'
 
 interface Props {
   theme: 'dark' | 'light'
@@ -16,6 +19,7 @@ interface SourceFormState {
 }
 
 const EMPTY_FORM: SourceFormState = { label: '', url: '' }
+const FYLKE_OPTIONS = [...FYLKER.entries()]
 
 /** Settings view (spec v3.2 item 8): sources CRUD + reorder, plus language and theme — the
  * "home" for these prefs, while the topbar keeps its own quick toggles. Discovery-config
@@ -30,19 +34,84 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [editError, setEditError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<SourceDto | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+  const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
   const t = useT()
   const [lang, setLang] = useLang()
+  const announce = useAnnounce()
+  const { focus, setFocus, resetFocus } = useFocus()
 
   const load = useCallback(() => {
+    setListError(null)
     return api
       .get<SourceDto[]>('/api/sources')
       .then(setSources)
-      .catch(() => setSources([]))
-  }, [])
+      .catch(() => setListError(t('sources.loadError')))
+  }, [t])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // Lazy, one-shot fetch backing the Fokus kommune select's options — a failure just leaves the
+  // select at its "Alle" option, so it's a silent catch (no error UI, nothing to retry).
+  useEffect(() => {
+    api
+      .get<CompanyDto[]>('/api/companies')
+      .then(setFocusCompanies)
+      .catch(() => {})
+  }, [])
+
+  const focusKommuner = useMemo(() => {
+    const byNumber = new Map<string, string>()
+    for (const c of focusCompanies) {
+      if (!c.kommune) continue
+      if (focus?.fylke && fylkeOf(c.kommune) !== focus.fylke) continue
+      if (!byNumber.has(c.kommune)) byNumber.set(c.kommune, c.kommuneNavn ?? c.kommune)
+    }
+    return Array.from(byNumber.entries()).sort(([, a], [, b]) => a.localeCompare(b))
+  }, [focusCompanies, focus?.fylke])
+
+  const handleFocusFylkeChange = (nextFylke: string) => {
+    const currentKommune = focus?.kommune ?? ''
+    const nextKommune =
+      nextFylke && currentKommune && fylkeOf(currentKommune) !== nextFylke ? '' : currentKommune
+    setFocus({
+      fylke: nextFylke || null,
+      kommune: nextKommune || null,
+      categories: focus?.categories ?? [],
+    })
+    announce(t('settings.focusUpdated'))
+  }
+
+  // A kommune picked while focus.fylke is still unset needs its fylke derived before storing —
+  // loadFocus rejects a kommune without a matching fylke, so the raw shape would round-trip as
+  // null on the next boot and silently drop the choice.
+  const handleFocusKommuneChange = (nextKommune: string) => {
+    setFocus({
+      fylke: focus?.fylke ?? fylkeOf(nextKommune),
+      kommune: nextKommune || null,
+      categories: focus?.categories ?? [],
+    })
+    announce(t('settings.focusUpdated'))
+  }
+
+  const toggleFocusCategory = (category: string) => {
+    const categories = focus?.categories ?? []
+    const nextCategories = categories.includes(category)
+      ? categories.filter((c) => c !== category)
+      : [...categories, category]
+    setFocus({
+      fylke: focus?.fylke ?? null,
+      kommune: focus?.kommune ?? null,
+      categories: nextCategories,
+    })
+    announce(t('settings.focusUpdated'))
+  }
+
+  const handleFocusReset = () => {
+    resetFocus()
+    announce(t('settings.focusResetDone'))
+  }
 
   const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -56,6 +125,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     setAddForm(EMPTY_FORM)
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceAdded'))
   }
 
   const startEdit = (source: SourceDto) => {
@@ -82,6 +152,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     cancelEdit()
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceSaved'))
   }
 
   const handleRemoveConfirm = async () => {
@@ -96,6 +167,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     }
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceRemoved'))
   }
 
   const move = async (index: number, direction: -1 | 1) => {
@@ -112,6 +184,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     }
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceMoved'))
   }
 
   return (
@@ -121,8 +194,11 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         <p className="help">{t('settings.sourcesHint')}</p>
 
         {listError && (
-          <p role="status" className="alert alert-danger">
+          <p role="status" className="alert alert-danger cluster cluster-sm">
             {listError}
+            <button type="button" className="btn btn-ghost" onClick={load}>
+              {t('common.retry')}
+            </button>
           </p>
         )}
 
@@ -280,6 +356,68 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
             </button>
           </span>
         </fieldset>
+      </section>
+
+      <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
+        <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>
+        <p className="help">{t('settings.focusHint')}</p>
+
+        <div className="field">
+          <label className="label" htmlFor="settings-focus-fylke">
+            {t('companies.fylke')}
+          </label>
+          <select
+            id="settings-focus-fylke"
+            className="select"
+            value={focus?.fylke ?? ''}
+            onChange={(event) => handleFocusFylkeChange(event.target.value)}
+          >
+            <option value="">{t('focus.allOfNorway')}</option>
+            {FYLKE_OPTIONS.map(([number, name]) => (
+              <option key={number} value={number}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label className="label" htmlFor="settings-focus-kommune">
+            {t('companies.kommune')}
+          </label>
+          <select
+            id="settings-focus-kommune"
+            className="select"
+            value={focus?.kommune ?? ''}
+            onChange={(event) => handleFocusKommuneChange(event.target.value)}
+          >
+            <option value="">{t('common.all')}</option>
+            {focusKommuner.map(([number, name]) => (
+              <option key={number} value={number}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <fieldset className="stack stack-sm">
+          <legend>{t('focus.categoriesLegend')}</legend>
+          <p className="help">{t('focus.categoriesHint')}</p>
+          {KNOWN_CATEGORIES.map((category) => (
+            <label key={category} className="cluster cluster-sm">
+              <input
+                type="checkbox"
+                checked={focus?.categories?.includes(category) ?? false}
+                onChange={() => toggleFocusCategory(category)}
+              />
+              {category}
+            </label>
+          ))}
+        </fieldset>
+
+        <button type="button" className="btn btn-ghost" onClick={handleFocusReset}>
+          {t('settings.focusReset')}
+        </button>
       </section>
 
       <section aria-labelledby="settings-theme-heading" className="card settings-group">

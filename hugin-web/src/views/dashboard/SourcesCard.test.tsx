@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../../i18n'
 import type { SourceDto } from '../../types'
@@ -97,5 +98,21 @@ describe('SourcesCard', () => {
     expect(brreg).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'NAV' })).toBeInTheDocument()
     expect(screen.getAllByRole('link')).toHaveLength(2)
+  })
+
+  it('shows a load error with retry on fetch failure, and recovers on retry', async () => {
+    const user = userEvent.setup()
+    renderCard(fakeServer(null))
+
+    expect(await screen.findByText('Kunne ikke laste kilder.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+
+    vi.stubGlobal('fetch', fakeServer([sourceDto()]))
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Kunne ikke laste kilder.')).not.toBeInTheDocument()
+    })
+    expect(await screen.findByRole('link', { name: 'FINN' })).toBeInTheDocument()
   })
 })

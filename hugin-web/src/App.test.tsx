@@ -32,6 +32,12 @@ afterEach(() => {
   // Nav clicks push real history entries; reset the URL so the next test's App doesn't
   // boot into whichever view the previous test navigated to.
   window.history.replaceState(null, '', '/')
+  // App now reads FocusProvider's stored focus (localStorage 'hugin-focus') to decide whether
+  // to render FirstRunDialog — clear it so a later test's App doesn't inherit a prior test's
+  // saved (or absent) choice. Existing tests above run with no stored focus, so the dialog
+  // renders behind them; that's expected (see the App-level tests below) and doesn't disturb
+  // these assertions since jsdom's <dialog> polyfill has no real modal focus trap.
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('App', () => {
@@ -200,5 +206,64 @@ describe('App', () => {
     )
     expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/companies/915787630')
+  })
+})
+
+describe('App first-run focus dialog', () => {
+  it('renders the dialog when no focus is stored', () => {
+    render(<App />)
+
+    expect(screen.getByRole('dialog', { name: 'Hva vil du følge?' })).toBeVisible()
+  })
+
+  it('does not render the dialog when a valid focus is already stored', () => {
+    window.localStorage.setItem(
+      'hugin-focus',
+      JSON.stringify({ v: 1, fylke: null, kommune: null, categories: [] })
+    )
+
+    render(<App />)
+
+    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+  })
+
+  it('stays closed for the rest of the session after an Esc-dismiss', () => {
+    render(<App />)
+
+    const dialog = screen.getByRole('dialog', { name: 'Hva vil du følge?' })
+    act(() => {
+      dialog.dispatchEvent(new Event('close'))
+    })
+
+    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    // Dismissing is session-only — nothing gets persisted, so a fresh mount (next launch)
+    // would show the prompt again. Confirmed indirectly: no 'hugin-focus' key was written.
+    expect(window.localStorage.getItem('hugin-focus')).toBeNull()
+  })
+
+  it('saving a focus choice closes the dialog and persists it', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    expect(JSON.parse(window.localStorage.getItem('hugin-focus') as string)).toEqual({
+      v: 1,
+      fylke: '34',
+      kommune: null,
+      categories: [],
+    })
+  })
+
+  it('moves focus to the app heading once the dialog closes after Start', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Hugin' }))
   })
 })

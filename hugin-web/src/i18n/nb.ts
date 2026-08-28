@@ -26,6 +26,7 @@ export const nb = {
   'status.answered': 'Svar',
 
   'sync.heading': 'Synkronisering',
+  'sync.statusError': 'Kunne ikke laste synk-status.',
   'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Aldri',
@@ -40,6 +41,7 @@ export const nb = {
   'sync.failedPartial': 'Synk delvis feilet: {error}',
 
   'sources.title': 'Kilder',
+  'sources.loadError': 'Kunne ikke laste kilder.',
 
   'settings.sourcesHeading': 'Kilder',
   'settings.sourcesHint':
@@ -53,15 +55,26 @@ export const nb = {
   'settings.moveUp': 'Flytt opp',
   'settings.moveDown': 'Flytt ned',
   'settings.confirmRemove': 'Fjerne «{label}»?',
+  'settings.sourceAdded': 'Kilde lagt til.',
+  'settings.sourceSaved': 'Kilde lagret.',
+  'settings.sourceRemoved': 'Kilde fjernet.',
+  'settings.sourceMoved': 'Rekkefølge endret.',
   'settings.languageHeading': 'Språk',
   'settings.themeHeading': 'Tema',
+  'settings.focusHeading': 'Fokus',
+  'settings.focusHint': 'Styrer hva dashbordet og bedriftslisten viser som standard.',
+  'settings.focusUpdated': 'Fokus oppdatert.',
+  'settings.focusReset': 'Vis oppstartsvalget igjen',
+  'settings.focusResetDone': 'Oppstartsvalget vises ved neste start.',
 
   'trenger.heading': 'Trenger handling',
+  'trenger.loadError': 'Kunne ikke laste annonser.',
   'trenger.notApplied': 'aktiv, ikke søkt',
   'trenger.item': '{title} — {status} — {deadline}',
   'trenger.deadlineToday': 'frist i dag',
   'trenger.deadlineExpired': 'frist utløpt',
   'trenger.deadlineInDays': 'frist om {n} dager',
+  'trenger.deadlineInOneDay': 'frist om 1 dag',
 
   'frister.heading': 'Frister',
   'frister.showLabel': 'Vis',
@@ -81,6 +94,7 @@ export const nb = {
   'frister.expiredBadge': 'utløpt',
   'frister.todayBadge': 'i dag',
   'frister.daysBadge': '{n} dager',
+  'frister.dayBadgeOne': '1 dag',
 
   'newSince.heading': 'Nytt siden sist',
   'newSince.loadError': 'Kunne ikke laste nytt siden sist.',
@@ -113,9 +127,11 @@ export const nb = {
   'applications.starError': 'Kunne ikke oppdatere stjerne.',
 
   'companies.loadError': 'Kunne ikke laste bedrifter.',
+  'companies.fylke': 'Fylke',
   'companies.kommune': 'Kommune',
   'companies.search': 'Søk',
   'companies.count': '{n} bedrifter',
+  'companies.countOne': '1 bedrift',
   'companies.detailLoadError': 'Kunne ikke laste bedriften.',
   'companies.orgnr': 'Orgnr',
   'companies.nace': 'NACE',
@@ -156,4 +172,12 @@ export const nb = {
   'export.loadError': 'Kunne ikke laste eksport.',
   'export.copiedAnnounce': 'Kopiert til utklippstavlen.',
   'export.copyFailedAnnounce': 'Kunne ikke kopiere — merk teksten manuelt.',
+
+  'focus.title': 'Hva vil du følge?',
+  'focus.intro':
+    'Valget blir startfilteret ditt — du kan endre det når som helst under Innstillinger.',
+  'focus.allOfNorway': 'Hele landet',
+  'focus.categoriesLegend': 'Kategorier',
+  'focus.categoriesHint': 'Ingen valgt = alle.',
+  'focus.start': 'Start',
 } as const

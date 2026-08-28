@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useAnnounce } from '../components/LiveRegion'
 import { type TranslationKey, useT } from '../i18n'
@@ -37,6 +37,7 @@ export function EksportView() {
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
+  const requestSeq = useRef(0)
 
   const includeActive = entries === 'all'
   const ready = scope !== '' && (scope !== 'category' || category.trim().length > 0)
@@ -48,10 +49,15 @@ export function EksportView() {
       return Promise.resolve()
     }
     setError(null)
+    const seq = ++requestSeq.current
     return api
       .getText(url)
-      .then(setPreview)
-      .catch(() => setError(t('export.loadError')))
+      .then((text) => {
+        if (seq === requestSeq.current) setPreview(text)
+      })
+      .catch(() => {
+        if (seq === requestSeq.current) setError(t('export.loadError'))
+      })
   }, [url, ready, t])
 
   useEffect(() => {

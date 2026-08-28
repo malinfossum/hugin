@@ -3,6 +3,7 @@ import { ApiError, api } from '../../api'
 import { displayCompanyName } from '../../companyName'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDate } from '../../dates'
+import { adMatchesFocus, useFocus } from '../../focus'
 import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
 import type { AdDto } from '../../types'
@@ -32,6 +33,7 @@ function daysLeftText(daysLeft: number | null, t: T): string {
   if (daysLeft === null) return t('frister.none')
   if (daysLeft < 0) return t('frister.expiredBadge')
   if (daysLeft === 0) return t('frister.todayBadge')
+  if (daysLeft === 1) return t('frister.dayBadgeOne')
   return t('frister.daysBadge', { n: daysLeft })
 }
 
@@ -46,6 +48,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
+  const { focus } = useFocus()
   const t = useT()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -76,9 +79,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     else headingRef.current?.focus()
   }, [ads])
 
+  const visibleAds = ads.filter((ad) => adMatchesFocus(ad, focus))
+
   const handleSkjul = async (feedId: string) => {
-    const index = ads.findIndex((a) => a.feedId === feedId)
-    const nextFeedId = ads[index + 1]?.feedId ?? null
+    const index = visibleAds.findIndex((a) => a.feedId === feedId)
+    const nextFeedId = visibleAds[index + 1]?.feedId ?? null
     try {
       await api.post(`/api/ads/${feedId}/hide`)
     } catch {
@@ -142,7 +147,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
         </p>
       )}
       <ul className="stack stack-sm">
-        {ads.map((ad) => (
+        {visibleAds.map((ad) => (
           <li key={ad.feedId} className="frist-row">
             <div className="stack stack-sm">
               {ad.sourceUrl ? (

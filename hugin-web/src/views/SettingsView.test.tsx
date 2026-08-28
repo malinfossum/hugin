@@ -2,8 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { FocusProvider, loadFocus, saveFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
-import type { SourceDto } from '../types'
+import type { CompanyDto, SourceDto } from '../types'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -17,16 +18,37 @@ function source(overrides: Partial<SourceDto> = {}): SourceDto {
   return { id: 1, label: 'FINN', url: 'https://finn.no', position: 0, ...overrides }
 }
 
-/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE. */
-function fakeServer(seed: SourceDto[]) {
-  let entries = seed.map((s) => ({ ...s }))
+function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
+  return {
+    orgnr: '915787630',
+    name: 'Acme AS',
+    kommune: '0301',
+    kommuneNavn: null,
+    naceCode: '62.010',
+    isBranch: false,
+    website: null,
+    parentOrgnr: null,
+    ...overrides,
+  }
+}
+
+/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
+ * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches. Pass `null`
+ * as seed to make GET /api/sources reject (load-failure scenarios); `companies` defaults to
+ * empty, which is fine wherever a test doesn't care about kommune options. */
+function fakeServer(seed: SourceDto[] | null, companies: CompanyDto[] = []) {
+  let entries = (seed ?? []).map((s) => ({ ...s }))
   let nextId = Math.max(0, ...entries.map((s) => s.id)) + 1
 
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
 
+    if (url === '/api/companies' && method === 'GET') {
+      return Promise.resolve(jsonResponse(companies))
+    }
     if (url === '/api/sources' && method === 'GET') {
+      if (seed === null) return Promise.reject(new Error('network down'))
       return Promise.resolve(jsonResponse([...entries].sort((a, b) => a.position - b.position)))
     }
     if (url === '/api/sources' && method === 'POST') {
@@ -84,11 +106,13 @@ function renderView(
   const utils = render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <SettingsView
-          theme={theme}
-          onToggleTheme={onToggleTheme}
-          onSourcesChanged={onSourcesChanged}
-        />
+        <FocusProvider>
+          <SettingsView
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onSourcesChanged={onSourcesChanged}
+          />
+        </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -97,6 +121,7 @@ function renderView(
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('SettingsView', () => {
@@ -259,5 +284,185 @@ describe('SettingsView', () => {
     await user.click(screen.getByRole('button', { name: 'Bytt til lyst tema' }))
 
     expect(onToggleTheme).toHaveBeenCalled()
+  })
+
+  it('shows a load error with retry on GET failure, and recovers on retry', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer(null))
+
+    expect(await screen.findByText('Kunne ikke laste kilder.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+
+    vi.stubGlobal(
+      'fetch',
+      fakeServer([source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })])
+    )
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Kunne ikke laste kilder.')).not.toBeInTheDocument()
+    })
+    expect(await screen.findByText('FINN')).toBeInTheDocument()
+  })
+
+  it('announces after a successful add', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer([]))
+
+    await screen.findByRole('button', { name: 'Legg til lenke' })
+    await user.type(screen.getByLabelText('Etikett'), 'Vitae')
+    await user.type(screen.getByLabelText('URL'), 'https://vitae.no')
+    await user.click(screen.getByRole('button', { name: 'Legg til lenke' }))
+
+    await screen.findByText('Vitae')
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde lagt til.')
+    })
+  })
+
+  it('announces after a successful edit', async () => {
+    const user = userEvent.setup()
+    const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    await user.click(screen.getByRole('button', { name: 'Rediger' }))
+
+    const editForm = screen.getByRole('button', { name: 'Lagre' }).closest('form')
+    if (!editForm) throw new Error('edit form not found')
+    await user.click(within(editForm).getByRole('button', { name: 'Lagre' }))
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Lagre' })).toBeNull())
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde lagret.')
+    })
+  })
+
+  it('announces after a successful remove', async () => {
+    const user = userEvent.setup()
+    const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    await user.click(screen.getByRole('button', { name: 'Fjern' }))
+    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
+
+    await waitFor(() => expect(screen.queryByText('FINN')).not.toBeInTheDocument())
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde fjernet.')
+    })
+  })
+
+  it('announces after a successful reorder', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
+      source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
+    ]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    const moveDownButtons = screen.getAllByRole('button', { name: 'Flytt ned' })
+    await user.click(moveDownButtons[0])
+
+    await waitFor(() => {
+      const links = screen.getAllByRole('link', { name: /FINN|LinkedIn/ })
+      expect(links.map((l) => l.textContent)).toEqual(['LinkedIn', 'FINN'])
+    })
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Rekkefølge endret.')
+    })
+  })
+
+  it('renders a Fokus heading with fylke/kommune selects and a category fieldset', async () => {
+    renderView(fakeServer([]))
+
+    expect(await screen.findByRole('heading', { name: 'Fokus' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Fylke')).toBeInTheDocument()
+    expect(screen.getByLabelText('Kommune')).toBeInTheDocument()
+    const fieldset = screen.getByRole('group', { name: 'Kategorier' })
+    expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
+  })
+
+  it('changing the Fokus fylke select announces and persists the choice', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Fokus oppdatert.')
+    })
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
+  })
+
+  it('narrows the Fokus kommune select by the chosen fylke, from lazily-fetched companies', async () => {
+    const user = userEvent.setup()
+    const companies = [
+      company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    renderView(fakeServer([], companies))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    await waitFor(() => {
+      const kommuneOptions = within(screen.getByLabelText('Kommune'))
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+      expect(kommuneOptions).toEqual(['Alle', 'Hamar'])
+    })
+  })
+
+  it('choosing a Fokus kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
+    const user = userEvent.setup()
+    const companies = [
+      company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
+      company({ orgnr: '2', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    renderView(fakeServer([], companies))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
+    await waitFor(() => {
+      expect(within(screen.getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(3)
+    })
+    await user.selectOptions(screen.getByLabelText('Kommune'), '0301')
+
+    expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
+  })
+
+  it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
+    const user = userEvent.setup()
+    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
+
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+  })
+
+  it('reset button announces and clears the stored focus', async () => {
+    const user = userEvent.setup()
+    saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Oppstartsvalget vises ved neste start.')
+    })
+    expect(loadFocus()).toBeNull()
   })
 })

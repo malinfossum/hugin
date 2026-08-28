@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { FocusProvider } from '../../focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../types'
 import { TrengerHandling } from './TrengerHandling'
@@ -43,8 +45,21 @@ function renderTrenger(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   )
 }
 
+/** Same as renderTrenger but wrapped in FocusProvider, for tests that seed a focus. */
+function renderTrengerWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+  vi.stubGlobal('fetch', fetchMock)
+  return render(
+    <LanguageProvider>
+      <FocusProvider>
+        <TrengerHandling refreshKey={refreshKey} />
+      </FocusProvider>
+    </LanguageProvider>
+  )
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('TrengerHandling', () => {
@@ -89,5 +104,60 @@ describe('TrengerHandling', () => {
       expect(fetchMock).toHaveBeenCalled()
     })
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('shows a load error with retry on fetch failure, and the section does not vanish', async () => {
+    const user = userEvent.setup()
+    const failing = vi.fn(() => Promise.reject(new Error('network down')))
+    vi.stubGlobal('fetch', failing)
+    render(
+      <LanguageProvider>
+        <TrengerHandling refreshKey={0} />
+      </LanguageProvider>
+    )
+
+    expect(await screen.findByText('Kunne ikke laste annonser.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+    expect(retry).toBeInTheDocument()
+
+    const ads = [ad({ feedId: 'a1', title: 'Kom tilbake', pipelineStatus: 'active', daysLeft: 3 })]
+    vi.stubGlobal('fetch', mockFetch(ads))
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Kunne ikke laste annonser.')).not.toBeInTheDocument()
+    })
+    expect(await screen.findByText(/Kom tilbake/)).toBeInTheDocument()
+  })
+
+  describe('with a saved focus', () => {
+    function seedFocus() {
+      window.localStorage.setItem(
+        'hugin-focus',
+        JSON.stringify({ v: 1, fylke: '34', kommune: null, categories: ['Utvikling'] })
+      )
+    }
+
+    // TrengerHandling's own filter already requires pipelineStatus === 'active', so every ad it
+    // shows is tracked — the adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
+    // to protect pipeline deadlines) makes the focus lens a structural no-op here. This ad sits
+    // outside the seeded focus region (Oslo, kommune '0301', vs. focus fylke '34') and would be
+    // filtered by region if the bypass didn't apply — it must still render.
+    it('still shows a tracked, near-deadline ad outside the focus region (bypass makes the lens a no-op here)', async () => {
+      seedFocus()
+      const ads = [
+        ad({
+          feedId: 'a1',
+          title: 'Oslo-jobb, sporet',
+          kommune: '0301',
+          category: 'IT / Utvikling',
+          pipelineStatus: 'active',
+          daysLeft: 3,
+        }),
+      ]
+      renderTrengerWithFocus(mockFetch(ads))
+
+      expect(await screen.findByText(/Oslo-jobb, sporet/)).toBeInTheDocument()
+    })
   })
 })

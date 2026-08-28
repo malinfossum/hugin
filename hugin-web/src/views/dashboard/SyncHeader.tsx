@@ -20,18 +20,22 @@ function getFailureMessage(sync: SyncRunStatus, t: T): string | null {
 export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void }) {
   const [status, setStatus] = useState<StatusDto | null>(null)
   const [sync, setSync] = useState<SyncRunStatus | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
   const wasRunning = useRef(false)
 
   const loadStatus = useCallback(() => {
-    api
+    setLoadError(null)
+    return api
       .get<StatusDto>('/api/status')
       .then(setStatus)
-      .catch(() => {})
-  }, [])
+      .catch(() => setLoadError(t('sync.statusError')))
+  }, [t])
 
-  useEffect(loadStatus, [loadStatus])
+  useEffect(() => {
+    loadStatus()
+  }, [loadStatus])
 
   // INVARIANT: polling must survive/resume after a completed sync regardless of parent
   // memoization of onSyncCompleted. The interval is never stopped on completion — only on
@@ -92,6 +96,14 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
           pipelineEntries: status?.pipelineEntries ?? 0,
         })}
       </p>
+      {loadError && (
+        <p role="status" className="alert alert-danger cluster cluster-sm">
+          {loadError}
+          <button type="button" className="btn btn-ghost" onClick={loadStatus}>
+            {t('common.retry')}
+          </button>
+        </p>
+      )}
       <button
         type="button"
         className="btn btn-primary"

@@ -246,6 +246,45 @@ describe('SyncHeader', () => {
     expect(liveRegion).toHaveTextContent('En synk kjører allerede.')
   })
 
+  it('shows a load error with retry on the initial /api/status failure, and recovers on retry; the 2s poll stays silent', async () => {
+    let statusShouldFail = true
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      const method = init?.method ?? 'GET'
+      if (url === '/api/status' && method === 'GET') {
+        if (statusShouldFail) return Promise.reject(new Error('network down'))
+        return Promise.resolve(jsonResponse(statusDto()))
+      }
+      if (url === '/api/sync/status' && method === 'GET') {
+        return Promise.resolve(jsonResponse(syncStatus()))
+      }
+      return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+    })
+    renderHeader(fetchMock)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.getByText('Kunne ikke laste synk-status.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+
+    // The silent 2s poll ticking while /api/status is broken must not itself surface an error.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+    expect(screen.getByText('Kunne ikke laste synk-status.')).toBeInTheDocument()
+
+    statusShouldFail = false
+    fireEvent.click(retry)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(screen.queryByText('Kunne ikke laste synk-status.')).not.toBeInTheDocument()
+    expect(screen.getByText('3 aktive annonser · 5 bedrifter · 2 i Søknader')).toBeInTheDocument()
+  })
+
   it('announces a generic failure message (not "already running") on a non-409 POST failure', async () => {
     const fetchMock = mockFetch({
       post: () => Promise.reject(new TypeError('Failed to fetch')),

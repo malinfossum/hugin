@@ -311,6 +311,100 @@ describe('ApplicationsView', () => {
         )
       })
     })
+
+    it('disables the star button while its PUT is in flight, then re-enables it', async () => {
+      const user = userEvent.setup()
+      let resolvePut: (response: Response) => void = () => {}
+      const putPromise = new Promise<Response>((resolve) => {
+        resolvePut = resolve
+      })
+      const server = fakeServer([
+        entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', starred: false }),
+      ])
+      let putCalls = 0
+      const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        const method = init?.method ?? 'GET'
+        if (url === '/api/pipeline/1' && method === 'PUT') {
+          putCalls += 1
+          return putPromise
+        }
+        return server(input, init)
+      })
+      renderView(fetchMock)
+
+      await screen.findByText('Acme AS')
+      const starButton = screen.getByRole('button', { name: 'Gi stjerne' })
+      expect(starButton).not.toBeDisabled()
+
+      await user.click(starButton)
+      expect(starButton).toBeDisabled()
+
+      // A second click while the first PUT is still pending must not fire another request.
+      await user.click(starButton)
+      expect(putCalls).toBe(1)
+
+      resolvePut(
+        jsonResponse({
+          entry: entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', starred: true }),
+          warning: null,
+        })
+      )
+
+      await waitFor(() => {
+        expect(starButton).not.toBeDisabled()
+      })
+    })
+
+    it('a click on a different row while a star PUT is pending does not fire a second PUT', async () => {
+      // Row B's star button is NOT html-disabled (disabled is per-row: starPending === entry.orgnr),
+      // so this is the one scenario that actually exercises the app-level `if (starPending) return`
+      // guard rather than relying on native disabled-button click semantics.
+      const user = userEvent.setup()
+      let resolvePut: (response: Response) => void = () => {}
+      const putPromise = new Promise<Response>((resolve) => {
+        resolvePut = resolve
+      })
+      const server = fakeServer([
+        entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', starred: false }),
+        entry({ orgnr: '2', companyName: 'Beta AS', status: 'active', starred: false }),
+      ])
+      let putCalls = 0
+      const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        const method = init?.method ?? 'GET'
+        if (method === 'PUT' && (url === '/api/pipeline/1' || url === '/api/pipeline/2')) {
+          putCalls += 1
+          return putPromise
+        }
+        return server(input, init)
+      })
+      renderView(fetchMock)
+
+      await screen.findByText('Acme AS')
+      await screen.findByText('Beta AS')
+
+      const [rowAStar, rowBStar] = screen.getAllByRole('button', { name: 'Gi stjerne' })
+
+      await user.click(rowAStar)
+      expect(rowAStar).toBeDisabled()
+      expect(rowBStar).not.toBeDisabled()
+
+      await user.click(rowBStar)
+      expect(putCalls).toBe(1)
+
+      resolvePut(
+        jsonResponse({
+          entry: entry({ orgnr: '1', companyName: 'Acme AS', status: 'active', starred: true }),
+          warning: null,
+        })
+      )
+
+      await waitFor(() => {
+        expect(rowAStar).not.toBeDisabled()
+      })
+      expect(rowBStar).not.toBeDisabled()
+    })
   })
 
   describe('sorting', () => {

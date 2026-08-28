@@ -26,6 +26,7 @@ export const en = {
   'status.answered': 'Answered',
 
   'sync.heading': 'Sync',
+  'sync.statusError': 'Could not load sync status.',
   'sync.brregLabel': 'Brønnøysundregisteret',
   'sync.navLabel': 'NAV',
   'sync.never': 'Never',
@@ -40,6 +41,7 @@ export const en = {
   'sync.failedPartial': 'Sync partially failed: {error}',
 
   'sources.title': 'Sources',
+  'sources.loadError': 'Could not load sources.',
 
   'settings.sourcesHeading': 'Sources',
   'settings.sourcesHint':
@@ -53,15 +55,26 @@ export const en = {
   'settings.moveUp': 'Move up',
   'settings.moveDown': 'Move down',
   'settings.confirmRemove': 'Remove “{label}”?',
+  'settings.sourceAdded': 'Source added.',
+  'settings.sourceSaved': 'Source saved.',
+  'settings.sourceRemoved': 'Source removed.',
+  'settings.sourceMoved': 'Order changed.',
   'settings.languageHeading': 'Language',
   'settings.themeHeading': 'Theme',
+  'settings.focusHeading': 'Focus',
+  'settings.focusHint': 'Controls what the dashboard and company list show by default.',
+  'settings.focusUpdated': 'Focus updated.',
+  'settings.focusReset': 'Show the first-run choice again',
+  'settings.focusResetDone': 'The first-run choice will show again.',
 
   'trenger.heading': 'Needs action',
+  'trenger.loadError': 'Could not load ads.',
   'trenger.notApplied': 'active, not applied',
   'trenger.item': '{title} — {status} — {deadline}',
   'trenger.deadlineToday': 'due today',
   'trenger.deadlineExpired': 'deadline expired',
   'trenger.deadlineInDays': 'due in {n} days',
+  'trenger.deadlineInOneDay': 'due in 1 day',
 
   'frister.heading': 'Deadlines',
   'frister.showLabel': 'Show',
@@ -81,6 +94,7 @@ export const en = {
   'frister.expiredBadge': 'expired',
   'frister.todayBadge': 'today',
   'frister.daysBadge': '{n} days',
+  'frister.dayBadgeOne': '1 day',
 
   'newSince.heading': 'New since last visit',
   'newSince.loadError': 'Could not load new items.',
@@ -113,9 +127,11 @@ export const en = {
   'applications.starError': 'Could not update star.',
 
   'companies.loadError': 'Could not load companies.',
+  'companies.fylke': 'County',
   'companies.kommune': 'Municipality',
   'companies.search': 'Search',
   'companies.count': '{n} companies',
+  'companies.countOne': '1 company',
   'companies.detailLoadError': 'Could not load the company.',
   'companies.orgnr': 'Org. no.',
   'companies.nace': 'NACE',
@@ -156,4 +172,11 @@ export const en = {
   'export.loadError': 'Could not load export.',
   'export.copiedAnnounce': 'Copied to clipboard.',
   'export.copyFailedAnnounce': 'Could not copy — select the text manually.',
+
+  'focus.title': 'What do you want to follow?',
+  'focus.intro': 'This becomes your starting filter — change it anytime in Settings.',
+  'focus.allOfNorway': 'All of Norway',
+  'focus.categoriesLegend': 'Categories',
+  'focus.categoriesHint': 'None selected = all.',
+  'focus.start': 'Start',
 } as const
