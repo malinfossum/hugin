@@ -73,6 +73,7 @@ export function ApplicationsView() {
   const [formError, setFormError] = useState<string | null>(null)
   const [warning, setWarning] = useState<{ orgnr: string; message: string } | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>(loadSortMode)
+  const [starPending, setStarPending] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
   const [lang] = useLang()
@@ -131,22 +132,28 @@ export function ApplicationsView() {
   }
 
   const toggleStar = async (entry: PipelineDto) => {
-    let response: TrackResponse
+    if (starPending) return
+    setStarPending(entry.orgnr)
     try {
-      response = await api.put<TrackResponse>(`/api/pipeline/${entry.orgnr}`, {
-        status: entry.status,
-        why: entry.why,
-        note: entry.note,
-        svar: entry.svar,
-        starred: !entry.starred,
-      })
-    } catch (err) {
-      announce(err instanceof ApiError ? err.message : t('applications.starError'))
-      return
+      let response: TrackResponse
+      try {
+        response = await api.put<TrackResponse>(`/api/pipeline/${entry.orgnr}`, {
+          status: entry.status,
+          why: entry.why,
+          note: entry.note,
+          svar: entry.svar,
+          starred: !entry.starred,
+        })
+      } catch (err) {
+        announce(err instanceof ApiError ? err.message : t('applications.starError'))
+        return
+      }
+      setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
+      await load()
+      announce(entry.starred ? t('applications.starRemoved') : t('applications.starSet'))
+    } finally {
+      setStarPending(null)
     }
-    setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
-    await load()
-    announce(entry.starred ? t('applications.starRemoved') : t('applications.starSet'))
   }
 
   if (error) {
@@ -206,6 +213,7 @@ export function ApplicationsView() {
                         aria-label={
                           entry.starred ? t('applications.starRemove') : t('applications.starGive')
                         }
+                        disabled={starPending === entry.orgnr}
                         onClick={() => toggleStar(entry)}
                       >
                         <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
