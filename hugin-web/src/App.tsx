@@ -1,7 +1,7 @@
 import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
-import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
+import { LanguageProvider, type TranslationKey, useT } from './i18n'
 import { parseRoute, type Route, routePath } from './routing'
 import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
@@ -31,7 +31,6 @@ function AppShell() {
   // A ref mirrors the latest route for that handler without re-subscribing it on every render.
   const routeRef = useRef(route)
   const t = useT()
-  const [lang, setLang] = useLang()
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   )
@@ -56,7 +55,7 @@ function AppShell() {
   // on a full app restart, which matches the spec. One side effect: the dashboard's SyncHeader
   // keeps polling while hidden behind another view — intended, since a running sync must finish
   // its announce/refresh cycle regardless of which view is currently visible. Declared inside
-  // AppShell (not module scope) so the thunks can close over theme/lang state and callbacks.
+  // AppShell (not module scope) so the thunks can close over theme state and callbacks.
   const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
     dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
     applications: () => <ApplicationsView />,
@@ -140,30 +139,9 @@ function AppShell() {
                   ))}
                 </ul>
               </nav>
-              <fieldset className="lang-toggle cluster cluster-sm">
-                <legend className="visually-hidden">{t('lang.toggleLabel')}</legend>
-                <span className="segmented">
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    aria-pressed={lang === 'nb'}
-                    onClick={() => setLang('nb')}
-                  >
-                    NO
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    aria-pressed={lang === 'en'}
-                    onClick={() => setLang('en')}
-                  >
-                    EN
-                  </button>
-                </span>
-              </fieldset>
               <button
                 type="button"
-                className="btn btn-ghost icon-btn"
+                className="nav-link"
                 onClick={toggleTheme}
                 aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
               >

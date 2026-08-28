@@ -10,13 +10,17 @@ function jsonResponse(body: unknown) {
   })
 }
 
-/** Fake server covering only what the Companies view needs on mount — the other views mounted
- * in these tests (Dashboard, Export) either don't fetch (Export has no scope chosen yet) or
- * already tolerate a rejected fetch by design (Dashboard's own tests cover that). */
+/** Fake server covering only what the Companies and Settings views need on mount — the other
+ * views mounted in these tests (Dashboard, Export) either don't fetch (Export has no scope
+ * chosen yet) or already tolerate a rejected fetch by design (Dashboard's own tests cover
+ * that). */
 function fakeServer() {
   return vi.fn((input: RequestInfo | URL) => {
     const url = typeof input === 'string' ? input : input.toString()
     if (url === '/api/companies') {
+      return Promise.resolve(jsonResponse([]))
+    }
+    if (url === '/api/sources') {
       return Promise.resolve(jsonResponse([]))
     }
     return Promise.reject(new Error(`unhandled request ${url}`))
@@ -25,6 +29,9 @@ function fakeServer() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  // Nav clicks push real history entries; reset the URL so the next test's App doesn't
+  // boot into whichever view the previous test navigated to.
+  window.history.replaceState(null, '', '/')
 })
 
 describe('App', () => {
@@ -52,9 +59,14 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Dashbord' })).not.toHaveAttribute('aria-current')
   })
 
-  it('switches to English on the EN toggle: labels change, <html lang> and localStorage update', async () => {
+  it('switches to English via Settings: labels change, <html lang> and localStorage update', async () => {
+    vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
+
+    // The language toggle lives in Settings only — the header carries just nav + theme.
+    expect(screen.queryByRole('button', { name: 'EN' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
 
     const noButton = screen.getByRole('button', { name: 'NO' })
     const enButton = screen.getByRole('button', { name: 'EN' })
@@ -118,6 +130,7 @@ describe('App', () => {
     await user.type(search, 'Acme')
     expect(search).toHaveValue('Acme')
 
+    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
     await user.click(screen.getByRole('button', { name: 'EN' }))
 
     expect(screen.getByLabelText('Search')).toHaveValue('Acme')
