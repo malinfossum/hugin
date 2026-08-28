@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { formatDate } from '../dates'
-import { FocusProvider, loadFocus, saveFocus } from '../focus'
+import { FocusProvider, loadFocus, saveFocus, useFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
@@ -20,6 +20,29 @@ function BedrifterViewHarness() {
       onOpenCompany={setSelectedOrgnr}
       onCloseCompany={() => setSelectedOrgnr(null)}
     />
+  )
+}
+
+/** Test-only stand-in for "somewhere else" (Settings, or the first-run dialog) writing to the
+ * shared FocusContext — proves BedrifterView reads focus live rather than mirroring it into
+ * local state that would go stale once written from outside the view. */
+function ExternalFocusSetter() {
+  const { setFocus } = useFocus()
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setFocus({ fylke: '03', kommune: null, categories: [] })}
+      >
+        Set Oslo externally
+      </button>
+      <button
+        type="button"
+        onClick={() => setFocus({ fylke: null, kommune: null, categories: [] })}
+      >
+        Clear region externally
+      </button>
+    </div>
   )
 }
 
@@ -631,5 +654,42 @@ describe('BedrifterView', () => {
     await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
 
     expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+  })
+
+  it('reacts live to a focus change made outside the view — context is the single reactive owner', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', fakeServer(companies, {}))
+    render(
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusProvider>
+            <ExternalFocusSetter />
+            <BedrifterViewHarness />
+          </FocusProvider>
+        </LiveRegionProvider>
+      </LanguageProvider>
+    )
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+
+    // A focus change from outside this view (e.g. Settings) — the select and the filtered
+    // list must pick it up immediately, without the view being remounted.
+    await user.click(screen.getByRole('button', { name: 'Set Oslo externally' }))
+
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('03')
+    expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+
+    // A reset-style external change (clearing the region) restores the full list, same way.
+    await user.click(screen.getByRole('button', { name: 'Clear region externally' }))
+
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 })

@@ -59,8 +59,13 @@ export function BedrifterView({
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
   const { focus, setFocus } = useFocus()
-  const [fylke, setFylke] = useState(focus?.fylke ?? '')
-  const [kommune, setKommune] = useState(focus?.kommune ?? '')
+  // Derived straight from context every render — not local state. App keeps views mounted, so a
+  // focus change made elsewhere (Settings, or a reset) must reach an already-mounted Companies
+  // view immediately; a useState seeded once from focus would freeze at whatever it saw on
+  // first mount and go stale the moment focus changed out from under it (spec Part C: focus is
+  // reactive everywhere, not just on the view that happens to change it).
+  const fylke = focus?.fylke ?? ''
+  const kommune = focus?.kommune ?? ''
   const [search, setSearch] = useState('')
   const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -201,8 +206,6 @@ export function BedrifterView({
             onChange={(event) => {
               const next = event.target.value
               const nextKommune = next && kommune && fylkeOf(kommune) !== next ? '' : kommune
-              setFylke(next)
-              if (nextKommune !== kommune) setKommune(nextKommune)
               writeBackRegion(next, nextKommune)
             }}
           >
@@ -225,7 +228,6 @@ export function BedrifterView({
             value={kommune}
             onChange={(event) => {
               const next = event.target.value
-              setKommune(next)
               writeBackRegion(fylke, next)
             }}
           >
