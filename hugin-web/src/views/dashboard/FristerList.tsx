@@ -79,9 +79,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     else headingRef.current?.focus()
   }, [ads])
 
+  const visibleAds = ads.filter((ad) => adMatchesFocus(ad, focus))
+
   const handleSkjul = async (feedId: string) => {
-    const index = ads.findIndex((a) => a.feedId === feedId)
-    const nextFeedId = ads[index + 1]?.feedId ?? null
+    const index = visibleAds.findIndex((a) => a.feedId === feedId)
+    const nextFeedId = visibleAds[index + 1]?.feedId ?? null
     try {
       await api.post(`/api/ads/${feedId}/hide`)
     } catch {
@@ -116,8 +118,6 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     await load()
     announce(t('frister.unhiddenAnnounce'))
   }
-
-  const visibleAds = ads.filter((ad) => adMatchesFocus(ad, focus))
 
   return (
     <section aria-labelledby="frister-heading" className="frister-list card stack">

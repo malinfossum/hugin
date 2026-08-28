@@ -361,5 +361,62 @@ describe('FristerList', () => {
 
       expect(await screen.findByText('Ukjent sted')).toBeInTheDocument()
     })
+
+    // Regression: handleSkjul used to compute the next-focus target from the raw (unfiltered)
+    // ads array. With a focus lens hiding a row from the render, that raw-array "next" ad could
+    // be a row with no Skjul button on screen, so focus fell back to the heading even though a
+    // valid next VISIBLE row existed. The fix indexes into visibleAds, the same array the list
+    // renders, so focus always lands on a real rendered Skjul button.
+    it('moves focus to the next VISIBLE row on Skjul, skipping a row hidden by the focus lens', async () => {
+      seedFocus()
+      const user = userEvent.setup()
+      const ads = [
+        ad({
+          feedId: 'a1',
+          title: 'Første',
+          kommune: '3401',
+          category: 'IT / Utvikling',
+          pipelineStatus: null,
+        }),
+        ad({
+          feedId: 'a2',
+          title: 'Andre',
+          kommune: '0301',
+          category: 'IT / Utvikling',
+          pipelineStatus: null,
+        }),
+        ad({
+          feedId: 'a3',
+          title: 'Tredje',
+          kommune: '3402',
+          category: 'IT / Utvikling',
+          pipelineStatus: null,
+        }),
+      ]
+      const fetchMock = fakeServer(ads)
+      renderListWithFocus(fetchMock)
+
+      await screen.findByText('Første')
+      expect(screen.queryByText('Andre')).not.toBeInTheDocument()
+      const forsteRow = screen.getByText('Første').closest('li')
+      if (!forsteRow) throw new Error('row not found')
+      await user.click(within(forsteRow).getByRole('button', { name: 'Skjul' }))
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/ads/a1/hide',
+          expect.objectContaining({ method: 'POST' })
+        )
+      })
+
+      await waitFor(() => {
+        expect(screen.queryByText('Første')).not.toBeInTheDocument()
+      })
+
+      const tredjeRow = screen.getByText('Tredje').closest('li')
+      if (!tredjeRow) throw new Error('row not found')
+      const tredjeSkjulButton = within(tredjeRow).getByRole('button', { name: 'Skjul' })
+      expect(document.activeElement).toBe(tredjeSkjulButton)
+    })
   })
 })
