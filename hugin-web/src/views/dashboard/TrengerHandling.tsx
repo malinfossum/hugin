@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../api'
+import { adMatchesFocus, useFocus } from '../../focus'
 import { type T, useT } from '../../i18n'
 import type { AdDto } from '../../types'
 
@@ -13,6 +14,7 @@ function fristText(daysLeft: number, t: T): string {
 export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
+  const { focus } = useFocus()
   const t = useT()
 
   const load = useCallback(() => {
@@ -29,7 +31,11 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
   }, [load, refreshKey])
 
   const trenger = ads.filter(
-    (ad) => ad.pipelineStatus === 'active' && ad.daysLeft !== null && ad.daysLeft <= 7
+    (ad) =>
+      adMatchesFocus(ad, focus) &&
+      ad.pipelineStatus === 'active' &&
+      ad.daysLeft !== null &&
+      ad.daysLeft <= 7
   )
 
   if (!loadError && trenger.length === 0) return null

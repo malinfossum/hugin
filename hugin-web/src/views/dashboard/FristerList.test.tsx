@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { FocusProvider } from '../../focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../types'
 import { FristerList } from './FristerList'
@@ -72,8 +73,23 @@ function renderList(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   )
 }
 
+/** Same as renderList but wrapped in FocusProvider, for tests that seed a focus. */
+function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+  vi.stubGlobal('fetch', fetchMock)
+  return render(
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <FocusProvider>
+          <FristerList refreshKey={refreshKey} />
+        </FocusProvider>
+      </LiveRegionProvider>
+    </LanguageProvider>
+  )
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('FristerList', () => {
@@ -284,5 +300,66 @@ describe('FristerList', () => {
 
     await screen.findAllByRole('listitem')
     expect(screen.queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
+  })
+
+  describe('with a saved focus', () => {
+    function seedFocus() {
+      window.localStorage.setItem(
+        'hugin-focus',
+        JSON.stringify({ v: 1, fylke: '34', kommune: null, categories: ['Utvikling'] })
+      )
+    }
+
+    it('hides an untracked ad outside the focus region', async () => {
+      seedFocus()
+      const ads = [
+        ad({
+          feedId: 'a1',
+          title: 'Oslo-jobb',
+          kommune: '0301',
+          category: 'IT / Utvikling',
+          pipelineStatus: null,
+        }),
+      ]
+      const fetchMock = fakeServer(ads)
+      renderListWithFocus(fetchMock)
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalled()
+      })
+      expect(screen.queryByText('Oslo-jobb')).not.toBeInTheDocument()
+    })
+
+    it('still shows a tracked ad outside the focus region (bypass protects pipeline deadlines)', async () => {
+      seedFocus()
+      const ads = [
+        ad({
+          feedId: 'a1',
+          title: 'Oslo-jobb, sporet',
+          kommune: '0301',
+          category: 'IT / Utvikling',
+          pipelineStatus: 'active',
+        }),
+      ]
+      renderListWithFocus(fakeServer(ads))
+
+      expect(await screen.findByText('Oslo-jobb, sporet')).toBeInTheDocument()
+    })
+
+    it('shows an untracked ad with no kommune and no category (fails open)', async () => {
+      seedFocus()
+      const ads = [
+        ad({
+          feedId: 'a1',
+          title: 'Ukjent sted',
+          kommune: null,
+          category: null,
+          pipelineStatus: null,
+        }),
+      ]
+      renderListWithFocus(fakeServer(ads))
+
+      expect(await screen.findByText('Ukjent sted')).toBeInTheDocument()
+    })
   })
 })

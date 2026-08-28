@@ -3,6 +3,7 @@ import { ApiError, api } from '../../api'
 import { displayCompanyName } from '../../companyName'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDate } from '../../dates'
+import { adMatchesFocus, useFocus } from '../../focus'
 import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
 import type { AdDto } from '../../types'
@@ -47,6 +48,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
   const announce = useAnnounce()
+  const { focus } = useFocus()
   const t = useT()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -115,6 +117,8 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     announce(t('frister.unhiddenAnnounce'))
   }
 
+  const visibleAds = ads.filter((ad) => adMatchesFocus(ad, focus))
+
   return (
     <section aria-labelledby="frister-heading" className="frister-list card stack">
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
@@ -143,7 +147,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
         </p>
       )}
       <ul className="stack stack-sm">
-        {ads.map((ad) => (
+        {visibleAds.map((ad) => (
           <li key={ad.feedId} className="frist-row">
             <div className="stack stack-sm">
               {ad.sourceUrl ? (
