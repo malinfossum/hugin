@@ -55,6 +55,10 @@ export const en = {
   'settings.moveUp': 'Move up',
   'settings.moveDown': 'Move down',
   'settings.confirmRemove': 'Remove “{label}”?',
+  'settings.sourceAdded': 'Source added.',
+  'settings.sourceSaved': 'Source saved.',
+  'settings.sourceRemoved': 'Source removed.',
+  'settings.sourceMoved': 'Order changed.',
   'settings.languageHeading': 'Language',
   'settings.themeHeading': 'Theme',
 

@@ -17,9 +17,10 @@ function source(overrides: Partial<SourceDto> = {}): SourceDto {
   return { id: 1, label: 'FINN', url: 'https://finn.no', position: 0, ...overrides }
 }
 
-/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE. */
-function fakeServer(seed: SourceDto[]) {
-  let entries = seed.map((s) => ({ ...s }))
+/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE.
+ * Pass `null` as seed to make GET reject (load-failure scenarios). */
+function fakeServer(seed: SourceDto[] | null) {
+  let entries = (seed ?? []).map((s) => ({ ...s }))
   let nextId = Math.max(0, ...entries.map((s) => s.id)) + 1
 
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -27,6 +28,7 @@ function fakeServer(seed: SourceDto[]) {
     const method = init?.method ?? 'GET'
 
     if (url === '/api/sources' && method === 'GET') {
+      if (seed === null) return Promise.reject(new Error('network down'))
       return Promise.resolve(jsonResponse([...entries].sort((a, b) => a.position - b.position)))
     }
     if (url === '/api/sources' && method === 'POST') {
@@ -259,5 +261,98 @@ describe('SettingsView', () => {
     await user.click(screen.getByRole('button', { name: 'Bytt til lyst tema' }))
 
     expect(onToggleTheme).toHaveBeenCalled()
+  })
+
+  it('shows a load error with retry on GET failure, and recovers on retry', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer(null))
+
+    expect(await screen.findByText('Kunne ikke laste kilder.')).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Prøv igjen' })
+
+    vi.stubGlobal(
+      'fetch',
+      fakeServer([source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })])
+    )
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Kunne ikke laste kilder.')).not.toBeInTheDocument()
+    })
+    expect(await screen.findByText('FINN')).toBeInTheDocument()
+  })
+
+  it('announces after a successful add', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer([]))
+
+    await screen.findByRole('button', { name: 'Legg til lenke' })
+    await user.type(screen.getByLabelText('Etikett'), 'Vitae')
+    await user.type(screen.getByLabelText('URL'), 'https://vitae.no')
+    await user.click(screen.getByRole('button', { name: 'Legg til lenke' }))
+
+    await screen.findByText('Vitae')
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde lagt til.')
+    })
+  })
+
+  it('announces after a successful edit', async () => {
+    const user = userEvent.setup()
+    const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    await user.click(screen.getByRole('button', { name: 'Rediger' }))
+
+    const editForm = screen.getByRole('button', { name: 'Lagre' }).closest('form')
+    if (!editForm) throw new Error('edit form not found')
+    await user.click(within(editForm).getByRole('button', { name: 'Lagre' }))
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Lagre' })).toBeNull())
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde lagret.')
+    })
+  })
+
+  it('announces after a successful remove', async () => {
+    const user = userEvent.setup()
+    const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    await user.click(screen.getByRole('button', { name: 'Fjern' }))
+    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
+
+    await waitFor(() => expect(screen.queryByText('FINN')).not.toBeInTheDocument())
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Kilde fjernet.')
+    })
+  })
+
+  it('announces after a successful reorder', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
+      source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
+    ]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('FINN')
+    const moveDownButtons = screen.getAllByRole('button', { name: 'Flytt ned' })
+    await user.click(moveDownButtons[0])
+
+    await waitFor(() => {
+      const links = screen.getAllByRole('link', { name: /FINN|LinkedIn/ })
+      expect(links.map((l) => l.textContent)).toEqual(['LinkedIn', 'FINN'])
+    })
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Rekkefølge endret.')
+    })
   })
 })

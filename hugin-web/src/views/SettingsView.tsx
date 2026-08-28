@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { useAnnounce } from '../components/LiveRegion'
 import { useLang, useT } from '../i18n'
 import type { SourceDto } from '../types'
 
@@ -32,13 +33,15 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [listError, setListError] = useState<string | null>(null)
   const t = useT()
   const [lang, setLang] = useLang()
+  const announce = useAnnounce()
 
   const load = useCallback(() => {
+    setListError(null)
     return api
       .get<SourceDto[]>('/api/sources')
       .then(setSources)
-      .catch(() => setSources([]))
-  }, [])
+      .catch(() => setListError(t('sources.loadError')))
+  }, [t])
 
   useEffect(() => {
     load()
@@ -56,6 +59,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     setAddForm(EMPTY_FORM)
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceAdded'))
   }
 
   const startEdit = (source: SourceDto) => {
@@ -82,6 +86,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     cancelEdit()
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceSaved'))
   }
 
   const handleRemoveConfirm = async () => {
@@ -96,6 +101,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     }
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceRemoved'))
   }
 
   const move = async (index: number, direction: -1 | 1) => {
@@ -112,6 +118,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     }
     await load()
     onSourcesChanged()
+    announce(t('settings.sourceMoved'))
   }
 
   return (
@@ -121,8 +128,11 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         <p className="help">{t('settings.sourcesHint')}</p>
 
         {listError && (
-          <p role="status" className="alert alert-danger">
+          <p role="status" className="alert alert-danger cluster cluster-sm">
             {listError}
+            <button type="button" className="btn btn-ghost" onClick={load}>
+              {t('common.retry')}
+            </button>
           </p>
         )}
 

@@ -55,6 +55,10 @@ export const nb = {
   'settings.moveUp': 'Flytt opp',
   'settings.moveDown': 'Flytt ned',
   'settings.confirmRemove': 'Fjerne «{label}»?',
+  'settings.sourceAdded': 'Kilde lagt til.',
+  'settings.sourceSaved': 'Kilde lagret.',
+  'settings.sourceRemoved': 'Kilde fjernet.',
+  'settings.sourceMoved': 'Rekkefølge endret.',
   'settings.languageHeading': 'Språk',
   'settings.themeHeading': 'Tema',
 
