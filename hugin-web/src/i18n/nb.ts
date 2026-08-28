@@ -61,6 +61,11 @@ export const nb = {
   'settings.sourceMoved': 'Rekkefølge endret.',
   'settings.languageHeading': 'Språk',
   'settings.themeHeading': 'Tema',
+  'settings.focusHeading': 'Fokus',
+  'settings.focusHint': 'Styrer hva dashbordet og bedriftslisten viser som standard.',
+  'settings.focusUpdated': 'Fokus oppdatert.',
+  'settings.focusReset': 'Vis oppstartsvalget igjen',
+  'settings.focusResetDone': 'Oppstartsvalget vises ved neste start.',
 
   'trenger.heading': 'Trenger handling',
   'trenger.loadError': 'Kunne ikke laste annonser.',

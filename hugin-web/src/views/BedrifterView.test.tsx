@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { formatDate } from '../dates'
+import { FocusProvider, loadFocus, saveFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
@@ -89,7 +90,9 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <BedrifterViewHarness />
+        <FocusProvider>
+          <BedrifterViewHarness />
+        </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -97,6 +100,7 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('BedrifterView', () => {
@@ -570,5 +574,62 @@ describe('BedrifterView', () => {
     await user.click(back)
 
     expect(onCloseCompany).toHaveBeenCalledTimes(1)
+  })
+
+  it('initializes the fylke select from a stored focus', async () => {
+    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('34')
+    // Fylke filter is applied from the seeded focus straight away.
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+  })
+
+  it('changing the kommune select writes the choice back to stored focus', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '0301', kommuneNavn: 'Oslo' }),
+      company({ orgnr: '2', name: 'Beta Software', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.selectOptions(screen.getByLabelText('Kommune'), '3403')
+
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: '3403', categories: [] })
+  })
+
+  it('write-back happens even when no focus was stored yet (a manual choice is an answer)', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    expect(loadFocus()).toBeNull()
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
+  })
+
+  it('a region write-back preserves existing categories from focus', async () => {
+    saveFocus({ fylke: null, kommune: null, categories: ['Utvikling'] })
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
   })
 })

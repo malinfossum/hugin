@@ -2,8 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { FocusProvider, loadFocus, saveFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
-import type { SourceDto } from '../types'
+import type { CompanyDto, SourceDto } from '../types'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -17,9 +18,25 @@ function source(overrides: Partial<SourceDto> = {}): SourceDto {
   return { id: 1, label: 'FINN', url: 'https://finn.no', position: 0, ...overrides }
 }
 
-/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE.
- * Pass `null` as seed to make GET reject (load-failure scenarios). */
-function fakeServer(seed: SourceDto[] | null) {
+function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
+  return {
+    orgnr: '915787630',
+    name: 'Acme AS',
+    kommune: '0301',
+    kommuneNavn: null,
+    naceCode: '62.010',
+    isBranch: false,
+    website: null,
+    parentOrgnr: null,
+    ...overrides,
+  }
+}
+
+/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
+ * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches. Pass `null`
+ * as seed to make GET /api/sources reject (load-failure scenarios); `companies` defaults to
+ * empty, which is fine wherever a test doesn't care about kommune options. */
+function fakeServer(seed: SourceDto[] | null, companies: CompanyDto[] = []) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
   let nextId = Math.max(0, ...entries.map((s) => s.id)) + 1
 
@@ -27,6 +44,9 @@ function fakeServer(seed: SourceDto[] | null) {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
 
+    if (url === '/api/companies' && method === 'GET') {
+      return Promise.resolve(jsonResponse(companies))
+    }
     if (url === '/api/sources' && method === 'GET') {
       if (seed === null) return Promise.reject(new Error('network down'))
       return Promise.resolve(jsonResponse([...entries].sort((a, b) => a.position - b.position)))
@@ -86,11 +106,13 @@ function renderView(
   const utils = render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <SettingsView
-          theme={theme}
-          onToggleTheme={onToggleTheme}
-          onSourcesChanged={onSourcesChanged}
-        />
+        <FocusProvider>
+          <SettingsView
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onSourcesChanged={onSourcesChanged}
+          />
+        </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -99,6 +121,7 @@ function renderView(
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
 })
 
 describe('SettingsView', () => {
@@ -354,5 +377,74 @@ describe('SettingsView', () => {
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Rekkefølge endret.')
     })
+  })
+
+  it('renders a Fokus heading with fylke/kommune selects and a category fieldset', async () => {
+    renderView(fakeServer([]))
+
+    expect(await screen.findByRole('heading', { name: 'Fokus' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Fylke')).toBeInTheDocument()
+    expect(screen.getByLabelText('Kommune')).toBeInTheDocument()
+    const fieldset = screen.getByRole('group', { name: 'Kategorier' })
+    expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
+  })
+
+  it('changing the Fokus fylke select announces and persists the choice', async () => {
+    const user = userEvent.setup()
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Fokus oppdatert.')
+    })
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
+  })
+
+  it('narrows the Fokus kommune select by the chosen fylke, from lazily-fetched companies', async () => {
+    const user = userEvent.setup()
+    const companies = [
+      company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '2', kommune: '0301', kommuneNavn: 'Oslo' }),
+    ]
+    renderView(fakeServer([], companies))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+
+    await waitFor(() => {
+      const kommuneOptions = within(screen.getByLabelText('Kommune'))
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+      expect(kommuneOptions).toEqual(['Alle', 'Hamar'])
+    })
+  })
+
+  it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
+    const user = userEvent.setup()
+    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
+
+    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+  })
+
+  it('reset button announces and clears the stored focus', async () => {
+    const user = userEvent.setup()
+    saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+    renderView(fakeServer([]))
+
+    await screen.findByRole('heading', { name: 'Fokus' })
+    await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => {
+      expect(liveRegion).toHaveTextContent('Oppstartsvalget vises ved neste start.')
+    })
+    expect(loadFocus()).toBeNull()
   })
 })

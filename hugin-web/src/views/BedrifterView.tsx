@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { displayCompanyName } from '../companyName'
+import { useFocus } from '../focus'
 import { fylkeName, fylkeOf } from '../fylker'
 import { useT } from '../i18n'
 import type { CompanyDto } from '../types'
@@ -57,13 +58,25 @@ export function BedrifterView({
 }: BedrifterViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [fylke, setFylke] = useState('')
-  const [kommune, setKommune] = useState('')
+  const { focus, setFocus } = useFocus()
+  const [fylke, setFylke] = useState(focus?.fylke ?? '')
+  const [kommune, setKommune] = useState(focus?.kommune ?? '')
   const [search, setSearch] = useState('')
   const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
+
+  // A manual region choice here IS an answer to the first-run question — write it back to the
+  // shared focus even when focus was still null, so the dialog doesn't reopen next launch.
+  // Categories are preserved as-is; this view never edits them (Settings owns that).
+  const writeBackRegion = (nextFylke: string, nextKommune: string) => {
+    setFocus({
+      fylke: nextFylke || null,
+      kommune: nextKommune || null,
+      categories: focus?.categories ?? [],
+    })
+  }
 
   const load = useCallback(() => {
     setError(null)
@@ -187,8 +200,10 @@ export function BedrifterView({
             value={fylke}
             onChange={(event) => {
               const next = event.target.value
+              const nextKommune = next && kommune && fylkeOf(kommune) !== next ? '' : kommune
               setFylke(next)
-              if (next && kommune && fylkeOf(kommune) !== next) setKommune('')
+              if (nextKommune !== kommune) setKommune(nextKommune)
+              writeBackRegion(next, nextKommune)
             }}
           >
             <option value="">{t('common.all')}</option>
@@ -208,7 +223,11 @@ export function BedrifterView({
             id="bedrifter-kommune"
             className="select"
             value={kommune}
-            onChange={(event) => setKommune(event.target.value)}
+            onChange={(event) => {
+              const next = event.target.value
+              setKommune(next)
+              writeBackRegion(fylke, next)
+            }}
           >
             <option value="">{t('common.all')}</option>
             {kommuner.map(([number, name]) => (

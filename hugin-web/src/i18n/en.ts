@@ -61,6 +61,11 @@ export const en = {
   'settings.sourceMoved': 'Order changed.',
   'settings.languageHeading': 'Language',
   'settings.themeHeading': 'Theme',
+  'settings.focusHeading': 'Focus',
+  'settings.focusHint': 'Controls what the dashboard and company list show by default.',
+  'settings.focusUpdated': 'Focus updated.',
+  'settings.focusReset': 'Show the first-run choice again',
+  'settings.focusResetDone': 'The first-run choice will show again.',
 
   'trenger.heading': 'Needs action',
   'trenger.loadError': 'Could not load ads.',
