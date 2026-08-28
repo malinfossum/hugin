@@ -62,6 +62,7 @@ export const nb = {
   'trenger.deadlineToday': 'frist i dag',
   'trenger.deadlineExpired': 'frist utløpt',
   'trenger.deadlineInDays': 'frist om {n} dager',
+  'trenger.deadlineInOneDay': 'frist om 1 dag',
 
   'frister.heading': 'Frister',
   'frister.showLabel': 'Vis',
@@ -81,6 +82,7 @@ export const nb = {
   'frister.expiredBadge': 'utløpt',
   'frister.todayBadge': 'i dag',
   'frister.daysBadge': '{n} dager',
+  'frister.dayBadgeOne': '1 dag',
 
   'newSince.heading': 'Nytt siden sist',
   'newSince.loadError': 'Kunne ikke laste nytt siden sist.',
@@ -116,6 +118,7 @@ export const nb = {
   'companies.kommune': 'Kommune',
   'companies.search': 'Søk',
   'companies.count': '{n} bedrifter',
+  'companies.countOne': '1 bedrift',
   'companies.detailLoadError': 'Kunne ikke laste bedriften.',
   'companies.orgnr': 'Orgnr',
   'companies.nace': 'NACE',

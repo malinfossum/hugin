@@ -32,6 +32,7 @@ function daysLeftText(daysLeft: number | null, t: T): string {
   if (daysLeft === null) return t('frister.none')
   if (daysLeft < 0) return t('frister.expiredBadge')
   if (daysLeft === 0) return t('frister.todayBadge')
+  if (daysLeft === 1) return t('frister.dayBadgeOne')
   return t('frister.daysBadge', { n: daysLeft })
 }
 

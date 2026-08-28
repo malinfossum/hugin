@@ -62,6 +62,7 @@ export const en = {
   'trenger.deadlineToday': 'due today',
   'trenger.deadlineExpired': 'deadline expired',
   'trenger.deadlineInDays': 'due in {n} days',
+  'trenger.deadlineInOneDay': 'due in 1 day',
 
   'frister.heading': 'Deadlines',
   'frister.showLabel': 'Show',
@@ -81,6 +82,7 @@ export const en = {
   'frister.expiredBadge': 'expired',
   'frister.todayBadge': 'today',
   'frister.daysBadge': '{n} days',
+  'frister.dayBadgeOne': '1 day',
 
   'newSince.heading': 'New since last visit',
   'newSince.loadError': 'Could not load new items.',
@@ -116,6 +118,7 @@ export const en = {
   'companies.kommune': 'Municipality',
   'companies.search': 'Search',
   'companies.count': '{n} companies',
+  'companies.countOne': '1 company',
   'companies.detailLoadError': 'Could not load the company.',
   'companies.orgnr': 'Org. no.',
   'companies.nace': 'NACE',

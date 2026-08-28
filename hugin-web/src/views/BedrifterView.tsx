@@ -211,7 +211,11 @@ export function BedrifterView({
         </div>
       </div>
 
-      <p className="text-muted">{t('companies.count', { n: filtered.length })}</p>
+      <p className="text-muted">
+        {visibleGroups.length === 1
+          ? t('companies.countOne')
+          : t('companies.count', { n: visibleGroups.length })}
+      </p>
 
       <ul className="stack stack-sm">
         {visibleGroups.map((g) => (

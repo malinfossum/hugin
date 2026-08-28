@@ -109,6 +109,14 @@ describe('FristerList', () => {
     expect(ingenSpan).not.toHaveClass('frist-gul')
   })
 
+  it('renders the singular day badge for daysLeft === 1', async () => {
+    const ads = [ad({ feedId: 'a1', title: 'I morgen', daysLeft: 1 })]
+    renderList(fakeServer(ads))
+
+    await screen.findByText('1 dag')
+    expect(screen.queryByText('1 dager')).toBeNull()
+  })
+
   it('shows "utløpt" with frist-rod for an overdue (negative daysLeft) row', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', daysLeft: -2 })]
     renderList(fakeServer(ads))

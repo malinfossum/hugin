@@ -6,6 +6,7 @@ import type { AdDto } from '../../types'
 function fristText(daysLeft: number, t: T): string {
   if (daysLeft < 0) return t('trenger.deadlineExpired')
   if (daysLeft === 0) return t('trenger.deadlineToday')
+  if (daysLeft === 1) return t('trenger.deadlineInOneDay')
   return t('trenger.deadlineInDays', { n: daysLeft })
 }
 

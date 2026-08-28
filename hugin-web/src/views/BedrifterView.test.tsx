@@ -113,7 +113,31 @@ describe('BedrifterView', () => {
 
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
-    expect(screen.getByText('1 bedrifter')).toBeInTheDocument()
+    expect(screen.getByText('1 bedrift')).toBeInTheDocument()
+  })
+
+  it('shows the singular count for a single loaded company with no filters applied', async () => {
+    const companies = [company({ orgnr: '1', name: 'Acme AS' })]
+    renderView(fakeServer(companies, {}))
+
+    expect(await screen.findByText('1 bedrift')).toBeInTheDocument()
+  })
+
+  it('counts rendered rows, not raw units — a branch+parent pair (2 units, 1 row) is singular', async () => {
+    const companies = [
+      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({
+        orgnr: '972483672',
+        name: 'NORSK TIPPING AS AVDELING OSLO',
+        parentOrgnr: '925836613',
+        isBranch: true,
+        kommuneNavn: 'Oslo',
+      }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    expect(await screen.findByText('1 bedrift')).toBeInTheDocument()
+    expect(screen.queryByText('2 bedrifter')).not.toBeInTheDocument()
   })
 
   it('filters by kommune select', async () => {
