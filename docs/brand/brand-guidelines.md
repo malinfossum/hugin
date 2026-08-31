@@ -17,11 +17,11 @@ Do not use the micro mark at large display sizes. Do not force the primary mark 
 
 | Token | Value | Purpose |
 | --- | --- | --- |
-| Ground | `#0A0806` | Warm near-black brand surface |
-| Ember | `#D66A30` | Primary dark-theme mark/accent |
+| Ground | `#080909` | Cool near-black brand surface ("ember on slate", 2026-08-31) |
+| Ember | `#D66A30` | Primary dark-theme mark/accent — the only warm element |
 | Light-theme ember | `#9E3E16` | Accessible mark/accent on light surfaces |
 | Ivory | `#FBF7EF` | Primary text on dark surfaces |
-| Muted | `#CFC5B4` | Supporting text |
+| Muted | `#C7C7BE` | Supporting text |
 
 Use one ember family only. Do not add gradients, shadows, metallic effects, or a second accent hue.
 

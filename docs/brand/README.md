@@ -2,7 +2,7 @@
 
 Hugin is Odin's raven of thought — it flies out each morning and returns with tidings. The identity is a responsive two-mark system: a watchful raven in profile, scanning ahead.
 
-**Source of truth:** Hugin Brand Pack v1.0.0 (local: `Development\Assets\Brand_Project_Design\Hugin-Brand-Pack\`). This folder holds only the copies the repo references; regenerate nothing here — re-export from the pack. Full usage rules live in [brand-guidelines.md](brand-guidelines.md) (vendored from the pack's `07-guidelines/`).
+**Source of truth:** Hugin Brand Pack v1.1.0 (local: `Development\Assets\Brand_Project_Design\Hugin-Brand-Pack\`). This folder holds only the copies the repo references; regenerate nothing here — re-export from the pack. Full usage rules live in [brand-guidelines.md](brand-guidelines.md) (vendored from the pack's `07-guidelines/`).
 
 ## The two marks
 
@@ -21,7 +21,7 @@ Hugin is Odin's raven of thought — it flies out each morning and returns with 
 
 Pack tokens match the design system's `hugin` palette (`hugin-web/design-system/tokens/palettes/hugin.css`):
 
-- Ground `#0a0806` (warm near-black) · ivory text `#fbf7ef` · muted `#cfc5b4`
+- Ground `#080909` (cool near-black slate, "ember on slate" 2026-08-31) · ivory text `#fbf7ef` · muted `#c7c7be`
 - Ember accent `#d66a30` (`--accent-rgb: 214 106 48`); light theme uses the darker ember (`#9e3e16`) automatically wherever the mark is colored via `currentColor`.
 - Type: Space Grotesk 700 (display) + Figtree 500 (body), both bundled in the design system.
 
