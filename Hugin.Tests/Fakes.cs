@@ -2,6 +2,7 @@ using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
 using Hugin.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Hugin.Tests;
 
@@ -449,4 +450,20 @@ internal sealed class FakeConfigSource(HuginConfig config) : IConfigSource
     public HuginConfig Config { get; set; } = config;
 
     public HuginConfig Load() => Config;
+}
+
+/// <summary>Captures warnings so a test can assert the depth-cap message was actually emitted.</summary>
+internal sealed class ListLogger<T> : ILogger<T>
+{
+    public List<string> Warnings { get; } = [];
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+        Func<TState, Exception?, string> formatter)
+    {
+        if (logLevel >= LogLevel.Warning) Warnings.Add(formatter(state, exception));
+    }
 }

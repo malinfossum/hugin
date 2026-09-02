@@ -1,3 +1,4 @@
+using System.Globalization;
 using Hugin.Infrastructure.Http;
 
 namespace Hugin.Tests;
@@ -93,5 +94,81 @@ public class BrregClientTests
         Assert.That(result.Single(k => k.Number == "0301").Name, Is.EqualTo("Oslo"));
         Assert.That(result.Single(k => k.Number == "3453").Name, Is.EqualTo("Vågå"));
         Assert.That(result.Single(k => k.Number == "3454").Name, Is.EqualTo("Nord-Aurdal"));
+    }
+
+    // Fake Brreg that filters a fixed unit set by the request's inclusive date bounds and reports
+    // totalElements = matching count. `window` makes the client bisect long before 10k.
+    private static (BrregClient Client, List<string> Requests) BisectingClient(
+        IReadOnlyList<(string Orgnr, DateOnly Date)> units, int window, ListLogger<BrregClient>? logger = null)
+    {
+        var requests = new List<string>();
+        var http = HttpFixtures.Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            requests.Add(url);
+            if (url.Contains("underenheter?", StringComparison.Ordinal))
+                return HttpFixtures.Json("""{"_embedded":{"underenheter":[]},"page":{"size":200,"totalElements":0,"totalPages":0,"number":0}}""");
+            if (!url.Contains("enheter?", StringComparison.Ordinal)) return HttpFixtures.NotFound();
+
+            var (from, to) = DateRange(url);
+            var hits = units.Where(u => (from is null || u.Date >= from) && (to is null || u.Date <= to)).ToList();
+            var items = string.Join(',', hits.Select(u =>
+                $$$"""{"organisasjonsnummer":"{{{u.Orgnr}}}","navn":"X","forretningsadresse":{"kommunenummer":"0301"}}"""));
+            return HttpFixtures.Json(
+                $$$"""{"_embedded":{"enheter":[{{{items}}}]},"page":{"size":200,"totalElements":{{{hits.Count}}},"totalPages":1,"number":0}}""");
+        });
+        return (new BrregClient(http, logger, paginationWindow: window, today: () => new DateOnly(2026, 9, 3)), requests);
+    }
+
+    private static (DateOnly? From, DateOnly? To) DateRange(string url)
+    {
+        var query = new Uri(url).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2)).ToDictionary(p => p[0], p => p.Length > 1 ? p[1] : "");
+        DateOnly? Parse(string key) => query.TryGetValue(key, out var v)
+            ? DateOnly.ParseExact(v, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
+        return (Parse("fraRegistreringsdatoEnhetsregisteret"), Parse("tilRegistreringsdatoEnhetsregisteret"));
+    }
+
+    [Test]
+    public async Task Over_window_query_is_bisected_by_date_and_the_slices_partition_the_unsplit_set()
+    {
+        var units = Enumerable.Range(0, 10)
+            .Select(i => ($"90000000{i}", new DateOnly(2020, 1, 1).AddDays(i * 37))).ToList();
+        var (client, requests) = BisectingClient(units, window: 4);
+
+        var result = await client.GetCompaniesAsync(["62"], ["0301"]);
+
+        Assert.That(result.Select(c => c.Orgnr), Is.EquivalentTo(units.Select(u => u.Item1)),
+            "union of the bisected slices == the unsplit set, with no duplicates");
+        Assert.That(requests.Count(r => r.Contains("enheter?", StringComparison.Ordinal) && !r.Contains("underenheter", StringComparison.Ordinal)),
+            Is.GreaterThan(1), "the client actually split the query");
+    }
+
+    [Test]
+    public async Task Under_window_query_is_never_split()
+    {
+        var units = new List<(string, DateOnly)> { ("900000001", new DateOnly(2020, 1, 1)), ("900000002", new DateOnly(2021, 1, 1)) };
+        var (client, requests) = BisectingClient(units, window: 4);
+
+        await client.GetCompaniesAsync(["62"], ["0301"]);
+
+        Assert.That(requests.Any(r => r.Contains("Registreringsdato", StringComparison.Ordinal)), Is.False,
+            "today's behavior is byte-identical below the window");
+    }
+
+    [Test]
+    public async Task Slice_that_cannot_be_split_further_warns_and_returns_what_the_window_allows()
+    {
+        var sameDay = new DateOnly(2020, 5, 5);
+        var units = new List<(string, DateOnly)> { ("900000001", sameDay), ("900000002", sameDay) };
+        var logger = new ListLogger<BrregClient>();
+        var (client, _) = BisectingClient(units, window: 1, logger);
+
+        var result = await client.GetCompaniesAsync(["62"], ["0301"]);
+
+        Assert.That(result.Select(c => c.Orgnr), Is.EquivalentTo(new[] { "900000001", "900000002" }),
+            "the fake serves both on page 0; the client still returns them");
+        Assert.That(logger.Warnings, Has.Count.EqualTo(1));
+        Assert.That(logger.Warnings[0], Does.Contain("0301").And.Contain("over grensen"));
     }
 }

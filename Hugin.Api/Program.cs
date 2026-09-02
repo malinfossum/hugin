@@ -9,6 +9,7 @@ using Hugin.Infrastructure.Data;
 using Hugin.Infrastructure.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 
 var configPath = ArgValue(args, "--config");
 var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
@@ -49,8 +50,9 @@ builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
 builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
-builder.Services.AddSingleton<IBrregClient>(_ =>
-    new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
+builder.Services.AddSingleton<IBrregClient>(sp =>
+    new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) },
+        sp.GetRequiredService<ILogger<BrregClient>>()));
 builder.Services.AddSingleton<INavFeedClient>(_ =>
 {
     var http = new HttpClient { BaseAddress = new Uri(NavFeedClient.BaseAddress) };

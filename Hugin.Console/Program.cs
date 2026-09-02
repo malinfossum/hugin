@@ -125,8 +125,9 @@ internal static class Program
         services.AddScoped<IKommuneRepository, EfKommuneRepository>();
         services.AddScoped<ISourceRepository, EfSourceRepository>();
 
-        services.AddSingleton<IBrregClient>(_ =>
-            new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
+        services.AddSingleton<IBrregClient>(sp =>
+            new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) },
+                sp.GetRequiredService<ILogger<BrregClient>>()));
 
         services.AddSingleton<INavFeedClient>(_ =>
         {
