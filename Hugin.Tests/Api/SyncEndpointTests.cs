@@ -70,7 +70,7 @@ public sealed class SyncEndpointTests
         Assert.That(status.FinishedUtc, Is.Null);
     }
 
-    private static async Task<SyncRunStatus> PollUntilFinished(HttpClient client)
+    internal static async Task<SyncRunStatus> PollUntilFinished(HttpClient client)
     {
         var deadline = DateTime.UtcNow + PollTimeout;
         while (DateTime.UtcNow < deadline)

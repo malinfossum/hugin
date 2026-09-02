@@ -37,6 +37,7 @@ public sealed class RealHostBindingTests
         psi.ArgumentList.Add("--config");
         psi.ArgumentList.Add(configPath);
         psi.Environment["hugin__autosync"] = "false"; // no real Brreg/NAV calls from a test process
+        psi.Environment["hugin__openbrowser"] = "false"; // no popped browser from a test process
 
         using var process = Process.Start(psi) ?? throw new InvalidOperationException("failed to start Hugin.Api");
         // Drain redirected streams so the child never blocks on a full pipe buffer.

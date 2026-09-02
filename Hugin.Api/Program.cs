@@ -68,6 +68,7 @@ builder.Services.AddScoped<AdOverviewService>();
 builder.Services.AddScoped<ExtractService>();
 
 builder.Services.AddSingleton<SyncRunner>();
+builder.Services.AddSingleton<BootSyncGate>();
 builder.Services.AddHostedService<StartupSync>();
 
 var app = builder.Build();
@@ -75,10 +76,13 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var services = scope.ServiceProvider;
-    // DI-resolved, not the outer `loaded.Config` local — same instance in production, but this
-    // is what lets a test host (ApiFactory) override HuginConfig and have the override actually
-    // reach seeding.
-    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+    // DI-resolved (not the outer locals) so a test host can point config + db at its own temp dir.
+    var file = services.GetRequiredService<HuginConfigFile>();
+
+    // Fresh install = no db on disk BEFORE InitAsync creates it: hold the boot sync for first-run.
+    if (!File.Exists(file.DatabasePath)) services.GetRequiredService<BootSyncGate>().Hold();
+
+    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), file.DatabasePath,
         services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
 }
 
@@ -111,6 +115,7 @@ app.MapReads();
 app.MapWrites();
 app.MapSync();
 app.MapSources();
+app.MapConfig();
 
 // SPA fallback — but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
 app.MapFallback(async context =>
@@ -138,10 +143,10 @@ app.MapFallback(async context =>
 });
 
 // One double-click is the whole start-up: open the dashboard in the default browser once the
-// host is listening. Every test host sets hugin:autosync=false (the RealHostBindingTests
-// subprocess included, via env var), so tests never pop a browser; --no-browser opts out.
+// host is listening. Every test host sets hugin:openbrowser=false (ApiFactory, and
+// RealHostBindingTests via env var), so tests never pop a browser; --no-browser opts out for people.
 var openBrowser = Array.IndexOf(args, "--no-browser") < 0
-    && app.Configuration["hugin:autosync"] != "false";
+    && app.Configuration["hugin:openbrowser"] != "false";
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
