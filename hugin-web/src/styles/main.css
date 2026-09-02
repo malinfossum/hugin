@@ -288,6 +288,15 @@ input[type="text"] {
   }
 }
 
+/* Same reason as .lang-toggle: the fieldset is the semantic group for the kommune
+   checkboxes, not a boxed form section — strip the native chrome. */
+.coverage-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
 /* Coverage cascade (v3.4): one checkbox row per kommune. Rows are ≥44 px touch targets; the
    grid fills in mobile-first — one column on a phone, more as width allows. */
 .coverage-kommuner {

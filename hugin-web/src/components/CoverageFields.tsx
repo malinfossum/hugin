@@ -53,7 +53,7 @@ export function CoverageFields({ idPrefix, draft, onChange, kommuner }: Props) {
       )}
 
       {draft.fylke && kommuner !== null && (
-        <fieldset className="stack stack-sm">
+        <fieldset className="stack stack-sm coverage-group">
           <legend>{t('coverage.kommunerLegend', { fylke: fylkeName(draft.fylke) })}</legend>
           <p className="help">{t('coverage.kommunerHint')}</p>
           <div className="coverage-kommuner">
