@@ -108,7 +108,11 @@ internal static class Program
 
         var services = builder.Services;
 
+        var configFile = new HuginConfigFile(loaded.ConfigPath);
+
         services.AddSingleton(loaded.Config);
+        services.AddSingleton(configFile);
+        services.AddSingleton<IConfigSource>(configFile);
         services.AddSingleton<IClock, SystemClock>();
 
         services.AddDbContext<HuginDbContext>(o => o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
@@ -124,11 +128,11 @@ internal static class Program
         services.AddSingleton<IBrregClient>(_ =>
             new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
 
-        services.AddSingleton<INavFeedClient>(sp =>
+        services.AddSingleton<INavFeedClient>(_ =>
         {
             var http = new HttpClient { BaseAddress = new Uri(NavFeedClient.BaseAddress) };
-            var config = sp.GetRequiredService<HuginConfig>();
-            return new NavFeedClient(http, new NavTokenProvider(http, config.NavToken), config);
+            // The token is the one config value that stays a startup snapshot (not part of the v3.4 UI).
+            return new NavFeedClient(http, new NavTokenProvider(http, loaded.Config.NavToken));
         });
         services.AddSingleton<IWebsiteProber>(_ => new WebsiteProber(WebsiteProber.CreateHttpClient()));
 

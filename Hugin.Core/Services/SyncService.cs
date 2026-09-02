@@ -27,7 +27,7 @@ public sealed class SyncService(
     IReviewMarkRepository reviewMark,
     IWebsiteProber websiteProber,
     IClock clock,
-    HuginConfig config)
+    IConfigSource configSource)
 {
     // A generous stop so a malformed next_id chain cannot loop forever. Daily syncs from
     // yesterday's tail need a handful of pages; a full backfill walks the whole feed and
@@ -51,14 +51,18 @@ public sealed class SyncService(
     {
         var now = clock.UtcNow;
 
+        // Per-run config: a scope saved from the dashboard (or a hand edit) applies to the very
+        // next sync — no restart, no stale startup snapshot (spec v3.4 Part C).
+        var config = configSource.Load();
+
         // The register must be current before the scope is built from it — a first-ever run
         // with an unreachable register simply degrades to config-only scope (kommuner.GetAllAsync
         // returns whatever is already stored, empty on a fresh database).
         await SyncKommunerAsync(ct);
         var scope = MunicipalityScope.Build(config, await kommuner.GetAllAsync(ct));
 
-        var brregResult = await SyncBrregAsync(now, scope, ct);
-        var navResult = await SyncNavAsync(now, fullNav, scope, onNavPage, ct);
+        var brregResult = await SyncBrregAsync(now, config, scope, ct);
+        var navResult = await SyncNavAsync(now, fullNav, config, scope, onNavPage, ct);
 
         // Expiry is a local sweep, not feed data: an ad past its date is stale whether or not
         // NAV was reachable this morning.
@@ -137,7 +141,7 @@ public sealed class SyncService(
     /// — fylker or all-of-Norway — the allowed numbers are chunked by 2-char fylke prefix so
     /// each query stays under Brreg's pagination window.
     /// </summary>
-    private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, MunicipalityScope scope, CancellationToken ct)
+    private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, HuginConfig config, MunicipalityScope scope, CancellationToken ct)
     {
         // Declared outside the try so a later chunk's failure can still report what earlier
         // chunks already fetched and stored — same convention as SyncNavAsync's `stored`.
@@ -196,7 +200,7 @@ public sealed class SyncService(
         }
     }
 
-    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, bool full, MunicipalityScope scope,
+    private async Task<SourceResult> SyncNavAsync(DateTimeOffset now, bool full, HuginConfig config, MunicipalityScope scope,
         Action<int, int>? onPage, CancellationToken ct)
     {
         var stored = 0;
@@ -215,8 +219,8 @@ public sealed class SyncService(
                 // A backfill with no stored position starts at the feed's oldest page; with
                 // one, it resumes — so an interrupted backfill continues instead of restarting.
                 var feedPage = full && firstFetch && cursor is null
-                    ? await nav.GetFirstPageAsync(scope, ct)
-                    : await nav.GetPageAsync(cursor, scope, ct);
+                    ? await nav.GetFirstPageAsync(config, scope, ct)
+                    : await nav.GetPageAsync(cursor, config, scope, ct);
                 firstFetch = false;
 
                 foreach (var ad in feedPage.Ads)

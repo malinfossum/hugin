@@ -16,6 +16,8 @@ public class NavFeedClientTests
     private static readonly MunicipalityScope ConfigScope =
         MunicipalityScope.Build(new HuginConfig(), new Dictionary<string, string>());
 
+    private static readonly HuginConfig Config = new();
+
     private static readonly string TokenBody =
         "Current public token for Nav Job Vacancy Feed:\n" +
         "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.c2lnbmF0dXJl";
@@ -42,13 +44,13 @@ public class NavFeedClientTests
     private static NavFeedClient Client(Func<HttpRequestMessage, HttpResponseMessage> respond, string? configuredToken = null)
     {
         var http = HttpFixtures.Client(respond, NavBase);
-        return new NavFeedClient(http, new NavTokenProvider(http, configuredToken), new HuginConfig());
+        return new NavFeedClient(http, new NavTokenProvider(http, configuredToken));
     }
 
     [Test]
     public async Task Maps_fixture_page_to_feed_ads()
     {
-        var page = await Client(ServeFeed).GetPageAsync(null, ConfigScope);
+        var page = await Client(ServeFeed).GetPageAsync(null, Config, ConfigScope);
 
         // Oslo (wrong municipality) and "Sykepleier natt" (no keyword) are filtered out.
         Assert.That(page.Ads.Select(a => a.FeedId), Is.EquivalentTo(new[]
@@ -101,7 +103,7 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/6666", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(result.Ads, Is.Empty);
     }
@@ -127,7 +129,8 @@ public class NavFeedClientTests
             """;
 
         var register = new Dictionary<string, string> { ["3909"] = "LARVIK" };
-        var scope = MunicipalityScope.Build(new HuginConfig { Fylker = ["39"] }, register);
+        var fylkeConfig = new HuginConfig { Fylker = ["39"] };
+        var scope = MunicipalityScope.Build(fylkeConfig, register);
 
         var result = await Client(request =>
         {
@@ -135,7 +138,7 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/8888", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null, scope);
+        }).GetPageAsync(null, fylkeConfig, scope);
 
         Assert.That(result.Ads.Single().MunicipalityNumber, Is.EqualTo("3909"));
     }
@@ -156,7 +159,7 @@ public class NavFeedClientTests
             var url = request.RequestUri!.ToString();
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(result.Ads, Is.Empty);
     }
@@ -187,7 +190,7 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/7777", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(result.Ads.Single().EmployerHomepage, Is.Null);
     }
@@ -214,7 +217,7 @@ public class NavFeedClientTests
             if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
             if (url.Contains("feedentry/5555", StringComparison.Ordinal)) return HttpFixtures.Json(stub);
             return HttpFixtures.Json(page);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(result.Ads.Single().IsActive, Is.False,
             "an ad NAV has stripped is gone now, whatever the historical entry said");
@@ -228,7 +231,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetPageAsync("1df27f1c-2a02-4077-9ef0-d5e45f4c77f1", ConfigScope);
+        }).GetPageAsync("1df27f1c-2a02-4077-9ef0-d5e45f4c77f1", Config, ConfigScope);
 
         Assert.That(requested.Any(u => u.EndsWith("api/v1/feed/1df27f1c-2a02-4077-9ef0-d5e45f4c77f1", StringComparison.Ordinal)),
             Is.True, "a stored cursor must be requested as a feed page id");
@@ -243,7 +246,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(requested.Any(u => u.Contains("last=true", StringComparison.Ordinal)), Is.True,
             "a first sync must not walk the feed from 2019");
@@ -257,7 +260,7 @@ public class NavFeedClientTests
         {
             requested.Add(request.RequestUri!.ToString());
             return ServeFeed(request);
-        }).GetFirstPageAsync(ConfigScope);
+        }).GetFirstPageAsync(Config, ConfigScope);
 
         var feedRequest = requested.First(u => u.Contains("api/v1/feed", StringComparison.Ordinal));
         Assert.That(feedRequest, Does.EndWith("api/v1/feed"),
@@ -278,7 +281,7 @@ public class NavFeedClientTests
 
             feedCalls++;
             return feedCalls == 1 ? Unauthorized() : ServeFeed(request);
-        }).GetPageAsync(null, ConfigScope);
+        }).GetPageAsync(null, Config, ConfigScope);
 
         Assert.That(feedCalls, Is.EqualTo(2), "exactly one retry");
         Assert.That(tokenCalls, Is.EqualTo(2), "the token is refetched before the retry");
@@ -293,7 +296,7 @@ public class NavFeedClientTests
                 ? Text(TokenBody)
                 : Unauthorized());
 
-        Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null, ConfigScope));
+        Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null, Config, ConfigScope));
     }
 
     [Test]

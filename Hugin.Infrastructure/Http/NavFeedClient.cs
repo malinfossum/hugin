@@ -32,21 +32,21 @@ namespace Hugin.Infrastructure.Http;
 ///    only survivors are enriched. Inactive ads return a stub with no ad_content — expected,
 ///    NAV strips content once an ad is gone — so the summary values stand and IsActive flips.
 /// </summary>
-public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, HuginConfig config) : INavFeedClient
+public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : INavFeedClient
 {
     public const string BaseAddress = "https://pam-stilling-feed.nav.no/";
 
-    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default) =>
+    public Task<FeedPage> GetPageAsync(string? cursor, HuginConfig config, MunicipalityScope scope, CancellationToken ct = default) =>
         // No cursor means no sync has completed: start at the newest page rather than
         // walking the whole history uninvited. A deliberate backfill goes through
         // GetFirstPageAsync instead.
-        FetchPageAsync(cursor is null ? "api/v1/feed?last=true" : $"api/v1/feed/{cursor}", scope, ct);
+        FetchPageAsync(cursor is null ? "api/v1/feed?last=true" : $"api/v1/feed/{cursor}", config, scope, ct);
 
-    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default) =>
+    public Task<FeedPage> GetFirstPageAsync(HuginConfig config, MunicipalityScope scope, CancellationToken ct = default) =>
         // The bare feed URL is the oldest page (mid-2023 as of writing).
-        FetchPageAsync("api/v1/feed", scope, ct);
+        FetchPageAsync("api/v1/feed", config, scope, ct);
 
-    private async Task<FeedPage> FetchPageAsync(string path, MunicipalityScope scope, CancellationToken ct)
+    private async Task<FeedPage> FetchPageAsync(string path, HuginConfig config, MunicipalityScope scope, CancellationToken ct)
     {
 
         using var response = await SendAuthorizedAsync(path, ct);
@@ -66,7 +66,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
 
                 // Enrichment can also disqualify: NAV's occupation category separates real
                 // developer roles from keyword coincidences like prosjektutvikler massivtre.
-                if (await EnrichAsync(ad, scope, ct) is { } enriched)
+                if (await EnrichAsync(ad, config, scope, ct) is { } enriched)
                     ads.Add(enriched);
             }
         }
@@ -91,7 +91,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens, Hugi
             IsActive: string.Equals(Text(summary, "status"), "ACTIVE", StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task<FeedAd?> EnrichAsync(FeedAd ad, MunicipalityScope scope, CancellationToken ct)
+    private async Task<FeedAd?> EnrichAsync(FeedAd ad, HuginConfig config, MunicipalityScope scope, CancellationToken ct)
     {
         using var response = await SendAuthorizedAsync($"api/v1/feedentry/{ad.FeedId}", ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return ad;

@@ -28,7 +28,8 @@ public class SyncServiceTests
         FakeSyncStateRepository SyncState,
         FakeReviewMarkRepository ReviewMark,
         FakeWebsiteProber Prober,
-        FakeClock Clock);
+        FakeClock Clock,
+        FakeConfigSource ConfigSource);
 
     private static Harness Build(FakeBrregClient? brreg = null, FakeNavFeedClient? nav = null,
         FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null,
@@ -45,9 +46,10 @@ public class SyncServiceTests
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
+        var configSource = new FakeConfigSource(config);
 
-        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, config);
-        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock);
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, configSource);
+        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, configSource);
     }
 
     [Test]
@@ -289,6 +291,25 @@ public class SyncServiceTests
 
         Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "pins today's behavior — no chunking without scaling");
         Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+    }
+
+    [Test]
+    public async Task Config_edited_between_two_syncs_is_picked_up_without_a_restart()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner = { new Kommune { Number = "3909", Name = "LARVIK" } },
+        };
+        var h = Build(brreg: brreg);
+        await h.Service.SyncAsync();
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+
+        h.ConfigSource.Config = new HuginConfig { Municipalities = [new("Larvik", "3909")] };
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests[1], Is.EquivalentTo(new[] { "3909" }),
+            "the second run must read the new scope — no restart");
     }
 
     [Test]

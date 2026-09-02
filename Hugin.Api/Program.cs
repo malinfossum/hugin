@@ -16,6 +16,8 @@ var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
 var loaded = ConfigLoader.Load(configPath);
 if (loaded.Warning is not null) Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
 
+var configFile = new HuginConfigFile(loaded.ConfigPath);
+
 // Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
 // not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
 // standard ASPNETCORE_CONTENTROOT env var still wins when set, e.g. for test hosts.
@@ -33,6 +35,8 @@ builder.WebHost.ConfigureKestrel(o => o.Listen(System.Net.IPAddress.Loopback, po
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
 builder.Services.AddSingleton(loaded.Config);
+builder.Services.AddSingleton(configFile);
+builder.Services.AddSingleton<IConfigSource>(configFile);
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddDbContext<HuginDbContext>(o =>
     o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
@@ -47,11 +51,11 @@ builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
 builder.Services.AddSingleton<IBrregClient>(_ =>
     new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
-builder.Services.AddSingleton<INavFeedClient>(sp =>
+builder.Services.AddSingleton<INavFeedClient>(_ =>
 {
     var http = new HttpClient { BaseAddress = new Uri(NavFeedClient.BaseAddress) };
-    var config = sp.GetRequiredService<HuginConfig>();
-    return new NavFeedClient(http, new NavTokenProvider(http, config.NavToken), config);
+    // The token is the one config value that stays a startup snapshot (not part of the v3.4 UI).
+    return new NavFeedClient(http, new NavTokenProvider(http, loaded.Config.NavToken));
 });
 builder.Services.AddSingleton<IWebsiteProber>(_ => new WebsiteProber(WebsiteProber.CreateHttpClient()));
 

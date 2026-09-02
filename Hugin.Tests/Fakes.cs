@@ -1,4 +1,5 @@
 using Hugin.Core.Abstractions;
+using Hugin.Core.Config;
 using Hugin.Core.Models;
 using Hugin.Core.Services;
 
@@ -81,14 +82,14 @@ public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
     /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
     public Func<Task>? OnCall { get; set; }
 
-    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default)
+    public Task<FeedPage> GetPageAsync(string? cursor, HuginConfig config, MunicipalityScope scope, CancellationToken ct = default)
     {
         RequestedCursors.Add(cursor);
         RequestedScopes.Add(scope);
         return NextPage();
     }
 
-    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default)
+    public Task<FeedPage> GetFirstPageAsync(HuginConfig config, MunicipalityScope scope, CancellationToken ct = default)
     {
         FirstPageRequested = true;
         RequestedScopes.Add(scope);
@@ -441,4 +442,11 @@ internal sealed class FakeKommuneRepository : IKommuneRepository
         foreach (var kommune in kommuner) Store[kommune.Number] = kommune.Name;
         return Task.CompletedTask;
     }
+}
+
+internal sealed class FakeConfigSource(HuginConfig config) : IConfigSource
+{
+    public HuginConfig Config { get; set; } = config;
+
+    public HuginConfig Load() => Config;
 }
