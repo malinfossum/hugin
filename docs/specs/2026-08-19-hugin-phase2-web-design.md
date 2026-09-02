@@ -57,7 +57,7 @@ All JSON under `/api/*`, minimal API style. Responses are thin DTOs, not domain 
 
 ### API security (localhost is not a boundary against the browser)
 
-Any website can fire requests at `http://localhost:*`; simple cross-origin POSTs reach the server, and DNS rebinding can read responses. The pipeline holds personal assessments of employers — it must not be readable or writable by a page Malin happens to visit.
+Any website can fire requests at `http://localhost:*`; simple cross-origin POSTs reach the server, and DNS rebinding can read responses. The pipeline holds personal assessments of employers — it must not be readable or writable by a page I happen to visit.
 
 - **Loopback binding set in code**, not config: Kestrel listens on `127.0.0.1` only, asserted by a test. Never `0.0.0.0`.
 - **No CORS headers, ever** — cross-origin reads stay default-denied.

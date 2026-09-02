@@ -1,10 +1,10 @@
 # Hugin v3 — the generalization pivot
 
-2026-08-20 · Status: approved (decisions taken with Malin in-session)
+2026-08-20 · Status: approved (decisions taken 2026-08-20)
 
 Hugin stops being a GET Prepared-shaped tool and becomes a job radar for anyone: generalized statuses, starring, bilingual UI, format-choice data extract, own theme, single-exe distribution. Functionality-first, but visual quality is an explicit goal.
 
-## Decisions (Malin, 2026-08-20)
+## Decisions (2026-08-20)
 
 1. **De-GET-ify the whole tool** — web AND CLI. The Preparelogg-specific export (Søkt selv / Bedt GET tables, Route attribution) is removed; the weekly routine is served by the new extract's Applied table.
 2. **Status model**: `Active` (found) → `Applied` → `Answered`; independent ⭐ `Starred` flag on any entry ("want to apply"); sorting: starred first / deadline / updated / name. Migration maps Funnet→Active, SoektSelv→Applied, BedtGetSjekke→Applied, Svar→Answered; `OutreachRoute` is dropped.

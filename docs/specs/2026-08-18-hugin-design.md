@@ -14,7 +14,7 @@ Hugin is a command-line job radar for the Norwegian developer job market. It wat
 
 - No scraping of finn.no or proff.no (terms forbid it). finn/LinkedIn remain configured **link-outs** printed in output.
 - No web UI, no API, no notifications, no multi-user. The React + TypeScript frontend is a planned later phase, not part of v1.
-- No AI/text generation. Hugin stores and surfaces the begrunnelse; writing it is Malin's job.
+- No AI/text generation. Hugin stores and surfaces the begrunnelse; writing it is my job.
 
 ## Stack and project layout
 
@@ -54,7 +54,7 @@ Lives next to the executable (or `--config <path>`). This file is the whole "pre
 }
 ```
 
-- `linkouts` URLs above are illustrative — Malin's actual saved-search URLs (her existing finn.no search, the LinkedIn `f_E=1,2` search) go in at setup.
+- `linkouts` URLs above are illustrative — my actual saved-search URLs (my existing finn.no search, the LinkedIn `f_E=1,2` search) go in at setup.
 - `naeringskoder` uses **SN2025** codes (prefix `62` matches all sub-codes; the old `62.010` returns zero results — documented gotcha).
 - `navToken: null` → Hugin fetches NAV's rotating public token from `/api/publicToken` automatically; a registered stable token can be pasted in later.
 - Keywords filter **ads** (title/occupation), not companies — a company is interesting regardless of ad wording.
@@ -124,7 +124,7 @@ EF Core-backed repository tests use SQLite in-memory. The Stop-hook (`dotnet tes
 
 1. **Phase 2 — web:** thin ASP.NET Core API over the same Core + database, React + TypeScript frontend (also prep for Norsk Tipping's stack). The CLI keeps working; Core is shared.
 2. Possible PostgreSQL swap if the web phase wants it.
-3. Open-source from the start: English README, `hugin.json.example`, no personal data committed (`hugin.json` + `hugin.db` gitignored — the pipeline contains her real outreach history).
+3. Open-source from the start: English README, `hugin.json.example`, no personal data committed (`hugin.json` + `hugin.db` gitignored — the pipeline contains my real outreach history).
 
 ## Risks / known constraints
 
@@ -140,7 +140,7 @@ Three defects found after the build, against the live APIs rather than in review
 1. **NAV feed resume point.** At the feed tail `next_id` is null, and storing that as the cursor sent every later sync back to `?last=true` — the newest page — skipping every page that completed in between. Tail pages roll over within the hour, so a daily sync would have missed almost all ads. `FeedPage` now also carries the page `id`, and sync stores `next_id ?? id`; re-reading one page is harmless because upserts are idempotent.
 2. **Company websites.** Brreg stores `hjemmeside` as a bare hostname (`www.innit.no`) — of 200 companies sampled across the configured municipalities, 39 had one and none carried a scheme, so `UrlGuard.HttpOrHttps` discarded all of them and the export's Nettside column was always empty. `UrlGuard.Website` now assumes https for a scheme-less hostname, still refusing any value that declares a different scheme, and requires a dot so a typed note does not become a link.
 3. **Category gate (added post-v1).** Broad keywords ("utvikler") also match compounds NAV files far from IT — prosjektutvikler massivtre (Bygg), fag- og kvalitetsutvikler (Helse). Config gained `categories` (default `["IT"]`), matched against `occupationCategories[].level1` after enrichment; uncategorized ads fail open. `Ad.Category` stores the display value ("IT / Utvikling") and `list --ads` groups by it.
-4. **Answered outreach attribution.** Because `Status` is linear and ends at `Svar`, an answer to an application Malin sent herself moved into the "Bedt GET om å sjekke" section. Hence the `Route` field above; export now splits on route rather than status.
+4. **Answered outreach attribution.** Because `Status` is linear and ends at `Svar`, an answer to an application I sent myself moved into the "Bedt GET om å sjekke" section. Hence the `Route` field above; export now splits on route rather than status.
 
 ## Stress-test record (2026-08-18)
 
