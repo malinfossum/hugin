@@ -72,6 +72,8 @@ public sealed record SourceWriteRequest(string Label, string Url);
 
 public sealed record ReorderRequest(IReadOnlyList<int> Ids);
 
+public sealed record KommuneDto(string Number, string Name);
+
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {
