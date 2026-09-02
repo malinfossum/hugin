@@ -173,8 +173,21 @@ export const en = {
   'export.copiedAnnounce': 'Copied to clipboard.',
   'export.copyFailedAnnounce': 'Could not copy — select the text manually.',
 
+  'coverage.heading': 'Coverage',
+  'coverage.hint':
+    'Coverage controls what Hugin fetches from Brønnøysundregisteret and NAV. Focus (below) only controls what you see.',
+  'coverage.kommunerLegend': 'Municipalities in {fylke}',
+  'coverage.kommunerHint': 'None selected = the whole county.',
+  'coverage.kommunerUnavailable':
+    'The municipality list is not available yet — pick a county now, and municipalities under Settings later.',
+  'coverage.loadError': 'Could not load coverage.',
+  'coverage.save': 'Save coverage',
+  'coverage.saved': 'Saved — syncing …',
+  'coverage.saveFailed': 'Could not save coverage: {error}',
+
   'focus.title': 'What do you want to follow?',
-  'focus.intro': 'This becomes your starting filter — change it anytime in Settings.',
+  'focus.intro':
+    'Coverage controls what Hugin fetches; focus controls what you see first. Both can be changed in Settings.',
   'focus.allOfNorway': 'All of Norway',
   'focus.categoriesLegend': 'Categories',
   'focus.categoriesHint': 'None selected = all.',

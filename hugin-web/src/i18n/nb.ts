@@ -173,9 +173,21 @@ export const nb = {
   'export.copiedAnnounce': 'Kopiert til utklippstavlen.',
   'export.copyFailedAnnounce': 'Kunne ikke kopiere — merk teksten manuelt.',
 
+  'coverage.heading': 'Dekning',
+  'coverage.hint':
+    'Dekningen styrer hva Hugin henter fra Brønnøysundregisteret og NAV. Fokus (under) styrer bare hva du ser.',
+  'coverage.kommunerLegend': 'Kommuner i {fylke}',
+  'coverage.kommunerHint': 'Ingen valgt = hele fylket.',
+  'coverage.kommunerUnavailable':
+    'Kommunelisten er ikke tilgjengelig ennå — velg fylke nå, og kommuner under Innstillinger senere.',
+  'coverage.loadError': 'Kunne ikke laste dekningen.',
+  'coverage.save': 'Lagre dekning',
+  'coverage.saved': 'Lagret — synkroniserer …',
+  'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
+
   'focus.title': 'Hva vil du følge?',
   'focus.intro':
-    'Valget blir startfilteret ditt — du kan endre det når som helst under Innstillinger.',
+    'Dekningen styrer hva Hugin henter; fokuset styrer hva du ser først. Begge kan endres i Innstillinger.',
   'focus.allOfNorway': 'Hele landet',
   'focus.categoriesLegend': 'Kategorier',
   'focus.categoriesHint': 'Ingen valgt = alle.',
