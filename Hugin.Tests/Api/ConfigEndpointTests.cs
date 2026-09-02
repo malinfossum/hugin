@@ -156,6 +156,21 @@ public sealed class ConfigEndpointTests
     }
 
     [Test]
+    public async Task Put_discovery_returns_500_and_leaves_the_file_untouched_when_the_write_fails()
+    {
+        using var factory = new ApiFactory();
+        File.WriteAllText(factory.ConfigPath, "{ this is not json");
+        factory.Brreg.Kommuner.AddRange(Register);
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest(["3405"], [], false));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(File.ReadAllText(factory.ConfigPath), Is.EqualTo("{ this is not json"));
+        Assert.That(File.Exists(factory.ConfigPath + ".bak"), Is.False);
+    }
+
+    [Test]
     public async Task Put_discovery_needs_the_write_header()
     {
         using var factory = new ApiFactory();
