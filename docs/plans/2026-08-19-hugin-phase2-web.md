@@ -1733,7 +1733,7 @@ Write-Host "publish\hugin.exe og publish\hugin-api.exe deler hugin.json + hugin.
 Run: `.\build.ps1`
 Expected: `publish\hugin.exe`, `publish\hugin-api.exe`, `publish\wwwroot\index.html` all present.
 
-- [ ] **Step 3: Smoke test the real thing (manual, against Malin's live db — READ-ONLY steps only)**
+- [ ] **Step 3: Smoke test the real thing (manual, against my live db — READ-ONLY steps only)**
 
 ```bash
 ./publish/hugin-api.exe --port 5111
