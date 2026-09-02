@@ -74,6 +74,14 @@ public sealed record ReorderRequest(IReadOnlyList<int> Ids);
 
 public sealed record KommuneDto(string Number, string Name);
 
+public sealed record DiscoveryConfigDto(IReadOnlyList<MunicipalityRef> Municipalities, IReadOnlyList<string> Fylker, bool AllOfNorway)
+{
+    public static DiscoveryConfigDto From(DiscoveryConfig d) => new(d.Municipalities, d.Fylker, d.AllOfNorway);
+}
+
+/// <summary>Numbers only — names are derived from the kommune register server-side (spec v3.4 Part A).</summary>
+public sealed record DiscoveryWriteRequest(IReadOnlyList<string>? MunicipalityNumbers, IReadOnlyList<string>? Fylker, bool AllOfNorway);
+
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {

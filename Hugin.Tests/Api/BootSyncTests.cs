@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Hugin.Api;
 using Hugin.Api.Services;
+using Hugin.Core.Models;
 
 namespace Hugin.Tests.Api;
 
@@ -60,5 +62,25 @@ public sealed class BootSyncTests
         var response = await client.PostAsync("/api/first-run-dismissed", null);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Saving_discovery_releases_the_hold_without_starting_a_sync_itself()
+    {
+        using var factory = new ApiFactory(autosync: true);
+        factory.Brreg.Kommuner.Add(new Kommune { Number = "3909", Name = "Larvik" });
+        using var client = factory.CreateApiClient();
+
+        var put = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest(["3909"], [], false));
+        Assert.That(put.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        await Task.Delay(300);
+        var status = await client.GetFromJsonAsync<SyncRunStatus>("/api/sync/status");
+        Assert.That(status!.FinishedUtc, Is.Null, "the dashboard starts the sync — the PUT only lifts the hold");
+
+        var start = await client.PostAsync("/api/sync", null);
+        Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), "no 409 — nothing else is running");
+        var finished = await SyncEndpointTests.PollUntilFinished(client);
+        Assert.That(finished.Brreg!.Succeeded, Is.True);
     }
 }
