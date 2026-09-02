@@ -287,3 +287,31 @@ input[type="text"] {
     transition: none !important;
   }
 }
+
+/* Coverage cascade (v3.4): one checkbox row per kommune. Rows are ≥44 px touch targets; the
+   grid fills in mobile-first — one column on a phone, more as width allows. */
+.coverage-kommuner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 0.5rem;
+}
+.coverage-kommune {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.coverage-kommune input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+@media (min-width: 768px) {
+  .coverage-kommuner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .coverage-kommuner {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
