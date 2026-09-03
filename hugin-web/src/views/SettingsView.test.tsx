@@ -555,4 +555,20 @@ describe('Dekning (coverage)', () => {
       server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
     ).toBe(false)
   })
+
+  it('switching language does not discard an unsaved coverage edit', async () => {
+    const server = fakeServer([])
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(screen.getByRole('button', { name: 'EN' }))
+
+    expect(within(section).getByRole('checkbox', { name: 'Lillehammer' })).toBeChecked()
+    const discoveryGets = server.fetchMock.mock.calls.filter(
+      ([u, i]) => u === '/api/config/discovery' && (i?.method ?? 'GET') === 'GET'
+    )
+    expect(discoveryGets).toHaveLength(1)
+  })
 })

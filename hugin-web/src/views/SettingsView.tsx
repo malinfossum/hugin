@@ -40,6 +40,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
   const [coverage, setCoverage] = useState<CoverageDraft | null>(null)
   const [coverageKommuner, setCoverageKommuner] = useState<KommuneDto[] | null>(null)
+  const [coverageFailed, setCoverageFailed] = useState(false)
   const [coverageError, setCoverageError] = useState<string | null>(null)
   const [coverageSaving, setCoverageSaving] = useState(false)
   const t = useT()
@@ -69,14 +70,17 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   }, [])
 
   // Coverage = the server's discovery scope (what sync fetches). Loaded once on mount; the
-  // kommune list is best-effort (null → fylke-only cascade).
+  // kommune list is best-effort (null → fylke-only cascade). loadCoverage stays out of [t]:
+  // useT() hands back a new `t` identity on every language switch, and re-running this on a
+  // switch would re-GET the scope and overwrite an unsaved draft (the flag is translated at
+  // render instead, so it still follows the current language).
   const loadCoverage = useCallback(() => {
-    setCoverageError(null)
+    setCoverageFailed(false)
     return api
       .get<DiscoveryConfigDto>('/api/config/discovery')
       .then((config) => setCoverage(fromDiscoveryConfig(config)))
-      .catch(() => setCoverageError(t('coverage.loadError')))
-  }, [t])
+      .catch(() => setCoverageFailed(true))
+  }, [])
 
   useEffect(() => {
     loadCoverage()
@@ -405,9 +409,9 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         <h2 id="settings-coverage-heading">{t('coverage.heading')}</h2>
         <p className="help">{t('coverage.hint')}</p>
 
-        {coverageError && (
+        {(coverageFailed || coverageError) && (
           <p role="alert" className="alert alert-danger cluster cluster-sm">
-            {coverageError}
+            {coverageFailed ? t('coverage.loadError') : coverageError}
             {!coverage && (
               <button type="button" className="btn btn-ghost" onClick={loadCoverage}>
                 {t('common.retry')}
