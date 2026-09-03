@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../api'
 import {
   type CoverageDraft,
+  effectiveDraft,
   fromDiscoveryConfig,
   toDiscoveryRequest,
   toFocusSeed,
@@ -87,9 +88,10 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
   const handleStart = async () => {
     setSaving(true)
     setError(null)
-    const focus = toFocusSeed(draft, categories)
+    const chosen = effectiveDraft(draft, kommuner)
+    const focus = toFocusSeed(chosen, categories)
     try {
-      await api.put('/api/config/discovery', toDiscoveryRequest(draft))
+      await api.put('/api/config/discovery', toDiscoveryRequest(chosen))
     } catch (err) {
       // The lens still works without the server scope — save it, show the error, keep Start as retry.
       onSaveFocus(focus)

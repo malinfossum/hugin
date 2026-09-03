@@ -120,6 +120,28 @@ describe('FirstRunDialog v2', () => {
     expect(screen.getByRole('group', { name: 'Kategorier' })).toBeInTheDocument()
   })
 
+  it('saves the fylke alone when /api/kommuner is unreachable', async () => {
+    // The prefilled kommuner have no checkboxes in this mode, so they are invisible and
+    // un-clearable — sending them would only earn a 503 the user cannot act on. The fylke is
+    // what the dialog actually shows, so the fylke is what gets saved.
+    const calls = fakeServer({ kommunerDown: true })
+    const user = userEvent.setup()
+    const onSaveFocus = vi.fn()
+    const onDone = vi.fn()
+    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    await screen.findByText(/Kommunelisten er ikke tilgjengelig/)
+
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1))
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({
+      municipalityNumbers: [],
+      fylker: ['34'],
+      allOfNorway: false,
+    })
+    expect(onSaveFocus).toHaveBeenCalledWith({ fylke: '34', kommune: null, categories: [] })
+  })
+
   it('calls onDismiss (nothing else) on a native close, e.g. Escape', async () => {
     const calls = fakeServer()
     const onDismiss = vi.fn()

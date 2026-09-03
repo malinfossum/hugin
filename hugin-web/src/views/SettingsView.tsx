@@ -3,7 +3,12 @@ import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageFields } from '../components/CoverageFields'
 import { useAnnounce } from '../components/LiveRegion'
-import { type CoverageDraft, fromDiscoveryConfig, toDiscoveryRequest } from '../coverage'
+import {
+  type CoverageDraft,
+  effectiveDraft,
+  fromDiscoveryConfig,
+  toDiscoveryRequest,
+} from '../coverage'
 import { KNOWN_CATEGORIES, useFocus } from '../focus'
 import { FYLKER, fylkeOf } from '../fylker'
 import { useLang, useT } from '../i18n'
@@ -95,7 +100,10 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     setCoverageSaving(true)
     setCoverageError(null)
     try {
-      await api.put('/api/config/discovery', toDiscoveryRequest(coverage))
+      await api.put(
+        '/api/config/discovery',
+        toDiscoveryRequest(effectiveDraft(coverage, coverageKommuner))
+      )
     } catch (err) {
       setCoverageError(
         t('coverage.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })

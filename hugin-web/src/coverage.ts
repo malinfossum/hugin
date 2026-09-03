@@ -17,6 +17,14 @@ export function toDiscoveryRequest(draft: CoverageDraft): DiscoveryWriteRequest 
   return { municipalityNumbers: draft.kommuner, fylker: [], allOfNorway: false }
 }
 
+/** What to actually save, given what the cascade could render. With no kommune list
+ * (`kommuner === null`) the checkboxes are not drawn at all, so any prefilled numbers are
+ * invisible and un-clearable — and the API refuses numbers it cannot verify against the
+ * register. Degrade to the fylke alone: that is what the user sees, so that is what is saved. */
+export function effectiveDraft(draft: CoverageDraft, kommuner: KommuneDto[] | null): CoverageDraft {
+  return kommuner === null ? { fylke: draft.fylke, kommuner: [] } : draft
+}
+
 /** The cascade shows one fylke at a time: a config listing kommuner across several fylker shows
  * the first one's; the others are left untouched only until the next save (accepted — the
  * default config and every UI-written config are single-fylke). */

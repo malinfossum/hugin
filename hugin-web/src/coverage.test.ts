@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { fromDiscoveryConfig, kommunerInFylke, toDiscoveryRequest, toFocusSeed } from './coverage'
+import {
+  effectiveDraft,
+  fromDiscoveryConfig,
+  kommunerInFylke,
+  toDiscoveryRequest,
+  toFocusSeed,
+} from './coverage'
 
 const kommuner = [
   { number: '3405', name: 'Lillehammer' },
@@ -84,6 +90,20 @@ describe('toFocusSeed', () => {
       kommune: null,
       categories: [],
     })
+  })
+})
+
+describe('effectiveDraft', () => {
+  it('drops the kommuner when the register list is unavailable', () => {
+    expect(effectiveDraft({ fylke: '34', kommuner: ['3403', '3405'] }, null)).toEqual({
+      fylke: '34',
+      kommuner: [],
+    })
+  })
+
+  it('keeps the draft as-is when the list loaded', () => {
+    const draft = { fylke: '34', kommuner: ['3403'] }
+    expect(effectiveDraft(draft, kommuner)).toBe(draft)
   })
 })
 

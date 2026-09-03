@@ -49,12 +49,18 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
  * Dekning section always fetches on mount, in every scenario. Pass `null` as seed to make GET
  * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
  * wherever a test doesn't care about kommune options. `discovery`/`kommuner` seed the Dekning
- * section; `putStatus` makes the PUT fail with that status instead of echoing `discovery` back.
+ * section, `kommunerDown` makes GET /api/kommuner fail (the fylke-only degraded mode), and
+ * `putStatus` makes the PUT fail with that status instead of echoing `discovery` back.
  * Returns `{ fetchMock, puts }` — `puts` records every PUT /api/config/discovery body. */
 function fakeServer(
   seed: SourceDto[] | null,
   companies: CompanyDto[] = [],
-  options: { discovery?: DiscoveryConfigDto; kommuner?: KommuneDto[]; putStatus?: number } = {}
+  options: {
+    discovery?: DiscoveryConfigDto
+    kommuner?: KommuneDto[]
+    kommunerDown?: boolean
+    putStatus?: number
+  } = {}
 ) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
   let nextId = Math.max(0, ...entries.map((s) => s.id)) + 1
@@ -82,6 +88,9 @@ function fakeServer(
       return Promise.resolve(jsonResponse(discovery))
     }
     if (url === '/api/kommuner' && method === 'GET') {
+      if (options.kommunerDown) {
+        return Promise.resolve(jsonResponse({ title: 'Registeret er nede' }, { status: 503 }))
+      }
       return Promise.resolve(jsonResponse(kommuner))
     }
     if (url === '/api/sync' && method === 'POST') {
@@ -554,6 +563,25 @@ describe('Dekning (coverage)', () => {
     expect(
       server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
     ).toBe(false)
+  })
+
+  it('saves the fylke alone when the kommune list is unavailable', async () => {
+    // No checkboxes are rendered in this mode, so the prefilled kommuner are invisible and
+    // un-clearable — and the API would reject numbers it cannot verify. Save the fylke.
+    const server = fakeServer([], [], { kommunerDown: true })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+    await within(section).findByText(/Kommunelisten er ikke tilgjengelig/)
+
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    await waitFor(() => expect(server.puts).toHaveLength(1))
+    expect(server.puts[0]).toEqual({
+      municipalityNumbers: [],
+      fylker: ['34'],
+      allOfNorway: false,
+    })
   })
 
   it('switching language does not discard an unsaved coverage edit', async () => {
