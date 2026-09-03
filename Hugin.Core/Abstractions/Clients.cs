@@ -1,3 +1,4 @@
+using Hugin.Core.Config;
 using Hugin.Core.Services;
 
 namespace Hugin.Core.Abstractions;
@@ -32,12 +33,12 @@ public interface IBrregClient
 public interface INavFeedClient
 {
     /// <summary>A null cursor lands at the newest page — the normal daily entry point.
-    /// <paramref name="scope"/> resolves each ad's municipality name (config first, then the
-    /// kommune register) and gates it against the sync's allowed numbers.</summary>
-    public Task<FeedPage> GetPageAsync(string? cursor, MunicipalityScope scope, CancellationToken ct = default);
+    /// <paramref name="config"/> carries this run's keywords/categories (read fresh per sync);
+    /// <paramref name="scope"/> resolves each ad's municipality name and gates it.</summary>
+    public Task<FeedPage> GetPageAsync(string? cursor, HuginConfig config, MunicipalityScope scope, CancellationToken ct = default);
 
     /// <summary>The feed's oldest page — the entry point for a full backfill.</summary>
-    public Task<FeedPage> GetFirstPageAsync(MunicipalityScope scope, CancellationToken ct = default);
+    public Task<FeedPage> GetFirstPageAsync(HuginConfig config, MunicipalityScope scope, CancellationToken ct = default);
 }
 
 /// <summary><paramref name="ResolvedUrl"/> is the variant (https or http) that actually

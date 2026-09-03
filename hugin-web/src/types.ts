@@ -91,3 +91,25 @@ export interface SyncRunStatus {
   brreg: SourceResultDto | null
   nav: SourceResultDto | null
 }
+
+export interface KommuneDto {
+  number: string
+  name: string
+}
+
+export interface MunicipalityRefDto {
+  name: string
+  number: string
+}
+
+export interface DiscoveryConfigDto {
+  municipalities: MunicipalityRefDto[]
+  fylker: string[]
+  allOfNorway: boolean
+}
+
+export interface DiscoveryWriteRequest {
+  municipalityNumbers: string[]
+  fylker: string[]
+  allOfNorway: boolean
+}

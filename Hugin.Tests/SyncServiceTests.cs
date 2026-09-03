@@ -28,7 +28,8 @@ public class SyncServiceTests
         FakeSyncStateRepository SyncState,
         FakeReviewMarkRepository ReviewMark,
         FakeWebsiteProber Prober,
-        FakeClock Clock);
+        FakeClock Clock,
+        FakeConfigSource ConfigSource);
 
     private static Harness Build(FakeBrregClient? brreg = null, FakeNavFeedClient? nav = null,
         FakeAdRepository? ads = null, FakeCompanyRepository? companies = null, FakeWebsiteProber? prober = null,
@@ -45,9 +46,10 @@ public class SyncServiceTests
         var syncState = new FakeSyncStateRepository();
         var reviewMark = new FakeReviewMarkRepository();
         var clock = new FakeClock(Now);
+        var configSource = new FakeConfigSource(config);
 
-        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, config);
-        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock);
+        var service = new SyncService(brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, configSource);
+        return new Harness(service, brreg, nav, companies, kommuner, ads, syncState, reviewMark, prober, clock, configSource);
     }
 
     [Test]
@@ -292,6 +294,25 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Config_edited_between_two_syncs_is_picked_up_without_a_restart()
+    {
+        var brreg = new FakeBrregClient
+        {
+            Companies = { Company() },
+            Kommuner = { new Kommune { Number = "3909", Name = "LARVIK" } },
+        };
+        var h = Build(brreg: brreg);
+        await h.Service.SyncAsync();
+        Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+
+        h.ConfigSource.Config = new HuginConfig { Municipalities = [new("Larvik", "3909")] };
+        await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests[1], Is.EquivalentTo(new[] { "3909" }),
+            "the second run must read the new scope — no restart");
+    }
+
+    [Test]
     public async Task Fylke_config_chunks_the_brreg_query_per_fylke()
     {
         var brreg = new FakeBrregClient
@@ -360,6 +381,24 @@ public class SyncServiceTests
         var chunks = h.Brreg.CompaniesRequests.Select(c => c.ToHashSet()).ToList();
         Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3903" }));
         Assert.That(chunks, Has.Some.EquivalentTo(new[] { "3403" }));
+    }
+
+    [Test]
+    public async Task An_empty_scope_fails_brreg_instead_of_fetching_all_of_norway()
+    {
+        // A fylke-only config plus an empty kommune register (fresh install, register fetch
+        // down) leaves AllowedNumbers empty. Chunking that would send `kommunenummer=` to
+        // Brreg, which ignores an empty filter and answers with every IT unit in the country —
+        // so the sync has to stop here instead of quietly widening the scope to all of Norway.
+        var brreg = new FakeBrregClient { Companies = { Company() }, ThrowsOnGetKommuner = true };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Is.Empty, "nothing may be fetched under an empty scope");
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Kommuneregisteret er tomt — dekningen kunne ikke utvides"));
     }
 
     [Test]

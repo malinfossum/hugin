@@ -1,29 +1,44 @@
 import { useEffect, useRef, useState } from 'react'
+import { ApiError, api } from '../api'
+import {
+  type CoverageDraft,
+  effectiveDraft,
+  fromDiscoveryConfig,
+  toDiscoveryRequest,
+  toFocusSeed,
+} from '../coverage'
 import type { Focus } from '../focus'
 import { KNOWN_CATEGORIES } from '../focus'
-import { FYLKER } from '../fylker'
 import { useT } from '../i18n'
+import type { DiscoveryConfigDto, KommuneDto } from '../types'
+import { CoverageFields } from './CoverageFields'
 
 interface Props {
   open: boolean
-  onSave: (focus: Focus) => void
+  /** The render lens, seeded from the chosen scope — saved even when the PUT fails. */
+  onSaveFocus: (focus: Focus) => void
+  /** The scope was written and the sync started: the parent may close the dialog. */
+  onDone: () => void
   onDismiss: () => void
 }
 
-const FYLKE_OPTIONS = [...FYLKER.entries()]
+const DEFAULT_DRAFT: CoverageDraft = { fylke: '', kommuner: [] }
 
-/** First-run prompt for the starting focus filter (spec: fylke + categories, region-only —
- * kommune narrows later from Settings). Mirrors ConfirmDialog's native <dialog> management
- * (showModal/close effect + openRef guard distinguishing user-Esc from a parent-driven close),
- * except the heading (not a cancel button) gets the post-open focus, and there is no cancel
- * button — Esc is the only way to defer without choosing. */
-export function FirstRunDialog({ open, onSave, onDismiss }: Props) {
+/** First-run prompt v2 (spec v3.4 Part B): the region step is scope + lens. It prefills from the
+ * server's current discovery scope, lists the fylke's kommuner from /api/kommuner (degrading to
+ * fylke-only when that fails), and Start writes the scope, seeds the focus and triggers a sync.
+ * Native <dialog> management mirrors ConfirmDialog (showModal/close + openRef guard); Esc is
+ * the only way to defer without choosing. */
+export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const t = useT()
   const openRef = useRef(open)
-  const [fylke, setFylke] = useState('')
+  const [draft, setDraft] = useState<CoverageDraft>(DEFAULT_DRAFT)
+  const [kommuner, setKommuner] = useState<KommuneDto[] | null>(null)
   const [categories, setCategories] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -36,6 +51,30 @@ export function FirstRunDialog({ open, onSave, onDismiss }: Props) {
     if (!open && dialog.open) dialog.close()
   }, [open])
 
+  // Load the current server scope + the kommune list each time the dialog opens. Both are
+  // best-effort: no scope → defaults, no kommune list → fylke granularity only.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    api
+      .get<DiscoveryConfigDto>('/api/config/discovery')
+      .then((config) => {
+        if (!cancelled) setDraft(fromDiscoveryConfig(config))
+      })
+      .catch(() => {})
+    api
+      .get<KommuneDto[]>('/api/kommuner')
+      .then((list) => {
+        if (!cancelled) setKommuner(list)
+      })
+      .catch(() => {
+        if (!cancelled) setKommuner(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
   const handleClose = () => {
     if (openRef.current) onDismiss()
   }
@@ -46,8 +85,26 @@ export function FirstRunDialog({ open, onSave, onDismiss }: Props) {
     )
   }
 
-  const handleStart = () => {
-    onSave({ fylke: fylke || null, kommune: null, categories })
+  const handleStart = async () => {
+    setSaving(true)
+    setError(null)
+    const chosen = effectiveDraft(draft, kommuner)
+    const focus = toFocusSeed(chosen, categories)
+    try {
+      await api.put('/api/config/discovery', toDiscoveryRequest(chosen))
+    } catch (err) {
+      // The lens still works without the server scope — save it, show the error, keep Start as retry.
+      onSaveFocus(focus)
+      setError(
+        t('coverage.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })
+      )
+      setSaving(false)
+      return
+    }
+    onSaveFocus(focus)
+    await api.post('/api/sync').catch(() => {}) // SyncHeader shows progress; a 409 just means it already runs
+    setSaving(false)
+    onDone()
   }
 
   return (
@@ -62,24 +119,7 @@ export function FirstRunDialog({ open, onSave, onDismiss }: Props) {
       </h2>
       <p>{t('focus.intro')}</p>
 
-      <div className="field">
-        <label className="label" htmlFor="focus-fylke">
-          {t('companies.fylke')}
-        </label>
-        <select
-          id="focus-fylke"
-          className="select"
-          value={fylke}
-          onChange={(event) => setFylke(event.target.value)}
-        >
-          <option value="">{t('focus.allOfNorway')}</option>
-          {FYLKE_OPTIONS.map(([number, name]) => (
-            <option key={number} value={number}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <CoverageFields idPrefix="first-run" draft={draft} onChange={setDraft} kommuner={kommuner} />
 
       <fieldset className="stack stack-sm">
         <legend>{t('focus.categoriesLegend')}</legend>
@@ -96,8 +136,14 @@ export function FirstRunDialog({ open, onSave, onDismiss }: Props) {
         ))}
       </fieldset>
 
+      {error && (
+        <p role="alert" className="alert alert-danger">
+          {error}
+        </p>
+      )}
+
       <div className="dialog-actions cluster cluster-sm">
-        <button type="button" className="btn btn-primary" onClick={handleStart}>
+        <button type="button" className="btn btn-primary" onClick={handleStart} disabled={saving}>
           {t('focus.start')}
         </button>
       </div>

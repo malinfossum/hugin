@@ -1,10 +1,11 @@
 namespace Hugin.Api.Services;
 
-public sealed class StartupSync(SyncRunner runner, IConfiguration configuration) : IHostedService
+public sealed class StartupSync(SyncRunner runner, BootSyncGate gate, IConfiguration configuration) : IHostedService
 {
     public Task StartAsync(CancellationToken ct)
     {
-        if (configuration["hugin:autosync"] != "false") runner.TryStart();
+        // A held gate means a fresh install waiting for first-run — the dialog (or its Esc) starts the sync.
+        if (configuration["hugin:autosync"] != "false" && !gate.Held) runner.TryStart();
         return Task.CompletedTask;
     }
 

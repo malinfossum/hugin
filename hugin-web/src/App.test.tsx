@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -10,18 +10,34 @@ function jsonResponse(body: unknown) {
   })
 }
 
-/** Fake server covering only what the Companies and Settings views need on mount — the other
- * views mounted in these tests (Dashboard, Export) either don't fetch (Export has no scope
- * chosen yet) or already tolerate a rejected fetch by design (Dashboard's own tests cover
- * that). */
+/** Fake server covering what the Companies and Settings views need on mount, plus
+ * FirstRunDialog's four calls (every test that renders <App /> hits it, since focus starts
+ * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
+ * carries the interesting scope/kommune scenarios. */
 function fakeServer() {
-  return vi.fn((input: RequestInfo | URL) => {
+  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
+    const method = init?.method ?? 'GET'
     if (url === '/api/companies') {
       return Promise.resolve(jsonResponse([]))
     }
     if (url === '/api/sources') {
       return Promise.resolve(jsonResponse([]))
+    }
+    if (url === '/api/config/discovery' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+    }
+    if (url === '/api/kommuner') {
+      return Promise.resolve(jsonResponse([]))
+    }
+    if (url === '/api/config/discovery' && method === 'PUT') {
+      return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+    }
+    if (url === '/api/sync' && method === 'POST') {
+      return Promise.resolve(new Response(null, { status: 202 }))
+    }
+    if (url === '/api/first-run-dismissed' && method === 'POST') {
+      return Promise.resolve(new Response(null, { status: 204 }))
     }
     return Promise.reject(new Error(`unhandled request ${url}`))
   })
@@ -42,6 +58,7 @@ afterEach(() => {
 
 describe('App', () => {
   it('renders five nav buttons with Dashbord active by default', () => {
+    vi.stubGlobal('fetch', fakeServer())
     render(<App />)
 
     const nav = screen.getByRole('navigation', { name: 'Hovedmeny' })
@@ -56,6 +73,7 @@ describe('App', () => {
   })
 
   it('moves aria-current to Søknader when clicked', async () => {
+    vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
@@ -91,6 +109,7 @@ describe('App', () => {
   })
 
   it('toggles the theme between dark and light, persisting the choice to localStorage', async () => {
+    vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
@@ -211,12 +230,14 @@ describe('App', () => {
 
 describe('App first-run focus dialog', () => {
   it('renders the dialog when no focus is stored', () => {
+    vi.stubGlobal('fetch', fakeServer())
     render(<App />)
 
     expect(screen.getByRole('dialog', { name: 'Hva vil du følge?' })).toBeVisible()
   })
 
   it('does not render the dialog when a valid focus is already stored', () => {
+    vi.stubGlobal('fetch', fakeServer())
     window.localStorage.setItem(
       'hugin-focus',
       JSON.stringify({ v: 1, fylke: null, kommune: null, categories: [] })
@@ -228,6 +249,8 @@ describe('App first-run focus dialog', () => {
   })
 
   it('stays closed for the rest of the session after an Esc-dismiss', () => {
+    const fetchMock = fakeServer()
+    vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 
     const dialog = screen.getByRole('dialog', { name: 'Hva vil du følge?' })
@@ -239,16 +262,26 @@ describe('App first-run focus dialog', () => {
     // Dismissing is session-only — nothing gets persisted, so a fresh mount (next launch)
     // would show the prompt again. Confirmed indirectly: no 'hugin-focus' key was written.
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
+    // Also releases a held boot sync on a fresh install.
+    expect(
+      fetchMock.mock.calls.some(
+        ([u, i]) =>
+          u === '/api/first-run-dismissed' && (i as RequestInit | undefined)?.method === 'POST'
+      )
+    ).toBe(true)
   })
 
   it('saving a focus choice closes the dialog and persists it', async () => {
+    vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
     await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
     await user.click(screen.getByRole('button', { name: 'Start' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    )
     expect(JSON.parse(window.localStorage.getItem('hugin-focus') as string)).toEqual({
       v: 1,
       fylke: '34',
@@ -258,12 +291,15 @@ describe('App first-run focus dialog', () => {
   })
 
   it('moves focus to the app heading once the dialog closes after Start', async () => {
+    vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: 'Start' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    )
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1, name: 'Hugin' }))
   })
 })

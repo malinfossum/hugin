@@ -1,4 +1,5 @@
 import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { api } from './api'
 import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
@@ -26,8 +27,12 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 function AppShell() {
   const { focus, setFocus } = useFocus()
   const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
+  // Whether first-run has been completed (scope written) — a returning user with a stored focus
+  // has; a fresh one hasn't even after the focus is seeded on a failed PUT, so the dialog stays
+  // up for the retry. A Settings reset (focus → null) reopens it either way.
+  const [firstRunDone, setFirstRunDone] = useState(() => focus !== null)
   const h1Ref = useRef<HTMLHeadingElement>(null)
-  const focusDialogOpen = focus === null && !focusPromptDismissed
+  const focusDialogOpen = (focus === null || !firstRunDone) && !focusPromptDismissed
   const prevFocusDialogOpen = useRef(focusDialogOpen)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
@@ -180,8 +185,13 @@ function AppShell() {
       </div>
       <FirstRunDialog
         open={focusDialogOpen}
-        onSave={(f) => setFocus(f)}
-        onDismiss={() => setFocusPromptDismissed(true)}
+        onSaveFocus={(f) => setFocus(f)}
+        onDone={() => setFirstRunDone(true)}
+        onDismiss={() => {
+          setFocusPromptDismissed(true)
+          // Releases a held boot sync on a fresh install; a no-op 204 otherwise.
+          api.post('/api/first-run-dismissed').catch(() => {})
+        }}
       />
     </LiveRegionProvider>
   )

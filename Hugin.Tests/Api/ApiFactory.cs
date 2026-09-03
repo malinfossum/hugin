@@ -1,19 +1,24 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
+using Hugin.Infrastructure;
 using Hugin.Infrastructure.Data;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.Hosting;
 
 namespace Hugin.Tests.Api;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+/// <param name="autosync">Let StartupSync run on boot — only the boot-hold tests want that.</param>
+/// <param name="existingDb">Pre-create hugin.db so the host sees an existing install, not a fresh one.</param>
+public sealed class ApiFactory(bool autosync = false, bool existingDb = false) : WebApplicationFactory<Program>
 {
-    private readonly string _dbPath =
-        Path.Combine(Path.GetTempPath(), $"hugin-api-{Guid.NewGuid():N}.db");
+    private readonly DirectoryInfo _dir = Directory.CreateTempSubdirectory("hugin-api-");
+
+    public string ConfigPath => Path.Combine(_dir.FullName, "hugin.json");
+    public string DbPath => Path.Combine(_dir.FullName, "hugin.db");
 
     public FakeBrregClient Brreg { get; } = new();
     public FakeNavFeedClient Nav { get; } = new();
@@ -21,12 +26,24 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting("hugin:autosync", "false");
+        // A 0-byte file is a valid empty SQLite database; InitAsync migrates it like any other.
+        if (existingDb && !File.Exists(DbPath)) File.WriteAllBytes(DbPath, []);
+
+        builder.UseSetting("hugin:autosync", autosync ? "true" : "false");
+        builder.UseSetting("hugin:openbrowser", "false"); // never pop a browser from a test host
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<HuginDbContext>));
             services.AddDbContext<HuginDbContext>(o =>
-                o.UseSqlite(HuginDbInitializer.ConnectionString(_dbPath)));
+                o.UseSqlite(HuginDbInitializer.ConnectionString(DbPath)));
+
+            // Config file beside the test db, so the fresh-install detection and the discovery
+            // endpoints both work against this factory's own temp directory.
+            var configFile = new HuginConfigFile(ConfigPath);
+            services.RemoveAll(typeof(HuginConfigFile));
+            services.RemoveAll(typeof(IConfigSource));
+            services.AddSingleton(configFile);
+            services.AddSingleton<IConfigSource>(configFile);
 
             services.RemoveAll(typeof(IBrregClient));
             services.RemoveAll(typeof(INavFeedClient));
@@ -56,6 +73,6 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         SqliteConnection.ClearAllPools();
-        try { File.Delete(_dbPath); } catch (IOException) { }
+        try { _dir.Delete(recursive: true); } catch (IOException) { }
     }
 }

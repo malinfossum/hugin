@@ -9,12 +9,15 @@ using Hugin.Infrastructure.Data;
 using Hugin.Infrastructure.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 
 var configPath = ArgValue(args, "--config");
 var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
 
 var loaded = ConfigLoader.Load(configPath);
 if (loaded.Warning is not null) Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
+
+var configFile = new HuginConfigFile(loaded.ConfigPath);
 
 // Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
 // not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
@@ -33,6 +36,8 @@ builder.WebHost.ConfigureKestrel(o => o.Listen(System.Net.IPAddress.Loopback, po
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
 builder.Services.AddSingleton(loaded.Config);
+builder.Services.AddSingleton(configFile);
+builder.Services.AddSingleton<IConfigSource>(configFile);
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddDbContext<HuginDbContext>(o =>
     o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
@@ -45,13 +50,14 @@ builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
 builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
-builder.Services.AddSingleton<IBrregClient>(_ =>
-    new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) }));
-builder.Services.AddSingleton<INavFeedClient>(sp =>
+builder.Services.AddSingleton<IBrregClient>(sp =>
+    new BrregClient(new HttpClient { BaseAddress = new Uri(BrregClient.BaseAddress) },
+        sp.GetRequiredService<ILogger<BrregClient>>()));
+builder.Services.AddSingleton<INavFeedClient>(_ =>
 {
     var http = new HttpClient { BaseAddress = new Uri(NavFeedClient.BaseAddress) };
-    var config = sp.GetRequiredService<HuginConfig>();
-    return new NavFeedClient(http, new NavTokenProvider(http, config.NavToken), config);
+    // The token is the one config value that stays a startup snapshot (not part of the v3.4 UI).
+    return new NavFeedClient(http, new NavTokenProvider(http, loaded.Config.NavToken));
 });
 builder.Services.AddSingleton<IWebsiteProber>(_ => new WebsiteProber(WebsiteProber.CreateHttpClient()));
 
@@ -60,8 +66,10 @@ builder.Services.AddScoped<NewItemsService>();
 builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<AdOverviewService>();
 builder.Services.AddScoped<ExtractService>();
+builder.Services.AddScoped<KommuneRegister>();
 
 builder.Services.AddSingleton<SyncRunner>();
+builder.Services.AddSingleton<BootSyncGate>();
 builder.Services.AddHostedService<StartupSync>();
 
 var app = builder.Build();
@@ -69,10 +77,13 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var services = scope.ServiceProvider;
-    // DI-resolved, not the outer `loaded.Config` local — same instance in production, but this
-    // is what lets a test host (ApiFactory) override HuginConfig and have the override actually
-    // reach seeding.
-    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), loaded.DatabasePath,
+    // DI-resolved (not the outer locals) so a test host can point config + db at its own temp dir.
+    var file = services.GetRequiredService<HuginConfigFile>();
+
+    // Fresh install = no db on disk BEFORE InitAsync creates it: hold the boot sync for first-run.
+    if (!File.Exists(file.DatabasePath)) services.GetRequiredService<BootSyncGate>().Hold();
+
+    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), file.DatabasePath,
         services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
 }
 
@@ -105,6 +116,7 @@ app.MapReads();
 app.MapWrites();
 app.MapSync();
 app.MapSources();
+app.MapConfig();
 
 // SPA fallback — but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
 app.MapFallback(async context =>
@@ -132,10 +144,10 @@ app.MapFallback(async context =>
 });
 
 // One double-click is the whole start-up: open the dashboard in the default browser once the
-// host is listening. Every test host sets hugin:autosync=false (the RealHostBindingTests
-// subprocess included, via env var), so tests never pop a browser; --no-browser opts out.
+// host is listening. Every test host sets hugin:openbrowser=false (ApiFactory, and
+// RealHostBindingTests via env var), so tests never pop a browser; --no-browser opts out for people.
 var openBrowser = Array.IndexOf(args, "--no-browser") < 0
-    && app.Configuration["hugin:autosync"] != "false";
+    && app.Configuration["hugin:openbrowser"] != "false";
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {

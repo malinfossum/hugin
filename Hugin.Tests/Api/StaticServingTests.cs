@@ -51,6 +51,7 @@ public sealed class StaticServingFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("hugin:autosync", "false");
+        builder.UseSetting("hugin:openbrowser", "false"); // never pop a browser from a test host
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<HuginDbContext>));
@@ -147,6 +148,7 @@ public sealed class EmbeddedServingFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("hugin:autosync", "false");
+        builder.UseSetting("hugin:openbrowser", "false"); // never pop a browser from a test host
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<HuginDbContext>));
