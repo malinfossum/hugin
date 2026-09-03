@@ -21,7 +21,7 @@ Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
 ## Web dashboard
 
-Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered` (an `Active` entry whose ads have all expired moves to `Expired` on its own, and back when a new ad appears), star the ones you want to apply to, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources plus language (English/bokmål) and dark/light theme — both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work.
+Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered` (an `Active` entry whose ads have all expired moves to `Expired` on its own, and back when a new ad appears), star the ones you want to apply to, link an ad by hand to the company you track when the registry chain does not join them, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources plus language (English/bokmål) and dark/light theme — both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work.
 
 `--port` picks the port (default `5111`), `--config <path>` points at a different `hugin.json`, `--no-browser` skips the launch. For development, run `dotnet run --project Hugin.Api` and `cd hugin-web && npm run dev` side by side.
 
@@ -42,7 +42,7 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin.db` — suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, and every state-changing request requires an `X-Hugin: 1` header (CSRF protection, not authentication — local processes are trusted).
 
 - **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`
-- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `POST /api/seen` · `POST /api/sync` · `PUT /api/config/discovery` · `POST /api/first-run-dismissed`
+- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `PUT|DELETE /api/ads/{feedId}/link` · `POST /api/seen` · `POST /api/sync` · `PUT /api/config/discovery` · `POST /api/first-run-dismissed`
 
 ## Configuration
 
