@@ -108,4 +108,13 @@ public sealed class DemoSeederTests
         WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder(PublicModeOptions.Off).ApplyAsync(), Is.EqualTo(0), "normal mode ignores the file");
     }
+
+    [Test]
+    public async Task Apply_logs_and_seeds_nothing_when_the_file_cannot_be_read()
+    {
+        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        using var locked = new FileStream(_mode.SeedPath, FileMode.Open, FileAccess.Read, FileShare.None);
+        Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
+        Assert.That(await _db.Pipeline.AnyAsync(), Is.False);
+    }
 }

@@ -74,7 +74,7 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
 
         string json;
         try { json = await File.ReadAllTextAsync(mode.SeedPath, ct); }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(ex, "Kunne ikke lese {Seed}.", mode.SeedPath);
             return 0;
