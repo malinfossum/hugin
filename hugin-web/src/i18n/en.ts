@@ -188,6 +188,9 @@ export const en = {
   'coverage.saved': 'Saved — syncing …',
   'coverage.savedSyncBusy': 'Saved — applies on the next sync',
   'coverage.saveFailed': 'Could not save coverage: {error}',
+  'coverage.othersHint': 'Also covered, outside {fylke}',
+  'coverage.otherFylke': '{fylke} (whole county)',
+  'coverage.removeOther': 'Remove {name}',
 
   'focus.title': 'What do you want to follow?',
   'focus.intro':

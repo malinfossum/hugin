@@ -4,6 +4,7 @@ import {
   type CoverageDraft,
   effectiveDraft,
   fromDiscoveryConfig,
+  NO_OTHERS,
   toDiscoveryRequest,
   toFocusSeed,
 } from '../coverage'
@@ -22,7 +23,7 @@ interface Props {
   onDismiss: () => void
 }
 
-const DEFAULT_DRAFT: CoverageDraft = { fylke: '', kommuner: [] }
+const DEFAULT_DRAFT: CoverageDraft = { fylke: '', kommuner: [], others: NO_OTHERS }
 
 /** First-run prompt v2 (spec v3.4 Part B): the region step is scope + lens. It prefills from the
  * server's current discovery scope, lists the fylke's kommuner from /api/kommuner (degrading to

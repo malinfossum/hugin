@@ -606,6 +606,38 @@ describe('Dekning (coverage)', () => {
     })
   })
 
+  it('a save keeps coverage outside the rendered fylke, and lists it', async () => {
+    // The real hugin.json is multi-fylke (Innlandet kommuner + Larvik). The cascade renders one
+    // fylke, so a save used to write only what it showed and silently dropped Larvik.
+    const server = fakeServer([], [], {
+      discovery: {
+        municipalities: [
+          { name: 'Hamar', number: '3403' },
+          { name: 'Larvik', number: '3909' },
+        ],
+        fylker: [],
+        allOfNorway: false,
+      },
+    })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    expect(
+      within(section).getByRole('list', { name: 'Dekkes også, utenfor Innlandet' })
+    ).toHaveTextContent('Larvik (Vestfold)')
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    await waitFor(() => expect(server.puts).toHaveLength(1))
+    expect(server.puts[0]).toEqual({
+      municipalityNumbers: ['3403', '3405', '3909'],
+      fylker: [],
+      allOfNorway: false,
+    })
+  })
+
   it('switching language does not discard an unsaved coverage edit', async () => {
     const server = fakeServer([])
     const user = userEvent.setup()

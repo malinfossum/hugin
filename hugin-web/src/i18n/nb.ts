@@ -188,6 +188,9 @@ export const nb = {
   'coverage.saved': 'Lagret — synkroniserer …',
   'coverage.savedSyncBusy': 'Lagret — brukes ved neste synk',
   'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
+  'coverage.othersHint': 'Dekkes også, utenfor {fylke}',
+  'coverage.otherFylke': '{fylke} (hele fylket)',
+  'coverage.removeOther': 'Fjern {name}',
 
   'focus.title': 'Hva vil du følge?',
   'focus.intro':
