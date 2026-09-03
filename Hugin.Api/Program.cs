@@ -77,7 +77,11 @@ builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
 builder.Services.AddScoped<IAdRepository, EfAdRepository>();
 builder.Services.AddScoped<IPipelineRepository, EfPipelineRepository>();
 builder.Services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
-builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
+if (publicMode.Enabled)
+    builder.Services.AddScoped<IReviewMarkRepository>(sp => new RollingReviewMark(
+        new EfReviewMarkRepository(sp.GetRequiredService<HuginDbContext>()), sp.GetRequiredService<IClock>()));
+else
+    builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
 builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
