@@ -286,9 +286,13 @@ input[type="text"] {
   white-space: nowrap;
 }
 
+/* Reduced motion must beat every component's own animation and transition, whatever their
+   specificity, so this is one of the few places !important is the right tool. */
 @media (prefers-reduced-motion: reduce) {
   * {
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
     transition: none !important;
   }
 }
