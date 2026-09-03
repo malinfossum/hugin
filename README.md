@@ -14,7 +14,7 @@ C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a R
 
 Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
-- **`Hugin.exe`** — single self-contained file, dashboard only, no .NET install needed. Put it anywhere, add a `hugin.json` beside it (start from `hugin.json.example`), double-click. The dashboard opens at `http://localhost:5111`.
+- **`Hugin.exe`** — single self-contained file, dashboard only, no .NET install needed. Put it anywhere and double-click. The dashboard opens at `http://localhost:5111` and asks which part of Norway to cover on first run. A `hugin.json` beside the exe (start from `hugin.json.example`) is optional and overrides the defaults.
 - **Zip** — `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 `hugin.json` and the `hugin.db` database are gitignored — the pipeline holds your own outreach history.
