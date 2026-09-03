@@ -183,6 +183,7 @@ export const en = {
   'coverage.loadError': 'Could not load coverage.',
   'coverage.save': 'Save coverage',
   'coverage.saved': 'Saved — syncing …',
+  'coverage.savedSyncBusy': 'Saved — applies on the next sync',
   'coverage.saveFailed': 'Could not save coverage: {error}',
 
   'focus.title': 'What do you want to follow?',

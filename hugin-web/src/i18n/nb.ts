@@ -183,6 +183,7 @@ export const nb = {
   'coverage.loadError': 'Kunne ikke laste dekningen.',
   'coverage.save': 'Lagre dekning',
   'coverage.saved': 'Lagret — synkroniserer …',
+  'coverage.savedSyncBusy': 'Lagret — brukes ved neste synk',
   'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
 
   'focus.title': 'Hva vil du følge?',

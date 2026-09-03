@@ -111,9 +111,14 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
       setCoverageSaving(false)
       return
     }
+    // A sync that was already running read the old scope before this save, so the new one
+    // only takes effect on the next run — say that instead of claiming a sync is fetching it.
+    let alreadyRunning = false
+    await api.post('/api/sync').catch((err) => {
+      alreadyRunning = err instanceof ApiError && err.status === 409
+    })
     setCoverageSaving(false)
-    announce(t('coverage.saved'))
-    await api.post('/api/sync').catch(() => {}) // a 409 means one already runs — fine
+    announce(t(alreadyRunning ? 'coverage.savedSyncBusy' : 'coverage.saved'))
   }
 
   const focusKommuner = useMemo(() => {

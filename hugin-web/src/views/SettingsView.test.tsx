@@ -50,7 +50,8 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
  * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
  * wherever a test doesn't care about kommune options. `discovery`/`kommuner` seed the Dekning
  * section, `kommunerDown` makes GET /api/kommuner fail (the fylke-only degraded mode), and
- * `putStatus` makes the PUT fail with that status instead of echoing `discovery` back.
+ * `putStatus` makes the PUT fail with that status instead of echoing `discovery` back;
+ * `syncStatus` makes POST /api/sync answer with that status (409 = one already runs).
  * Returns `{ fetchMock, puts }` — `puts` records every PUT /api/config/discovery body. */
 function fakeServer(
   seed: SourceDto[] | null,
@@ -60,6 +61,7 @@ function fakeServer(
     kommuner?: KommuneDto[]
     kommunerDown?: boolean
     putStatus?: number
+    syncStatus?: number
   } = {}
 ) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
@@ -94,6 +96,11 @@ function fakeServer(
       return Promise.resolve(jsonResponse(kommuner))
     }
     if (url === '/api/sync' && method === 'POST') {
+      if (options.syncStatus) {
+        return Promise.resolve(
+          jsonResponse({ title: 'En synk kjører allerede' }, { status: options.syncStatus })
+        )
+      }
       return Promise.resolve(jsonResponse(undefined, { status: 202 }))
     }
     if (url === '/api/sources' && method === 'GET') {
@@ -563,6 +570,21 @@ describe('Dekning (coverage)', () => {
     expect(
       server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
     ).toBe(false)
+  })
+
+  it('says the new scope applies next sync when one is already running', async () => {
+    // The running sync read the old scope before the save, so announcing "syncing …" would
+    // promise a fetch that is not happening.
+    const server = fakeServer([], [], { syncStatus: 409 })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    expect(await screen.findByText('Lagret — brukes ved neste synk')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('saves the fylke alone when the kommune list is unavailable', async () => {
