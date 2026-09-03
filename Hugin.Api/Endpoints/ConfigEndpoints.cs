@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Hugin.Api.Services;
 using Hugin.Core.Config;
 using Hugin.Infrastructure;

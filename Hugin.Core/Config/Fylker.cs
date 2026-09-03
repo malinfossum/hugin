@@ -1,4 +1,4 @@
-﻿namespace Hugin.Core.Config;
+namespace Hugin.Core.Config;
 
 /// <summary>
 /// The 2024 fylke set as 2-digit kommune-number prefixes. Static by design: it changes only by

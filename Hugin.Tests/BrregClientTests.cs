@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Hugin.Infrastructure.Http;
 
 namespace Hugin.Tests;
