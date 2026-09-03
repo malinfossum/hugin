@@ -44,4 +44,13 @@ public sealed class SecurityTests
         var response = await client.GetAsync("/api/status");
         Assert.That(response.Headers.Contains("Access-Control-Allow-Origin"), Is.False);
     }
+
+    [Test]
+    public async Task No_hardening_headers_in_normal_mode()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/status");
+        Assert.That(response.Headers.Contains("X-Frame-Options"), Is.False,
+            "the public-mode headers are a public-mode thing — the local app is unchanged");
+    }
 }

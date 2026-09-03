@@ -121,7 +121,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
 }
 
-app.UseHuginSecurity();
+app.UseHuginSecurity(app.Services.GetRequiredService<PublicModeOptions>());
 
 // Physical wwwroot (a normal `dotnet publish`, or dev after `npm run build`) wins when present;
 // otherwise fall back to the frontend embedded into this assembly at publish time (the
