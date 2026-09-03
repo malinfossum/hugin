@@ -21,7 +21,7 @@ Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
 ## Web dashboard
 
-Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered`, star the ones you want to apply to, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources plus language (English/bokmål) and dark/light theme — both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work.
+Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered` (an `Active` entry whose ads have all expired moves to `Expired` on its own, and back when a new ad appears), star the ones you want to apply to, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources plus language (English/bokmål) and dark/light theme — both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work.
 
 `--port` picks the port (default `5111`), `--config <path>` points at a different `hugin.json`, `--no-browser` skips the launch. For development, run `dotnet run --project Hugin.Api` and `cd hugin-web && npm run dev` side by side.
 

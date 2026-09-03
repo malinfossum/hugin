@@ -23,4 +23,13 @@ public sealed class Ad
 
     // Dashboard dismiss flag ("Skjul") — Hugin's own field, never touched by sync upserts.
     public bool Hidden { get; set; }
+
+    /// <summary>
+    /// The one rule for "still open": the feed has not closed it AND its deadline has not
+    /// passed. The sync sweep only persists the deadline half; reads apply it live so an ad
+    /// drops out the moment its frist passes, not at the next sync. NAV's expires is
+    /// end-of-day, so the deadline day itself still counts as open.
+    /// EfAdRepository.GetActiveAsync mirrors this in SQL — keep the two in step.
+    /// </summary>
+    public bool IsOpenAt(DateTimeOffset now) => IsActive && (Expires is null || Expires >= now);
 }

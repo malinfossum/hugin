@@ -140,6 +140,7 @@ internal static class Program
         services.AddScoped<SyncService>();
         services.AddScoped<NewItemsService>();
         services.AddScoped<PipelineService>();
+        services.AddScoped<AdOverviewService>();
         services.AddScoped<ExtractService>();
 
         return builder.Build();
@@ -225,7 +226,7 @@ internal static class Program
         {
             foreach (var ad in items.Ads)
             {
-                var marker = ad.IsActive ? "" : "  [utgått]";
+                var marker = ad.IsOpenAt(services.GetRequiredService<IClock>().UtcNow) ? "" : "  [utgått]";
                 var category = ad.Category is null ? "" : $"  [{ad.Category}]";
                 Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{category}{marker}");
                 if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
@@ -306,7 +307,8 @@ internal static class Program
 
         if (command.Ads)
         {
-            var ads = await services.GetRequiredService<IAdRepository>().GetActiveAsync(command.Kommune, includeHidden: true);
+            var ads = await services.GetRequiredService<IAdRepository>()
+                .GetActiveAsync(services.GetRequiredService<IClock>().UtcNow, command.Kommune, includeHidden: true);
 
             if (ads.Count == 0)
             {

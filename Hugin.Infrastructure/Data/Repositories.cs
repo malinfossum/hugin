@@ -140,24 +140,29 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         }
         else
         {
+            // Feed-owned fields. The enrichment-only ones (orgnr, dates, link, category) are
+            // null in the stub NAV sends once an ad is closed — keep what an earlier enrichment
+            // stored, or the ad loses its employer link and vanishes from company history and
+            // the Expired section. Hugin-owned fields (Hidden) are never touched here.
             existing.Title = ad.Title;
-            existing.EmployerName = ad.EmployerName;
-            existing.EmployerOrgnr = ad.EmployerOrgnr;
+            existing.EmployerName = ad.EmployerName ?? existing.EmployerName;
+            existing.EmployerOrgnr = ad.EmployerOrgnr ?? existing.EmployerOrgnr;
             existing.MunicipalityNumber = ad.MunicipalityNumber;
-            existing.Published = ad.Published;
-            existing.Expires = ad.Expires;
-            existing.SourceUrl = ad.SourceUrl;
-            existing.Category = ad.Category;
+            existing.Published = ad.Published ?? existing.Published;
+            existing.Expires = ad.Expires ?? existing.Expires;
+            existing.SourceUrl = ad.SourceUrl ?? existing.SourceUrl;
+            existing.Category = ad.Category ?? existing.Category;
             existing.IsActive = ad.IsActive;
         }
 
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null,
+    public async Task<IReadOnlyList<Ad>> GetActiveAsync(DateTimeOffset now, string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default) =>
         await db.Ads
-            .Where(a => a.IsActive
+            // SQL twin of Ad.IsOpenAt — EF cannot translate the method itself.
+            .Where(a => a.IsActive && (a.Expires == null || a.Expires >= now)
                 && (municipalityNumber == null || a.MunicipalityNumber == municipalityNumber)
                 && (includeHidden || !a.Hidden))
             .OrderByDescending(a => a.Published)
@@ -187,6 +192,9 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
     public async Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
         await db.Ads.Where(a => a.EmployerOrgnr == orgnr)
             .OrderByDescending(a => a.Published).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>
+        await db.Ads.ToListAsync(ct);
 }
 
 public sealed class EfPipelineRepository(HuginDbContext db) : IPipelineRepository

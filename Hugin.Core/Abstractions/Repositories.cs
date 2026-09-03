@@ -49,8 +49,11 @@ public interface IAdRepository
     /// <summary>Expires &lt; now → IsActive = false. Returns the number of ads flipped.</summary>
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default);
 
-    /// <summary>Currently-open ads, newest first, optionally narrowed to one municipality.</summary>
-    public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(string? municipalityNumber = null,
+    /// <summary>
+    /// Ads open at <paramref name="now"/> (see <see cref="Models.Ad.IsOpenAt"/>), newest first,
+    /// optionally narrowed to one municipality.
+    /// </summary>
+    public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(DateTimeOffset now, string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default);
 
     /// <summary>Dashboard dismiss flag. Returns false when the feedId is unknown.</summary>
@@ -58,6 +61,9 @@ public interface IAdRepository
 
     /// <summary>All stored ads for one employer — active and expired — newest published first.</summary>
     public Task<IReadOnlyList<Models.Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default);
+
+    /// <summary>Every stored ad — open, expired and hidden alike. No ordering promised.</summary>
+    public Task<IReadOnlyList<Models.Ad>> GetAllAsync(CancellationToken ct = default);
 }
 
 public interface IPipelineRepository

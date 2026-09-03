@@ -10,7 +10,7 @@ public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> A
 public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads,
     List<CompanyDtoProbe> Branches);
-public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred);
+public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred, bool AdsExpired);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
     int Companies, int PipelineEntries);
 
@@ -189,6 +189,28 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
+    public async Task Company_detail_reports_an_ad_past_its_deadline_as_inactive_before_the_sweep()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Ferskvare AS", "3407", "62.100", null, false, null), now);
+            var adRepo = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+            // Feed still says ACTIVE, but the frist passed an hour ago and no sync has swept it yet.
+            await adRepo.UpsertAsync(new FeedAd("stale", "Utvikler", "Ferskvare AS", "999888777", "3407",
+                now.AddDays(-20), now.AddHours(-1), "https://x", true, "IT"), now);
+            await adRepo.UpsertAsync(new FeedAd("open", "Utvikler 2", "Ferskvare AS", "999888777", "3407",
+                now, now.AddDays(10), "https://x", true, "IT"), now);
+        }
+
+        var dto = await _client.GetFromJsonAsync<CompanyDetailDtoProbe>("/api/companies/999888777");
+
+        Assert.That(dto!.Ads.Single(a => a.FeedId == "stale").IsActive, Is.False);
+        Assert.That(dto.Ads.Single(a => a.FeedId == "open").IsActive, Is.True);
+    }
+
+    [Test]
     public async Task Company_detail_lists_branches_ordered_by_kommune_then_name()
     {
         var now = DateTimeOffset.UtcNow;
@@ -262,6 +284,52 @@ public sealed class ReadEndpointTests
 
         var entries = await response.Content.ReadFromJsonAsync<List<PipelineDtoProbe>>();
         Assert.That(entries!.Select(e => e.Orgnr), Is.EqualTo(new[] { "1" }));
+    }
+
+    [Test]
+    public async Task Pipeline_flags_an_entry_whose_only_ads_have_expired()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
+            await pipeline.UpsertAsync(new PipelineEntry { Orgnr = "1", Status = PipelineStatus.Active, Created = now, Updated = now });
+            await pipeline.UpsertAsync(new PipelineEntry { Orgnr = "2", Status = PipelineStatus.Active, Created = now, Updated = now });
+            await pipeline.UpsertAsync(new PipelineEntry { Orgnr = "3", Status = PipelineStatus.Active, Created = now, Updated = now });
+            var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+            await ads.UpsertAsync(new FeedAd("a1", "Utvikler", "En AS", "1", "3407", now.AddDays(-30), now.AddDays(-1), null, true), now);
+            await ads.UpsertAsync(new FeedAd("a2", "Utvikler", "To AS", "2", "3407", now, now.AddDays(5), null, true), now);
+        }
+
+        var entries = (await _client.GetFromJsonAsync<List<PipelineDtoProbe>>("/api/pipeline"))!;
+
+        Assert.That(entries.Single(e => e.Orgnr == "1").AdsExpired, Is.True, "only ad is past its frist");
+        Assert.That(entries.Single(e => e.Orgnr == "2").AdsExpired, Is.False, "still has an open ad");
+        Assert.That(entries.Single(e => e.Orgnr == "3").AdsExpired, Is.False, "tracked without any ad");
+    }
+
+    [Test]
+    public async Task Pipeline_status_filter_still_assigns_ads_to_the_entry_outside_the_filter()
+    {
+        // Parent tracked as Applied, branch tracked as Active; the only ad sits on the parent.
+        // Filtering to active must not hand the parent's ad to the branch via the root match.
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await companies.UpsertAsync(new RegisterCompany("111111111", "Mor AS", "3407", "62.100", null, false, null), now);
+            await companies.UpsertAsync(new RegisterCompany("222222222", "Mor AS avd Gjøvik", "3407", "62.100", "111111111", true, null), now);
+            var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
+            await pipeline.UpsertAsync(new PipelineEntry { Orgnr = "111111111", Status = PipelineStatus.Applied, Created = now, Updated = now });
+            await pipeline.UpsertAsync(new PipelineEntry { Orgnr = "222222222", Status = PipelineStatus.Active, Created = now, Updated = now });
+            await scope.ServiceProvider.GetRequiredService<IAdRepository>()
+                .UpsertAsync(new FeedAd("a", "Utvikler", "Mor AS", "111111111", "3407", now.AddDays(-30), now.AddDays(-1), null, true), now);
+        }
+
+        var entries = (await _client.GetFromJsonAsync<List<PipelineDtoProbe>>("/api/pipeline?status=active"))!;
+
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "222222222" }));
+        Assert.That(entries.Single().AdsExpired, Is.False, "the branch has no ads of its own");
     }
 
     [Test]

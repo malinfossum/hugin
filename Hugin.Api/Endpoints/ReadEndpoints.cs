@@ -17,7 +17,7 @@ public static class ReadEndpoints
             var kommuner = await kommuneRepo.GetAllAsync();
             return Results.Ok(new NewDto(
                 items.Companies.Select(c => CompanyDto.From(c, config, kommuner)).ToList(),
-                items.Ads.Select(AdDto.FromAd).ToList(),
+                items.Ads.Select(a => AdDto.FromAd(a, asOf)).ToList(),
                 items.Since, asOf));
         });
 
@@ -29,7 +29,7 @@ public static class ReadEndpoints
         });
 
         app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
-            HuginConfig config, IKommuneRepository kommuneRepo, string orgnr) =>
+            HuginConfig config, IKommuneRepository kommuneRepo, IClock clock, string orgnr) =>
         {
             if (await companies.GetAsync(orgnr) is not { } company)
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.");
@@ -44,19 +44,19 @@ public static class ReadEndpoints
                 : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner)).ToList();
 
             return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner),
-                (await ads.GetByEmployerAsync(orgnr)).Select(AdDto.FromAd).ToList(), branches));
+                (await ads.GetByEmployerAsync(orgnr)).Select(a => AdDto.FromAd(a, clock.UtcNow)).ToList(), branches));
         });
 
-        app.MapGet("/api/pipeline", async (IPipelineRepository pipeline, ICompanyRepository companies, string? status) =>
+        app.MapGet("/api/pipeline", async (AdOverviewService overview, ICompanyRepository companies, string? status) =>
         {
             PipelineStatus? filter = null;
             if (status is not null && (filter = StatusSlug.Parse(status)) is null)
                 return Results.Problem(statusCode: 400, title: $"Ukjent status «{status}».");
 
-            var entries = await pipeline.GetAllAsync(filter);
+            var entries = await overview.GetPipelineOverviewAsync(filter);
             var result = new List<PipelineDto>(entries.Count);
-            foreach (var e in entries)
-                result.Add(PipelineDto.From(e, (await companies.GetAsync(e.Orgnr))?.Name ?? e.Orgnr));
+            foreach (var o in entries)
+                result.Add(PipelineDto.From(o, (await companies.GetAsync(o.Entry.Orgnr))?.Name ?? o.Entry.Orgnr));
             return Results.Ok(result);
         });
 
@@ -84,7 +84,7 @@ public static class ReadEndpoints
         });
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
-            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline) =>
+            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, IClock clock) =>
         {
             var brreg = await syncState.GetAsync("brreg");
             var nav = await syncState.GetAsync("nav");
@@ -92,7 +92,7 @@ public static class ReadEndpoints
                 brreg?.LastSyncUtc is { } brregSync ? new SourceStateDto(brregSync) : null,
                 nav?.LastSyncUtc is { } navSync ? new SourceStateDto(navSync) : null,
                 await mark.GetAsync(),
-                (await ads.GetActiveAsync()).Count,
+                (await ads.GetActiveAsync(clock.UtcNow)).Count,
                 (await companies.GetAllAsync()).Count,
                 (await pipeline.GetAllAsync()).Count));
         });

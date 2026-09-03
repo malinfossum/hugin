@@ -65,6 +65,25 @@ public sealed class WriteEndpointTests
     }
 
     [Test]
+    public async Task Track_response_carries_the_derived_expiry_flag()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("999888777", "Utgått AS", "3407", "62.100", null, false, null), now);
+            await scope.ServiceProvider.GetRequiredService<IAdRepository>()
+                .UpsertAsync(new FeedAd("a", "Utvikler", "Utgått AS", "999888777", "3407", now.AddDays(-30), now.AddDays(-1), null, true), now);
+        }
+
+        var response = await _client.PutAsJsonAsync("/api/pipeline/999888777",
+            new { status = "active", why = "", note = (string?)null, svar = (string?)null });
+
+        var dto = await response.Content.ReadFromJsonAsync<TrackResponseProbe>();
+        Assert.That(dto!.Entry.AdsExpired, Is.True);
+    }
+
+    [Test]
     public async Task Track_starred_survives_a_status_only_edit()
     {
         using (var scope = _factory.Services.CreateScope())

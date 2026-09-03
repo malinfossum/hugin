@@ -24,6 +24,7 @@ export const nb = {
   'status.active': 'Aktiv',
   'status.applied': 'Søkt',
   'status.answered': 'Svar',
+  'status.expired': 'Utgått',
 
   'sync.heading': 'Synkronisering',
   'sync.statusError': 'Kunne ikke laste synk-status.',
@@ -113,6 +114,8 @@ export const nb = {
   'applications.sortUpdated': 'Sist oppdatert',
   'applications.sortName': 'Navn',
   'applications.activeHint': 'Aktiv-oppføringer tas bare med i eksporten når du velger det.',
+  'applications.expiredHint':
+    'Alle annonsene har gått ut. Oppføringen flyttes tilbake når det kommer en ny.',
   'applications.missingWhy': '⚠ mangler begrunnelse',
   'applications.edit': 'Rediger',
   'applications.why': 'Begrunnelse',

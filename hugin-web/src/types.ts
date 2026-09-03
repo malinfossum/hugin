@@ -51,6 +51,8 @@ export interface PipelineDto {
   note: string | null
   svar: string | null
   updated: string
+  /** Derived server-side: the entry has ads and none is still open. Never a stored status. */
+  adsExpired: boolean
 }
 
 export interface TrackResponse {
