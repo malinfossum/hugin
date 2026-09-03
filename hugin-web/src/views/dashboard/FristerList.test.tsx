@@ -373,6 +373,65 @@ describe('FristerList', () => {
     expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/link'))).toBe(false)
   })
 
+  it('moves focus into the link form when it opens, and back to «Koble til bedrift» on Avbryt', async () => {
+    // The button that opens the form is replaced by the form, so without an explicit move
+    // keyboard focus would fall to the page body both on open and on cancel.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    const select = await within(row).findByLabelText('Koble annonsen til')
+    await waitFor(() => expect(select).toHaveFocus())
+
+    await user.click(within(row).getByRole('button', { name: 'Avbryt' }))
+    await waitFor(() =>
+      expect(within(row).getByRole('button', { name: 'Koble til bedrift' })).toHaveFocus()
+    )
+  })
+
+  it('lands focus on the row’s Skjul button after a link and after Koble fra', async () => {
+    // Both actions remove the button that had focus (the form, then «Koble fra»); the row's
+    // Skjul button is the one control that survives either.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await user.selectOptions(
+      await within(row).findByLabelText('Koble annonsen til'),
+      'Eccera IT Solutions AS'
+    )
+    await user.click(within(row).getByRole('button', { name: 'Koble' }))
+    const linked = await screen.findByRole('button', { name: 'Koble fra' })
+    await waitFor(() => expect(within(row).getByRole('button', { name: 'Skjul' })).toHaveFocus())
+
+    await user.click(linked)
+    await waitFor(() =>
+      expect(within(row).queryByRole('button', { name: 'Koble fra' })).not.toBeInTheDocument()
+    )
+    await waitFor(() => expect(within(row).getByRole('button', { name: 'Skjul' })).toHaveFocus())
+  })
+
+  it('fetches the tracked companies afresh each time the link form opens', async () => {
+    // A company tracked after the first open (from this list or elsewhere) must be offered.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+    const pipelineGets = () => fetchMock.mock.calls.filter(([u]) => u === '/api/pipeline').length
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await within(row).findByLabelText('Koble annonsen til')
+    await user.click(within(row).getByRole('button', { name: 'Avbryt' }))
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await within(row).findByLabelText('Koble annonsen til')
+
+    expect(pipelineGets()).toBe(2)
+  })
+
   it('Koble fra DELETEs the link and announces', async () => {
     const user = userEvent.setup()
     const fetchMock = fakeServer([

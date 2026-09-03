@@ -40,7 +40,9 @@ export function toDiscoveryRequest(draft: CoverageDraft): DiscoveryWriteRequest 
  * (`kommuner === null`) the checkboxes are not drawn at all, so any prefilled numbers are
  * invisible and un-clearable — and the API refuses numbers it cannot verify against the
  * register. Degrade to the fylke alone: that is what the user sees, so that is what is saved.
- * The others stay: they are listed by name, so nothing invisible is dropped. */
+ * The others stay in the request: they are listed by name, so nothing invisible is dropped —
+ * and when they hold kommuner, the API refuses the save (503) rather than writing numbers it
+ * cannot verify, so the user sees an error instead of a silently narrowed scope. */
 export function effectiveDraft(draft: CoverageDraft, kommuner: KommuneDto[] | null): CoverageDraft {
   return kommuner === null ? { ...draft, kommuner: [] } : draft
 }
