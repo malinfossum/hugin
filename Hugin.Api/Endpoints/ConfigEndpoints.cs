@@ -44,6 +44,10 @@ public static class ConfigEndpoints
                 return Results.Problem(statusCode: 400, title: $"Ugyldig kommunenummer «{badNumber}» — må være 4 sifre.");
             if (fylker.FirstOrDefault(f => !IsFylkePrefix(f)) is { } badFylke)
                 return Results.Problem(statusCode: 400, title: $"Ugyldig fylkesnummer «{badFylke}» — må være 2 sifre.");
+            // Nothing selected at all writes an empty allow-set, which the sync cannot act on —
+            // and an empty kommunenummer filter is what makes Brreg return the whole country.
+            if (numbers.Count == 0 && fylker.Count == 0 && !request.AllOfNorway)
+                return Results.Problem(statusCode: 400, title: "Tom dekning — velg minst én kommune, ett fylke eller hele Norge.");
 
             // Names come from the register, never from the client. Fylke-only saves are allowed
             // even when the register is unreachable (the dialog's degraded mode) — kommune numbers

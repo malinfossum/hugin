@@ -158,6 +158,14 @@ public sealed class SyncService(
                 return new SourceResult(false, 0,
                     $"Ugyldig kommunenummer i konfigurasjonen: «{invalid}» — må være 4 sifre");
 
+            // An empty allow-set is not "no filter" — Brreg ignores `kommunenummer=` and answers
+            // with every unit in the country, so chunking one empty chunk would quietly turn a
+            // fylke-only scope into a nationwide fetch whenever the kommune register is still
+            // empty (fresh install, register fetch down). Stop instead: the config is fine, the
+            // register just could not expand it yet, and the next run will have it.
+            if (scope.AllowedNumbers.Count == 0)
+                return new SourceResult(false, 0, "Kommuneregisteret er tomt — dekningen kunne ikke utvides");
+
             var configured = config.Municipalities.Select(m => m.Number).ToHashSet();
             var chunks = scope.AllowedNumbers.SetEquals(configured)
                 ? [scope.AllowedNumbers.ToArray()]

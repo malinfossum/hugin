@@ -125,6 +125,24 @@ public sealed class ConfigEndpointTests
     }
 
     [Test]
+    public async Task Put_discovery_rejects_an_empty_scope_and_writes_nothing()
+    {
+        // Nothing selected at all would be written as an empty allow-set, which the sync can
+        // only read as "no scope" — and an empty kommunenummer filter is exactly what makes
+        // Brreg answer with the whole country. Refuse it at the door instead.
+        using var factory = new ApiFactory();
+        factory.Brreg.Kommuner.AddRange(Register);
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest([], [], false));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That((await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>())!.Title,
+            Is.EqualTo("Tom dekning — velg minst én kommune, ett fylke eller hele Norge."));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
+    }
+
+    [Test]
     public async Task Put_discovery_with_numbers_is_503_when_the_register_is_unavailable_but_fylke_only_still_saves()
     {
         using var factory = new ApiFactory();

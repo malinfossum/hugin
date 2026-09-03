@@ -384,6 +384,24 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task An_empty_scope_fails_brreg_instead_of_fetching_all_of_norway()
+    {
+        // A fylke-only config plus an empty kommune register (fresh install, register fetch
+        // down) leaves AllowedNumbers empty. Chunking that would send `kommunenummer=` to
+        // Brreg, which ignores an empty filter and answers with every IT unit in the country —
+        // so the sync has to stop here instead of quietly widening the scope to all of Norway.
+        var brreg = new FakeBrregClient { Companies = { Company() }, ThrowsOnGetKommuner = true };
+        var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
+
+        var h = Build(brreg: brreg, config: config);
+        var summary = await h.Service.SyncAsync();
+
+        Assert.That(h.Brreg.CompaniesRequests, Is.Empty, "nothing may be fetched under an empty scope");
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Kommuneregisteret er tomt — dekningen kunne ikke utvides"));
+    }
+
+    [Test]
     public async Task Fylke_or_all_of_norway_with_an_empty_register_falls_back_to_a_single_configured_call()
     {
         // A first-ever run (or a register outage) leaves the register empty — Fylker/AllOfNorway
