@@ -28,15 +28,25 @@ const innlandetConfig = {
 
 /** Fake server for the dialog's four calls. `put` decides the PUT outcome; `kommunerDown`
  * makes /api/kommuner fail so the dialog degrades to fylke-only. */
-function fakeServer(opts: { put?: 'ok' | 'fail'; kommunerDown?: boolean } = {}) {
+function fakeServer(
+  opts: {
+    put?: 'ok' | 'fail'
+    kommunerDown?: boolean
+    kommunerPending?: boolean
+    scopePending?: boolean
+  } = {}
+) {
   const calls: { url: string; method: string; body?: unknown }[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
     calls.push({ url, method, body: init?.body ? JSON.parse(init.body as string) : undefined })
-    if (url === '/api/config/discovery' && method === 'GET')
+    if (url === '/api/config/discovery' && method === 'GET') {
+      if (opts.scopePending) return new Promise<Response>(() => {})
       return Promise.resolve(jsonResponse(innlandetConfig))
+    }
     if (url === '/api/kommuner') {
+      if (opts.kommunerPending) return new Promise<Response>(() => {})
       return opts.kommunerDown
         ? Promise.resolve(jsonResponse({ title: 'Registeret er nede' }, 503))
         : Promise.resolve(jsonResponse(kommuner))
@@ -85,11 +95,10 @@ describe('FirstRunDialog v2', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1))
     const put = calls.find((c) => c.method === 'PUT')
     expect(put?.body).toEqual({ municipalityNumbers: ['3405'], fylker: [], allOfNorway: false })
-    expect(onSaveFocus).toHaveBeenCalledWith({
-      fylke: '34',
-      kommune: '3405',
-      categories: ['Utvikling'],
-    })
+    expect(onSaveFocus).toHaveBeenCalledWith(
+      { fylke: '34', kommune: '3405', categories: ['Utvikling'] },
+      { persist: true }
+    )
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
   })
 
@@ -107,6 +116,10 @@ describe('FirstRunDialog v2', () => {
       'Kunne ikke lagre dekningen: Kunne ikke skrive hugin.json'
     )
     expect(onSaveFocus).toHaveBeenCalledTimes(1)
+    expect(onSaveFocus).toHaveBeenCalledWith(
+      { fylke: '34', kommune: null, categories: [] },
+      { persist: false }
+    )
     expect(onDone).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled()
   })
@@ -139,7 +152,33 @@ describe('FirstRunDialog v2', () => {
       fylker: ['34'],
       allOfNorway: false,
     })
-    expect(onSaveFocus).toHaveBeenCalledWith({ fylke: '34', kommune: null, categories: [] })
+    expect(onSaveFocus).toHaveBeenCalledWith(
+      { fylke: '34', kommune: null, categories: [] },
+      { persist: true }
+    )
+  })
+
+  it('Start stays disabled while the kommune list is still loading', async () => {
+    // Before the list settles the cascade cannot tell "no list" from "not yet" — and Start in
+    // that window would have saved the fylke alone, silently dropping the prefilled kommuner.
+    fakeServer({ kommunerPending: true })
+    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+
+    await waitFor(() => expect(screen.getByLabelText('Fylke')).toHaveValue('34'))
+
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
+    expect(screen.queryByText(/Kommunelisten er ikke tilgjengelig/)).not.toBeInTheDocument()
+  })
+
+  it('Start stays disabled while the current scope is still loading', async () => {
+    // The draft defaults to all of Norway until the scope arrives; Start before that would
+    // write a nationwide scope the user never chose.
+    fakeServer({ scopePending: true })
+    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+
+    await screen.findByLabelText('Fylke')
+
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
   })
 
   it('calls onDismiss (nothing else) on a native close, e.g. Escape', async () => {

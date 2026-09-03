@@ -187,6 +187,7 @@ export const en = {
   'coverage.save': 'Save coverage',
   'coverage.saved': 'Saved — syncing …',
   'coverage.savedSyncBusy': 'Saved — applies on the next sync',
+  'coverage.savedSyncFailed': 'Saved — the sync could not start',
   'coverage.saveFailed': 'Could not save coverage: {error}',
   'coverage.othersHint': 'Also covered, outside {fylke}',
   'coverage.otherFylke': '{fylke} (whole county)',

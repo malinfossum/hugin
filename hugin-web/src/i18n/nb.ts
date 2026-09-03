@@ -187,6 +187,7 @@ export const nb = {
   'coverage.save': 'Lagre dekning',
   'coverage.saved': 'Lagret — synkroniserer …',
   'coverage.savedSyncBusy': 'Lagret — brukes ved neste synk',
+  'coverage.savedSyncFailed': 'Lagret — synken kunne ikke starte',
   'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
   'coverage.othersHint': 'Dekkes også, utenfor {fylke}',
   'coverage.otherFylke': '{fylke} (hele fylket)',

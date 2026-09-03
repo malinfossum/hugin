@@ -44,7 +44,10 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [listError, setListError] = useState<string | null>(null)
   const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
   const [coverage, setCoverage] = useState<CoverageDraft | null>(null)
-  const [coverageKommuner, setCoverageKommuner] = useState<KommuneDto[] | null>(null)
+  // undefined = still loading (Save disabled), null = unreachable (fylke-only cascade).
+  const [coverageKommuner, setCoverageKommuner] = useState<KommuneDto[] | null | undefined>(
+    undefined
+  )
   const [coverageFailed, setCoverageFailed] = useState(false)
   const [coverageError, setCoverageError] = useState<string | null>(null)
   const [coverageSaving, setCoverageSaving] = useState(false)
@@ -75,7 +78,8 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   }, [])
 
   // Coverage = the server's discovery scope (what sync fetches). Loaded once on mount; the
-  // kommune list is best-effort (null → fylke-only cascade). loadCoverage stays out of [t]:
+  // kommune list is best-effort (null → fylke-only cascade) and Save waits for it to settle,
+  // since a save without the list degrades to the fylke alone. loadCoverage stays out of [t]:
   // useT() hands back a new `t` identity on every language switch, and re-running this on a
   // switch would re-GET the scope and overwrite an unsaved draft (the flag is translated at
   // render instead, so it still follows the current language).
@@ -96,7 +100,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   }, [loadCoverage])
 
   const handleCoverageSave = async () => {
-    if (!coverage) return
+    if (!coverage || coverageKommuner === undefined) return
     setCoverageSaving(true)
     setCoverageError(null)
     try {
@@ -113,12 +117,22 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
     }
     // A sync that was already running read the old scope before this save, so the new one
     // only takes effect on the next run — say that instead of claiming a sync is fetching it.
-    let alreadyRunning = false
-    await api.post('/api/sync').catch((err) => {
-      alreadyRunning = err instanceof ApiError && err.status === 409
-    })
+    // Any other failure to start is said plainly too: the scope is saved, nothing is fetching.
+    const sync = await api.post('/api/sync').then(
+      (): 'started' | 'busy' | 'failed' => 'started',
+      (err): 'busy' | 'failed' =>
+        err instanceof ApiError && err.status === 409 ? 'busy' : 'failed'
+    )
     setCoverageSaving(false)
-    announce(t(alreadyRunning ? 'coverage.savedSyncBusy' : 'coverage.saved'))
+    announce(
+      t(
+        sync === 'busy'
+          ? 'coverage.savedSyncBusy'
+          : sync === 'failed'
+            ? 'coverage.savedSyncFailed'
+            : 'coverage.saved'
+      )
+    )
   }
 
   const focusKommuner = useMemo(() => {
@@ -445,7 +459,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
               type="button"
               className="btn btn-primary"
               onClick={handleCoverageSave}
-              disabled={coverageSaving}
+              disabled={coverageSaving || coverageKommuner === undefined}
             >
               {t('coverage.save')}
             </button>

@@ -163,6 +163,20 @@ describe('FocusProvider / useFocus', () => {
     expect(loadFocus()).toEqual(next)
   })
 
+  it('setFocus with persist:false updates context state but leaves storage untouched', () => {
+    // The first-run dialog seeds the lens on a failed PUT so it works for this session — but
+    // nothing may be stored, or the dialog would never come back on the next launch.
+    const { result } = renderHook(() => useFocus(), { wrapper: FocusProvider })
+    const next: Focus = { fylke: '11', kommune: null, categories: [] }
+
+    act(() => {
+      result.current.setFocus(next, { persist: false })
+    })
+
+    expect(result.current.focus).toEqual(next)
+    expect(loadFocus()).toBeNull()
+  })
+
   it('resetFocus clears storage and sets focus back to null', () => {
     saveFocus({ fylke: '03', kommune: '0301', categories: [] })
     const { result } = renderHook(() => useFocus(), { wrapper: FocusProvider })

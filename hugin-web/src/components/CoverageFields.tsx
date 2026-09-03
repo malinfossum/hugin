@@ -13,8 +13,9 @@ interface Props {
   idPrefix: string
   draft: CoverageDraft
   onChange: (next: CoverageDraft) => void
-  /** null = /api/kommuner was unreachable: fylke granularity only, with a hint. */
-  kommuner: KommuneDto[] | null
+  /** undefined = /api/kommuner has not answered yet (nothing under the select, the parent
+   * keeps Save disabled); null = it was unreachable: fylke granularity only, with a hint. */
+  kommuner: KommuneDto[] | null | undefined
 }
 
 const FYLKE_OPTIONS = [...FYLKER.entries()]
@@ -28,6 +29,7 @@ const FYLKE_OPTIONS = [...FYLKER.entries()]
 export function CoverageFields({ idPrefix, draft, onChange, kommuner }: Props) {
   const t = useT()
   const options = kommuner ? kommunerInFylke(kommuner, draft.fylke) : []
+  const loading = kommuner === undefined
   const { others } = draft
   const hasOthers = others.municipalities.length > 0 || others.fylker.length > 0
   const othersLabelId = `${idPrefix}-others`
@@ -49,7 +51,7 @@ export function CoverageFields({ idPrefix, draft, onChange, kommuner }: Props) {
           id={`${idPrefix}-fylke`}
           className="select"
           value={draft.fylke}
-          onChange={(event) => onChange(switchFylke(draft, event.target.value, kommuner))}
+          onChange={(event) => onChange(switchFylke(draft, event.target.value, kommuner ?? null))}
         >
           <option value="">{t('focus.allOfNorway')}</option>
           {FYLKE_OPTIONS.map(([number, name]) => (
@@ -60,11 +62,11 @@ export function CoverageFields({ idPrefix, draft, onChange, kommuner }: Props) {
         </select>
       </div>
 
-      {draft.fylke && kommuner === null && (
+      {draft.fylke && !loading && kommuner === null && (
         <p className="help">{t('coverage.kommunerUnavailable')}</p>
       )}
 
-      {draft.fylke && kommuner !== null && (
+      {draft.fylke && !loading && kommuner !== null && (
         <fieldset className="stack stack-sm coverage-group">
           <legend>{t('coverage.kommunerLegend', { fylke: fylkeName(draft.fylke) })}</legend>
           <p className="help">{t('coverage.kommunerHint')}</p>
