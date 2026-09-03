@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Hugin.Api;
 using Hugin.Api.Services;
 using Hugin.Core.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Hugin.Tests.Api;
 
@@ -82,5 +83,53 @@ public sealed class BootSyncTests
         Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), "no 409 — nothing else is running");
         var finished = await SyncEndpointTests.PollUntilFinished(client);
         Assert.That(finished.Brreg!.Succeeded, Is.True);
+    }
+
+    /// <summary>Pre-seeds the nav sync state in the factory's db BEFORE the host starts, so
+    /// StartupSync sees an existing snapshot of a given age. Mirrors how the demo's copy-in
+    /// hands the host a db with history.</summary>
+    private static async Task SeedNavSyncAsync(ApiFactory factory, TimeSpan age)
+    {
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Hugin.Infrastructure.Data.HuginDbContext>()
+            .UseSqlite(Hugin.Infrastructure.Data.HuginDbInitializer.ConnectionString(factory.DbPath))
+            .Options;
+        await using var db = new Hugin.Infrastructure.Data.HuginDbContext(options);
+        await Hugin.Infrastructure.Data.HuginDbInitializer.InitAsync(db);
+        await new Hugin.Infrastructure.Data.EfSyncStateRepository(db).SetAsync("nav", null, DateTimeOffset.UtcNow - age);
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+    }
+
+    [Test]
+    public async Task Public_mode_skips_the_boot_sync_when_nav_synced_five_hours_ago()
+    {
+        using var factory = new ApiFactory(autosync: true, publicMode: true);
+        await SeedNavSyncAsync(factory, TimeSpan.FromHours(5));
+        using var client = factory.CreateClient();
+
+        await Task.Delay(300);
+        var status = await client.GetFromJsonAsync<SyncRunStatus>("/api/sync/status");
+        Assert.That(status!.Running, Is.False);
+        Assert.That(status.StartedUtc, Is.Null, "a fresh cold start must not re-sync inside the 6 h window");
+    }
+
+    [Test]
+    public async Task Public_mode_syncs_when_nav_synced_seven_hours_ago()
+    {
+        using var factory = new ApiFactory(autosync: true, publicMode: true);
+        await SeedNavSyncAsync(factory, TimeSpan.FromHours(7));
+        using var client = factory.CreateClient();
+
+        var status = await SyncEndpointTests.PollUntilFinished(client);
+        Assert.That(status.FinishedUtc, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task Public_mode_never_holds_the_boot_sync_on_an_empty_db()
+    {
+        using var factory = new ApiFactory(autosync: true, publicMode: true); // no db on disk
+        using var client = factory.CreateClient();
+
+        var status = await SyncEndpointTests.PollUntilFinished(client);
+        Assert.That(status.Brreg!.Succeeded, Is.True, "no first-run dialog exists to release a hold");
     }
 }
