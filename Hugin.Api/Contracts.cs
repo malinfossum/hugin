@@ -6,18 +6,18 @@ namespace Hugin.Api;
 
 public sealed record AdDto(string FeedId, string Title, string? Employer, string? EmployerOrgnr,
     string? Kommune, DateTimeOffset? Expires, int? DaysLeft, string? Category, string? SourceUrl,
-    string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published)
+    string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published, string? LinkedOrgnr)
 {
     // AdOverview only ever holds active ads.
     public static AdDto From(AdOverview a) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
         a.MunicipalityNumber, a.Expires, a.DaysLeft, a.Category, a.SourceUrl,
-        a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true, a.Published);
+        a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true, a.Published, a.LinkedOrgnr);
 
     // The new-list and company history are review lists, not the deadline view: no pipeline
     // join, no days-left countdown. IsActive is the live rule (Ad.IsOpenAt), not the stored flag.
     public static AdDto FromAd(Ad a, DateTimeOffset now) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
         a.MunicipalityNumber, a.Expires, DaysLeft: null, a.Category, a.SourceUrl,
-        PipelineStatus: null, a.Hidden, a.IsOpenAt(now), a.Published);
+        PipelineStatus: null, a.Hidden, a.IsOpenAt(now), a.Published, a.LinkedOrgnr);
 }
 
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,
@@ -56,6 +56,8 @@ public sealed record PipelineDto(string Orgnr, string CompanyName, string Status
 public sealed record TrackRequest(string Status, string? Why, string? Note, string? Svar, bool? Starred);
 
 public sealed record SeenRequest(DateTimeOffset AsOf);
+
+public sealed record LinkRequest(string Orgnr);
 
 public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 

@@ -238,4 +238,45 @@ public sealed class AdOverviewServiceTests
 
         Assert.That(result.Single(a => a.FeedId == "a").PipelineStatus, Is.EqualTo(PipelineStatus.Answered));
     }
+
+    [Test]
+    public async Task A_manual_link_wins_over_the_automatic_match()
+    {
+        // Sister-company seam: the ad is posted by one unit, the tracked entry is another, and
+        // no ParentOrgnr chain joins them. The link says which entry the ad belongs to.
+        var now = DateTimeOffset.UtcNow;
+        var linked = MakeAd("a", orgnr: "111111111");
+        linked.LinkedOrgnr = "222222222";
+        var pipeline = PipelineWith(MakeEntry("222222222", PipelineStatus.Applied, now));
+        var sut = new AdOverviewService(AdsWith(linked), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        var result = await sut.GetAsync();
+
+        Assert.That(result.Single().PipelineStatus, Is.EqualTo(PipelineStatus.Applied));
+        Assert.That(result.Single().LinkedOrgnr, Is.EqualTo("222222222"));
+    }
+
+    [Test]
+    public async Task Pipeline_overview_assigns_a_linked_ad_to_the_linked_entry()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ad = ExpiredAd("a", "111111111", now);
+        ad.LinkedOrgnr = "222222222";
+        var pipeline = PipelineWith(MakeEntry("222222222", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(AdsWith(ad), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.True);
+    }
+
+    [Test]
+    public async Task A_link_to_an_orgnr_that_is_not_tracked_falls_back_to_the_automatic_rule()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ad = MakeAd("a", orgnr: "333333333");
+        ad.LinkedOrgnr = "999999999";
+        var pipeline = PipelineWith(MakeEntry("333333333", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(AdsWith(ad), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetAsync()).Single().PipelineStatus, Is.EqualTo(PipelineStatus.Active));
+    }
 }

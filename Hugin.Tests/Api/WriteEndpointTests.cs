@@ -8,6 +8,8 @@ namespace Hugin.Tests.Api;
 
 public sealed record TrackResponseProbe(PipelineDtoProbe Entry, string? Warning);
 
+public sealed record LinkedAdProbe(string FeedId, string? PipelineStatus, string? LinkedOrgnr);
+
 [TestFixture]
 public sealed class WriteEndpointTests
 {
@@ -189,5 +191,57 @@ public sealed class WriteEndpointTests
             var mark = await scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>().GetAsync();
             Assert.That(mark, Is.EqualTo(t1));
         }
+    }
+
+    private async Task SeedAdAndTrackedCompanyAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using var scope = _factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IAdRepository>().UpsertAsync(
+            new FeedAd("a1", "Utvikler", "Søster AS", "111111111", "3407", now, now.AddDays(5), "https://x", true, "IT"), now);
+        await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(
+            new PipelineEntry { Orgnr = "222222222", Status = PipelineStatus.Applied, Created = now, Updated = now });
+    }
+
+    [Test]
+    public async Task Link_joins_the_ad_to_the_tracked_company_and_unlink_drops_it()
+    {
+        await SeedAdAndTrackedCompanyAsync();
+
+        var link = await _client.PutAsJsonAsync("/api/ads/a1/link", new { orgnr = "222222222" });
+        Assert.That(link.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var linked = (await _client.GetFromJsonAsync<List<LinkedAdProbe>>("/api/ads"))!.Single();
+        Assert.That(linked.PipelineStatus, Is.EqualTo("applied"));
+        Assert.That(linked.LinkedOrgnr, Is.EqualTo("222222222"));
+
+        var unlink = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/ads/a1/link"));
+        Assert.That(unlink.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        var unlinked = (await _client.GetFromJsonAsync<List<LinkedAdProbe>>("/api/ads"))!.Single();
+        Assert.That(unlinked.PipelineStatus, Is.Null);
+        Assert.That(unlinked.LinkedOrgnr, Is.Null);
+    }
+
+    [Test]
+    public async Task Link_to_a_company_that_is_not_tracked_returns_400_and_links_nothing()
+    {
+        await SeedAdAndTrackedCompanyAsync();
+
+        var response = await _client.PutAsJsonAsync("/api/ads/a1/link", new { orgnr = "999999999" });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var probe = (await _client.GetFromJsonAsync<List<LinkedAdProbe>>("/api/ads"))!.Single();
+        Assert.That(probe.LinkedOrgnr, Is.Null);
+    }
+
+    [Test]
+    public async Task Link_unknown_ad_returns_404()
+    {
+        await SeedAdAndTrackedCompanyAsync();
+
+        var response = await _client.PutAsJsonAsync("/api/ads/finnes-ikke/link", new { orgnr = "222222222" });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }
