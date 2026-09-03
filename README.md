@@ -41,8 +41,8 @@ The first sync sets a baseline, so `hugin new` starts empty rather than listing 
 
 The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin.db` — suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, and every state-changing request requires an `X-Hugin: 1` header (CSRF protection, not authentication — local processes are trusted).
 
-- **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`
-- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `POST /api/seen` · `POST /api/sync`
+- **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`
+- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `POST /api/seen` · `POST /api/sync` · `PUT /api/config/discovery` · `POST /api/first-run-dismissed`
 
 ## Configuration
 
@@ -58,6 +58,8 @@ The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin
 | `categories` | NAV occupation categories (default `["IT"]`) filter out keyword coincidences; uncategorized ads always pass |
 | `linkouts` | `{ "label", "url" }` pairs — imported into the dashboard's Sources on first run only; manage them under Settings afterwards |
 | `navToken` | `null` fetches NAV's rotating public token automatically; set a registered token instead |
+
+The first three fields are also editable from the dashboard (first-run dialog and Settings → Dekning). Saving from the UI rewrites only those three keys and keeps every other key as it was, after backing the file up to `hugin.json.bak`. Everything below the line stays hand-edited until v3.5.
 
 Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400).
 
