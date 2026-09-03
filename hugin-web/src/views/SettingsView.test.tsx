@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider, loadFocus, saveFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
-import type { CompanyDto, SourceDto } from '../types'
+import type { CompanyDto, DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -32,13 +32,35 @@ function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
   }
 }
 
+const DEFAULT_DISCOVERY: DiscoveryConfigDto = {
+  municipalities: [{ name: 'Hamar', number: '3403' }],
+  fylker: [],
+  allOfNorway: false,
+}
+
+const DEFAULT_KOMMUNER: KommuneDto[] = [
+  { number: '3403', name: 'Hamar' },
+  { number: '3405', name: 'Lillehammer' },
+]
+
 /** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
- * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches. Pass `null`
- * as seed to make GET /api/sources reject (load-failure scenarios); `companies` defaults to
- * empty, which is fine wherever a test doesn't care about kommune options. */
-function fakeServer(seed: SourceDto[] | null, companies: CompanyDto[] = []) {
+ * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches, and the
+ * discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner, POST /api/sync) the
+ * Dekning section always fetches on mount, in every scenario. Pass `null` as seed to make GET
+ * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
+ * wherever a test doesn't care about kommune options. `discovery`/`kommuner` seed the Dekning
+ * section; `putStatus` makes the PUT fail with that status instead of echoing `discovery` back.
+ * Returns `{ fetchMock, puts }` — `puts` records every PUT /api/config/discovery body. */
+function fakeServer(
+  seed: SourceDto[] | null,
+  companies: CompanyDto[] = [],
+  options: { discovery?: DiscoveryConfigDto; kommuner?: KommuneDto[]; putStatus?: number } = {}
+) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
   let nextId = Math.max(0, ...entries.map((s) => s.id)) + 1
+  const discovery = options.discovery ?? DEFAULT_DISCOVERY
+  const kommuner = options.kommuner ?? DEFAULT_KOMMUNER
+  const puts: unknown[] = []
 
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -46,6 +68,24 @@ function fakeServer(seed: SourceDto[] | null, companies: CompanyDto[] = []) {
 
     if (url === '/api/companies' && method === 'GET') {
       return Promise.resolve(jsonResponse(companies))
+    }
+    if (url === '/api/config/discovery' && method === 'GET') {
+      return Promise.resolve(jsonResponse(discovery))
+    }
+    if (url === '/api/config/discovery' && method === 'PUT') {
+      puts.push(JSON.parse(init?.body as string))
+      if (options.putStatus) {
+        return Promise.resolve(
+          jsonResponse({ title: 'Kunne ikke skrive hugin.json' }, { status: options.putStatus })
+        )
+      }
+      return Promise.resolve(jsonResponse(discovery))
+    }
+    if (url === '/api/kommuner' && method === 'GET') {
+      return Promise.resolve(jsonResponse(kommuner))
+    }
+    if (url === '/api/sync' && method === 'POST') {
+      return Promise.resolve(jsonResponse(undefined, { status: 202 }))
     }
     if (url === '/api/sources' && method === 'GET') {
       if (seed === null) return Promise.reject(new Error('network down'))
@@ -88,7 +128,7 @@ function fakeServer(seed: SourceDto[] | null, companies: CompanyDto[] = []) {
     }
     return Promise.reject(new Error(`unhandled request ${method} ${url}`))
   })
-  return fetchMock
+  return { fetchMock, puts }
 }
 
 function renderView(
@@ -130,7 +170,7 @@ describe('SettingsView', () => {
       source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
       source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
     ]
-    renderView(fakeServer(entries))
+    renderView(fakeServer(entries).fetchMock)
 
     await screen.findByText('FINN')
     const links = screen.getAllByRole('link', { name: /FINN|LinkedIn/ })
@@ -139,7 +179,7 @@ describe('SettingsView', () => {
 
   it('add form POSTs {label, url} and calls onSourcesChanged', async () => {
     const user = userEvent.setup()
-    const fetchMock = fakeServer([])
+    const { fetchMock } = fakeServer([])
     const { onSourcesChanged } = renderView(fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
@@ -164,7 +204,7 @@ describe('SettingsView', () => {
   it('edit switches a row to inputs and PUTs', async () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
-    const fetchMock = fakeServer(entries)
+    const { fetchMock } = fakeServer(entries)
     const { onSourcesChanged } = renderView(fetchMock)
 
     await screen.findByText('FINN')
@@ -197,7 +237,7 @@ describe('SettingsView', () => {
   it('remove opens ConfirmDialog, confirm DELETEs', async () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
-    const fetchMock = fakeServer(entries)
+    const { fetchMock } = fakeServer(entries)
     const { onSourcesChanged } = renderView(fetchMock)
 
     await screen.findByText('FINN')
@@ -225,7 +265,7 @@ describe('SettingsView', () => {
       source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
       source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
     ]
-    const fetchMock = fakeServer(entries)
+    const { fetchMock } = fakeServer(entries)
     const { onSourcesChanged } = renderView(fetchMock)
 
     await screen.findByText('FINN')
@@ -254,7 +294,7 @@ describe('SettingsView', () => {
       source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
       source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
     ]
-    renderView(fakeServer(entries))
+    renderView(fakeServer(entries).fetchMock)
 
     await screen.findByText('FINN')
     const moveUpButtons = screen.getAllByRole('button', { name: 'Flytt opp' })
@@ -267,7 +307,7 @@ describe('SettingsView', () => {
   })
 
   it('language section renders the NO/EN pressed-state buttons', async () => {
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     const noButton = screen.getByRole('button', { name: 'NO' })
@@ -278,7 +318,7 @@ describe('SettingsView', () => {
 
   it('theme section calls onToggleTheme', async () => {
     const user = userEvent.setup()
-    const { onToggleTheme } = renderView(fakeServer([]), { theme: 'dark' })
+    const { onToggleTheme } = renderView(fakeServer([]).fetchMock, { theme: 'dark' })
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     await user.click(screen.getByRole('button', { name: 'Bytt til lyst tema' }))
@@ -288,14 +328,14 @@ describe('SettingsView', () => {
 
   it('shows a load error with retry on GET failure, and recovers on retry', async () => {
     const user = userEvent.setup()
-    renderView(fakeServer(null))
+    renderView(fakeServer(null).fetchMock)
 
     expect(await screen.findByText('Kunne ikke laste kilder.')).toBeInTheDocument()
     const retry = screen.getByRole('button', { name: 'Prøv igjen' })
 
     vi.stubGlobal(
       'fetch',
-      fakeServer([source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })])
+      fakeServer([source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]).fetchMock
     )
     await user.click(retry)
 
@@ -307,7 +347,7 @@ describe('SettingsView', () => {
 
   it('announces after a successful add', async () => {
     const user = userEvent.setup()
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     await user.type(screen.getByLabelText('Etikett'), 'Vitae')
@@ -324,7 +364,7 @@ describe('SettingsView', () => {
   it('announces after a successful edit', async () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
-    renderView(fakeServer(entries))
+    renderView(fakeServer(entries).fetchMock)
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Rediger' }))
@@ -343,7 +383,7 @@ describe('SettingsView', () => {
   it('announces after a successful remove', async () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
-    renderView(fakeServer(entries))
+    renderView(fakeServer(entries).fetchMock)
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Fjern' }))
@@ -363,7 +403,7 @@ describe('SettingsView', () => {
       source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }),
       source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
     ]
-    renderView(fakeServer(entries))
+    renderView(fakeServer(entries).fetchMock)
 
     await screen.findByText('FINN')
     const moveDownButtons = screen.getAllByRole('button', { name: 'Flytt ned' })
@@ -380,21 +420,21 @@ describe('SettingsView', () => {
   })
 
   it('renders a Fokus heading with fylke/kommune selects and a category fieldset', async () => {
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
-    expect(await screen.findByRole('heading', { name: 'Fokus' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Fylke')).toBeInTheDocument()
-    expect(screen.getByLabelText('Kommune')).toBeInTheDocument()
-    const fieldset = screen.getByRole('group', { name: 'Kategorier' })
+    const section = await screen.findByRole('region', { name: 'Fokus' })
+    expect(within(section).getByLabelText('Fylke')).toBeInTheDocument()
+    expect(within(section).getByLabelText('Kommune')).toBeInTheDocument()
+    const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
     expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
   })
 
   it('changing the Fokus fylke select announces and persists the choice', async () => {
     const user = userEvent.setup()
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    const section = await screen.findByRole('region', { name: 'Fokus' })
+    await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => {
@@ -409,13 +449,13 @@ describe('SettingsView', () => {
       company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
       company({ orgnr: '2', kommune: '0301', kommuneNavn: 'Oslo' }),
     ]
-    renderView(fakeServer([], companies))
+    renderView(fakeServer([], companies).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    const section = await screen.findByRole('region', { name: 'Fokus' })
+    await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     await waitFor(() => {
-      const kommuneOptions = within(screen.getByLabelText('Kommune'))
+      const kommuneOptions = within(within(section).getByLabelText('Kommune'))
         .getAllByRole('option')
         .map((o) => o.textContent)
       expect(kommuneOptions).toEqual(['Alle', 'Hamar'])
@@ -428,14 +468,16 @@ describe('SettingsView', () => {
       company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
       company({ orgnr: '2', kommune: '3403', kommuneNavn: 'Hamar' }),
     ]
-    renderView(fakeServer([], companies))
+    renderView(fakeServer([], companies).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
-    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
+    const section = await screen.findByRole('region', { name: 'Fokus' })
+    expect((within(section).getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
     await waitFor(() => {
-      expect(within(screen.getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(3)
+      expect(within(within(section).getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(
+        3
+      )
     })
-    await user.selectOptions(screen.getByLabelText('Kommune'), '0301')
+    await user.selectOptions(within(section).getByLabelText('Kommune'), '0301')
 
     expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
   })
@@ -443,7 +485,7 @@ describe('SettingsView', () => {
   it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: [] })
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('heading', { name: 'Fokus' })
     await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
@@ -454,7 +496,7 @@ describe('SettingsView', () => {
   it('reset button announces and clears the stored focus', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
-    renderView(fakeServer([]))
+    renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('heading', { name: 'Fokus' })
     await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
@@ -464,5 +506,53 @@ describe('SettingsView', () => {
       expect(liveRegion).toHaveTextContent('Oppstartsvalget vises ved neste start.')
     })
     expect(loadFocus()).toBeNull()
+  })
+})
+
+describe('Dekning (coverage)', () => {
+  it('shows the current server scope with the fylke’s kommuner checked', async () => {
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+    expect(within(section).getByLabelText('Fylke')).toHaveValue('34')
+    expect(within(section).getByRole('checkbox', { name: 'Hamar' })).toBeChecked()
+    expect(within(section).getByRole('checkbox', { name: 'Lillehammer' })).not.toBeChecked()
+  })
+
+  it('Save PUTs the scope, announces, and triggers a sync', async () => {
+    const server = fakeServer([])
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    await waitFor(() => expect(server.puts).toHaveLength(1))
+    expect(server.puts[0]).toEqual({
+      municipalityNumbers: ['3403', '3405'],
+      fylker: [],
+      allOfNorway: false,
+    })
+    expect(await screen.findByText('Lagret — synkroniserer …')).toBeInTheDocument()
+    expect(
+      server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
+    ).toBe(true)
+  })
+
+  it('a failed save shows an alert and does not sync', async () => {
+    const server = fakeServer([], [], { putStatus: 500 })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    expect(await within(section).findByRole('alert')).toHaveTextContent(
+      /Kunne ikke lagre dekningen/
+    )
+    expect(
+      server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
+    ).toBe(false)
   })
 })
