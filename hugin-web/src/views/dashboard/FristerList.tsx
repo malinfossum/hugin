@@ -6,7 +6,7 @@ import { formatDate } from '../../dates'
 import { adMatchesFocus, useFocus } from '../../focus'
 import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
-import type { AdDto } from '../../types'
+import type { AdDto, PipelineDto } from '../../types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
   if (daysLeft === null) return undefined
@@ -47,6 +47,11 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
   const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
+  // The manual link form: which row has it open, the chosen orgnr, and the tracked companies
+  // it offers (fetched once, the first time a form opens).
+  const [linking, setLinking] = useState<string | null>(null)
+  const [linkTarget, setLinkTarget] = useState('')
+  const [tracked, setTracked] = useState<PipelineDto[] | null>(null)
   const announce = useAnnounce()
   const { focus } = useFocus()
   const t = useT()
@@ -119,6 +124,53 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     announce(t('frister.unhiddenAnnounce'))
   }
 
+  const openLink = async (feedId: string) => {
+    setLinking(feedId)
+    setLinkTarget('')
+    if (tracked !== null) return
+    try {
+      const entries = await api.get<PipelineDto[]>('/api/pipeline')
+      setTracked(
+        [...entries].sort((a, b) =>
+          displayCompanyName(a.companyName).localeCompare(displayCompanyName(b.companyName), 'nb')
+        )
+      )
+    } catch {
+      setError(t('frister.linkError'))
+      setLinking(null)
+    }
+  }
+
+  const closeLink = () => {
+    setLinking(null)
+    setLinkTarget('')
+  }
+
+  const handleLink = async (feedId: string) => {
+    const target = tracked?.find((c) => c.orgnr === linkTarget)
+    if (!target) return
+    try {
+      await api.put(`/api/ads/${feedId}/link`, { orgnr: target.orgnr })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('frister.linkError'))
+      return
+    }
+    closeLink()
+    await load()
+    announce(t('frister.linkedAnnounce', { name: displayCompanyName(target.companyName) }))
+  }
+
+  const handleUnlink = async (feedId: string) => {
+    try {
+      await api.del(`/api/ads/${feedId}/link`)
+    } catch {
+      setError(t('frister.unlinkError'))
+      return
+    }
+    await load()
+    announce(t('frister.unlinkedAnnounce'))
+  }
+
   return (
     <section aria-labelledby="frister-heading" className="frister-list card stack">
       <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
@@ -172,9 +224,23 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
               )}
+              {ad.linkedOrgnr && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => handleUnlink(ad.feedId)}
+                >
+                  {t('frister.unlink')}
+                </button>
+              )}
               {!ad.pipelineStatus && ad.employerOrgnr && (
                 <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
                   {t('frister.track')}
+                </button>
+              )}
+              {!ad.pipelineStatus && linking !== ad.feedId && (
+                <button type="button" className="btn btn-ghost" onClick={() => openLink(ad.feedId)}>
+                  {t('frister.link')}
                 </button>
               )}
               {ad.hidden ? (
@@ -199,6 +265,39 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                 </button>
               )}
             </div>
+            {linking === ad.feedId && tracked !== null && (
+              <div className="frist-link cluster cluster-sm">
+                <div className="field">
+                  <label className="label" htmlFor={`frist-link-${ad.feedId}`}>
+                    {t('frister.linkLabel')}
+                  </label>
+                  <select
+                    id={`frist-link-${ad.feedId}`}
+                    className="select"
+                    value={linkTarget}
+                    onChange={(event) => setLinkTarget(event.target.value)}
+                  >
+                    <option value="">{t('frister.linkPlaceholder')}</option>
+                    {tracked.map((c) => (
+                      <option key={c.orgnr} value={c.orgnr}>
+                        {displayCompanyName(c.companyName)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!linkTarget}
+                  onClick={() => handleLink(ad.feedId)}
+                >
+                  {t('frister.linkConfirm')}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={closeLink}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>

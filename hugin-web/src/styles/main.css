@@ -182,6 +182,11 @@ input[type="text"] {
     align-items: center;
     gap: var(--space-4);
   }
+  /* The manual-link form opens as a fourth child of the row: give it the full width so the
+     select sits on its own line under the three columns instead of squeezing into the first. */
+  .frist-link {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Bedrifter row button: name+branch tag stacked over kommune on mobile, spread across a

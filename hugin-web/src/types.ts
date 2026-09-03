@@ -16,6 +16,9 @@ export interface AdDto {
   hidden: boolean
   isActive: boolean
   published: string | null
+  /** Manual link to the pipeline entry the ad belongs to (sister-company case); wins over the
+   * automatic orgnr / registry-root match. */
+  linkedOrgnr: string | null
 }
 
 export interface CompanyDto {
