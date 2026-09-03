@@ -28,17 +28,41 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     pipelineStatus: null,
     hidden: false,
     isActive: true,
+    linkedOrgnr: null,
     published: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
 
-/** Fake server: GET /api/ads (non-hidden only) / ?hidden=true (all, flagged); POST/DELETE hide flip the Hidden flag in place. */
+const TRACKED = [
+  { orgnr: '222222222', companyName: 'Eccera IT Solutions AS', status: 'applied' },
+  { orgnr: '333333333', companyName: 'Arribatec AS', status: 'active' },
+]
+
+/** Fake server: GET /api/ads (non-hidden only) / ?hidden=true (all, flagged); POST/DELETE hide
+ * flip the Hidden flag in place; GET /api/pipeline lists the tracked companies; PUT/DELETE
+ * /api/ads/{id}/link set the manual link (and the linked entry's status) in place. */
 function fakeServer(seed: AdDto[]) {
   const ads = seed.map((a) => ({ ...a }))
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
+    if (url === '/api/pipeline' && method === 'GET') {
+      return Promise.resolve(jsonResponse(TRACKED))
+    }
+    const linkMatch = url.match(/^\/api\/ads\/(.+)\/link$/)
+    if (linkMatch && (method === 'PUT' || method === 'DELETE')) {
+      const target = ads.find((a) => a.feedId === linkMatch[1])
+      if (target) {
+        const orgnr =
+          method === 'PUT' ? (JSON.parse(init?.body as string) as { orgnr: string }).orgnr : null
+        target.linkedOrgnr = orgnr
+        target.pipelineStatus = orgnr
+          ? ((TRACKED.find((c) => c.orgnr === orgnr)?.status as AdDto['pipelineStatus']) ?? null)
+          : null
+      }
+      return Promise.resolve(jsonResponse(undefined, { status: 204 }))
+    }
     if (url === '/api/ads' && method === 'GET') {
       return Promise.resolve(jsonResponse(ads.filter((a) => !a.hidden)))
     }
@@ -292,6 +316,151 @@ describe('FristerList', () => {
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Norsk Tipping AS følges nå opp under Søknader.')
     })
+  })
+
+  it('links an untracked ad to a tracked company by hand: pick, confirm, PUT, badge, announce', async () => {
+    // Sister-company case: the ad is posted by Eccera Professionals AS, the tracked entry is
+    // Eccera IT Solutions AS, and no registry chain joins them.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([
+      ad({ feedId: 'a1', employer: 'Eccera Professionals AS', employerOrgnr: '111111111' }),
+    ])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    const select = await within(row).findByLabelText('Koble annonsen til')
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Velg bedrift …', 'Arribatec AS', 'Eccera IT Solutions AS'])
+    await user.selectOptions(select, 'Eccera IT Solutions AS')
+    await user.click(within(row).getByRole('button', { name: 'Koble' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ads/a1/link',
+        expect.objectContaining({
+          method: 'PUT',
+          headers: expect.objectContaining({ 'X-Hugin': '1' }),
+          body: JSON.stringify({ orgnr: '222222222' }),
+        })
+      )
+    })
+    const updated = (await screen.findAllByRole('listitem'))[0]
+    expect(within(updated).getByText('Søkt')).toBeInTheDocument()
+    expect(within(updated).getByRole('button', { name: 'Koble fra' })).toBeInTheDocument()
+    expect(within(updated).queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
+        'Annonsen er koblet til Eccera IT Solutions AS.'
+      )
+    )
+  })
+
+  it('Avbryt closes the link form without a request', async () => {
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await within(row).findByLabelText('Koble annonsen til')
+    await user.click(within(row).getByRole('button', { name: 'Avbryt' }))
+
+    expect(within(row).queryByLabelText('Koble annonsen til')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith('/link'))).toBe(false)
+  })
+
+  it('moves focus into the link form when it opens, and back to «Koble til bedrift» on Avbryt', async () => {
+    // The button that opens the form is replaced by the form, so without an explicit move
+    // keyboard focus would fall to the page body both on open and on cancel.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    const select = await within(row).findByLabelText('Koble annonsen til')
+    await waitFor(() => expect(select).toHaveFocus())
+
+    await user.click(within(row).getByRole('button', { name: 'Avbryt' }))
+    await waitFor(() =>
+      expect(within(row).getByRole('button', { name: 'Koble til bedrift' })).toHaveFocus()
+    )
+  })
+
+  it('lands focus on the row’s Skjul button after a link and after Koble fra', async () => {
+    // Both actions remove the button that had focus (the form, then «Koble fra»); the row's
+    // Skjul button is the one control that survives either.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await user.selectOptions(
+      await within(row).findByLabelText('Koble annonsen til'),
+      'Eccera IT Solutions AS'
+    )
+    await user.click(within(row).getByRole('button', { name: 'Koble' }))
+    const linked = await screen.findByRole('button', { name: 'Koble fra' })
+    await waitFor(() => expect(within(row).getByRole('button', { name: 'Skjul' })).toHaveFocus())
+
+    await user.click(linked)
+    await waitFor(() =>
+      expect(within(row).queryByRole('button', { name: 'Koble fra' })).not.toBeInTheDocument()
+    )
+    await waitFor(() => expect(within(row).getByRole('button', { name: 'Skjul' })).toHaveFocus())
+  })
+
+  it('fetches the tracked companies afresh each time the link form opens', async () => {
+    // A company tracked after the first open (from this list or elsewhere) must be offered.
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([ad({ feedId: 'a1', employerOrgnr: '111111111' })])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+    const pipelineGets = () => fetchMock.mock.calls.filter(([u]) => u === '/api/pipeline').length
+
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await within(row).findByLabelText('Koble annonsen til')
+    await user.click(within(row).getByRole('button', { name: 'Avbryt' }))
+    await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
+    await within(row).findByLabelText('Koble annonsen til')
+
+    expect(pipelineGets()).toBe(2)
+  })
+
+  it('Koble fra DELETEs the link and announces', async () => {
+    const user = userEvent.setup()
+    const fetchMock = fakeServer([
+      ad({
+        feedId: 'a1',
+        employerOrgnr: '111111111',
+        linkedOrgnr: '222222222',
+        pipelineStatus: 'applied',
+      }),
+    ])
+    renderList(fetchMock)
+    const row = (await screen.findAllByRole('listitem'))[0]
+
+    await user.click(within(row).getByRole('button', { name: 'Koble fra' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ads/a1/link',
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+    const updated = (await screen.findAllByRole('listitem'))[0]
+    expect(within(updated).queryByText('Søkt')).not.toBeInTheDocument()
+    expect(within(updated).getByRole('button', { name: 'Følg opp' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
+        'Koblingen er fjernet.'
+      )
+    )
   })
 
   it('does not show a track button for an already-tracked company', async () => {

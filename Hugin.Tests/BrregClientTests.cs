@@ -99,7 +99,8 @@ public class BrregClientTests
     // Fake Brreg that filters a fixed unit set by the request's inclusive date bounds and reports
     // totalElements = matching count. `window` makes the client bisect long before 10k.
     private static (BrregClient Client, List<string> Requests) BisectingClient(
-        IReadOnlyList<(string Orgnr, DateOnly Date)> units, int window, ListLogger<BrregClient>? logger = null)
+        IReadOnlyList<(string Orgnr, DateOnly Date)> units, int window, ListLogger<BrregClient>? logger = null,
+        DateTimeOffset? now = null)
     {
         var requests = new List<string>();
         var http = HttpFixtures.Client(request =>
@@ -117,7 +118,8 @@ public class BrregClientTests
             return HttpFixtures.Json(
                 $$$"""{"_embedded":{"enheter":[{{{items}}}]},"page":{"size":200,"totalElements":{{{hits.Count}}},"totalPages":1,"number":0}}""");
         });
-        return (new BrregClient(http, logger, paginationWindow: window, today: () => new DateOnly(2026, 9, 3)), requests);
+        var clock = new FakeClock(now ?? new DateTimeOffset(2026, 9, 3, 12, 0, 0, TimeSpan.Zero));
+        return (new BrregClient(http, logger, paginationWindow: window, clock: clock), requests);
     }
 
     private static (DateOnly? From, DateOnly? To) DateRange(string url)
@@ -170,5 +172,24 @@ public class BrregClientTests
             "the fake serves both on page 0; the client still returns them");
         Assert.That(logger.Warnings, Has.Count.EqualTo(1));
         Assert.That(logger.Warnings[0], Does.Contain("0301").And.Contain("over grensen"));
+    }
+
+    [Test]
+    public async Task Upper_date_bound_is_the_norwegian_calendar_day_not_the_utc_one()
+    {
+        // 22:30 UTC on 3 September is already 4 September in Norway (CEST). A unit registered
+        // on the 4th sits outside a UTC-dated upper bound and would be missed by every
+        // bisected slice; Brreg's registration dates are Norwegian dates.
+        var units = Enumerable.Range(0, 6)
+            .Select(i => ($"90000000{i}", new DateOnly(2026, 9, 4).AddDays(-i * 200))).ToList();
+        var lateEvening = new DateTimeOffset(2026, 9, 3, 22, 30, 0, TimeSpan.Zero);
+        var (client, requests) = BisectingClient(units, window: 2, now: lateEvening);
+
+        var result = await client.GetCompaniesAsync(["62"], ["0301"]);
+
+        var upperBounds = requests.Select(DateRange).Select(r => r.To).Where(d => d is not null).ToList();
+        Assert.That(upperBounds, Is.Not.Empty, "the query was bisected");
+        Assert.That(upperBounds.Max(), Is.EqualTo(new DateOnly(2026, 9, 4)));
+        Assert.That(result.Select(c => c.Orgnr), Does.Contain("900000000"), "the unit registered today is fetched");
     }
 }

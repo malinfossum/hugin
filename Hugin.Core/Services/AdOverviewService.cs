@@ -5,7 +5,7 @@ namespace Hugin.Core.Services;
 
 public sealed record AdOverview(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
     string? MunicipalityNumber, DateTimeOffset? Expires, int? DaysLeft, string? Category,
-    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden, DateTimeOffset? Published);
+    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden, DateTimeOffset? Published, string? LinkedOrgnr = null);
 
 /// <summary>
 /// One pipeline entry with the ads it is linked to summarised: <see cref="AdsExpired"/> is true
@@ -24,6 +24,8 @@ public sealed record PipelineOverview(PipelineEntry Entry, bool AdsExpired);
 /// <see cref="Company.ParentOrgnr"/> chain leads to 972483672). Exact orgnr match is tried
 /// first; when it misses, both the ad's orgnr and every pipeline entry's orgnr are resolved
 /// to their registry root (following ParentOrgnr, max 4 hops) and matched on that root instead.
+/// A manual link (<see cref="Ad.LinkedOrgnr"/>, set from the dashboard) wins over both when it
+/// names a tracked entry — the sister-company case no chain reaches.
 /// </remarks>
 public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pipeline, IClock clock,
     ICompanyRepository companies)
@@ -46,7 +48,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
             results.Add(new AdOverview(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
                 a.MunicipalityNumber, a.Expires,
                 a.Expires is { } e ? (e.UtcDateTime.Date - today).Days : null,
-                a.Category, a.SourceUrl, status, a.Hidden, a.Published));
+                a.Category, a.SourceUrl, status, a.Hidden, a.Published, a.LinkedOrgnr));
         }
 
         return results
@@ -96,9 +98,11 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         return new EntryIndex(entries.ToDictionary(e => e.Orgnr), byRoot);
     }
 
-    /// <summary>Exact orgnr match wins; otherwise the entry sharing the ad's registry root, if any.</summary>
+    /// <summary>A manual link to a tracked entry wins; then exact orgnr; then the entry sharing
+    /// the ad's registry root, if any.</summary>
     private async Task<PipelineEntry?> MatchAsync(Ad ad, EntryIndex index, CancellationToken ct)
     {
+        if (ad.LinkedOrgnr is { } link && index.ByOrgnr.TryGetValue(link, out var linked)) return linked;
         if (ad.EmployerOrgnr is not { } orgnr) return null;
         if (index.ByOrgnr.TryGetValue(orgnr, out var exact)) return exact;
         return index.ByRoot.GetValueOrDefault(await ResolveRootAsync(orgnr, ct));

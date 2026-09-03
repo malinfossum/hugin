@@ -14,7 +14,7 @@ function jsonResponse(body: unknown) {
  * FirstRunDialog's four calls (every test that renders <App /> hits it, since focus starts
  * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
  * carries the interesting scope/kommune scenarios. */
-function fakeServer() {
+function fakeServer(options: { putFails?: boolean } = {}) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
@@ -31,6 +31,14 @@ function fakeServer() {
       return Promise.resolve(jsonResponse([]))
     }
     if (url === '/api/config/discovery' && method === 'PUT') {
+      if (options.putFails) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ title: 'Kunne ikke skrive hugin.json' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+          })
+        )
+      }
       return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
     }
     if (url === '/api/sync' && method === 'POST') {
@@ -288,6 +296,19 @@ describe('App first-run focus dialog', () => {
       kommune: null,
       categories: [],
     })
+  })
+
+  it('a failed first-run save keeps the dialog open and stores nothing, so it returns next launch', async () => {
+    vi.stubGlobal('fetch', fakeServer({ putFails: true }))
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByRole('dialog', { name: 'Hva vil du følge?' })).toBeInTheDocument()
+    expect(window.localStorage.getItem('hugin-focus')).toBeNull()
   })
 
   it('moves focus to the app heading once the dialog closes after Start', async () => {

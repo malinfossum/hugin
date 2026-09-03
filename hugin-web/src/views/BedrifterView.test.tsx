@@ -81,6 +81,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     pipelineStatus: null,
     hidden: false,
     isActive: true,
+    linkedOrgnr: null,
     published: '2026-08-12T00:00:00Z',
     ...overrides,
   }
@@ -277,6 +278,7 @@ describe('BedrifterView', () => {
             feedId: 'a1',
             title: 'Aktiv annonse',
             isActive: true,
+            linkedOrgnr: null,
             published: '2026-08-01T00:00:00Z',
           }),
           ad({ feedId: 'a2', title: 'Utgått annonse', isActive: false, published: null }),

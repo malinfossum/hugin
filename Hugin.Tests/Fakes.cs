@@ -271,6 +271,13 @@ internal sealed class FakeAdRepository : IAdRepository
         return Task.FromResult(true);
     }
 
+    public Task<bool> SetLinkedOrgnrAsync(string feedId, string? orgnr, CancellationToken ct = default)
+    {
+        if (!Store.TryGetValue(feedId, out var ad)) return Task.FromResult(false);
+        ad.LinkedOrgnr = orgnr;
+        return Task.FromResult(true);
+    }
+
     public Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {
         var stale = Store.Values.Where(a => a.IsActive && a.Expires is not null && a.Expires < now).ToList();
@@ -280,7 +287,7 @@ internal sealed class FakeAdRepository : IAdRepository
 
     public Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values
-            .Where(a => a.EmployerOrgnr == orgnr)
+            .Where(a => a.EmployerOrgnr == orgnr || a.LinkedOrgnr == orgnr)
             .OrderByDescending(a => a.Published)
             .ToList());
 

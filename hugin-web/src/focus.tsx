@@ -100,7 +100,9 @@ export function adMatchesFocus(
 
 interface FocusContextValue {
   focus: Focus | null
-  setFocus: (focus: Focus) => void
+  /** `persist: false` keeps the lens for this session only — the first-run dialog uses it on
+   * a failed scope save, so the dialog comes back on the next launch. */
+  setFocus: (focus: Focus, options?: { persist?: boolean }) => void
   resetFocus: () => void
 }
 
@@ -116,8 +118,8 @@ const FocusContext = createContext<FocusContextValue>({
 export function FocusProvider({ children }: { children: ReactNode }): ReactElement {
   const [focus, setFocusState] = useState<Focus | null>(loadFocus)
 
-  const setFocus = useCallback((next: Focus) => {
-    saveFocus(next)
+  const setFocus = useCallback((next: Focus, options?: { persist?: boolean }) => {
+    if (options?.persist !== false) saveFocus(next)
     setFocusState(next)
   }, [])
 

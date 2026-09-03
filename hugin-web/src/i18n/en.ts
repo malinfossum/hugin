@@ -96,6 +96,15 @@ export const en = {
   'frister.todayBadge': 'today',
   'frister.daysBadge': '{n} days',
   'frister.dayBadgeOne': '1 day',
+  'frister.link': 'Link to company',
+  'frister.linkLabel': 'Link the ad to',
+  'frister.linkPlaceholder': 'Choose a company …',
+  'frister.linkConfirm': 'Link',
+  'frister.unlink': 'Unlink',
+  'frister.linkedAnnounce': 'The ad is linked to {name}.',
+  'frister.unlinkedAnnounce': 'The link is removed.',
+  'frister.linkError': 'Could not link the ad.',
+  'frister.unlinkError': 'Could not remove the link.',
 
   'newSince.heading': 'New since last visit',
   'newSince.loadError': 'Could not load new items.',
@@ -187,7 +196,11 @@ export const en = {
   'coverage.save': 'Save coverage',
   'coverage.saved': 'Saved — syncing …',
   'coverage.savedSyncBusy': 'Saved — applies on the next sync',
+  'coverage.savedSyncFailed': 'Saved — the sync could not start',
   'coverage.saveFailed': 'Could not save coverage: {error}',
+  'coverage.othersHint': 'Also covered, outside {fylke}',
+  'coverage.otherFylke': '{fylke} (whole county)',
+  'coverage.removeOther': 'Remove {name}',
 
   'focus.title': 'What do you want to follow?',
   'focus.intro':

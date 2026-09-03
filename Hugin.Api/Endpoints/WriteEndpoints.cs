@@ -28,6 +28,17 @@ public static class WriteEndpoints
         app.MapPost("/api/ads/{feedId}/hide", (IAdRepository ads, string feedId) => SetHidden(ads, feedId, true));
         app.MapDelete("/api/ads/{feedId}/hide", (IAdRepository ads, string feedId) => SetHidden(ads, feedId, false));
 
+        // Manual ad ↔ pipeline link for the sister-company case: the target must already be a
+        // pipeline entry, so the link can only ever point at something the badges can show.
+        app.MapPut("/api/ads/{feedId}/link", async (IAdRepository ads, IPipelineRepository pipeline,
+            string feedId, LinkRequest request) =>
+        {
+            if (await pipeline.GetByOrgnrAsync(request.Orgnr) is null)
+                return Results.Problem(statusCode: 400, title: $"Orgnr {request.Orgnr} følges ikke opp — følg opp bedriften først.");
+            return await SetLink(ads, feedId, request.Orgnr);
+        });
+        app.MapDelete("/api/ads/{feedId}/link", (IAdRepository ads, string feedId) => SetLink(ads, feedId, null));
+
         app.MapPost("/api/seen", async (IReviewMarkRepository mark, SeenRequest request) =>
         {
             // Monotonic: a stale tab must never move the mark backwards.
@@ -36,6 +47,11 @@ public static class WriteEndpoints
             return Results.NoContent();
         });
     }
+
+    private static async Task<IResult> SetLink(IAdRepository ads, string feedId, string? orgnr) =>
+        await ads.SetLinkedOrgnrAsync(feedId, orgnr)
+            ? Results.NoContent()
+            : Results.Problem(statusCode: 404, title: $"Fant ikke annonsen {feedId}.");
 
     private static async Task<IResult> SetHidden(IAdRepository ads, string feedId, bool hidden) =>
         await ads.SetHiddenAsync(feedId, hidden)

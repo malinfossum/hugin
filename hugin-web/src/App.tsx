@@ -185,7 +185,7 @@ function AppShell() {
       </div>
       <FirstRunDialog
         open={focusDialogOpen}
-        onSaveFocus={(f) => setFocus(f)}
+        onSaveFocus={(f, options) => setFocus(f, options)}
         onDone={() => setFirstRunDone(true)}
         onDismiss={() => {
           setFocusPromptDismissed(true)

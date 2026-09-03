@@ -176,6 +176,15 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         return true;
     }
 
+    public async Task<bool> SetLinkedOrgnrAsync(string feedId, string? orgnr, CancellationToken ct = default)
+    {
+        var ad = await db.Ads.FindAsync([feedId], ct);
+        if (ad is null) return false;
+        ad.LinkedOrgnr = orgnr;
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<int> DeactivateExpiredAsync(DateTimeOffset now, CancellationToken ct = default)
     {
         // Expiry is a local fallback: an ad past its date is stale even if the feed has not said so.
@@ -190,7 +199,7 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
     }
 
     public async Task<IReadOnlyList<Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default) =>
-        await db.Ads.Where(a => a.EmployerOrgnr == orgnr)
+        await db.Ads.Where(a => a.EmployerOrgnr == orgnr || a.LinkedOrgnr == orgnr)
             .OrderByDescending(a => a.Published).ToListAsync(ct);
 
     public async Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>

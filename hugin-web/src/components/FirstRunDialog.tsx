@@ -4,6 +4,7 @@ import {
   type CoverageDraft,
   effectiveDraft,
   fromDiscoveryConfig,
+  NO_OTHERS,
   toDiscoveryRequest,
   toFocusSeed,
 } from '../coverage'
@@ -15,14 +16,15 @@ import { CoverageFields } from './CoverageFields'
 
 interface Props {
   open: boolean
-  /** The render lens, seeded from the chosen scope — saved even when the PUT fails. */
-  onSaveFocus: (focus: Focus) => void
+  /** The render lens, seeded from the chosen scope. Persisted once the scope is written; on a
+   * failed PUT it is session-only, so the dialog returns on the next launch. */
+  onSaveFocus: (focus: Focus, options: { persist: boolean }) => void
   /** The scope was written and the sync started: the parent may close the dialog. */
   onDone: () => void
   onDismiss: () => void
 }
 
-const DEFAULT_DRAFT: CoverageDraft = { fylke: '', kommuner: [] }
+const DEFAULT_DRAFT: CoverageDraft = { fylke: '', kommuner: [], others: NO_OTHERS }
 
 /** First-run prompt v2 (spec v3.4 Part B): the region step is scope + lens. It prefills from the
  * server's current discovery scope, lists the fylke's kommuner from /api/kommuner (degrading to
@@ -35,7 +37,9 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
   const t = useT()
   const openRef = useRef(open)
   const [draft, setDraft] = useState<CoverageDraft>(DEFAULT_DRAFT)
-  const [kommuner, setKommuner] = useState<KommuneDto[] | null>(null)
+  // undefined = still loading (Start disabled), null = unreachable (fylke-only).
+  const [kommuner, setKommuner] = useState<KommuneDto[] | null | undefined>(undefined)
+  const [scopeLoaded, setScopeLoaded] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -52,16 +56,23 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
   }, [open])
 
   // Load the current server scope + the kommune list each time the dialog opens. Both are
-  // best-effort: no scope → defaults, no kommune list → fylke granularity only.
+  // best-effort: no scope → defaults, no kommune list → fylke granularity only. Start stays
+  // disabled until both have settled: before that the draft is a placeholder (all of Norway)
+  // and the cascade cannot tell "no list" from "not yet".
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    setScopeLoaded(false)
+    setKommuner(undefined)
     api
       .get<DiscoveryConfigDto>('/api/config/discovery')
       .then((config) => {
         if (!cancelled) setDraft(fromDiscoveryConfig(config))
       })
       .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setScopeLoaded(true)
+      })
     api
       .get<KommuneDto[]>('/api/kommuner')
       .then((list) => {
@@ -85,7 +96,10 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
     )
   }
 
+  const ready = scopeLoaded && kommuner !== undefined
+
   const handleStart = async () => {
+    if (kommuner === undefined) return
     setSaving(true)
     setError(null)
     const chosen = effectiveDraft(draft, kommuner)
@@ -93,15 +107,16 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
     try {
       await api.put('/api/config/discovery', toDiscoveryRequest(chosen))
     } catch (err) {
-      // The lens still works without the server scope — save it, show the error, keep Start as retry.
-      onSaveFocus(focus)
+      // The lens still works without the server scope — for this session only, so the dialog
+      // comes back next launch; show the error, keep Start as retry.
+      onSaveFocus(focus, { persist: false })
       setError(
         t('coverage.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })
       )
       setSaving(false)
       return
     }
-    onSaveFocus(focus)
+    onSaveFocus(focus, { persist: true })
     await api.post('/api/sync').catch(() => {}) // SyncHeader shows progress; a 409 just means it already runs
     setSaving(false)
     onDone()
@@ -143,7 +158,12 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
       )}
 
       <div className="dialog-actions cluster cluster-sm">
-        <button type="button" className="btn btn-primary" onClick={handleStart} disabled={saving}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleStart}
+          disabled={saving || !ready}
+        >
           {t('focus.start')}
         </button>
       </div>

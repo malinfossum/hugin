@@ -60,6 +60,7 @@ function fakeServer(
     discovery?: DiscoveryConfigDto
     kommuner?: KommuneDto[]
     kommunerDown?: boolean
+    kommunerPending?: boolean
     putStatus?: number
     syncStatus?: number
   } = {}
@@ -90,6 +91,7 @@ function fakeServer(
       return Promise.resolve(jsonResponse(discovery))
     }
     if (url === '/api/kommuner' && method === 'GET') {
+      if (options.kommunerPending) return new Promise<Response>(() => {})
       if (options.kommunerDown) {
         return Promise.resolve(jsonResponse({ title: 'Registeret er nede' }, { status: 503 }))
       }
@@ -604,6 +606,64 @@ describe('Dekning (coverage)', () => {
       fylker: ['34'],
       allOfNorway: false,
     })
+  })
+
+  it('a save keeps coverage outside the rendered fylke, and lists it', async () => {
+    // The real hugin.json is multi-fylke (Innlandet kommuner + Larvik). The cascade renders one
+    // fylke, so a save used to write only what it showed and silently dropped Larvik.
+    const server = fakeServer([], [], {
+      discovery: {
+        municipalities: [
+          { name: 'Hamar', number: '3403' },
+          { name: 'Larvik', number: '3909' },
+        ],
+        fylker: [],
+        allOfNorway: false,
+      },
+    })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    expect(
+      within(section).getByRole('list', { name: 'Dekkes også, utenfor Innlandet' })
+    ).toHaveTextContent('Larvik (Vestfold)')
+
+    await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    await waitFor(() => expect(server.puts).toHaveLength(1))
+    expect(server.puts[0]).toEqual({
+      municipalityNumbers: ['3403', '3405', '3909'],
+      fylker: [],
+      allOfNorway: false,
+    })
+  })
+
+  it('Save stays disabled until the kommune list has settled', async () => {
+    // A save in the loading window would have gone through effectiveDraft with no list and
+    // widened the scope to the fylke alone.
+    const server = fakeServer([], [], { kommunerPending: true })
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+    await within(section).findByLabelText('Fylke')
+
+    expect(within(section).getByRole('button', { name: 'Lagre dekning' })).toBeDisabled()
+    expect(
+      within(section).queryByText(/Kommunelisten er ikke tilgjengelig/)
+    ).not.toBeInTheDocument()
+  })
+
+  it('says the sync could not start when the save went through but the sync did not', async () => {
+    const server = fakeServer([], [], { syncStatus: 500 })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const section = await screen.findByRole('region', { name: 'Dekning' })
+
+    await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
+
+    expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('switching language does not discard an unsaved coverage edit', async () => {

@@ -471,4 +471,34 @@ public class RepositoryTests
 
         Assert.That((await _db.Ads.FindAsync("ad-1"))!.Hidden, Is.True);
     }
+
+    [Test]
+    public async Task SetLinkedOrgnr_persists_survives_a_feed_upsert_and_reports_unknown()
+    {
+        var repo = new EfAdRepository(_db);
+        var feed = new FeedAd("a", "Utvikler", "Firma AS", "111111111", "3403", T1, T1.AddDays(14), "https://x", true, "IT");
+        await repo.UpsertAsync(feed, T1);
+
+        Assert.That(await repo.SetLinkedOrgnrAsync("a", "222222222"), Is.True);
+        await repo.UpsertAsync(feed, T2); // sync must not touch the Hugin-owned link
+        Assert.That((await _db.Ads.FindAsync("a"))!.LinkedOrgnr, Is.EqualTo("222222222"));
+
+        Assert.That(await repo.SetLinkedOrgnrAsync("a", null), Is.True);
+        Assert.That((await _db.Ads.FindAsync("a"))!.LinkedOrgnr, Is.Null);
+
+        Assert.That(await repo.SetLinkedOrgnrAsync("finnes-ikke", "222222222"), Is.False);
+    }
+
+    [Test]
+    public async Task GetByEmployer_includes_ads_linked_to_that_employer()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("a", "Utvikler", "Søster AS", "111111111", "3403", T1, T1.AddDays(14), "https://x", true, "IT"), T1);
+        await repo.UpsertAsync(new FeedAd("b", "Annen", "Annen AS", "333333333", "3403", T1, T1.AddDays(14), "https://y", true, "IT"), T1);
+        await repo.SetLinkedOrgnrAsync("a", "222222222");
+
+        Assert.That((await repo.GetByEmployerAsync("222222222")).Select(a => a.FeedId), Is.EqualTo(new[] { "a" }));
+        Assert.That((await repo.GetByEmployerAsync("111111111")).Select(a => a.FeedId), Is.EqualTo(new[] { "a" }),
+            "the posting employer keeps its history too");
+    }
 }

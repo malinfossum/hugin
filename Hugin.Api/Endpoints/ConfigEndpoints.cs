@@ -70,6 +70,13 @@ public static class ConfigEndpoints
                 if (fylker.FirstOrDefault(f => !known.Keys.Any(k => k.StartsWith(f, StringComparison.Ordinal))) is { } unknownFylke)
                     return Results.Problem(statusCode: 400, title: $"Ukjent fylkesnummer «{unknownFylke}».");
             }
+            else if (fylker.FirstOrDefault(f => !Fylker.Known.Contains(f)) is { } unknownFylke)
+            {
+                // No register to check against — the static fylke set still rules out a
+                // well-formed prefix that no kommune has, which would otherwise be written and
+                // then fetch nothing.
+                return Results.Problem(statusCode: 400, title: $"Ukjent fylkesnummer «{unknownFylke}».");
+            }
 
             var municipalities = known is null
                 ? []

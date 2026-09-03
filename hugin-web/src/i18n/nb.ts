@@ -96,6 +96,15 @@ export const nb = {
   'frister.todayBadge': 'i dag',
   'frister.daysBadge': '{n} dager',
   'frister.dayBadgeOne': '1 dag',
+  'frister.link': 'Koble til bedrift',
+  'frister.linkLabel': 'Koble annonsen til',
+  'frister.linkPlaceholder': 'Velg bedrift …',
+  'frister.linkConfirm': 'Koble',
+  'frister.unlink': 'Koble fra',
+  'frister.linkedAnnounce': 'Annonsen er koblet til {name}.',
+  'frister.unlinkedAnnounce': 'Koblingen er fjernet.',
+  'frister.linkError': 'Kunne ikke koble annonsen.',
+  'frister.unlinkError': 'Kunne ikke fjerne koblingen.',
 
   'newSince.heading': 'Nytt siden sist',
   'newSince.loadError': 'Kunne ikke laste nytt siden sist.',
@@ -187,7 +196,11 @@ export const nb = {
   'coverage.save': 'Lagre dekning',
   'coverage.saved': 'Lagret — synkroniserer …',
   'coverage.savedSyncBusy': 'Lagret — brukes ved neste synk',
+  'coverage.savedSyncFailed': 'Lagret — synken kunne ikke starte',
   'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
+  'coverage.othersHint': 'Dekkes også, utenfor {fylke}',
+  'coverage.otherFylke': '{fylke} (hele fylket)',
+  'coverage.removeOther': 'Fjern {name}',
 
   'focus.title': 'Hva vil du følge?',
   'focus.intro':
