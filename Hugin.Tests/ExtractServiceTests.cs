@@ -50,10 +50,16 @@ public class ExtractServiceTests
         FakePipelineRepository? pipeline = null,
         FakeReviewMarkRepository? reviewMark = null,
         FakeKommuneRepository? kommuner = null,
-        HuginConfig? config = null) =>
-        new(companies ?? new FakeCompanyRepository(), ads ?? new FakeAdRepository(),
-            pipeline ?? new FakePipelineRepository(), reviewMark ?? new FakeReviewMarkRepository(),
-            kommuner ?? new FakeKommuneRepository(), config ?? new HuginConfig(), new FakeClock(Now));
+        HuginConfig? config = null)
+    {
+        companies ??= new FakeCompanyRepository();
+        ads ??= new FakeAdRepository();
+        pipeline ??= new FakePipelineRepository();
+        var clock = new FakeClock(Now);
+        return new ExtractService(companies, ads, reviewMark ?? new FakeReviewMarkRepository(),
+            kommuner ?? new FakeKommuneRepository(), config ?? new HuginConfig(), clock,
+            new AdOverviewService(ads, pipeline, clock, companies));
+    }
 
     // --- New scope --------------------------------------------------------
 
@@ -218,6 +224,33 @@ public class ExtractServiceTests
         var names = tracker.EnumerateArray().Select(r => r.GetProperty("companyName").GetString()).ToList();
         Assert.That(names, Does.Contain("Aktiv AS"));
         Assert.That(names, Does.Contain("Sokt AS"));
+    }
+
+    [Test]
+    public async Task All_scope_leaves_out_an_active_entry_whose_ads_have_all_expired_even_when_asked_for_active()
+    {
+        // Screen and export agree: an entry the dashboard shows under Utgått is not an
+        // "active" entry, so "include active" must not resurrect it in the Søkt table.
+        var companies = new FakeCompanyRepository();
+        companies.Store["1"] = Company("1", "Utgatt AS");
+        companies.Store["2"] = Company("2", "Aktiv AS");
+
+        var ads = new FakeAdRepository();
+        ads.Store["a"] = Ad("a", "Utvikler", expires: Now.AddDays(-1), employerOrgnr: "1");
+        ads.Store["b"] = Ad("b", "Utvikler", expires: Now.AddDays(5), employerOrgnr: "2");
+
+        var pipeline = new FakePipelineRepository();
+        pipeline.Store.Add(Entry("1", PipelineStatus.Active));
+        pipeline.Store.Add(Entry("2", PipelineStatus.Active));
+
+        var service = BuildService(companies: companies, ads: ads, pipeline: pipeline);
+
+        var result = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Json, includeActive: true);
+
+        using var doc = JsonDocument.Parse(result.Content);
+        var names = doc.RootElement.GetProperty("tracker").EnumerateArray()
+            .Select(r => r.GetProperty("companyName").GetString()).ToList();
+        Assert.That(names, Is.EqualTo(new[] { "Aktiv AS" }));
     }
 
     [Test]

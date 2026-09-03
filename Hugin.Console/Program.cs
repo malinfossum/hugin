@@ -140,6 +140,7 @@ internal static class Program
         services.AddScoped<SyncService>();
         services.AddScoped<NewItemsService>();
         services.AddScoped<PipelineService>();
+        services.AddScoped<AdOverviewService>();
         services.AddScoped<ExtractService>();
 
         return builder.Build();

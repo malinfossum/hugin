@@ -39,11 +39,11 @@ public sealed record ExtractDocument(DateTimeOffset GeneratedUtc, string Scope, 
 public sealed class ExtractService(
     ICompanyRepository companies,
     IAdRepository ads,
-    IPipelineRepository pipeline,
     IReviewMarkRepository reviewMark,
     IKommuneRepository kommuneRepo,
     HuginConfig config,
-    IClock clock)
+    IClock clock,
+    AdOverviewService overview)
 {
     public async Task<ExtractResult> ExtractAsync(ExtractScope scope, ExtractFormat format,
         string? category = null, bool includeActive = false, CancellationToken ct = default)
@@ -102,13 +102,16 @@ public sealed class ExtractService(
 
     private async Task<IReadOnlyList<ExtractTrackerRow>> BuildTrackerAsync(bool includeActive, CancellationToken ct)
     {
-        var entries = await pipeline.GetAllAsync(ct: ct);
+        var entries = await overview.GetPipelineOverviewAsync(ct: ct);
         var rows = new List<ExtractTrackerRow>();
 
         // Active is pre-outreach and excluded by default (same rule the old MarkdownExporter
-        // enforced) — v3.1 makes inclusion an option via includeActive.
+        // enforced) — v3.1 makes inclusion an option via includeActive. An Active entry whose
+        // ads have all expired sits under Utgått on screen, not Active, so it stays out here too.
         foreach (var entry in entries
-            .Where(e => e.Status >= PipelineStatus.Applied || (includeActive && e.Status == PipelineStatus.Active))
+            .Where(o => o.Entry.Status >= PipelineStatus.Applied
+                || (includeActive && o.Entry.Status == PipelineStatus.Active && !o.AdsExpired))
+            .Select(o => o.Entry)
             .OrderBy(e => e.Updated))
         {
             var company = await companies.GetAsync(entry.Orgnr, ct);
