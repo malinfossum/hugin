@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
@@ -26,7 +26,7 @@ namespace Hugin.Infrastructure.Http;
 /// filter on hovedenheter. Both paths are always walked.
 /// </summary>
 public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = null,
-    int paginationWindow = 10_000, Func<DateOnly>? today = null) : IBrregClient
+    int paginationWindow = 10_000, IClock? clock = null) : IBrregClient
 {
     public const string BaseAddress = "https://data.brreg.no/enhetsregisteret/api/";
 
@@ -37,7 +37,32 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
     private static readonly DateOnly RegisterEpoch = new(1900, 1, 1);
 
     private readonly ILogger<BrregClient> _logger = logger ?? NullLogger<BrregClient>.Instance;
-    private readonly Func<DateOnly> _today = today ?? (() => DateOnly.FromDateTime(DateTime.UtcNow));
+    private readonly IClock _clock = clock ?? new SystemClock();
+
+    // Brreg's registration dates are Norwegian calendar days, so the open upper bound of a
+    // bisected range is "today in Norway" — not the UTC date, which lags it by up to two hours
+    // and would leave a unit registered late in the evening outside every slice.
+    private static readonly TimeZoneInfo Norway = FindNorway();
+
+    private DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_clock.UtcNow, Norway).DateTime);
+
+    private static TimeZoneInfo FindNorway()
+    {
+        foreach (var id in new[] { "Europe/Oslo", "W. Europe Standard Time" })
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(id);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+        return TimeZoneInfo.Local;
+    }
 
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
@@ -123,7 +148,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
             if (page == 0 && totalElements >= paginationWindow)
             {
                 var lo = from ?? RegisterEpoch;
-                var hi = to ?? _today();
+                var hi = to ?? Today();
                 if (depth < MaxBisectionDepth && lo < hi)
                 {
                     var mid = lo.AddDays((hi.DayNumber - lo.DayNumber) / 2); // lo <= mid < hi
