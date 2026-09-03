@@ -1,18 +1,12 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { CoverageFields } from '../components/CoverageFields'
+import { CoverageSection } from '../components/CoverageSection'
 import { useAnnounce } from '../components/LiveRegion'
-import {
-  type CoverageDraft,
-  effectiveDraft,
-  fromDiscoveryConfig,
-  toDiscoveryRequest,
-} from '../coverage'
 import { KNOWN_CATEGORIES, useFocus } from '../focus'
 import { FYLKER, fylkeOf } from '../fylker'
 import { useLang, useT } from '../i18n'
-import type { CompanyDto, DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
+import type { CompanyDto, SourceDto } from '../types'
 
 interface Props {
   theme: 'dark' | 'light'
@@ -30,8 +24,7 @@ const FYLKE_OPTIONS = [...FYLKER.entries()]
 
 /** Settings view (spec v3.2 item 8): sources CRUD + reorder, plus language and theme — the
  * "home" for these prefs, while the topbar keeps its own quick toggles. The Dekning section
- * (v3.4) edits the server's discovery scope directly — the same fylke → kommune cascade as the
- * first-run dialog, for changing it later. Brreg/NAV aren't editable here — they're fixed,
+ * (v3.4) lives in CoverageSection. Brreg/NAV aren't editable here — they're fixed,
  * i18n-sourced entries shown on the dashboard's SourcesCard, not rows in this list. */
 export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) {
   const [sources, setSources] = useState<SourceDto[]>([])
@@ -43,14 +36,6 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [removing, setRemoving] = useState<SourceDto | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
-  const [coverage, setCoverage] = useState<CoverageDraft | null>(null)
-  // undefined = still loading (Save disabled), null = unreachable (fylke-only cascade).
-  const [coverageKommuner, setCoverageKommuner] = useState<KommuneDto[] | null | undefined>(
-    undefined
-  )
-  const [coverageFailed, setCoverageFailed] = useState(false)
-  const [coverageError, setCoverageError] = useState<string | null>(null)
-  const [coverageSaving, setCoverageSaving] = useState(false)
   const t = useT()
   const [lang, setLang] = useLang()
   const announce = useAnnounce()
@@ -76,64 +61,6 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
       .then(setFocusCompanies)
       .catch(() => {})
   }, [])
-
-  // Coverage = the server's discovery scope (what sync fetches). Loaded once on mount; the
-  // kommune list is best-effort (null → fylke-only cascade) and Save waits for it to settle,
-  // since a save without the list degrades to the fylke alone. loadCoverage stays out of [t]:
-  // useT() hands back a new `t` identity on every language switch, and re-running this on a
-  // switch would re-GET the scope and overwrite an unsaved draft (the flag is translated at
-  // render instead, so it still follows the current language).
-  const loadCoverage = useCallback(() => {
-    setCoverageFailed(false)
-    return api
-      .get<DiscoveryConfigDto>('/api/config/discovery')
-      .then((config) => setCoverage(fromDiscoveryConfig(config)))
-      .catch(() => setCoverageFailed(true))
-  }, [])
-
-  useEffect(() => {
-    loadCoverage()
-    api
-      .get<KommuneDto[]>('/api/kommuner')
-      .then(setCoverageKommuner)
-      .catch(() => setCoverageKommuner(null))
-  }, [loadCoverage])
-
-  const handleCoverageSave = async () => {
-    if (!coverage || coverageKommuner === undefined) return
-    setCoverageSaving(true)
-    setCoverageError(null)
-    try {
-      await api.put(
-        '/api/config/discovery',
-        toDiscoveryRequest(effectiveDraft(coverage, coverageKommuner))
-      )
-    } catch (err) {
-      setCoverageError(
-        t('coverage.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })
-      )
-      setCoverageSaving(false)
-      return
-    }
-    // A sync that was already running read the old scope before this save, so the new one
-    // only takes effect on the next run — say that instead of claiming a sync is fetching it.
-    // Any other failure to start is said plainly too: the scope is saved, nothing is fetching.
-    const sync = await api.post('/api/sync').then(
-      (): 'started' | 'busy' | 'failed' => 'started',
-      (err): 'busy' | 'failed' =>
-        err instanceof ApiError && err.status === 409 ? 'busy' : 'failed'
-    )
-    setCoverageSaving(false)
-    announce(
-      t(
-        sync === 'busy'
-          ? 'coverage.savedSyncBusy'
-          : sync === 'failed'
-            ? 'coverage.savedSyncFailed'
-            : 'coverage.saved'
-      )
-    )
-  }
 
   const focusKommuner = useMemo(() => {
     const byNumber = new Map<string, string>()
@@ -432,40 +359,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         </fieldset>
       </section>
 
-      <section aria-labelledby="settings-coverage-heading" className="card settings-group stack">
-        <h2 id="settings-coverage-heading">{t('coverage.heading')}</h2>
-        <p className="help">{t('coverage.hint')}</p>
-
-        {(coverageFailed || coverageError) && (
-          <p role="alert" className="alert alert-danger cluster cluster-sm">
-            {coverageFailed ? t('coverage.loadError') : coverageError}
-            {!coverage && (
-              <button type="button" className="btn btn-ghost" onClick={loadCoverage}>
-                {t('common.retry')}
-              </button>
-            )}
-          </p>
-        )}
-
-        {coverage && (
-          <>
-            <CoverageFields
-              idPrefix="settings-coverage"
-              draft={coverage}
-              onChange={setCoverage}
-              kommuner={coverageKommuner}
-            />
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleCoverageSave}
-              disabled={coverageSaving || coverageKommuner === undefined}
-            >
-              {t('coverage.save')}
-            </button>
-          </>
-        )}
-      </section>
+      <CoverageSection />
 
       <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
         <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>
