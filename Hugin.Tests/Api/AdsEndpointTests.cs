@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hugin.Tests.Api;
 
-public sealed record AdDtoProbe(string FeedId, string? PipelineStatus, int? DaysLeft, bool Hidden);
+public sealed record AdDtoProbe(string FeedId, string? PipelineStatus, int? DaysLeft, bool Hidden, bool IsActive);
 
 [TestFixture]
 public sealed class AdsEndpointTests

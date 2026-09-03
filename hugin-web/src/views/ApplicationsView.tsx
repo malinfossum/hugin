@@ -3,11 +3,24 @@ import { ApiError, api } from '../api'
 import { displayCompanyName } from '../companyName'
 import { useAnnounce } from '../components/LiveRegion'
 import { formatDate } from '../dates'
-import { localeFor, type TranslationKey, useLang, useT } from '../i18n'
+import { localeFor, type T, type TranslationKey, useLang, useT } from '../i18n'
 import { pipelineLabel } from '../pipelineLabels'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
 
-const SECTIONS: PipelineStatusSlug[] = ['active', 'applied', 'answered']
+/** The statuses you can pick. */
+const STATUSES: PipelineStatusSlug[] = ['active', 'applied', 'answered']
+
+/** The sections on screen. Expired is derived — an active entry whose ads have all expired — never a status. */
+type Section = PipelineStatusSlug | 'expired'
+const SECTIONS: Section[] = ['active', 'applied', 'answered', 'expired']
+
+function sectionFor(entry: PipelineDto): Section {
+  return entry.status === 'active' && entry.adsExpired ? 'expired' : entry.status
+}
+
+function sectionLabel(t: T, section: Section): string {
+  return section === 'expired' ? t('status.expired') : pipelineLabel(t, section)
+}
 
 type SortMode = 'starred' | 'updated' | 'name'
 
@@ -187,20 +200,21 @@ export function ApplicationsView() {
         </select>
       </div>
 
-      {SECTIONS.map((status) => {
+      {SECTIONS.map((section) => {
         const sectionEntries = sortEntries(
-          entries.filter((e) => e.status === status),
+          entries.filter((e) => sectionFor(e) === section),
           sortMode,
           locale
         )
-        const headingId = `pipeline-heading-${status}`
+        const headingId = `pipeline-heading-${section}`
         return (
-          <section key={status} aria-labelledby={headingId} className="card stack">
-            <h2 id={headingId}>{pipelineLabel(t, status)}</h2>
-            {status === 'active' && <p className="muted help">{t('applications.activeHint')}</p>}
+          <section key={section} aria-labelledby={headingId} className="card stack">
+            <h2 id={headingId}>{sectionLabel(t, section)}</h2>
+            {section === 'active' && <p className="muted help">{t('applications.activeHint')}</p>}
+            {section === 'expired' && <p className="muted help">{t('applications.expiredHint')}</p>}
             <ul className="stack stack-sm">
               {sectionEntries.map((entry) => {
-                const missingWhy = status !== 'active' && !entry.why
+                const missingWhy = entry.status !== 'active' && !entry.why
                 const isEditing = editingOrgnr === entry.orgnr
                 return (
                   <li key={entry.orgnr} className="panel stack stack-sm">
@@ -267,7 +281,7 @@ export function ApplicationsView() {
                               })
                             }
                           >
-                            {SECTIONS.map((slug) => (
+                            {STATUSES.map((slug) => (
                               <option key={slug} value={slug}>
                                 {pipelineLabel(t, slug)}
                               </option>

@@ -14,10 +14,10 @@ public sealed record AdDto(string FeedId, string Title, string? Employer, string
         a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true, a.Published);
 
     // The new-list and company history are review lists, not the deadline view: no pipeline
-    // join, no days-left countdown.
-    public static AdDto FromAd(Ad a) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
+    // join, no days-left countdown. IsActive is the live rule (Ad.IsOpenAt), not the stored flag.
+    public static AdDto FromAd(Ad a, DateTimeOffset now) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
         a.MunicipalityNumber, a.Expires, DaysLeft: null, a.Category, a.SourceUrl,
-        PipelineStatus: null, a.Hidden, a.IsActive, a.Published);
+        PipelineStatus: null, a.Hidden, a.IsOpenAt(now), a.Published);
 }
 
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,
@@ -46,10 +46,11 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads, IReadOnlyList<CompanyDto> Branches);
 
 public sealed record PipelineDto(string Orgnr, string CompanyName, string Status, bool Starred,
-    string Why, string? Note, string? Svar, DateTimeOffset Updated)
+    string Why, string? Note, string? Svar, DateTimeOffset Updated, bool AdsExpired)
 {
-    public static PipelineDto From(PipelineEntry e, string companyName) => new(e.Orgnr, companyName,
-        StatusSlug.ToSlug(e.Status), e.Starred, e.Why, e.Note, e.SvarText, e.Updated);
+    public static PipelineDto From(PipelineOverview o, string companyName) => new(o.Entry.Orgnr, companyName,
+        StatusSlug.ToSlug(o.Entry.Status), o.Entry.Starred, o.Entry.Why, o.Entry.Note, o.Entry.SvarText,
+        o.Entry.Updated, o.AdsExpired);
 }
 
 public sealed record TrackRequest(string Status, string? Why, string? Note, string? Svar, bool? Starred);

@@ -25,6 +25,7 @@ function entry(overrides: Partial<PipelineDto> = {}): PipelineDto {
     note: null,
     svar: null,
     updated: '2026-08-15T00:00:00Z',
+    adsExpired: false,
     ...overrides,
   }
 }
@@ -101,6 +102,58 @@ describe('ApplicationsView', () => {
 
     expect(within(activeSection).queryByText('Søkt-firma')).not.toBeInTheDocument()
     expect(within(appliedSection).queryByText('Aktiv-firma')).not.toBeInTheDocument()
+  })
+
+  it('moves an active entry whose ads have all expired into the Utgått section', async () => {
+    const entries = [
+      entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active' }),
+      entry({ orgnr: '2', companyName: 'Utgått-firma', status: 'active', adsExpired: true }),
+      entry({
+        orgnr: '3',
+        companyName: 'Søkt-firma',
+        status: 'applied',
+        why: 'x',
+        adsExpired: true,
+      }),
+    ]
+    renderView(fakeServer(entries))
+
+    await screen.findByText('Utgått-firma')
+
+    const activeSection = screen.getByRole('heading', { name: 'Aktiv' }).closest('section')
+    const expiredSection = screen.getByRole('heading', { name: 'Utgått' }).closest('section')
+    const appliedSection = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
+    if (!activeSection || !expiredSection || !appliedSection) throw new Error('section not found')
+
+    expect(within(expiredSection).getByText('Utgått-firma')).toBeInTheDocument()
+    expect(within(activeSection).queryByText('Utgått-firma')).not.toBeInTheDocument()
+    expect(within(activeSection).getByText('Aktiv-firma')).toBeInTheDocument()
+    // Applied stays put — the ad expiring after you applied is the normal course of things.
+    expect(within(appliedSection).getByText('Søkt-firma')).toBeInTheDocument()
+    expect(within(expiredSection).queryByText('Søkt-firma')).not.toBeInTheDocument()
+  })
+
+  it('explains the Utgått section and keeps its entries editable', async () => {
+    const user = userEvent.setup()
+    renderView(
+      fakeServer([
+        entry({ orgnr: '2', companyName: 'Utgått-firma', status: 'active', adsExpired: true }),
+      ])
+    )
+
+    await screen.findByText('Utgått-firma')
+
+    expect(
+      screen.getByText(
+        'Alle annonsene har gått ut. Oppføringen flyttes tilbake når det kommer en ny.'
+      )
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Rediger' }))
+    const statusSelect = screen.getByLabelText('Status')
+    expect(statusSelect).toHaveValue('active')
+    // Utgått is derived, never a status you can pick.
+    expect(within(statusSelect).queryByRole('option', { name: 'Utgått' })).not.toBeInTheDocument()
   })
 
   it('shows the active-hint text under the Aktiv heading', async () => {

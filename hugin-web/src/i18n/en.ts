@@ -24,6 +24,7 @@ export const en = {
   'status.active': 'Active',
   'status.applied': 'Applied',
   'status.answered': 'Answered',
+  'status.expired': 'Expired',
 
   'sync.heading': 'Sync',
   'sync.statusError': 'Could not load sync status.',
@@ -113,6 +114,8 @@ export const en = {
   'applications.sortUpdated': 'Last updated',
   'applications.sortName': 'Name',
   'applications.activeHint': 'Active entries are only exported when you opt in.',
+  'applications.expiredHint':
+    'Every ad has expired. The entry moves back on its own when a new one appears.',
   'applications.missingWhy': '⚠ missing justification',
   'applications.edit': 'Edit',
   'applications.why': 'Justification',

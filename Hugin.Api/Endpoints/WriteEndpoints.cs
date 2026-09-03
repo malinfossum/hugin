@@ -7,7 +7,7 @@ public static class WriteEndpoints
 {
     public static void MapWrites(this IEndpointRouteBuilder app)
     {
-        app.MapPut("/api/pipeline/{orgnr}", async (PipelineService pipeline,
+        app.MapPut("/api/pipeline/{orgnr}", async (PipelineService pipeline, AdOverviewService overview,
             ICompanyRepository companies, string orgnr, TrackRequest request) =>
         {
             if (StatusSlug.Parse(request.Status) is not { } status)
@@ -20,7 +20,9 @@ public static class WriteEndpoints
 
             var result = await pipeline.TrackAsync(orgnr, status, request.Why, request.Note, request.Svar, request.Starred);
             var name = (await companies.GetAsync(orgnr))!.Name;
-            return Results.Ok(new TrackResponse(PipelineDto.From(result.Entry, name), result.Warning));
+            // The response entry carries the same derived expiry flag as a fresh GET would.
+            var saved = (await overview.GetPipelineOverviewAsync()).First(o => o.Entry.Orgnr == orgnr);
+            return Results.Ok(new TrackResponse(PipelineDto.From(saved, name), result.Warning));
         });
 
         app.MapPost("/api/ads/{feedId}/hide", (IAdRepository ads, string feedId) => SetHidden(ads, feedId, true));

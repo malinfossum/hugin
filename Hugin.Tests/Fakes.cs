@@ -226,13 +226,13 @@ internal sealed class FakeAdRepository : IAdRepository
         if (Store.TryGetValue(ad.FeedId, out var existing))
         {
             existing.Title = ad.Title;
-            existing.EmployerName = ad.EmployerName;
-            existing.EmployerOrgnr = ad.EmployerOrgnr;
+            existing.EmployerName = ad.EmployerName ?? existing.EmployerName;
+            existing.EmployerOrgnr = ad.EmployerOrgnr ?? existing.EmployerOrgnr;
             existing.MunicipalityNumber = ad.MunicipalityNumber;
-            existing.Published = ad.Published;
-            existing.Expires = ad.Expires;
-            existing.SourceUrl = ad.SourceUrl;
-            existing.Category = ad.Category;
+            existing.Published = ad.Published ?? existing.Published;
+            existing.Expires = ad.Expires ?? existing.Expires;
+            existing.SourceUrl = ad.SourceUrl ?? existing.SourceUrl;
+            existing.Category = ad.Category ?? existing.Category;
             existing.IsActive = ad.IsActive;
         }
         else
@@ -256,10 +256,10 @@ internal sealed class FakeAdRepository : IAdRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<Ad>> GetActiveAsync(string? municipalityNumber = null,
+    public Task<IReadOnlyList<Ad>> GetActiveAsync(DateTimeOffset now, string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values
-            .Where(a => a.IsActive
+            .Where(a => a.IsOpenAt(now)
                 && (municipalityNumber is null || a.MunicipalityNumber == municipalityNumber)
                 && (includeHidden || !a.Hidden))
             .ToList());
@@ -283,6 +283,9 @@ internal sealed class FakeAdRepository : IAdRepository
             .Where(a => a.EmployerOrgnr == orgnr)
             .OrderByDescending(a => a.Published)
             .ToList());
+
+    public Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Ad>>(Store.Values.ToList());
 }
 
 internal sealed class FakePipelineRepository : IPipelineRepository

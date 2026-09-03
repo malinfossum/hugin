@@ -58,6 +58,98 @@ public sealed class AdOverviewServiceTests
     }
 
     [Test]
+    public async Task Leaves_out_an_ad_whose_deadline_has_passed()
+    {
+        var now = new DateTimeOffset(2026, 8, 19, 8, 0, 0, TimeSpan.Zero);
+        var ads = AdsWith(
+            MakeAd("gone", expires: now.AddDays(-1)),
+            MakeAd("open", expires: now.AddDays(1)));
+        var sut = new AdOverviewService(ads, new FakePipelineRepository(), new FakeClock(now), new FakeCompanyRepository());
+
+        var result = await sut.GetAsync();
+
+        Assert.That(result.Select(a => a.FeedId), Is.EqualTo(new[] { "open" }));
+    }
+
+    private static Ad ExpiredAd(string id, string orgnr, DateTimeOffset now) =>
+        MakeAd(id, orgnr: orgnr, expires: now.AddDays(-1));
+
+    [Test]
+    public async Task Pipeline_overview_marks_an_entry_whose_ads_have_all_expired()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ads = AdsWith(ExpiredAd("a", "1", now), ExpiredAd("b", "1", now));
+        var pipeline = PipelineWith(MakeEntry("1", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        var result = await sut.GetPipelineOverviewAsync();
+
+        Assert.That(result.Single().AdsExpired, Is.True);
+    }
+
+    [Test]
+    public async Task Pipeline_overview_keeps_an_entry_with_one_open_ad_among_expired_ones()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var ads = AdsWith(ExpiredAd("a", "1", now), MakeAd("b", orgnr: "1", expires: now.AddDays(3)));
+        var pipeline = PipelineWith(MakeEntry("1", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.False);
+    }
+
+    [Test]
+    public async Task Pipeline_overview_never_marks_an_entry_that_has_no_ads()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var pipeline = PipelineWith(MakeEntry("1", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(AdsWith(), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.False);
+    }
+
+    [Test]
+    public async Task Pipeline_overview_treats_a_feed_closed_ad_as_expired()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var closed = MakeAd("a", orgnr: "1", expires: now.AddDays(3));
+        closed.IsActive = false;
+        var pipeline = PipelineWith(MakeEntry("1", PipelineStatus.Active, now));
+        var sut = new AdOverviewService(AdsWith(closed), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.True);
+    }
+
+    [Test]
+    public async Task Pipeline_overview_links_ads_through_the_root_chain_like_the_badges_do()
+    {
+        // NT case inverted: entry tracked under the child, the ad carries the parent orgnr.
+        var now = DateTimeOffset.UtcNow;
+        var ads = AdsWith(ExpiredAd("a", "972483672", now));
+        var pipeline = PipelineWith(MakeEntry("925836613", PipelineStatus.Active, now));
+        var companies = CompaniesWith(MakeCompany("925836613", parentOrgnr: "972483672"));
+        var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
+
+        Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.True);
+    }
+
+    [Test]
+    public async Task Pipeline_overview_returns_every_entry_with_its_status_untouched()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var pipeline = PipelineWith(MakeEntry("1", PipelineStatus.Active, now), MakeEntry("2", PipelineStatus.Applied, now));
+        var sut = new AdOverviewService(AdsWith(ExpiredAd("a", "2", now)), pipeline, new FakeClock(now), new FakeCompanyRepository());
+
+        var result = await sut.GetPipelineOverviewAsync();
+
+        Assert.That(result.Select(r => (r.Entry.Orgnr, r.Entry.Status, r.AdsExpired)), Is.EquivalentTo(new[]
+        {
+            ("1", PipelineStatus.Active, false),
+            ("2", PipelineStatus.Applied, true),
+        }));
+    }
+
+    [Test]
     public async Task Joins_pipeline_status_by_employer_orgnr()
     {
         var now = DateTimeOffset.UtcNow;

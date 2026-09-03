@@ -251,13 +251,34 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task Upsert_keeps_the_enriched_fields_when_the_feed_sends_a_closed_stub()
+    {
+        // NAV strips ad_content once an ad is gone: the stub carries only the summary (title,
+        // employer name, municipality) and status INACTIVE. The orgnr link, frist and deep-link
+        // must survive it, or the ad drops out of company history and the Expired section.
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("a", "Utvikler", "Firma AS", "999888777", "3403",
+            T1, T1.AddDays(14), "https://arbeidsplassen.nav.no/x", true, "IT / Utvikling"), T1);
+        await repo.UpsertAsync(new FeedAd("a", "Utvikler", "Firma AS", null, "3403",
+            null, null, null, false), T2);
+
+        var stored = (await repo.GetByEmployerAsync("999888777")).Single();
+
+        Assert.That(stored.IsActive, Is.False);
+        Assert.That(stored.Expires, Is.EqualTo(T1.AddDays(14)));
+        Assert.That(stored.Published, Is.EqualTo(T1));
+        Assert.That(stored.SourceUrl, Is.EqualTo("https://arbeidsplassen.nav.no/x"));
+        Assert.That(stored.Category, Is.EqualTo("IT / Utvikling"));
+    }
+
+    [Test]
     public async Task Category_survives_insert_and_update()
     {
         var repo = new EfAdRepository(_db);
         await repo.UpsertAsync(new FeedAd("a", "Utvikler", null, null, "3403", T1, null, null, true, "IT / Utvikling"), T1);
         await repo.UpsertAsync(new FeedAd("a", "Utvikler", null, null, "3403", T1, null, null, true, "IT / Drift"), T2);
 
-        var stored = (await repo.GetActiveAsync()).Single();
+        var stored = (await repo.GetActiveAsync(T1)).Single();
         Assert.That(stored.Category, Is.EqualTo("IT / Drift"));
     }
 
@@ -269,11 +290,38 @@ public class RepositoryTests
         await repo.UpsertAsync(new FeedAd("aktiv-gjovik", "Utvikler", null, null, "3407", T1, null, null, true), T1);
         await repo.UpsertAsync(new FeedAd("borte", "Utvikler", null, null, "3403", T1, null, null, false), T1);
 
-        var all = await repo.GetActiveAsync(null);
+        var all = await repo.GetActiveAsync(T1, null);
         Assert.That(all.Select(a => a.FeedId), Is.EquivalentTo(new[] { "aktiv-hamar", "aktiv-gjovik" }));
 
-        var hamar = await repo.GetActiveAsync("3403");
+        var hamar = await repo.GetActiveAsync(T1, "3403");
         Assert.That(hamar.Select(a => a.FeedId), Is.EqualTo(new[] { "aktiv-hamar" }));
+    }
+
+    [Test]
+    public async Task GetActive_drops_an_ad_past_its_deadline_before_the_sweep_has_flipped_it()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("gone", "Utvikler", null, null, "3403", T1, T1.AddDays(2), null, true), T1);
+        await repo.UpsertAsync(new FeedAd("open", "Utvikler", null, null, "3403", T1, T1.AddDays(30), null, true), T1);
+        await repo.UpsertAsync(new FeedAd("no-deadline", "Utvikler", null, null, "3403", T1, null, null, true), T1);
+
+        var open = await repo.GetActiveAsync(T1.AddDays(10));
+
+        Assert.That(open.Select(a => a.FeedId), Is.EquivalentTo(new[] { "open", "no-deadline" }));
+    }
+
+    [Test]
+    public async Task GetAll_returns_open_expired_and_hidden_ads_alike()
+    {
+        var repo = new EfAdRepository(_db);
+        await repo.UpsertAsync(new FeedAd("open", "Utvikler", null, null, "3403", T1, T1.AddDays(30), null, true), T1);
+        await repo.UpsertAsync(new FeedAd("closed", "Utvikler", null, null, "3403", T1, null, null, false), T1);
+        await repo.UpsertAsync(new FeedAd("hidden", "Utvikler", null, null, "3403", T1, null, null, true), T1);
+        await repo.SetHiddenAsync("hidden", true);
+
+        var all = await repo.GetAllAsync();
+
+        Assert.That(all.Select(a => a.FeedId), Is.EquivalentTo(new[] { "open", "closed", "hidden" }));
     }
 
     [Test]
@@ -374,8 +422,8 @@ public class RepositoryTests
         await repo.UpsertAsync(SomeFeedAd("ad-2"), T1);
         await repo.SetHiddenAsync("ad-2", true);
 
-        Assert.That((await repo.GetActiveAsync()).Select(a => a.FeedId), Is.EquivalentTo(new[] { "ad-1" }));
-        Assert.That((await repo.GetActiveAsync(includeHidden: true)).Count, Is.EqualTo(2));
+        Assert.That((await repo.GetActiveAsync(T1)).Select(a => a.FeedId), Is.EquivalentTo(new[] { "ad-1" }));
+        Assert.That((await repo.GetActiveAsync(T1, includeHidden: true)).Count, Is.EqualTo(2));
     }
 
     [Test]

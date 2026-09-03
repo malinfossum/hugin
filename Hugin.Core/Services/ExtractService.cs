@@ -71,7 +71,7 @@ public sealed class ExtractService(
                 break;
 
             case ExtractScope.Category:
-                adRows = (await ads.GetActiveAsync(ct: ct))
+                adRows = (await ads.GetActiveAsync(clock.UtcNow, ct: ct))
                     .Where(a => a.Category is not null
                         && a.Category.Contains(category!, StringComparison.OrdinalIgnoreCase))
                     .Select(ToAdRow)
@@ -80,7 +80,7 @@ public sealed class ExtractService(
 
             case ExtractScope.All:
                 companyRows = (await companies.GetAllAsync(ct: ct)).Select(c => ToCompanyRow(c, kommuner)).ToList();
-                adRows = (await ads.GetActiveAsync(ct: ct)).Select(ToAdRow).ToList();
+                adRows = (await ads.GetActiveAsync(clock.UtcNow, ct: ct)).Select(ToAdRow).ToList();
                 trackerRows = await BuildTrackerAsync(includeActive, ct);
                 break;
         }
