@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Hugin.Api;
 using Hugin.Core.Config;
@@ -155,6 +155,22 @@ public sealed class ConfigEndpointTests
 
         var fylke = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest([], ["34"], false));
         Assert.That(fylke.StatusCode, Is.EqualTo(HttpStatusCode.OK), "the dialog degrades to fylke granularity — that save must still work");
+    }
+
+    [Test]
+    public async Task Put_discovery_rejects_an_unknown_fylke_even_when_the_register_is_unavailable()
+    {
+        // Degraded mode used to check the fylke's format only, so a well-formed nonsense prefix
+        // was written and the next sync fetched nothing for it. The 2024 fylke set is static.
+        using var factory = new ApiFactory();
+        factory.Brreg.ThrowsOnGetKommuner = true;
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest([], ["99"], false));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That((await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>())!.Title, Is.EqualTo("Ukjent fylkesnummer «99»."));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
     }
 
     [Test]
