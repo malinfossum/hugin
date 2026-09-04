@@ -105,6 +105,8 @@ builder.Services.AddScoped<KommuneRegister>();
 
 builder.Services.AddSingleton<SyncRunner>();
 builder.Services.AddSingleton<BootSyncGate>();
+builder.Services.AddSingleton<DemoSnapshot>();
+builder.Services.AddScoped<DemoSeeder>();
 builder.Services.AddHostedService<StartupSync>();
 
 var app = builder.Build();
@@ -121,8 +123,12 @@ await using (var scope = app.Services.CreateAsyncScope())
     // Never in public mode — there is no first-run dialog for a visitor to resolve (spec A5).
     if (!mode.Enabled && !File.Exists(dbPath)) services.GetRequiredService<BootSyncGate>().Hold();
 
+    if (mode.Enabled) services.GetRequiredService<DemoSnapshot>().CopyIn();
+
     await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), dbPath,
         services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
+
+    if (mode.Enabled) await services.GetRequiredService<DemoSeeder>().ApplyAsync();
 }
 
 app.UseHuginSecurity(app.Services.GetRequiredService<PublicModeOptions>());

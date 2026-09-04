@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Services;
+using Hugin.Infrastructure.Data;
 
 namespace Hugin.Api.Services;
 
@@ -37,6 +38,12 @@ public sealed class SyncRunner(IServiceScopeFactory scopes, IClock clock)
             await using var scope = scopes.CreateAsyncScope();
             var summary = await scope.ServiceProvider.GetRequiredService<SyncService>().SyncAsync();
             (brreg, nav) = (summary.Brreg, summary.Nav);
+
+            // Demo spec B3: seeder → checkpoint → copy-back, in that order, so the persisted
+            // snapshot carries the seeded pipeline. Both are no-ops outside public mode.
+            await scope.ServiceProvider.GetRequiredService<DemoSeeder>().ApplyAsync();
+            await scope.ServiceProvider.GetRequiredService<DemoSnapshot>()
+                .CopyBackAsync(scope.ServiceProvider.GetRequiredService<HuginDbContext>());
         }
         catch (Exception ex)
         {
