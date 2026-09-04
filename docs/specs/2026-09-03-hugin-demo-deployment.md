@@ -265,3 +265,12 @@ successful sync, so a down NAV means one attempt per cold start, which is bounde
 cold-start rate; a real all-interfaces bind test — the Windows firewall prompt on my machine,
 the pure helper covers the decision; rate limiting — F1's quota is the limiter and my data is
 never on the box; `InvariantGlobalization` as an ICU fallback — breaks æøå.
+
+## Post-implementation corrections (2026-09-04)
+
+1. **Coverage in read-only Settings** renders as a disabled `<fieldset>` around the existing
+   fields, not as a separate text rendering — the values are visible and inert, one code path.
+2. **`--public` parsing** lives in `PublicMode` (pure) and is proven by unit tests; the real
+   process path for the three startup errors was smoke-tested by hand (Task 2, Step 6).
+3. **Copy-back runs inside the sync scope**, after the seeder, so the snapshot always holds the
+   seeded rows; `SyncRunner` is the single place the order is fixed.

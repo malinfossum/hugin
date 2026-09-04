@@ -29,3 +29,7 @@ hugin-web/node_modules/
 
 # superpowers SDD scratch (ledger, briefs, review packages)
 .superpowers/
+
+# Demo publish output (Linux) — rebuilt from publish-demo.ps1
+publish-linux/
+hugin-demo.zip
