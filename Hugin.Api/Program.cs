@@ -11,13 +11,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 
-var configPath = ArgValue(args, "--config");
-var port = int.TryParse(ArgValue(args, "--port"), out var p) ? p : 5111;
-
-var loaded = ConfigLoader.Load(configPath);
-if (loaded.Warning is not null) Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
-
-var configFile = new HuginConfigFile(loaded.ConfigPath);
+var configArg = ArgValue(args, "--config");
+var portArg = ArgValue(args, "--port");
+var publicFlag = Array.IndexOf(args, "--public") >= 0;
+var stateArg = ArgValue(args, "--state");
 
 // Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
 // not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
@@ -30,8 +27,47 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = contentRoot,
 });
 
+// Two doors into public mode: the --public flag for real runs, or hugin:public in configuration
+// (reachable as the hugin__public env var) for a host that sets it that way instead — ApiFactory
+// uses this door for test hosts. Both doors must run through the same Validate + state-dir
+// sourcing below, or the config-only door skips the checks meant to keep a broken demo host from
+// silently doing the wrong thing (no --state/--config checks, hugin.json loaded from beside the
+// exe instead of the state dir).
+var isPublic = publicFlag || builder.Configuration["hugin:public"] == "true";
+var effectiveStateDir = stateArg ?? builder.Configuration["hugin:state"];
+
+if (PublicMode.Validate(isPublic, effectiveStateDir, configArg) is { } startupError)
+{
+    Console.Error.WriteLine(startupError);
+    return 1;
+}
+
+// Public mode: the state dir owns hugin.json (validated above); normal mode: --config or beside the exe.
+var loaded = ConfigLoader.Load(isPublic ? Path.Combine(effectiveStateDir!, ConfigLoader.FileName) : configArg);
+if (loaded.Warning is not null)
+{
+    Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
+    // A broken demo config must never silently become the defaults on a public host.
+    if (isPublic) return 1;
+}
+
+var configFile = new HuginConfigFile(loaded.ConfigPath);
+
+var publicMode = isPublic
+    ? new PublicModeOptions(true,
+        effectiveStateDir!,
+        builder.Configuration["hugin:workingdb"] ?? Path.Combine(Path.GetTempPath(), "hugin-demo", "hugin.db"))
+    : PublicModeOptions.Off;
+builder.Services.AddSingleton(publicMode);
+
 // Loopback in code, not config: a copied launchSettings must never expose the pipeline on LAN.
-builder.WebHost.ConfigureKestrel(o => o.Listen(System.Net.IPAddress.Loopback, port));
+// Public mode is the one deliberate exception, and it prints a warning at startup for it.
+var (listenAddress, port) = PublicMode.ListenAddress(isPublic, portArg, Environment.GetEnvironmentVariable("PORT"));
+builder.WebHost.ConfigureKestrel(o => o.Listen(listenAddress, port));
+
+// SQLite creates the file but not its directory; the working copy lives under the temp dir.
+var databasePath = publicMode.Enabled ? publicMode.WorkingDbPath : loaded.DatabasePath;
+Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
 
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
@@ -40,13 +76,17 @@ builder.Services.AddSingleton(configFile);
 builder.Services.AddSingleton<IConfigSource>(configFile);
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddDbContext<HuginDbContext>(o =>
-    o.UseSqlite(HuginDbInitializer.ConnectionString(loaded.DatabasePath)));
+    o.UseSqlite(HuginDbInitializer.ConnectionString(databasePath)));
 
 builder.Services.AddScoped<ICompanyRepository, EfCompanyRepository>();
 builder.Services.AddScoped<IAdRepository, EfAdRepository>();
 builder.Services.AddScoped<IPipelineRepository, EfPipelineRepository>();
 builder.Services.AddScoped<ISyncStateRepository, EfSyncStateRepository>();
-builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
+if (publicMode.Enabled)
+    builder.Services.AddScoped<IReviewMarkRepository>(sp => new RollingReviewMark(
+        new EfReviewMarkRepository(sp.GetRequiredService<HuginDbContext>()), sp.GetRequiredService<IClock>()));
+else
+    builder.Services.AddScoped<IReviewMarkRepository, EfReviewMarkRepository>();
 builder.Services.AddScoped<IKommuneRepository, EfKommuneRepository>();
 builder.Services.AddScoped<ISourceRepository, EfSourceRepository>();
 
@@ -70,6 +110,8 @@ builder.Services.AddScoped<KommuneRegister>();
 
 builder.Services.AddSingleton<SyncRunner>();
 builder.Services.AddSingleton<BootSyncGate>();
+builder.Services.AddSingleton<DemoSnapshot>();
+builder.Services.AddScoped<DemoSeeder>();
 builder.Services.AddHostedService<StartupSync>();
 
 var app = builder.Build();
@@ -79,15 +121,22 @@ await using (var scope = app.Services.CreateAsyncScope())
     var services = scope.ServiceProvider;
     // DI-resolved (not the outer locals) so a test host can point config + db at its own temp dir.
     var file = services.GetRequiredService<HuginConfigFile>();
+    var mode = services.GetRequiredService<PublicModeOptions>();
+    var dbPath = mode.Enabled ? mode.WorkingDbPath : file.DatabasePath;
 
     // Fresh install = no db on disk BEFORE InitAsync creates it: hold the boot sync for first-run.
-    if (!File.Exists(file.DatabasePath)) services.GetRequiredService<BootSyncGate>().Hold();
+    // Never in public mode — there is no first-run dialog for a visitor to resolve (spec A5).
+    if (!mode.Enabled && !File.Exists(dbPath)) services.GetRequiredService<BootSyncGate>().Hold();
 
-    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), file.DatabasePath,
+    if (mode.Enabled) services.GetRequiredService<DemoSnapshot>().CopyIn();
+
+    await HuginDbInitializer.InitAsync(services.GetRequiredService<HuginDbContext>(), dbPath,
         services.GetRequiredService<HuginConfig>(), services.GetRequiredService<IClock>().UtcNow);
+
+    if (mode.Enabled) await services.GetRequiredService<DemoSeeder>().ApplyAsync();
 }
 
-app.UseHuginSecurity();
+app.UseHuginSecurity(app.Services.GetRequiredService<PublicModeOptions>());
 
 // Physical wwwroot (a normal `dotnet publish`, or dev after `npm run build`) wins when present;
 // otherwise fall back to the frontend embedded into this assembly at publish time (the
@@ -145,12 +194,28 @@ app.MapFallback(async context =>
 
 // One double-click is the whole start-up: open the dashboard in the default browser once the
 // host is listening. Every test host sets hugin:openbrowser=false (ApiFactory, and
-// RealHostBindingTests via env var), so tests never pop a browser; --no-browser opts out for people.
+// RealHostBindingTests via env var), so tests never pop a browser; --no-browser opts out for
+// people, and public mode never opens one (nobody is sitting at a server).
 var openBrowser = Array.IndexOf(args, "--no-browser") < 0
-    && app.Configuration["hugin:openbrowser"] != "false";
+    && app.Configuration["hugin:openbrowser"] != "false"
+    && !isPublic;
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
+    if (isPublic)
+    {
+        // The first log line of a deploy proves the two Linux runtime facts the spec asks for
+        // (ICU-backed culture, tzdata-backed Europe/Oslo) before anything else can go wrong.
+        string oslo;
+        try { oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo").Id; }
+        catch (TimeZoneNotFoundException) { oslo = "IKKE FUNNET — tzdata mangler"; }
+        Console.WriteLine($"Hugin kjører i public-modus på {listenAddress}:{port} — state: {publicMode.StateDir}. "
+            + $"Kultur: {System.Globalization.CultureInfo.CurrentCulture.Name}, tidssone Europe/Oslo: {oslo}.");
+        Console.WriteLine("ADVARSEL: alt i state-mappen serveres skrivebeskyttet til alle som når porten. "
+            + "Bruk aldri --public på en maskin med en ekte pipeline.");
+        return;
+    }
+
     Console.WriteLine($"Hugin kjører på http://localhost:{port} — lukk dette vinduet for å avslutte.");
 
     if (!openBrowser) return;
@@ -169,6 +234,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
 });
 
 app.Run();
+return 0;
 
 static string? ArgValue(string[] args, string name)
 {

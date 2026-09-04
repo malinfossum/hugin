@@ -6,6 +6,7 @@ import { formatDate } from '../../dates'
 import { adMatchesFocus, useFocus } from '../../focus'
 import { type T, useT } from '../../i18n'
 import { pipelineLabel } from '../../pipelineLabels'
+import { useReadOnly } from '../../readOnly'
 import type { AdDto, PipelineDto } from '../../types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
@@ -56,6 +57,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
   const announce = useAnnounce()
   const { focus } = useFocus()
   const t = useT()
+  const { readOnly } = useReadOnly()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   // undefined: no pending focus move. null: focus the heading. string: focus that row's Skjul button.
@@ -248,7 +250,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               {ad.pipelineStatus && (
                 <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
               )}
-              {ad.linkedOrgnr && (
+              {!readOnly && ad.linkedOrgnr && (
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -257,12 +259,12 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   {t('frister.unlink')}
                 </button>
               )}
-              {!ad.pipelineStatus && ad.employerOrgnr && (
+              {!readOnly && !ad.pipelineStatus && ad.employerOrgnr && (
                 <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
                   {t('frister.track')}
                 </button>
               )}
-              {!ad.pipelineStatus && linking !== ad.feedId && (
+              {!readOnly && !ad.pipelineStatus && linking !== ad.feedId && (
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -275,27 +277,28 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   {t('frister.link')}
                 </button>
               )}
-              {ad.hidden ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => handleAngreSkjul(ad.feedId)}
-                >
-                  {t('frister.undoHide')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  ref={(el) => {
-                    if (el) skjulRefs.current.set(ad.feedId, el)
-                    else skjulRefs.current.delete(ad.feedId)
-                  }}
-                  onClick={() => handleSkjul(ad.feedId)}
-                >
-                  {t('frister.hide')}
-                </button>
-              )}
+              {!readOnly &&
+                (ad.hidden ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => handleAngreSkjul(ad.feedId)}
+                  >
+                    {t('frister.undoHide')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    ref={(el) => {
+                      if (el) skjulRefs.current.set(ad.feedId, el)
+                      else skjulRefs.current.delete(ad.feedId)
+                    }}
+                    onClick={() => handleSkjul(ad.feedId)}
+                  >
+                    {t('frister.hide')}
+                  </button>
+                ))}
             </div>
             {linking === ad.feedId && tracked !== null && (
               <div className="frist-link cluster cluster-sm">

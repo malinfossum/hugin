@@ -1,0 +1,19 @@
+{
+  "municipalities": [
+    { "name": "Gjøvik", "number": "3407" },
+    { "name": "Hamar", "number": "3403" },
+    { "name": "Lillehammer", "number": "3405" },
+    { "name": "Ringsaker", "number": "3411" }
+  ],
+  "fylker": [],
+  "allOfNorway": false,
+  "naeringskoder": ["62"],
+  "keywords": [
+    "utvikler", "developer", "engineer", "programmerer", "fullstack", "backend", "frontend",
+    "devops", "programvare", "software", "arkitekt", "IT-konsulent", "kunstig intelligens",
+    "maskinlæring", "machine learning"
+  ],
+  "categories": ["IT"],
+  "navToken": null,
+  "linkouts": []
+}

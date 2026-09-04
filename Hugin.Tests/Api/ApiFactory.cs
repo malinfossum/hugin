@@ -13,12 +13,16 @@ namespace Hugin.Tests.Api;
 
 /// <param name="autosync">Let StartupSync run on boot — only the boot-hold tests want that.</param>
 /// <param name="existingDb">Pre-create hugin.db so the host sees an existing install, not a fresh one.</param>
-public sealed class ApiFactory(bool autosync = false, bool existingDb = false) : WebApplicationFactory<Program>
+/// <param name="publicMode">Boot the host as the hosted demo: hugin:public + hugin:state (a state dir
+/// under the temp dir holding an empty hugin.json) + hugin:workingdb pointed at this factory's DbPath.</param>
+public sealed class ApiFactory(bool autosync = false, bool existingDb = false, bool publicMode = false) : WebApplicationFactory<Program>
 {
     private readonly DirectoryInfo _dir = Directory.CreateTempSubdirectory("hugin-api-");
 
     public string ConfigPath => Path.Combine(_dir.FullName, "hugin.json");
     public string DbPath => Path.Combine(_dir.FullName, "hugin.db");
+    /// <summary>Public-mode state dir: config, seed file and snapshot live here (spec Part B/C).</summary>
+    public string StateDir => Path.Combine(_dir.FullName, "state");
 
     public FakeBrregClient Brreg { get; } = new();
     public FakeNavFeedClient Nav { get; } = new();
@@ -31,6 +35,14 @@ public sealed class ApiFactory(bool autosync = false, bool existingDb = false) :
 
         builder.UseSetting("hugin:autosync", autosync ? "true" : "false");
         builder.UseSetting("hugin:openbrowser", "false"); // never pop a browser from a test host
+        if (publicMode)
+        {
+            Directory.CreateDirectory(StateDir);
+            File.WriteAllText(Path.Combine(StateDir, "hugin.json"), "{}");
+            builder.UseSetting("hugin:public", "true");
+            builder.UseSetting("hugin:state", StateDir);
+            builder.UseSetting("hugin:workingdb", DbPath);
+        }
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<HuginDbContext>));

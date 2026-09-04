@@ -209,4 +209,9 @@ export const nb = {
   'focus.categoriesLegend': 'Kategorier',
   'focus.categoriesHint': 'Ingen valgt = alle.',
   'focus.start': 'Start',
+
+  'demo.regionLabel': 'Demo',
+  'demo.banner':
+    'Demo — skrivebeskyttet. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet. Pipelinen er eksempeldata. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
+  'demo.repoLink': 'Kildekode på GitHub',
 } as const

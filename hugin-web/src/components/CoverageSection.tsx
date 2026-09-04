@@ -7,6 +7,7 @@ import {
   toDiscoveryRequest,
 } from '../coverage'
 import { useT } from '../i18n'
+import { useReadOnly } from '../readOnly'
 import type { DiscoveryConfigDto, KommuneDto } from '../types'
 import { CoverageFields } from './CoverageFields'
 import { useAnnounce } from './LiveRegion'
@@ -24,6 +25,7 @@ export function CoverageSection() {
   const [saving, setSaving] = useState(false)
   const t = useT()
   const announce = useAnnounce()
+  const { readOnly } = useReadOnly()
 
   // The kommune list is best-effort (null → fylke-only cascade) and Save waits for it to
   // settle, since a save without the list degrades to the fylke alone. loadCoverage stays out
@@ -97,20 +99,24 @@ export function CoverageSection() {
 
       {coverage && (
         <>
-          <CoverageFields
-            idPrefix="settings-coverage"
-            draft={coverage}
-            onChange={setCoverage}
-            kommuner={kommuner}
-          />
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={saving || kommuner === undefined}
-          >
-            {t('coverage.save')}
-          </button>
+          <fieldset className="stack" disabled={readOnly} aria-label={t('coverage.heading')}>
+            <CoverageFields
+              idPrefix="settings-coverage"
+              draft={coverage}
+              onChange={setCoverage}
+              kommuner={kommuner}
+            />
+          </fieldset>
+          {!readOnly && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving || kommuner === undefined}
+            >
+              {t('coverage.save')}
+            </button>
+          )}
         </>
       )}
     </section>

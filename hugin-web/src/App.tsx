@@ -3,9 +3,12 @@ import { api } from './api'
 import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
-import { FocusProvider, useFocus } from './focus'
+import { fromDiscoveryConfig, toFocusSeed } from './coverage'
+import { FocusProvider, KNOWN_CATEGORIES, useFocus } from './focus'
 import { LanguageProvider, type TranslationKey, useT } from './i18n'
+import { ReadOnlyProvider, useReadOnly } from './readOnly'
 import { parseRoute, type Route, routePath } from './routing'
+import type { DiscoveryConfigDto } from './types'
 import { ApplicationsView } from './views/ApplicationsView'
 import { BedrifterView } from './views/BedrifterView'
 import { DashboardView } from './views/dashboard/DashboardView'
@@ -26,13 +29,17 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 
 function AppShell() {
   const { focus, setFocus } = useFocus()
+  const { readOnly, resolved } = useReadOnly()
   const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
   // Whether first-run has been completed (scope written) — a returning user with a stored focus
   // has; a fresh one hasn't even after the focus is seeded on a failed PUT, so the dialog stays
   // up for the retry. A Settings reset (focus → null) reopens it either way.
   const [firstRunDone, setFirstRunDone] = useState(() => focus !== null)
   const h1Ref = useRef<HTMLHeadingElement>(null)
-  const focusDialogOpen = (focus === null || !firstRunDone) && !focusPromptDismissed
+  // Never before /api/status has answered (a fresh visitor would see it flash, or worse, get it
+  // for real and a Save that can only 403), and never on the read-only demo.
+  const focusDialogOpen =
+    resolved && !readOnly && (focus === null || !firstRunDone) && !focusPromptDismissed
   const prevFocusDialogOpen = useRef(focusDialogOpen)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
@@ -119,6 +126,28 @@ function AppShell() {
     return () => window.removeEventListener('popstate', onPopState)
   }, [apply])
 
+  // Read-only demo: the first-run dialog never opens, so seed the render lens from the server's
+  // own scope (a GET, allowed) — the dashboard then opens straight onto Innlandet. Session-only:
+  // nothing is written to the visitor's storage that a Settings reset would have to undo.
+  useEffect(() => {
+    if (!readOnly || focus !== null) return
+    let cancelled = false
+    api
+      .get<DiscoveryConfigDto>('/api/config/discovery')
+      .then((config) => {
+        if (cancelled) return
+        setFocus(toFocusSeed(fromDiscoveryConfig(config), [...KNOWN_CATEGORIES]), {
+          persist: false,
+        })
+      })
+      .catch(() => {
+        /* no lens: every filter fails open, the demo still shows everything */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [readOnly, focus, setFocus])
+
   useLayoutEffect(() => {
     window.scrollTo(0, scrollByView.current.get(view) ?? 0)
   }, [view])
@@ -172,6 +201,22 @@ function AppShell() {
             </div>
           </div>
         </header>
+        {readOnly && (
+          <section className="demo-banner" aria-label={t('demo.regionLabel')}>
+            <div className="container">
+              <p>
+                {t('demo.banner')}{' '}
+                <a
+                  href="https://github.com/malinfossum/hugin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('demo.repoLink')}
+                </a>
+              </p>
+            </div>
+          </section>
+        )}
         <main className="container main-content stack stack-lg">
           <h1 ref={h1Ref} tabIndex={-1} className="visually-hidden">
             Hugin
@@ -200,9 +245,11 @@ function AppShell() {
 export default function App() {
   return (
     <LanguageProvider>
-      <FocusProvider>
-        <AppShell />
-      </FocusProvider>
+      <ReadOnlyProvider>
+        <FocusProvider>
+          <AppShell />
+        </FocusProvider>
+      </ReadOnlyProvider>
     </LanguageProvider>
   )
 }

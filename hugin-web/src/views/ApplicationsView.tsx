@@ -5,6 +5,7 @@ import { useAnnounce } from '../components/LiveRegion'
 import { formatDate } from '../dates'
 import { localeFor, type T, type TranslationKey, useLang, useT } from '../i18n'
 import { pipelineLabel } from '../pipelineLabels'
+import { useReadOnly } from '../readOnly'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../types'
 
 /** The statuses you can pick. */
@@ -89,6 +90,7 @@ export function ApplicationsView() {
   const [starPending, setStarPending] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
+  const { readOnly } = useReadOnly()
   const [lang] = useLang()
   const locale = localeFor(lang)
 
@@ -220,18 +222,22 @@ export function ApplicationsView() {
                   <li key={entry.orgnr} className="panel stack stack-sm">
                     <div className="cluster cluster-sm cluster-between">
                       <span className="text-strong">{displayCompanyName(entry.companyName)}</span>
-                      <button
-                        type="button"
-                        className="btn btn-ghost icon-btn"
-                        aria-pressed={entry.starred}
-                        aria-label={
-                          entry.starred ? t('applications.starRemove') : t('applications.starGive')
-                        }
-                        disabled={starPending === entry.orgnr}
-                        onClick={() => toggleStar(entry)}
-                      >
-                        <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost icon-btn"
+                          aria-pressed={entry.starred}
+                          aria-label={
+                            entry.starred
+                              ? t('applications.starRemove')
+                              : t('applications.starGive')
+                          }
+                          disabled={starPending === entry.orgnr}
+                          onClick={() => toggleStar(entry)}
+                        >
+                          <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
+                        </button>
+                      )}
                     </div>
                     {!isEditing && (
                       <>
@@ -252,13 +258,15 @@ export function ApplicationsView() {
                             ⚠ {warning.message}
                           </p>
                         )}
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          onClick={() => startEdit(entry)}
-                        >
-                          {t('applications.edit')}
-                        </button>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => startEdit(entry)}
+                          >
+                            {t('applications.edit')}
+                          </button>
+                        )}
                       </>
                     )}
                     {isEditing && form && (

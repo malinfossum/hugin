@@ -6,6 +6,7 @@ import { useAnnounce } from '../components/LiveRegion'
 import { KNOWN_CATEGORIES, useFocus } from '../focus'
 import { FYLKER, fylkeOf } from '../fylker'
 import { useLang, useT } from '../i18n'
+import { useReadOnly } from '../readOnly'
 import type { CompanyDto, SourceDto } from '../types'
 
 interface Props {
@@ -39,6 +40,7 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const t = useT()
   const [lang, setLang] = useLang()
   const announce = useAnnounce()
+  const { readOnly } = useReadOnly()
   const { focus, setFocus, resetFocus } = useFocus()
 
   const load = useCallback(() => {
@@ -256,82 +258,86 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
                   <a href={source.url} target="_blank" rel="noopener noreferrer">
                     {source.label}
                   </a>
-                  <div className="cluster cluster-sm">
-                    <button
-                      type="button"
-                      className="btn btn-ghost icon-btn"
-                      aria-label={t('settings.moveUp')}
-                      disabled={index === 0}
-                      onClick={() => move(index, -1)}
-                    >
-                      <span aria-hidden="true">↑</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost icon-btn"
-                      aria-label={t('settings.moveDown')}
-                      disabled={index === sources.length - 1}
-                      onClick={() => move(index, 1)}
-                    >
-                      <span aria-hidden="true">↓</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => startEdit(source)}
-                    >
-                      {t('settings.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => setRemoving(source)}
-                    >
-                      {t('settings.remove')}
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="cluster cluster-sm">
+                      <button
+                        type="button"
+                        className="btn btn-ghost icon-btn"
+                        aria-label={t('settings.moveUp')}
+                        disabled={index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        <span aria-hidden="true">↑</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost icon-btn"
+                        aria-label={t('settings.moveDown')}
+                        disabled={index === sources.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        <span aria-hidden="true">↓</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => startEdit(source)}
+                      >
+                        {t('settings.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setRemoving(source)}
+                      >
+                        {t('settings.remove')}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </li>
           ))}
         </ul>
 
-        <form className="stack stack-sm" onSubmit={handleAdd}>
-          <div className="field">
-            <label className="label" htmlFor="add-source-label">
-              {t('settings.label')}
-            </label>
-            <input
-              id="add-source-label"
-              className="input"
-              type="text"
-              value={addForm.label}
-              onChange={(event) => setAddForm({ ...addForm, label: event.target.value })}
-              required
-            />
-          </div>
-          <div className="field">
-            <label className="label" htmlFor="add-source-url">
-              {t('settings.url')}
-            </label>
-            <input
-              id="add-source-url"
-              className="input"
-              type="url"
-              value={addForm.url}
-              onChange={(event) => setAddForm({ ...addForm, url: event.target.value })}
-              required
-            />
-          </div>
-          {addError && (
-            <p role="status" className="alert alert-danger">
-              {addError}
-            </p>
-          )}
-          <button type="submit" className="btn btn-primary">
-            {t('settings.addSource')}
-          </button>
-        </form>
+        {!readOnly && (
+          <form className="stack stack-sm" onSubmit={handleAdd}>
+            <div className="field">
+              <label className="label" htmlFor="add-source-label">
+                {t('settings.label')}
+              </label>
+              <input
+                id="add-source-label"
+                className="input"
+                type="text"
+                value={addForm.label}
+                onChange={(event) => setAddForm({ ...addForm, label: event.target.value })}
+                required
+              />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="add-source-url">
+                {t('settings.url')}
+              </label>
+              <input
+                id="add-source-url"
+                className="input"
+                type="url"
+                value={addForm.url}
+                onChange={(event) => setAddForm({ ...addForm, url: event.target.value })}
+                required
+              />
+            </div>
+            {addError && (
+              <p role="status" className="alert alert-danger">
+                {addError}
+              </p>
+            )}
+            <button type="submit" className="btn btn-primary">
+              {t('settings.addSource')}
+            </button>
+          </form>
+        )}
       </section>
 
       <section aria-labelledby="settings-language-heading" className="card settings-group">

@@ -160,7 +160,9 @@ without also restoring an older snapshot: the working copy would carry a newer s
 2. **Azure, once.** Resource group `hugin-demo`, App Service plan **F1 Linux** (region: Norway
    East if F1 is offered there, else West Europe), web app `hugin-demo` (global name; fall back to
    `hugin-demo-mf`). Startup command:
-   `/home/site/wwwroot/hugin-api --public --state /home/data`. App setting
+   `sh -c "chmod +x /home/site/wwwroot/hugin-api && exec /home/site/wwwroot/hugin-api --public --state /home/data"`
+   — `Compress-Archive` (Part E.1) keeps no Unix file mode, so the executable bit is lost in the
+   zip and must be restored before the binary runs. App setting
    `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true` (default for code deploys; set explicitly so
    `/home` is guaranteed persistent). No Always On (not on F1), no custom domain (not on F1).
    Publishing credentials and the publish profile stay out of the repo (`*.publishsettings` is
@@ -265,3 +267,23 @@ successful sync, so a down NAV means one attempt per cold start, which is bounde
 cold-start rate; a real all-interfaces bind test — the Windows firewall prompt on my machine,
 the pure helper covers the decision; rate limiting — F1's quota is the limiter and my data is
 never on the box; `InvariantGlobalization` as an ICU fallback — breaks æøå.
+
+## Post-implementation corrections (2026-09-04)
+
+1. **Coverage in read-only Settings** renders as a disabled `<fieldset>` around the existing
+   fields, not as a separate text rendering — the values are visible and inert, one code path.
+2. **`--public` parsing** lives in `PublicMode` (pure) and is proven by unit tests; the real
+   process path for the three startup errors was smoke-tested by hand (Task 2, Step 6).
+3. **Copy-back runs inside the sync scope**, after the seeder, so the snapshot always holds the
+   seeded rows; `SyncRunner` is the single place the order is fixed.
+4. **`GET /api/kommuner` still Brreg-fetches and upserts when the `Kommuner` table is empty**,
+   also in public mode — a GET with a write side effect during a cold start without a snapshot;
+   accepted, the uploaded snapshot arrives populated.
+5. **The pre-migration `.bak` is written beside the working copy in tmp** in public mode, so it
+   does not survive a container recycle.
+6. **The derived «Utløpt» section renders in public mode**; whether closed ads may be
+   republished depends on the NAV feed terms (verify-first item 6) — a deploy blocker, not a
+   merge blocker; the one-flag fix is hiding that section under `readOnly`.
+7. **The first snapshot must be built with the CLI** (`hugin.exe --config S2\hugin.json sync
+   --full`) — the API host on a fresh db fetches only the newest NAV page, the full walk is
+   CLI-only.

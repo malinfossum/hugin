@@ -84,7 +84,8 @@ public static class ReadEndpoints
         });
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
-            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, IClock clock) =>
+            IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, IClock clock,
+            PublicModeOptions mode) =>
         {
             var brreg = await syncState.GetAsync("brreg");
             var nav = await syncState.GetAsync("nav");
@@ -94,7 +95,8 @@ public static class ReadEndpoints
                 await mark.GetAsync(),
                 (await ads.GetActiveAsync(clock.UtcNow)).Count,
                 (await companies.GetAllAsync()).Count,
-                (await pipeline.GetAllAsync()).Count));
+                (await pipeline.GetAllAsync()).Count,
+                mode.Enabled));
         });
     }
 

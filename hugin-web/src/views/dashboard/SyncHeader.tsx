@@ -3,6 +3,7 @@ import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
 import { formatDateTime } from '../../dates'
 import { type T, useT } from '../../i18n'
+import { useReadOnly } from '../../readOnly'
 import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
 
 function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
@@ -23,6 +24,7 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
   const [loadError, setLoadError] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
+  const { readOnly } = useReadOnly()
   const wasRunning = useRef(false)
 
   const loadStatus = useCallback(() => {
@@ -104,21 +106,23 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
           </button>
         </p>
       )}
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={startSync}
-        disabled={sync?.running ?? false}
-      >
-        {sync?.running ? (
-          <>
-            <span className="spinner" aria-hidden="true" />
-            {t('sync.syncing')}
-          </>
-        ) : (
-          t('sync.now')
-        )}
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={startSync}
+          disabled={sync?.running ?? false}
+        >
+          {sync?.running ? (
+            <>
+              <span className="spinner" aria-hidden="true" />
+              {t('sync.syncing')}
+            </>
+          ) : (
+            t('sync.now')
+          )}
+        </button>
+      )}
       {failureMessage && (
         <p role="status" className="alert alert-danger">
           {failureMessage}

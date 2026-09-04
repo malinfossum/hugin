@@ -64,7 +64,7 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries);
+    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly);
 
 public sealed record SourceDto(int Id, string Label, string Url, int Position)
 {

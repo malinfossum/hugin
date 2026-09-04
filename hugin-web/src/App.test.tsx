@@ -14,10 +14,33 @@ function jsonResponse(body: unknown) {
  * FirstRunDialog's four calls (every test that renders <App /> hits it, since focus starts
  * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
  * carries the interesting scope/kommune scenarios. */
-function fakeServer(options: { putFails?: boolean } = {}) {
+function fakeServer(
+  options: { putFails?: boolean; readOnly?: boolean; statusFails?: boolean } = {}
+) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
+    if (url === '/api/status') {
+      if (options.statusFails) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ title: 'nede' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+          })
+        )
+      }
+      return Promise.resolve(
+        jsonResponse({
+          brreg: null,
+          nav: null,
+          reviewMark: null,
+          activeAds: 0,
+          companies: 0,
+          pipelineEntries: 0,
+          readOnly: options.readOnly ?? false,
+        })
+      )
+    }
     if (url === '/api/companies') {
       return Promise.resolve(jsonResponse([]))
     }
@@ -25,7 +48,15 @@ function fakeServer(options: { putFails?: boolean } = {}) {
       return Promise.resolve(jsonResponse([]))
     }
     if (url === '/api/config/discovery' && method === 'GET') {
-      return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+      // Read-only mode seeds Focus from this response (App.tsx's seed effect) — give it a
+      // concrete scope so the seed's effect on rendered state is observable, not just the fetch.
+      return Promise.resolve(
+        jsonResponse(
+          options.readOnly
+            ? { municipalities: [], fylker: ['34'], allOfNorway: false }
+            : { municipalities: [], fylker: [], allOfNorway: true }
+        )
+      )
     }
     if (url === '/api/kommuner') {
       return Promise.resolve(jsonResponse([]))
@@ -234,14 +265,66 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/companies/915787630')
   })
+
+  it('read-only: shows the demo banner and never opens the first-run dialog', async () => {
+    vi.stubGlobal('fetch', fakeServer({ readOnly: true }))
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Demo' })).toHaveTextContent(
+        'Demo — skrivebeskyttet'
+      )
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Kildekode på GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/malinfossum/hugin'
+    )
+  })
+
+  it('read-only: seeds the focus from the server scope instead of asking', async () => {
+    const fetchMock = fakeServer({ readOnly: true })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/config/discovery', undefined))
+    expect(window.localStorage.getItem('hugin-focus')).toBeNull()
+
+    // The seed is session-only state, not a side effect on its own — prove it actually reached
+    // the app's Focus context by reading it back from a view that renders it: Settings' focus
+    // Fylke select (disambiguated from CoverageSection's own Fylke select by id) should show the
+    // fylke the fake server's discovery config carried ('34' = Innlandet), not the unset default.
+    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Fylke', { selector: '#settings-focus-fylke' })).toHaveValue(
+        '34'
+      )
+    )
+  })
+
+  it('keeps the first-run dialog closed until /api/status has answered, then opens it locally', async () => {
+    vi.stubGlobal('fetch', fakeServer({ readOnly: false }))
+    render(<App />)
+    // Synchronous first render: status still pending → no dialog yet.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    expect(screen.queryByRole('region', { name: 'Demo' })).not.toBeInTheDocument()
+  })
+
+  it('never opens the first-run dialog when /api/status fails', async () => {
+    const fetchMock = fakeServer({ statusFails: true })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<App />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/status', undefined))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })
 
 describe('App first-run focus dialog', () => {
-  it('renders the dialog when no focus is stored', () => {
+  it('renders the dialog when no focus is stored', async () => {
     vi.stubGlobal('fetch', fakeServer())
     render(<App />)
 
-    expect(screen.getByRole('dialog', { name: 'Hva vil du følge?' })).toBeVisible()
+    expect(await screen.findByRole('dialog', { name: 'Hva vil du følge?' })).toBeVisible()
   })
 
   it('does not render the dialog when a valid focus is already stored', () => {
@@ -256,12 +339,12 @@ describe('App first-run focus dialog', () => {
     expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
   })
 
-  it('stays closed for the rest of the session after an Esc-dismiss', () => {
+  it('stays closed for the rest of the session after an Esc-dismiss', async () => {
     const fetchMock = fakeServer()
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 
-    const dialog = screen.getByRole('dialog', { name: 'Hva vil du følge?' })
+    const dialog = await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
     act(() => {
       dialog.dispatchEvent(new Event('close'))
     })
@@ -284,6 +367,7 @@ describe('App first-run focus dialog', () => {
     const user = userEvent.setup()
     render(<App />)
 
+    await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
     await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
     await user.click(screen.getByRole('button', { name: 'Start' }))
 
@@ -303,6 +387,7 @@ describe('App first-run focus dialog', () => {
     const user = userEvent.setup()
     render(<App />)
 
+    await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
     await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
     await user.click(screen.getByRole('button', { name: 'Start' }))
 
@@ -316,7 +401,7 @@ describe('App first-run focus dialog', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Start' }))
+    await user.click(await screen.findByRole('button', { name: 'Start' }))
 
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()

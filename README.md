@@ -25,6 +25,12 @@ Browse active ads, the company inventory (one row per company, branches as tabs 
 
 `--port` picks the port (default `5111`), `--config <path>` points at a different `hugin.json`, `--no-browser` skips the launch. For development, run `dotnet run --project Hugin.Api` and `cd hugin-web && npm run dev` side by side.
 
+`--public --state <dir>` runs the **hosted demo mode**: all interfaces, every write refused, config and seed file read from `<dir>`, database snapshot persisted there after each sync. It is for the demo server only — never run it on a machine holding a real pipeline, it serves everything in the state dir to anyone who reaches the port.
+
+## Demo
+
+A read-only showcase is being deployed to Azure App Service (free tier: the first visit after idle takes a few seconds); the URL lands here once it is up. Real job ads and companies from NAV and Brreg for Innlandet, a seeded example pipeline, no personal data, no tracking. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
+
 ## CLI
 
 | Command | What it does |
