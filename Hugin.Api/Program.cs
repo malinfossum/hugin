@@ -16,23 +16,6 @@ var portArg = ArgValue(args, "--port");
 var publicFlag = Array.IndexOf(args, "--public") >= 0;
 var stateArg = ArgValue(args, "--state");
 
-if (PublicMode.Validate(publicFlag, stateArg, configArg) is { } startupError)
-{
-    Console.Error.WriteLine(startupError);
-    return 1;
-}
-
-// Public mode: the state dir owns hugin.json (validated above); normal mode: --config or beside the exe.
-var loaded = ConfigLoader.Load(publicFlag ? Path.Combine(stateArg!, ConfigLoader.FileName) : configArg);
-if (loaded.Warning is not null)
-{
-    Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
-    // A broken demo config must never silently become the defaults on a public host.
-    if (publicFlag) return 1;
-}
-
-var configFile = new HuginConfigFile(loaded.ConfigPath);
-
 // Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
 // not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
 // standard ASPNETCORE_CONTENTROOT env var still wins when set, e.g. for test hosts.
@@ -44,13 +27,35 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     ContentRootPath = contentRoot,
 });
 
-// Public mode is decided from the flag for real runs, or from configuration for test hosts
-// (ApiFactory sets hugin:public/hugin:state/hugin:workingdb the way it sets hugin:autosync).
+// Two doors into public mode: the --public flag for real runs, or hugin:public in configuration
+// (reachable as the hugin__public env var) for a host that sets it that way instead — ApiFactory
+// uses this door for test hosts. Both doors must run through the same Validate + state-dir
+// sourcing below, or the config-only door skips the checks meant to keep a broken demo host from
+// silently doing the wrong thing (no --state/--config checks, hugin.json loaded from beside the
+// exe instead of the state dir).
 var isPublic = publicFlag || builder.Configuration["hugin:public"] == "true";
+var effectiveStateDir = stateArg ?? builder.Configuration["hugin:state"];
+
+if (PublicMode.Validate(isPublic, effectiveStateDir, configArg) is { } startupError)
+{
+    Console.Error.WriteLine(startupError);
+    return 1;
+}
+
+// Public mode: the state dir owns hugin.json (validated above); normal mode: --config or beside the exe.
+var loaded = ConfigLoader.Load(isPublic ? Path.Combine(effectiveStateDir!, ConfigLoader.FileName) : configArg);
+if (loaded.Warning is not null)
+{
+    Console.Error.WriteLine($"Advarsel: {loaded.Warning}");
+    // A broken demo config must never silently become the defaults on a public host.
+    if (isPublic) return 1;
+}
+
+var configFile = new HuginConfigFile(loaded.ConfigPath);
+
 var publicMode = isPublic
     ? new PublicModeOptions(true,
-        stateArg ?? builder.Configuration["hugin:state"]
-            ?? throw new InvalidOperationException("hugin:state mangler i public-modus"),
+        effectiveStateDir!,
         builder.Configuration["hugin:workingdb"] ?? Path.Combine(Path.GetTempPath(), "hugin-demo", "hugin.db"))
     : PublicModeOptions.Off;
 builder.Services.AddSingleton(publicMode);

@@ -5,6 +5,8 @@ using Hugin.Api.Services;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hugin.Tests.Api;
 
@@ -157,6 +159,39 @@ public sealed class BootSyncTests
         await using var snapshot = new Hugin.Infrastructure.Data.HuginDbContext(options);
         Assert.That(await snapshot.Pipeline.AnyAsync(p => p.Orgnr == "922425620"), Is.True);
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+    }
+
+    /// <summary>Important 1 fix: seeder + copy-back run in their own try in SyncRunner, so a
+    /// throw from the sync scope itself must not also cost the demo its persisted snapshot —
+    /// and must not be mislabelled as coming from the seeder/copy step. IKommuneRepository's
+    /// GetAllAsync is the one unguarded call inside SyncService.SyncAsync (used to build the
+    /// scope before either source runs), so swapping it for one that throws reproduces exactly
+    /// the "sync throws" scenario without touching SyncService itself.</summary>
+    [Test]
+    public async Task Public_mode_still_writes_the_snapshot_when_the_sync_itself_throws()
+    {
+        using var factory = new ApiFactory(autosync: true, publicMode: true); // no db on disk
+        using var throwingFactory = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll(typeof(IKommuneRepository));
+            services.AddScoped<IKommuneRepository, ThrowingKommuneRepository>();
+        }));
+        using var client = throwingFactory.CreateClient();
+
+        var status = await SyncEndpointTests.PollUntilFinished(client);
+        Assert.That(status.Brreg!.Succeeded, Is.False, "the sync scope threw before either source ran");
+
+        var snapshotPath = Path.Combine(factory.StateDir, "hugin.db");
+        await WaitForFileAsync(snapshotPath);
+    }
+
+    private sealed class ThrowingKommuneRepository : IKommuneRepository
+    {
+        public Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken ct = default) =>
+            throw new InvalidOperationException("kommuneregisteret utilgjengelig (test)");
+
+        public Task UpsertManyAsync(IReadOnlyList<Kommune> kommuner, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 
     private static async Task WaitForFileAsync(string path)

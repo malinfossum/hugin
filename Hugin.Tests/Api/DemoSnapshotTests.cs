@@ -85,6 +85,49 @@ public sealed class DemoSnapshotTests
         Assert.That(await check.Sources.AnyAsync(s => s.Label == "Demo"), Is.True);
     }
 
+    /// <summary>Important 2 fix: PRAGMA wal_checkpoint(TRUNCATE)'s (busy, log, checkpointed) row
+    /// is now actually read instead of discarded by ExecuteSqlRawAsync. A second connection with
+    /// an open read transaction on the working db holds a read mark the checkpoint cannot fold
+    /// past — the same signal a concurrent reader produces on the real host — so the copy must
+    /// be skipped rather than risk a stale snapshot with an empty log.</summary>
+    [Test]
+    public async Task Copy_back_skips_a_busy_checkpoint_instead_of_writing_a_stale_snapshot()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_mode.WorkingDbPath)!);
+        await using var db = new HuginDbContext(Options(_mode.WorkingDbPath));
+        await HuginDbInitializer.InitAsync(db);
+        db.Sources.Add(new Source { Label = "Demo", Url = "https://example.org", Position = 99 });
+        await db.SaveChangesAsync();
+
+        await using var reader = new SqliteConnection(HuginDbInitializer.ConnectionString(_mode.WorkingDbPath));
+        await reader.OpenAsync();
+        await using (var begin = reader.CreateCommand())
+        {
+            begin.CommandText = "BEGIN;";
+            await begin.ExecuteNonQueryAsync();
+        }
+        await using (var hold = reader.CreateCommand())
+        {
+            // The first read inside the transaction is what actually takes the WAL read mark —
+            // BEGIN alone (DEFERRED) does not.
+            hold.CommandText = "SELECT COUNT(*) FROM Sources;";
+            await hold.ExecuteScalarAsync();
+        }
+
+        try
+        {
+            Assert.That(await Snapshot().CopyBackAsync(db), Is.False,
+                "the WAL cannot fold in while the reader holds its mark");
+            Assert.That(File.Exists(_mode.SnapshotPath), Is.False, "no stale snapshot was written");
+        }
+        finally
+        {
+            await using var rollback = reader.CreateCommand();
+            rollback.CommandText = "ROLLBACK;";
+            await rollback.ExecuteNonQueryAsync();
+        }
+    }
+
     [Test]
     public async Task Copy_back_into_an_unwritable_state_dir_logs_and_returns_false()
     {

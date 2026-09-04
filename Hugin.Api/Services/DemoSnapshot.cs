@@ -49,7 +49,20 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
         var tmp = mode.SnapshotPath + ".tmp";
         try
         {
-            await db.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", ct);
+            // One retry after a short delay: a concurrent reader's mark can clear between the
+            // two attempts. Still busy after both means the WAL was not folded in — copying
+            // hugin.db now would produce a valid-looking but stale snapshot with an empty log,
+            // so the copy is skipped rather than risked; the next sync tries again.
+            if (!await TryCheckpointAsync(db, ct))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
+                if (!await TryCheckpointAsync(db, ct))
+                {
+                    logger.LogWarning("WAL fortsatt opptatt etter ny forsøk — hopper over kopiering til {State}.", mode.StateDir);
+                    return false;
+                }
+            }
+
             Directory.CreateDirectory(mode.StateDir);
             File.Copy(mode.WorkingDbPath, tmp, overwrite: true);
             File.Move(tmp, mode.SnapshotPath, overwrite: true);
@@ -59,6 +72,30 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
         {
             logger.LogWarning(ex, "Kunne ikke kopiere snapshot tilbake til {State}.", mode.StateDir);
             return false;
+        }
+    }
+
+    /// <summary>Runs PRAGMA wal_checkpoint(TRUNCATE) through a raw command so its (busy, log,
+    /// checkpointed) row is actually read — ExecuteSqlRawAsync discards it, so a busy checkpoint
+    /// (a concurrent reader holding a read mark) would otherwise fail silently and let the copy
+    /// below run against a WAL that was never folded into the db file. True only when busy = 0.
+    /// Opens/closes through the Database facade (ref-counted) rather than the raw connection, so
+    /// this nests safely with whatever else is holding the same DbContext's connection open.</summary>
+    private static async Task<bool> TryCheckpointAsync(HuginDbContext db, CancellationToken ct)
+    {
+        await db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            await using var command = db.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            if (!await reader.ReadAsync(ct)) return true; // no row: nothing pending, treat as done
+
+            return reader.GetInt32(0) == 0;
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
         }
     }
 }
