@@ -29,7 +29,7 @@ Browse active ads, the company inventory (one row per company, branches as tabs 
 
 ## Demo
 
-A read-only showcase runs at https://hugin-demo.azurewebsites.net (free tier: the first visit after idle takes a few seconds). Real job ads and companies from NAV and Brreg for Innlandet, a seeded example pipeline, no personal data, no tracking. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
+A read-only showcase is being deployed to Azure App Service (free tier: the first visit after idle takes a few seconds); the URL lands here once it is up. Real job ads and companies from NAV and Brreg for Innlandet, a seeded example pipeline, no personal data, no tracking. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
 
 ## CLI
 

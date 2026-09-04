@@ -206,7 +206,11 @@ function AppShell() {
             <div className="container">
               <p>
                 {t('demo.banner')}{' '}
-                <a href="https://github.com/malinfossum/hugin" rel="noreferrer">
+                <a
+                  href="https://github.com/malinfossum/hugin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {t('demo.repoLink')}
                 </a>
               </p>
