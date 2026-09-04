@@ -347,3 +347,14 @@ input[type="text"] {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* Demo banner (read-only showcase): a static region right after the header. */
+.demo-banner {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding-block: var(--space-2);
+  font-size: var(--text-sm);
+}
+.demo-banner p {
+  margin: 0;
+}

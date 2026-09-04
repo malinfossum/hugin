@@ -209,4 +209,9 @@ export const en = {
   'focus.categoriesLegend': 'Categories',
   'focus.categoriesHint': 'None selected = all.',
   'focus.start': 'Start',
+
+  'demo.regionLabel': 'Demo',
+  'demo.banner':
+    'Demo — read-only. Real job ads and companies from NAV and Brreg for Innlandet. The pipeline is sample data. No tracking, no cookies; your theme choice is stored only in your browser.',
+  'demo.repoLink': 'Source code on GitHub',
 } as const

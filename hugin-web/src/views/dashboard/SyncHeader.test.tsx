@@ -20,6 +20,7 @@ function statusDto(overrides: Partial<StatusDto> = {}): StatusDto {
     activeAds: 3,
     companies: 5,
     pipelineEntries: 2,
+    readOnly: false,
     ...overrides,
   }
 }

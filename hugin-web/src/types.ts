@@ -81,6 +81,7 @@ export interface StatusDto {
   activeAds: number
   companies: number
   pipelineEntries: number
+  readOnly: boolean
 }
 
 export interface SourceResultDto {
