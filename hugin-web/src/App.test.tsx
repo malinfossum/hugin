@@ -48,7 +48,15 @@ function fakeServer(
       return Promise.resolve(jsonResponse([]))
     }
     if (url === '/api/config/discovery' && method === 'GET') {
-      return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+      // Read-only mode seeds Focus from this response (App.tsx's seed effect) — give it a
+      // concrete scope so the seed's effect on rendered state is observable, not just the fetch.
+      return Promise.resolve(
+        jsonResponse(
+          options.readOnly
+            ? { municipalities: [], fylker: ['34'], allOfNorway: false }
+            : { municipalities: [], fylker: [], allOfNorway: true }
+        )
+      )
     }
     if (url === '/api/kommuner') {
       return Promise.resolve(jsonResponse([]))
@@ -276,9 +284,21 @@ describe('App', () => {
   it('read-only: seeds the focus from the server scope instead of asking', async () => {
     const fetchMock = fakeServer({ readOnly: true })
     vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
     render(<App />)
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/config/discovery', undefined))
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
+
+    // The seed is session-only state, not a side effect on its own — prove it actually reached
+    // the app's Focus context by reading it back from a view that renders it: Settings' focus
+    // Fylke select (disambiguated from CoverageSection's own Fylke select by id) should show the
+    // fylke the fake server's discovery config carried ('34' = Innlandet), not the unset default.
+    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Fylke', { selector: '#settings-focus-fylke' })).toHaveValue(
+        '34'
+      )
+    )
   })
 
   it('keeps the first-run dialog closed until /api/status has answered, then opens it locally', async () => {
