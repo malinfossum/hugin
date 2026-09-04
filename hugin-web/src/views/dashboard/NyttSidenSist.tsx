@@ -4,6 +4,7 @@ import { displayCompanyName } from '../../companyName'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
 import { useT } from '../../i18n'
+import { useReadOnly } from '../../readOnly'
 import type { CompanyDto, NewDto } from '../../types'
 
 /** Groups companies by kommune, preserving first-seen order of both groups and members. */
@@ -25,6 +26,7 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const announce = useAnnounce()
   const t = useT()
+  const { readOnly } = useReadOnly()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const pendingFocus = useRef(false)
   // Snapshot of the asOf the user was actually looking at when they opened the dialog.
@@ -134,16 +136,18 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
           </div>
 
           {hasNew ? (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                reviewedAsOf.current = data.asOf
-                setConfirmOpen(true)
-              }}
-            >
-              {t('newSince.markSeen')}
-            </button>
+            !readOnly && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  reviewedAsOf.current = data.asOf
+                  setConfirmOpen(true)
+                }}
+              >
+                {t('newSince.markSeen')}
+              </button>
+            )
           ) : (
             <p className="empty-hint">{t('newSince.none')}</p>
           )}
