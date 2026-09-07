@@ -9,15 +9,18 @@ public static class ReadEndpoints
 {
     public static void MapReads(this IEndpointRouteBuilder app)
     {
+        // The NAV feed terms (arbeidsplassen.nav.no/vilkar-api) say a republished ad must be removed
+        // the moment it goes inactive at NAV. The hosted demo republishes, so its review lists never
+        // carry a closed ad; the local app keeps its own history — nobody else can reach it.
         app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config,
-            IKommuneRepository kommuneRepo) =>
+            IKommuneRepository kommuneRepo, PublicModeOptions mode) =>
         {
             var asOf = clock.UtcNow; // captured before the query so it can't drift past what GetNewAsync actually saw
             if (await service.GetNewAsync() is not { } items) return Results.NoContent();
             var kommuner = await kommuneRepo.GetAllAsync();
             return Results.Ok(new NewDto(
                 items.Companies.Select(c => CompanyDto.From(c, config, kommuner)).ToList(),
-                items.Ads.Select(a => AdDto.FromAd(a, asOf)).ToList(),
+                items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf)).ToList(),
                 items.Since, asOf));
         });
 
@@ -29,7 +32,7 @@ public static class ReadEndpoints
         });
 
         app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
-            HuginConfig config, IKommuneRepository kommuneRepo, IClock clock, string orgnr) =>
+            HuginConfig config, IKommuneRepository kommuneRepo, IClock clock, PublicModeOptions mode, string orgnr) =>
         {
             if (await companies.GetAsync(orgnr) is not { } company)
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.");
@@ -43,8 +46,11 @@ public static class ReadEndpoints
                 ? []
                 : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner)).ToList();
 
+            // Same feed-terms rule as /api/new: the demo's company history holds open ads only.
+            var now = clock.UtcNow;
             return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner),
-                (await ads.GetByEmployerAsync(orgnr)).Select(a => AdDto.FromAd(a, clock.UtcNow)).ToList(), branches));
+                (await ads.GetByEmployerAsync(orgnr)).Where(a => !mode.Enabled || a.IsOpenAt(now))
+                    .Select(a => AdDto.FromAd(a, now)).ToList(), branches));
         });
 
         app.MapGet("/api/pipeline", async (AdOverviewService overview, ICompanyRepository companies, string? status) =>
