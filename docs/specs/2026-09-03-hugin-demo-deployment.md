@@ -291,3 +291,40 @@ never on the box; `InvariantGlobalization` as an ICU fallback — breaks æøå.
 7. **The first snapshot must be built with the CLI** (`hugin.exe --config S2\hugin.json sync
    --full`) — the API host on a fresh db fetches only the newest NAV page, the full walk is
    CLI-only.
+
+## Deployed 2026-09-07
+
+Live at https://hugin-demo.azurewebsites.net — resource group `hugin-demo`, F1 Linux plan,
+region Sweden Central (F1 quota is 0 in Norway East, West Europe is closed to new plans).
+Snapshot built the same day with the CLI: 1008 Brreg companies, 852 NAV ads. Verified live:
+`GET /api/status` 200, `POST /api/sync` 403, all three security headers, container clock
+matches UTC, snapshot copied back to `/home/data` after the boot sync. Deviations from Part E:
+
+8. **The startup command needs no `sh -c` wrapper.** App Service writes the user command into
+   its own startup script, so `chmod +x /home/site/wwwroot/hugin-api && exec
+   /home/site/wwwroot/hugin-api --public --state /home/data` runs as-is. The quoted `sh -c`
+   form cannot be passed through `az webapp config set` from PowerShell anyway (the inner
+   quotes are lost).
+9. **`az webapp deploy` reported failure while the site had started.** The tracker said the
+   worker did not start within 10 minutes; the startup log showed the probe succeeding 14 s
+   after the container came up, under the same deployment id. Judge a deploy by
+   `az webapp log startup show`, not by the CLI exit code.
+10. **`LC_ALL=nb_NO.UTF-8` is set as an app setting.** Without it `CultureInfo.CurrentCulture`
+    was the invariant culture and the startup line logged an empty culture name; `LANG` alone
+    was ignored by the runtime on this image, `LC_ALL` is honoured. Nothing user-visible
+    depended on it (every Norwegian comparison names `nb-NO` explicitly, dates go out as ISO),
+    but the startup line is the verify-first evidence, so it now reads `nb-NO`.
+11. **The seed lists three firms, not four.** Norsk Tipping (925836613, NACE 92.000) can never
+    enter `Companies` under the demo's `naeringskoder: ["62"]`, so the seeder warned at every
+    boot and after every sync. Dropped from `demo/demo-pipeline.json` and from `/home/data`.
+12. **Kudu uploads use the Azure CLI bearer token**, not the publishing credentials:
+    `Authorization: Bearer $(az account get-access-token --query accessToken -o tsv)` against
+    `https://hugin-demo.scm.azurewebsites.net/api/vfs/data/<file>` with `If-Match: *`. No
+    basic-auth secret to handle or leak.
+13. **The idle cold start was not observable on deploy day.** After 33 minutes without a
+    request the site still answered in under a second and the startup log showed no new
+    attempt, so App Service had not unloaded it. Verify-first items 2 and 3 rest on the three
+    configuration restarts instead: each new container came up from the `/home/data` snapshot
+    with no «starter tom», `lastSyncUtc` stayed at the first boot sync (19:44 UTC) through all
+    three, and the snapshot's mtime never moved — no boot sync inside the 6 h throttle. Check
+    the F1 quota graph and the startup log after the first full day.
