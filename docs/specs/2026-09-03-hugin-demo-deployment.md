@@ -281,9 +281,13 @@ never on the box; `InvariantGlobalization` as an ICU fallback — breaks æøå.
    accepted, the uploaded snapshot arrives populated.
 5. **The pre-migration `.bak` is written beside the working copy in tmp** in public mode, so it
    does not survive a container recycle.
-6. **The derived «Utløpt» section renders in public mode**; whether closed ads may be
-   republished depends on the NAV feed terms (verify-first item 6) — a deploy blocker, not a
-   merge blocker; the one-flag fix is hiding that section under `readOnly`.
+6. **Closed ads are filtered out of the demo's responses, not the «Utgått» section.** The NAV
+   feed terms (arbeidsplassen.nav.no/vilkar-api, read 2026-09-04) say a republished ad «skal
+   straks fjernast» when it goes inactive at NAV. The «Utgått» pipeline section names companies,
+   never ads, so it stays. What did republish closed ads was `GET /api/companies/{orgnr}` (the
+   whole ad history, closed ones tagged «utgått») and `GET /api/new` (first-seen within the
+   window, closed or not). Both now drop every ad that is not open (`Ad.IsOpenAt`) when
+   `PublicModeOptions.Enabled`; the local app keeps its history, nobody else can reach it.
 7. **The first snapshot must be built with the CLI** (`hugin.exe --config S2\hugin.json sync
    --full`) — the API host on a fresh db fetches only the newest NAV page, the full walk is
    CLI-only.
