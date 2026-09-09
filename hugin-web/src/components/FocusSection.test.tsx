@@ -20,6 +20,8 @@ interface ServerOptions {
   focus?: FocusConfigDto
   status?: number
   recommended?: string[]
+  /** Fails GET /api/config/focus/recommended with this status instead of answering `recommended`. */
+  recommendedStatus?: number
   /** code -> either the preview DTO, or a status code to fail the preview call with. */
   preview?: Record<string, NacePreviewDto | number>
   putStatus?: number
@@ -75,6 +77,9 @@ function fakeServer(opts: ServerOptions = {}) {
       return Promise.resolve(jsonResponse(body))
     }
     if (url === '/api/config/focus/recommended' && method === 'GET') {
+      if (opts.recommendedStatus) {
+        return Promise.resolve(jsonResponse({ title: 'nede' }, opts.recommendedStatus))
+      }
       return Promise.resolve(jsonResponse(opts.recommended ?? []))
     }
     if (url.startsWith('/api/config/focus/preview') && method === 'GET') {
@@ -136,7 +141,83 @@ describe('FocusSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
 
     expect(await screen.findByText(/45 bedrifter/)).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(/45 bedrifter/)
+    // The rendered role="status" node proves nothing about the actual announcement — assert the
+    // live region useAnnounce feeds, the way every other announced state change in this suite
+    // does (spec B5: "A resolved preview is announced").
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent(/45 bedrifter/))
+  })
+
+  it('shows the honest invalid-format message from the preview button, not a fabricated Brreg failure', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), 'abc')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+
+    expect(await screen.findByText(/Ugyldig bransjekode/)).toBeInTheDocument()
+    expect(screen.queryByText('Kunne ikke hente antall')).not.toBeInTheDocument()
+  })
+
+  it('pressing Add on an invalid code shows the same message instead of doing nothing', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, 'abc')
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
+
+    expect(await screen.findByText(/Ugyldig bransjekode/)).toBeInTheDocument()
+    expect(screen.queryByText('abc')).not.toBeInTheDocument()
+    expect(input).toHaveValue('abc')
+  })
+
+  it('a failed recommended fetch says so instead of leaving the button looking dead', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] }, recommendedStatus: 500 })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
+
+    expect(await screen.findByText('Kunne ikke hente anbefalte bransjer.')).toBeInTheDocument()
+  })
+
+  it('«Legg til anbefalte» previews the total the newly added codes bring in, and announces it (spec B4)', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      recommended: ['62', '72', '63'],
+      preview: {
+        '72': { code: '72', name: 'Forskning og utviklingsarbeid', units: 87 },
+        '63': { code: '63', name: 'Databehandling', units: 45 },
+      },
+    })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
+
+    const expected = 'La til 2 anbefalte bransjer — 132 bedrifter totalt.'
+    expect(await screen.findByText(expected)).toBeInTheDocument()
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent(expected))
+  })
+
+  it('previews a partial total honestly when Brreg cannot resolve one of the newly added codes', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      recommended: ['62', '72', '63'],
+      preview: {
+        '72': { code: '72', name: 'Forskning og utviklingsarbeid', units: 87 },
+        '63': 503,
+      },
+    })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
+
+    expect(
+      await screen.findByText(
+        'La til 2 anbefalte bransjer — 87 bedrifter totalt for 1 av dem (resten ukjent, Brreg var utilgjengelig).'
+      )
+    ).toBeInTheDocument()
   })
 
   it('warns when a code is already covered by a broader one', async () => {
@@ -211,9 +292,13 @@ describe('FocusSection', () => {
   })
 
   it('«Legg til anbefalte» adds only the recommended codes not already configured', async () => {
-    fakeServer({
+    const calls = fakeServer({
       focus: { naeringskoder: ['62'], keywords: [] },
       recommended: ['62', '72', '63'],
+      preview: {
+        '72': { code: '72', name: 'Forskning og utviklingsarbeid', units: 87 },
+        '63': { code: '63', name: 'Databehandling', units: 45 },
+      },
     })
 
     renderSection()
@@ -223,6 +308,13 @@ describe('FocusSection', () => {
     expect(screen.getByText('63')).toBeInTheDocument()
     // '62' was already there — still exactly one chip for it, not a duplicate.
     expect(screen.getAllByText('62')).toHaveLength(1)
+    // The offer itself is exactly the codes not already configured (spec B4) — proven here by
+    // what actually gets a preview request, not just by the resulting chip list: '62' must never
+    // be re-queried since it was never "added".
+    await waitFor(() => {
+      expect(calls.some((c) => c.url.includes('nace=72'))).toBe(true)
+    })
+    expect(calls.some((c) => c.url.includes('nace=62'))).toBe(false)
   })
 
   it('caches a preview per code within one mount, and fetches fresh again after a remount (scope-keyed cache)', async () => {

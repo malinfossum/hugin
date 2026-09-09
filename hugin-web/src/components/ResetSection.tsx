@@ -15,7 +15,9 @@ const CONFIRM_WORD = 'NULLSTILL'
  * in read-only mode. Two levels behind POST /api/reset — "scope" just clears the discovery
  * config (so the first-run dialog can ask again), "all" also wipes the database after a
  * VACUUM INTO snapshot. Both are refused with 409 while a sync runs; that must surface as a
- * failure, never as if the reset happened. */
+ * failure, never as if the reset happened. The hard reset's success message names the snapshot
+ * path (D2) and waits for the person to press its own reload button, rather than reloading out
+ * from under the message the moment it appears. */
 export function ResetSection() {
   const [status, setStatus] = useState<StatusDto | null>(null)
   const [scopeOpen, setScopeOpen] = useState(false)
@@ -77,10 +79,12 @@ export function ResetSection() {
         kind: 'success',
         text: t('reset.hardDone', { path: result.snapshotPath ?? '' }),
       })
-      // Everything on screen assumed a database that no longer exists — a full reload is the
-      // simplest honest way to reflect that, and it stays disabled (saving never resets) until
-      // it happens.
-      window.location.reload()
+      // Everything on screen assumed a database that no longer exists, so a reload is still the
+      // honest way to reflect that — but firing it here, before this render commits, is exactly
+      // why the snapshot path was never seen: `window.location.reload()` cuts the page away
+      // before React paints the message above. Leave `saving` true (both trigger buttons stay
+      // disabled) and wait for the person to read the path and press the reload button below
+      // instead of reloading out from under them.
     } catch (err) {
       setSaving(false)
       // Re-typing the confirm word per attempt is the whole point of the gate — a failed
@@ -112,6 +116,11 @@ export function ResetSection() {
         >
           {hardMessage.text}
         </p>
+      )}
+      {hardMessage?.kind === 'success' && (
+        <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+          {t('reset.hardReload')}
+        </button>
       )}
 
       <div className="cluster cluster-sm">

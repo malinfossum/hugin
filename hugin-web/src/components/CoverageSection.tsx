@@ -14,10 +14,12 @@ import { useAnnounce } from './LiveRegion'
 
 interface CoverageSectionProps {
   /** Fires once the PUT succeeds — before the follow-up sync is even attempted, since the scope
-   * it reads is already the new one. SettingsView uses this to bump a key that remounts
-   * FocusSection, clearing its per-code preview cache (v3.5 Task 11 ruling 2): the cached count
-   * for a bransje code depends on the coverage it was previewed under, and a stale count read
-   * after changing coverage would be wrong, not just stale. */
+   * it reads is already the new one. SettingsView uses this to bump a `previewVersion` counter
+   * that is passed to FocusSection and folded into its per-code preview cache key (v3.5 Task 11
+   * ruling 2): the cached count for a bransje code depends on the coverage it was previewed
+   * under, and a stale count read after changing coverage would be wrong, not just stale.
+   * FocusSection is never remounted for this — that would also discard an unsaved
+   * bransje/keyword draft. */
   onSaved?: () => void
 }
 

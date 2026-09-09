@@ -215,8 +215,16 @@ export const nb = {
   // standing in for the missing name, never previewUnknown's literal "0" for a real count.
   'focus.previewNoName': '{code} — {units} bedrifter',
   'focus.previewFailed': 'Kunne ikke hente antall',
+  // A format failure is not a Brreg failure — previewFailed above claims a lookup that never
+  // ran. Used by both the preview button and Add, so a typo gets one honest answer either way.
+  'focus.invalidCode':
+    'Ugyldig bransjekode — to sifre, med valgfritt punktum og 1–3 sifre til (f.eks. «62» eller «58.2»).',
   'focus.covered': '{code} dekkes allerede av {broader}',
   'focus.recommended': 'Legg til anbefalte',
+  'focus.recommendedFailed': 'Kunne ikke hente anbefalte bransjer.',
+  'focus.recommendedAddedTotal': 'La til {count} anbefalte bransjer — {units} bedrifter totalt.',
+  'focus.recommendedAddedPartial':
+    'La til {count} anbefalte bransjer — {units} bedrifter totalt for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
   'focus.removeCode': 'Fjern bransje {code}',
   'focus.keywordsLegend': 'Nøkkelord',
   'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',
@@ -272,4 +280,7 @@ export const nb = {
   'reset.confirmLabel': 'Skriv NULLSTILL for å bekrefte',
   'reset.hardDone': 'Nullstilt. Sikkerhetskopi lagret: {path}',
   'reset.hardFailed': 'Kunne ikke nullstille: {error}',
+  // D2: the snapshot path must genuinely be read, not fire past the user via an immediate
+  // reload — the reload now waits for this button instead of firing on its own.
+  'reset.hardReload': 'Last siden på nytt',
 } as const

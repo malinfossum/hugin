@@ -171,7 +171,7 @@ describe('ResetSection', () => {
     expect(hardButton).toBeEnabled()
   })
 
-  it('Start på nytt posts { mode: "all" }, shows the returned snapshot path, resets focus and reloads', async () => {
+  it('Start på nytt posts { mode: "all" }, shows the returned snapshot path and resets focus without reloading yet', async () => {
     const user = userEvent.setup()
     const reload = stubReload()
     saveFocus({ fylke: '34', kommune: null, categories: [] })
@@ -185,12 +185,38 @@ describe('ResetSection', () => {
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
     await waitFor(() => expect(posts).toEqual([{ mode: 'all' }]))
+    // This is the point of the fix: the path must genuinely be on screen, not just set on state
+    // a moment before an immediate reload discards the render (the old bug this test used to
+    // pass despite).
     expect(
       await screen.findByText(
         'Nullstilt. Sikkerhetskopi lagret: hugin.db.reset-20260909-120000.bak'
       )
     ).toBeInTheDocument()
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
+    // No reload until the person acts on it — both trigger buttons stay disabled meanwhile,
+    // since the database this screen reflects is already gone.
+    expect(reload).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Nullstill dekning' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Start på nytt' })).toBeDisabled()
+  })
+
+  it('reloads only once the person presses the reload button after reading the snapshot path', async () => {
+    const user = userEvent.setup()
+    const reload = stubReload()
+    const { fetchMock } = fakeServer({
+      resetBody: { mode: 'all', snapshotPath: 'hugin.db.reset-20260909-120000.bak' },
+    })
+    renderSection(fetchMock)
+
+    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
+    await user.click(screen.getByRole('button', { name: 'Slett alt' }))
+    await screen.findByText('Nullstilt. Sikkerhetskopi lagret: hugin.db.reset-20260909-120000.bak')
+
+    expect(reload).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Last siden på nytt' }))
+
     expect(reload).toHaveBeenCalledTimes(1)
   })
 

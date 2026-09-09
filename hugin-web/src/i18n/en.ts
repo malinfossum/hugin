@@ -213,8 +213,15 @@ export const en = {
   'focus.previewUnknown': '{code} — 0 companies',
   'focus.previewNoName': '{code} — {units} companies',
   'focus.previewFailed': 'Could not fetch the count',
+  'focus.invalidCode':
+    'Invalid industry code — two digits, optionally a dot and 1–3 more digits (e.g. "62" or "58.2").',
   'focus.covered': '{code} is already covered by {broader}',
   'focus.recommended': 'Add recommended',
+  'focus.recommendedFailed': 'Could not fetch the recommended industries.',
+  'focus.recommendedAddedTotal':
+    'Added {count} recommended industries — {units} companies in total.',
+  'focus.recommendedAddedPartial':
+    'Added {count} recommended industries — {units} companies in total for {known} of them (the rest unknown, Brreg was unreachable).',
   'focus.removeCode': 'Remove industry {code}',
   'focus.keywordsLegend': 'Keywords',
   'focus.keywordsHint': 'Changes apply to ads that arrive after the next sync.',
@@ -266,4 +273,5 @@ export const en = {
   'reset.confirmLabel': 'Type NULLSTILL to confirm',
   'reset.hardDone': 'Reset. Backup saved: {path}',
   'reset.hardFailed': 'Could not reset: {error}',
+  'reset.hardReload': 'Reload the page',
 } as const

@@ -76,17 +76,38 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     load()
   }, [load])
 
-  const preview = async (code: string) => {
-    if (!NACE_PATTERN.test(code)) return setPreviewText(t('focus.previewFailed'))
-    const cacheKey = `${previewVersion}:${code}`
-    const cached = previewCache.current.get(cacheKey)
-    const result =
-      cached ??
-      (await api
+  // Shared by the single-code preview button and the "Legg til anbefalte" total below — both
+  // want the same cache (keyed on `previewVersion`, so a coverage save invalidates every count
+  // at once) and the same guarded fetch, and neither should re-request a code the other already
+  // resolved. Returns null on any failure (bad response, network, Brreg down) — callers decide
+  // how to talk about a null, since a single failed code means something different in a sum
+  // than it does on its own.
+  const resolvePreview = useCallback(
+    async (code: string): Promise<NacePreviewDto | null> => {
+      const cacheKey = `${previewVersion}:${code}`
+      const cached = previewCache.current.get(cacheKey)
+      if (cached) return cached
+      const result = await api
         .getGuarded<NacePreviewDto>(`/api/config/focus/preview?nace=${encodeURIComponent(code)}`)
-        .catch(() => null))
-    if (!result) return setPreviewText(t('focus.previewFailed'))
-    previewCache.current.set(cacheKey, result)
+        .catch(() => null)
+      if (result) previewCache.current.set(cacheKey, result)
+      return result
+    },
+    [previewVersion]
+  )
+
+  const preview = async (code: string) => {
+    // A format failure is not a Brreg failure — claiming one (as this used to, via the same
+    // "kunne ikke hente antall" text as a real lookup failure) reports a lookup that never ran.
+    if (!NACE_PATTERN.test(code)) {
+      setPreviewText(t('focus.invalidCode'))
+      return
+    }
+    const result = await resolvePreview(code)
+    if (!result) {
+      setPreviewText(t('focus.previewFailed'))
+      return
+    }
     // Ruling 3: only a genuine zero count says "0 bedrifter" — a resolved, nonzero count with no
     // name shows the count honestly, with the code standing in for the missing name.
     const text =
@@ -100,13 +121,22 @@ export function FocusSection({ previewVersion = 0 }: Props) {
             })
           : t('focus.previewNoName', { code: result.code, units: String(result.units) })
     setPreviewText(text)
+    // Spec B5: "A resolved preview is announced" — an async count that only ever exists
+    // visually is invisible to a screen reader, since nothing else signals it arrived.
+    announce(text)
   }
 
   const handleAddCode = (event: FormEvent) => {
     event.preventDefault()
     if (!draft) return
     const code = codeInput.trim()
-    if (!NACE_PATTERN.test(code) || draft.naeringskoder.includes(code)) return
+    if (!NACE_PATTERN.test(code)) {
+      // Same format failure as the preview button, and the same honest message — pressing Add
+      // on an invalid code used to no-op silently, which reads as a dead button.
+      setPreviewText(t('focus.invalidCode'))
+      return
+    }
+    if (draft.naeringskoder.includes(code)) return
     setDraft({ ...draft, naeringskoder: [...draft.naeringskoder, code] })
     setCodeInput('')
     setPreviewText(null)
@@ -122,6 +152,9 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     if (wasLast) addCodeRef.current?.focus()
   }
 
+  // Spec B4: offers exactly the codes not already configured (the `missing` filter below), and
+  // — the half that was never built — previews the total those additions bring in before the
+  // user saves. Reuses `resolvePreview`'s cache and guarded fetch rather than a new endpoint.
   const handleAddRecommended = async () => {
     let codes = recommended
     if (!codes) {
@@ -129,6 +162,9 @@ export function FocusSection({ previewVersion = 0 }: Props) {
         codes = await api.get<string[]>('/api/config/focus/recommended')
         setRecommended(codes)
       } catch {
+        // A dead-looking button is the defect this closes: a failed fetch used to return with
+        // nothing shown at all.
+        setPreviewText(t('focus.recommendedFailed'))
         return
       }
     }
@@ -136,6 +172,23 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     const missing = codes.filter((c) => !draft.naeringskoder.includes(c))
     if (missing.length === 0) return
     setDraft({ ...draft, naeringskoder: [...draft.naeringskoder, ...missing] })
+
+    const results = await Promise.all(missing.map((code) => resolvePreview(code)))
+    const known = results.filter((r): r is NacePreviewDto => r !== null)
+    const total = known.reduce((sum, r) => sum + r.units, 0)
+    // A total that is partly unknown must say so rather than under-report (ruling 3's honesty,
+    // extended from a single code to a sum of them) — Brreg being unreachable for some of the
+    // newly added codes must not silently read as "the rest add zero".
+    const text =
+      known.length === missing.length
+        ? t('focus.recommendedAddedTotal', { count: String(missing.length), units: String(total) })
+        : t('focus.recommendedAddedPartial', {
+            count: String(missing.length),
+            known: String(known.length),
+            units: String(total),
+          })
+    setPreviewText(text)
+    announce(text)
   }
 
   const handleAddKeyword = (event: FormEvent) => {
