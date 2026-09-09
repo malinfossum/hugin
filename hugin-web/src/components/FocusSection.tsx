@@ -258,7 +258,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
                 ))}
               </ul>
 
-              <form className="cluster cluster-sm" onSubmit={handleAddCode}>
+              <form className="cluster cluster-sm focus-add-row" onSubmit={handleAddCode}>
                 <div className="field">
                   <label className="label" htmlFor="focus-add-code">
                     {t('focus.addCode')}
@@ -317,7 +317,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
                 ))}
               </ul>
 
-              <form className="cluster cluster-sm" onSubmit={handleAddKeyword}>
+              <form className="cluster cluster-sm focus-add-row" onSubmit={handleAddKeyword}>
                 <div className="field">
                   <label className="label" htmlFor="focus-add-keyword">
                     {t('focus.addKeyword')}

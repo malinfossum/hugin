@@ -370,6 +370,13 @@ input[type="text"] {
   min-block-size: 44px;
 }
 
+/* Fokus add rows: label+input pairs (taller .field wrapper) sit inside a .cluster with 44px
+   buttons. Centring against the wrapper misaligns buttons 15px above the input's baseline.
+   Align to the bottom instead so button edges line up with the input's bottom edge. */
+.focus-add-row {
+  align-items: flex-end;
+}
+
 /* Demo banner (read-only showcase): a static region right after the header. */
 .demo-banner {
   background: var(--surface-1);
