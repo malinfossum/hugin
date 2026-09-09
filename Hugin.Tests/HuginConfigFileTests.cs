@@ -98,25 +98,32 @@ public class HuginConfigFileTests
     public void WriteFocus_replaces_only_its_own_keys()
     {
         var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"{Guid.NewGuid()}.json");
-        File.WriteAllText(path, """
+        const string original = """
         {
           "Keywords": ["gammel"],
           "categories": ["IT"],
           "navToken": "abc",
+          "linkouts": [{ "label": "FINN", "url": "https://www.finn.no/job" }],
           "municipalities": [{ "name": "Hamar", "number": "3403" }]
         }
-        """);
+        """;
+        File.WriteAllText(path, original);
         var file = new HuginConfigFile(path);
 
         file.WriteFocus(new FocusConfig(["62", "58.2"], ["utvikler"]));
 
         var written = file.Load();
         Assert.That(written.Naeringskoder, Is.EqualTo(new[] { "62", "58.2" }));
-        Assert.That(written.Keywords, Is.EqualTo(new[] { "utvikler" }), "the capital-K spelling must be gone");
-        Assert.That(written.Categories, Is.EqualTo(new[] { "IT" }));
         Assert.That(written.NavToken, Is.EqualTo("abc"));
         Assert.That(written.Municipalities.Single().Number, Is.EqualTo("3403"));
         Assert.That(File.Exists(path + ".bak"), Is.True);
+
+        var before = JsonNode.Parse(original)!.AsObject();
+        var after = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        Assert.That(after.ContainsKey("Keywords"), Is.False, "the capital-K spelling must be gone");
+        Assert.That(after["keywords"]!.AsArray().Select(n => n!.GetValue<string>()), Is.EqualTo(new[] { "utvikler" }));
+        Assert.That(JsonNode.DeepEquals(after["categories"], before["categories"]), Is.True, "categories round-trip untouched");
+        Assert.That(JsonNode.DeepEquals(after["linkouts"], before["linkouts"]), Is.True, "linkouts round-trip untouched");
     }
 
     [Test]
