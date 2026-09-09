@@ -6,11 +6,26 @@ interface Props {
   title: string
   children?: ReactNode
   confirmLabel: string
+  /** Keeps the confirm button disabled — the typed-confirmation gate on a destructive action
+   * (ResetSection's hard reset). Defaults to enabled, so every existing caller is unaffected. */
+  confirmDisabled?: boolean
+  /** 'danger' styles the confirm button as destructive (ResetSection) instead of the default
+   * recommended-action styling. Defaults to 'primary', so every existing caller is unaffected. */
+  variant?: 'primary' | 'danger'
   onConfirm: () => void
   onCancel: () => void
 }
 
-export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  confirmDisabled,
+  variant,
+  onConfirm,
+  onCancel,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const t = useT()
   // Latest `open` prop, so the native close handler can tell a user-initiated close
@@ -40,7 +55,12 @@ export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, 
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
           {t('common.cancel')}
         </button>
-        <button type="button" className="btn btn-primary" onClick={onConfirm}>
+        <button
+          type="button"
+          className={`btn btn-${variant === 'danger' ? 'danger' : 'primary'}`}
+          disabled={confirmDisabled}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </button>
       </div>

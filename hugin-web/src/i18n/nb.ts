@@ -246,4 +246,30 @@ export const nb = {
   'demo.banner':
     'Demo — skrivebeskyttet. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet. Pipelinen er eksempeldata. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
   'demo.repoLink': 'Kildekode på GitHub',
+
+  // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen — an
+  // empty result, not an error, so it gets a button instead of the generic failure banner.
+  'dashboard.noCoverageMessage': 'Ingen dekning valgt.',
+  'dashboard.noCoverageButton': 'Velg dekning',
+  'dashboard.noCoverageAnnounce': 'Ingen dekning valgt. Velg fylke, kommune eller hele landet.',
+
+  // v3.5 Part D — Nullstilling. Two levels, both danger-styled and behind a typed confirmation
+  // for the hard one; the confirm word itself stays "NULLSTILL" in both languages (spec-locked).
+  'reset.heading': 'Nullstilling',
+  'reset.hint': 'To nivåer for å begynne på nytt — velg det du trenger. Ingen av dem kan angres.',
+  'reset.scopeButton': 'Nullstill dekning',
+  'reset.scopeConfirmTitle': 'Nullstille dekningen?',
+  'reset.scopeConfirmBody':
+    'Kommuner, fylker og «hele landet» fjernes fra oppsettet. Bedrifter og annonser blir liggende uten å bli oppdatert. Bransjer og nøkkelord endres ikke. Oppstartsvalget vises igjen.',
+  'reset.scopeDone': 'Dekningen er nullstilt.',
+  'reset.scopeFailed': 'Kunne ikke nullstille dekningen: {error}',
+  'reset.hardButton': 'Start på nytt',
+  'reset.hardConfirmTitle': 'Slette alt og starte på nytt?',
+  'reset.hardConfirmIntro':
+    'Dette kan ikke angres. Pipelinen din forsvinner for godt — bedrifter og annonser kommer tilbake ved neste synk.',
+  'reset.hardCounts': '{companies} bedrifter, {activeAds} annonser, {pipelineEntries} i Søknader.',
+  'reset.hardConfirmButton': 'Slett alt',
+  'reset.confirmLabel': 'Skriv NULLSTILL for å bekrefte',
+  'reset.hardDone': 'Nullstilt. Sikkerhetskopi lagret: {path}',
+  'reset.hardFailed': 'Kunne ikke nullstille: {error}',
 } as const

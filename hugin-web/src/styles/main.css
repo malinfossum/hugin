@@ -136,6 +136,13 @@ input[type="text"] {
   padding-block: 0.25rem;
 }
 
+/* Nullstilling (v3.5 Part D) — same "loud edge" treatment as .trenger-handling, in the
+   danger hue: both irreversible reset levels live here, so the section itself should read as
+   destructive before either button is ever clicked. */
+.reset-section {
+  border-inline-start: 3px solid var(--danger);
+}
+
 /* Content lists throughout the app are custom-styled rows, never bullet lists. */
 .frister-list ul,
 .nytt-siden-sist ul,

@@ -82,6 +82,69 @@ describe('ConfirmDialog', () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
+
+  it('defaults to the primary style with Avbryt first, when variant is omitted', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Slett rad?"
+        confirmLabel="Slett"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    )
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.map((b) => b.textContent)).toEqual(['Avbryt', 'Slett'])
+    expect(screen.getByRole('button', { name: 'Slett' })).toHaveClass('btn-primary')
+  })
+
+  it('renders the confirm button as btn-danger when variant is "danger", Avbryt still first', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Slette alt?"
+        confirmLabel="Slett alt"
+        variant="danger"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    )
+
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.map((b) => b.textContent)).toEqual(['Avbryt', 'Slett alt'])
+    const confirm = screen.getByRole('button', { name: 'Slett alt' })
+    expect(confirm).toHaveClass('btn-danger')
+    expect(confirm).not.toHaveClass('btn-primary')
+  })
+
+  it('disables the confirm button when confirmDisabled is true, and it stays clickable when omitted', () => {
+    const onConfirm = vi.fn()
+    const { rerender } = render(
+      <ConfirmDialog
+        open
+        title="Slette alt?"
+        confirmLabel="Slett alt"
+        confirmDisabled
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Slett alt' })).toBeDisabled()
+
+    rerender(
+      <ConfirmDialog
+        open
+        title="Slette alt?"
+        confirmLabel="Slett alt"
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Slett alt' })).toBeEnabled()
+  })
 })
 
 describe('ConfirmDialog controlled close (regression)', () => {

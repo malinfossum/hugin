@@ -63,6 +63,10 @@ function fakeServer(
     kommunerPending?: boolean
     putStatus?: number
     syncStatus?: number
+    /** Successive `units` counts GET /api/config/focus/preview?nace=62 answers with, one per
+     * call — the last value repeats once exhausted. Lets a test tell a fresh Brreg fetch apart
+     * from a cached one (Task 11 ruling 2). */
+    focusPreviewUnits?: number[]
   } = {}
 ) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
@@ -70,6 +74,8 @@ function fakeServer(
   const discovery = options.discovery ?? DEFAULT_DISCOVERY
   const kommuner = options.kommuner ?? DEFAULT_KOMMUNER
   const puts: unknown[] = []
+  const focusPreviewUnits = options.focusPreviewUnits ?? [45]
+  let focusPreviewCalls = 0
 
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -99,6 +105,29 @@ function fakeServer(
     }
     if (url === '/api/config/focus' && method === 'GET') {
       return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
+    }
+    if (url.startsWith('/api/config/focus/preview') && method === 'GET') {
+      const units = focusPreviewUnits[Math.min(focusPreviewCalls, focusPreviewUnits.length - 1)]
+      focusPreviewCalls += 1
+      return Promise.resolve(jsonResponse({ code: '62', name: 'IT-tjenester', units }))
+    }
+    if (url === '/api/status' && method === 'GET') {
+      return Promise.resolve(
+        jsonResponse({
+          brreg: null,
+          nav: null,
+          reviewMark: null,
+          activeAds: 0,
+          companies: companies.length,
+          pipelineEntries: 0,
+          readOnly: false,
+          scopeConfigured: true,
+        })
+      )
+    }
+    if (url === '/api/reset' && method === 'POST') {
+      const body = JSON.parse(init?.body as string)
+      return Promise.resolve(jsonResponse({ mode: body.mode, snapshotPath: null }))
     }
     if (url === '/api/sync' && method === 'POST') {
       if (options.syncStatus) {
@@ -667,6 +696,43 @@ describe('Dekning (coverage)', () => {
 
     expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
     expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+  })
+
+  it('a coverage save resets Fokus’s preview cache — a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
+    const server = fakeServer([], [], { focusPreviewUnits: [10, 20] })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const focusSection = await screen.findByRole('region', { name: 'Fokus' })
+
+    await user.type(within(focusSection).getByLabelText('Legg til bransje'), '62')
+    await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
+    expect(
+      await within(focusSection).findByText('62 · IT-tjenester — 10 bedrifter')
+    ).toBeInTheDocument()
+
+    await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
+    await screen.findByText('Lagret — synkroniserer …')
+
+    // FocusSection remounted: its add-code field is empty again (fresh instance), and the
+    // preview endpoint has only been called once so far.
+    const previewCalls = server.fetchMock.mock.calls.filter(([u]) =>
+      String(u).startsWith('/api/config/focus/preview')
+    )
+    expect(previewCalls).toHaveLength(1)
+
+    const focusSectionAfter = screen.getByRole('region', { name: 'Fokus' })
+    await user.type(within(focusSectionAfter).getByLabelText('Legg til bransje'), '62')
+    await user.click(within(focusSectionAfter).getByRole('button', { name: 'Vis antall' }))
+
+    expect(
+      await within(focusSectionAfter).findByText('62 · IT-tjenester — 20 bedrifter')
+    ).toBeInTheDocument()
+    const previewCallsAfter = server.fetchMock.mock.calls.filter(([u]) =>
+      String(u).startsWith('/api/config/focus/preview')
+    )
+    expect(previewCallsAfter).toHaveLength(2)
   })
 
   it('switching language does not discard an unsaved coverage edit', async () => {

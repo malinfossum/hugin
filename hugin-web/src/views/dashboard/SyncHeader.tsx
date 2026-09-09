@@ -18,7 +18,24 @@ function getFailureMessage(sync: SyncRunStatus, t: T): string | null {
   return t('sync.failedPartial', { error: failed[0]?.error ?? '' })
 }
 
-export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void }) {
+// Exact prefix `SyncBrregAsync` returns when no municipalities, fylker or allOfNorway are
+// configured (v3.5 Part A2) — an empty result, not an error, so it gets its own prompt instead
+// of the generic failure banner (Part A4).
+const NO_COVERAGE_PREFIX = 'Ingen dekning valgt'
+
+function isNoCoverageFailure(sync: SyncRunStatus): boolean {
+  return (
+    !!sync.brreg && !sync.brreg.succeeded && (sync.brreg.error ?? '').startsWith(NO_COVERAGE_PREFIX)
+  )
+}
+
+interface SyncHeaderProps {
+  onSyncCompleted: () => void
+  /** Reopens the first-run dialog — the empty-coverage prompt's own button (v3.5 Part A4). */
+  onRequestCoverage: () => void
+}
+
+export function SyncHeader({ onSyncCompleted, onRequestCoverage }: SyncHeaderProps) {
   const [status, setStatus] = useState<StatusDto | null>(null)
   const [sync, setSync] = useState<SyncRunStatus | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -51,7 +68,11 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
       setSync(s)
       if (wasRunning.current && !s.running) {
         wasRunning.current = false
-        announce(getFailureMessage(s, t) ?? t('sync.done'))
+        announce(
+          isNoCoverageFailure(s)
+            ? t('dashboard.noCoverageAnnounce')
+            : (getFailureMessage(s, t) ?? t('sync.done'))
+        )
         loadStatus()
         onSyncCompleted()
       }
@@ -76,7 +97,8 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
     }
   }
 
-  const failureMessage = sync && !sync.running ? getFailureMessage(sync, t) : null
+  const noCoverage = !readOnly && sync && !sync.running ? isNoCoverageFailure(sync) : false
+  const failureMessage = sync && !sync.running && !noCoverage ? getFailureMessage(sync, t) : null
 
   return (
     <header className="sync-header card stack">
@@ -122,6 +144,14 @@ export function SyncHeader({ onSyncCompleted }: { onSyncCompleted: () => void })
             t('sync.now')
           )}
         </button>
+      )}
+      {noCoverage && (
+        <p role="status" className="alert alert-warning cluster cluster-sm">
+          {t('dashboard.noCoverageMessage')}
+          <button type="button" className="btn btn-ghost" onClick={onRequestCoverage}>
+            {t('dashboard.noCoverageButton')}
+          </button>
+        </p>
       )}
       {failureMessage && (
         <p role="status" className="alert alert-danger">

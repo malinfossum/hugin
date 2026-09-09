@@ -29,7 +29,7 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 
 function AppShell() {
   const { focus, setFocus } = useFocus()
-  const { readOnly, resolved } = useReadOnly()
+  const { readOnly, resolved, scopeConfigured } = useReadOnly()
   const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
   // Whether first-run has been completed (scope written) — a returning user with a stored focus
   // has; a fresh one hasn't even after the focus is seeded on a failed PUT, so the dialog stays
@@ -37,9 +37,15 @@ function AppShell() {
   const [firstRunDone, setFirstRunDone] = useState(() => focus !== null)
   const h1Ref = useRef<HTMLHeadingElement>(null)
   // Never before /api/status has answered (a fresh visitor would see it flash, or worse, get it
-  // for real and a Save that can only 403), and never on the read-only demo.
+  // for real and a Save that can only 403), and never on the read-only demo. `scopeConfigured
+  // === false` catches a browser that already has a stored focus but the server has no scope
+  // (v3.5 Part A3/D1) — a stale localStorage focus alone can no longer hide that. Reuses the
+  // status ReadOnlyProvider already fetched at boot; no second poll.
   const focusDialogOpen =
-    resolved && !readOnly && (focus === null || !firstRunDone) && !focusPromptDismissed
+    resolved &&
+    !readOnly &&
+    (focus === null || !firstRunDone || scopeConfigured === false) &&
+    !focusPromptDismissed
   const prevFocusDialogOpen = useRef(focusDialogOpen)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
@@ -76,7 +82,12 @@ function AppShell() {
   // its announce/refresh cycle regardless of which view is currently visible. Declared inside
   // AppShell (not module scope) so the thunks can close over theme state and callbacks.
   const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
-    dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
+    dashboard: () => (
+      <DashboardView
+        sourcesVersion={sourcesVersion}
+        onRequestCoverage={() => setFocusPromptDismissed(false)}
+      />
+    ),
     applications: () => <ApplicationsView />,
     companies: () => (
       <BedrifterView

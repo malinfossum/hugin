@@ -243,4 +243,27 @@ export const en = {
   'demo.banner':
     'Demo — read-only. Real job ads and companies from NAV and Brreg for Innlandet. The pipeline is sample data. No tracking, no cookies; your theme choice is stored only in your browser.',
   'demo.repoLink': 'Source code on GitHub',
+
+  'dashboard.noCoverageMessage': 'No coverage chosen.',
+  'dashboard.noCoverageButton': 'Choose coverage',
+  'dashboard.noCoverageAnnounce':
+    'No coverage chosen. Pick a county, municipality or all of Norway.',
+
+  'reset.heading': 'Reset',
+  'reset.hint': 'Two levels — pick the one you need. Neither can be undone.',
+  'reset.scopeButton': 'Reset coverage',
+  'reset.scopeConfirmTitle': 'Reset the coverage?',
+  'reset.scopeConfirmBody':
+    'Municipalities, counties and "all of Norway" are cleared from the setup. Companies and ads stay, but stop refreshing. Industries and keywords are unchanged. The first-run choice appears again.',
+  'reset.scopeDone': 'Coverage reset.',
+  'reset.scopeFailed': 'Could not reset the coverage: {error}',
+  'reset.hardButton': 'Start over',
+  'reset.hardConfirmTitle': 'Delete everything and start over?',
+  'reset.hardConfirmIntro':
+    'This cannot be undone. Your pipeline is gone for good — companies and ads come back on the next sync.',
+  'reset.hardCounts': '{companies} companies, {activeAds} ads, {pipelineEntries} in Applications.',
+  'reset.hardConfirmButton': 'Delete everything',
+  'reset.confirmLabel': 'Type NULLSTILL to confirm',
+  'reset.hardDone': 'Reset. Backup saved: {path}',
+  'reset.hardFailed': 'Could not reset: {error}',
 } as const

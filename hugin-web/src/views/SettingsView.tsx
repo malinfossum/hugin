@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageSection } from '../components/CoverageSection'
 import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
+import { ResetSection } from '../components/ResetSection'
 import { KNOWN_CATEGORIES, useFocus } from '../focus'
 import { FYLKER, fylkeOf } from '../fylker'
 import { useLang, useT } from '../i18n'
@@ -38,6 +39,10 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [removing, setRemoving] = useState<SourceDto | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
+  // Bumped when CoverageSection's Save succeeds; used as FocusSection's key so a coverage
+  // change remounts it, resetting its per-code preview cache (v3.5 Task 11 ruling 2 — a cached
+  // count from the old coverage is a wrong number, not a stale one).
+  const [coverageVersion, setCoverageVersion] = useState(0)
   const t = useT()
   const [lang, setLang] = useLang()
   const announce = useAnnounce()
@@ -366,9 +371,9 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         </fieldset>
       </section>
 
-      <CoverageSection />
+      <CoverageSection onSaved={() => setCoverageVersion((v) => v + 1)} />
 
-      <FocusSection />
+      <FocusSection key={coverageVersion} />
 
       <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
         <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>
@@ -443,6 +448,8 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
           <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
         </button>
       </section>
+
+      <ResetSection />
 
       <ConfirmDialog
         open={removing !== null}

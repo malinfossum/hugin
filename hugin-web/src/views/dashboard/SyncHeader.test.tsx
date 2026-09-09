@@ -21,6 +21,7 @@ function statusDto(overrides: Partial<StatusDto> = {}): StatusDto {
     companies: 5,
     pipelineEntries: 2,
     readOnly: false,
+    scopeConfigured: true,
     ...overrides,
   }
 }
@@ -57,12 +58,16 @@ function mockFetch(options: {
   })
 }
 
-function renderHeader(fetchMock: ReturnType<typeof vi.fn>, onSyncCompleted = vi.fn()) {
+function renderHeader(
+  fetchMock: ReturnType<typeof vi.fn>,
+  onSyncCompleted = vi.fn(),
+  onRequestCoverage = vi.fn()
+) {
   vi.stubGlobal('fetch', fetchMock)
   render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <SyncHeader onSyncCompleted={onSyncCompleted} />
+        <SyncHeader onSyncCompleted={onSyncCompleted} onRequestCoverage={onRequestCoverage} />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -304,5 +309,48 @@ describe('SyncHeader', () => {
     const liveRegion = document.querySelector('[aria-live="polite"]')
     expect(liveRegion).toHaveTextContent('Kunne ikke starte synk — prøv igjen.')
     expect(liveRegion).not.toHaveTextContent('En synk kjører allerede.')
+  })
+
+  it('renders the empty-coverage prompt instead of the failure banner, and its button reopens the dialog (v3.5 Part A4)', async () => {
+    let call = 0
+    const fetchMock = mockFetch({
+      syncStatus: () => {
+        call += 1
+        return call === 1
+          ? syncStatus({ running: true })
+          : syncStatus({
+              running: false,
+              brreg: {
+                succeeded: false,
+                fetched: 0,
+                error: 'Ingen dekning valgt — velg kommuner i dashbordet',
+              },
+              nav: { succeeded: true, fetched: 0, error: null },
+            })
+      },
+    })
+    const onRequestCoverage = vi.fn()
+    renderHeader(fetchMock, vi.fn(), onRequestCoverage)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2050)
+    })
+
+    // The raw "Synk delvis feilet: ..." banner never renders for this specific failure.
+    expect(screen.queryByText(/Synk delvis feilet/)).not.toBeInTheDocument()
+    const prompt = screen.getByRole('status')
+    const button = screen.getByRole('button', { name: 'Velg dekning' })
+    expect(prompt).toHaveTextContent('Ingen dekning valgt.')
+
+    fireEvent.click(button)
+    expect(onRequestCoverage).toHaveBeenCalledTimes(1)
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    expect(liveRegion).toHaveTextContent(
+      'Ingen dekning valgt. Velg fylke, kommune eller hele landet.'
+    )
   })
 })

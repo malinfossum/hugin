@@ -12,11 +12,20 @@ import type { DiscoveryConfigDto, KommuneDto } from '../types'
 import { CoverageFields } from './CoverageFields'
 import { useAnnounce } from './LiveRegion'
 
+interface CoverageSectionProps {
+  /** Fires once the PUT succeeds — before the follow-up sync is even attempted, since the scope
+   * it reads is already the new one. SettingsView uses this to bump a key that remounts
+   * FocusSection, clearing its per-code preview cache (v3.5 Task 11 ruling 2): the cached count
+   * for a bransje code depends on the coverage it was previewed under, and a stale count read
+   * after changing coverage would be wrong, not just stale. */
+  onSaved?: () => void
+}
+
 /** Settings → Dekning (spec v3.4 Part B): edits the server's discovery scope — what sync
  * fetches — through the same fylke → kommune cascade as the first-run dialog. Loads the scope
  * and the kommune list once on mount; Save PUTs the scope and starts a sync, announcing
  * honestly when that sync is busy or could not start. */
-export function CoverageSection() {
+export function CoverageSection({ onSaved }: CoverageSectionProps) {
   const [coverage, setCoverage] = useState<CoverageDraft | null>(null)
   // undefined = still loading (Save disabled), null = unreachable (fylke-only cascade).
   const [kommuner, setKommuner] = useState<KommuneDto[] | null | undefined>(undefined)
@@ -61,6 +70,7 @@ export function CoverageSection() {
       setSaving(false)
       return
     }
+    onSaved?.()
     // A sync that was already running read the old scope before this save, so the new one
     // only takes effect on the next run — say that instead of claiming a sync is fetching it.
     // Any other failure to start is said plainly too: the scope is saved, nothing is fetching.

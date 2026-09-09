@@ -111,7 +111,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('read-only mode hides write controls', () => {
   it('SyncHeader has no «Synk nå»', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<SyncHeader onSyncCompleted={() => {}} />)
+    wrap(<SyncHeader onSyncCompleted={() => {}} onRequestCoverage={() => {}} />)
     await waitFor(() => expect(screen.getByText(/Synkronisering/)).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Synk nå' })).not.toBeInTheDocument()
   })

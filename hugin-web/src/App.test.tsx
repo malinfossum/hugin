@@ -15,7 +15,12 @@ function jsonResponse(body: unknown) {
  * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
  * carries the interesting scope/kommune scenarios. */
 function fakeServer(
-  options: { putFails?: boolean; readOnly?: boolean; statusFails?: boolean } = {}
+  options: {
+    putFails?: boolean
+    readOnly?: boolean
+    statusFails?: boolean
+    scopeConfigured?: boolean
+  } = {}
 ) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -38,6 +43,7 @@ function fakeServer(
           companies: 0,
           pipelineEntries: 0,
           readOnly: options.readOnly ?? false,
+          scopeConfigured: options.scopeConfigured ?? true,
         })
       )
     }
@@ -340,6 +346,18 @@ describe('App first-run focus dialog', () => {
     render(<App />)
 
     expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+  })
+
+  it('the first-run dialog opens again when the server has no scope, even with a valid focus already stored (v3.5 Part A3)', async () => {
+    vi.stubGlobal('fetch', fakeServer({ scopeConfigured: false }))
+    window.localStorage.setItem(
+      'hugin-focus',
+      JSON.stringify({ v: 1, fylke: '34', kommune: null, categories: [] })
+    )
+
+    render(<App />)
+
+    expect(await screen.findByRole('dialog', { name: 'Hva vil du følge?' })).toBeInTheDocument()
   })
 
   it('stays closed for the rest of the session after an Esc-dismiss', async () => {

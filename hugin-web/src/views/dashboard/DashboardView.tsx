@@ -5,12 +5,21 @@ import { SourcesCard } from './SourcesCard'
 import { SyncHeader } from './SyncHeader'
 import { TrengerHandling } from './TrengerHandling'
 
-export function DashboardView({ sourcesVersion }: { sourcesVersion: number }) {
+interface DashboardViewProps {
+  sourcesVersion: number
+  /** Reopens the first-run dialog — wired from App.tsx (SyncHeader's empty-coverage prompt). */
+  onRequestCoverage: () => void
+}
+
+export function DashboardView({ sourcesVersion, onRequestCoverage }: DashboardViewProps) {
   const [refreshKey, setRefreshKey] = useState(0)
 
   return (
     <div className="dashboard stack stack-lg">
-      <SyncHeader onSyncCompleted={() => setRefreshKey((k) => k + 1)} />
+      <SyncHeader
+        onSyncCompleted={() => setRefreshKey((k) => k + 1)}
+        onRequestCoverage={onRequestCoverage}
+      />
       <SourcesCard refreshToken={sourcesVersion} />
       <TrengerHandling refreshKey={refreshKey} />
       <FristerList refreshKey={refreshKey} />

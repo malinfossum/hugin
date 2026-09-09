@@ -82,6 +82,9 @@ export interface StatusDto {
   companies: number
   pipelineEntries: number
   readOnly: boolean
+  /** True when municipalities, fylker or allOfNorway is non-empty — false on a fresh install
+   * with no scope chosen yet (v3.5 Part A3). */
+  scopeConfigured: boolean
 }
 
 export interface SourceResultDto {
@@ -129,4 +132,10 @@ export interface NacePreviewDto {
   code: string
   name: string | null
   units: number
+}
+
+export interface ResetResultDto {
+  mode: 'scope' | 'all'
+  /** Only set for mode "all" — the VACUUM INTO snapshot taken before the wipe. */
+  snapshotPath: string | null
 }
