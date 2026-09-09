@@ -76,6 +76,20 @@ public sealed class SyncEndpointTests
     }
 
     [Test]
+    public async Task Sync_full_backfill_accepts_true_spelling()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsync("/api/sync?full=true", null);
+        Assert.That(response.IsSuccessStatusCode, Is.True);
+
+        var status = await PollUntilFinished(client);
+        Assert.That(status.Running, Is.False);
+        Assert.That(factory.Nav.FirstPageRequested, Is.True, "full=true also reaches the backfill path");
+    }
+
+    [Test]
     public async Task Fresh_factory_never_syncs_on_boot()
     {
         using var factory = new ApiFactory();
