@@ -85,10 +85,55 @@ public class HuginConfigFileTests
     {
         File.WriteAllText(ConfigPath, "{ this is not json");
 
-        Assert.Throws<JsonException>(() =>
+        // Assert.Catch, not Assert.Throws: JsonNode.Parse throws the JsonException subtype
+        // JsonReaderException, and WriteKeys no longer normalizes it to the base type.
+        Assert.Catch<JsonException>(() =>
             new HuginConfigFile(ConfigPath).WriteDiscovery(new DiscoveryConfig([], [], true)));
 
         Assert.That(File.ReadAllText(ConfigPath), Is.EqualTo("{ this is not json"));
         Assert.That(File.Exists(ConfigPath + ".bak"), Is.False, "parse happens before any file is touched");
+    }
+
+    [Test]
+    public void WriteFocus_replaces_only_its_own_keys()
+    {
+        var path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"{Guid.NewGuid()}.json");
+        File.WriteAllText(path, """
+        {
+          "Keywords": ["gammel"],
+          "categories": ["IT"],
+          "navToken": "abc",
+          "municipalities": [{ "name": "Hamar", "number": "3403" }]
+        }
+        """);
+        var file = new HuginConfigFile(path);
+
+        file.WriteFocus(new FocusConfig(["62", "58.2"], ["utvikler"]));
+
+        var written = file.Load();
+        Assert.That(written.Naeringskoder, Is.EqualTo(new[] { "62", "58.2" }));
+        Assert.That(written.Keywords, Is.EqualTo(new[] { "utvikler" }), "the capital-K spelling must be gone");
+        Assert.That(written.Categories, Is.EqualTo(new[] { "IT" }));
+        Assert.That(written.NavToken, Is.EqualTo("abc"));
+        Assert.That(written.Municipalities.Single().Number, Is.EqualTo("3403"));
+        Assert.That(File.Exists(path + ".bak"), Is.True);
+    }
+
+    [Test]
+    public void WriteFocus_on_invalid_json_leaves_the_file_and_its_existing_backup_untouched()
+    {
+        var file = new HuginConfigFile(ConfigPath);
+        file.WriteFocus(new FocusConfig(["62"], ["utvikler"])); // first write: file created, no .bak yet
+        file.WriteFocus(new FocusConfig(["63"], ["backend"])); // second write: creates .bak from the first write's content
+        var backupBeforeFailure = File.ReadAllText(ConfigPath + ".bak");
+
+        File.WriteAllText(ConfigPath, "{ this is not json");
+
+        Assert.Catch<JsonException>(() => file.WriteFocus(new FocusConfig(["64"], ["frontend"])));
+
+        Assert.That(File.ReadAllText(ConfigPath), Is.EqualTo("{ this is not json"),
+            "a failed write must not touch the original config");
+        Assert.That(File.ReadAllText(ConfigPath + ".bak"), Is.EqualTo(backupBeforeFailure),
+            "a failed write must not touch the existing backup");
     }
 }
