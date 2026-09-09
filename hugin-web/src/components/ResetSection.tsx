@@ -83,6 +83,9 @@ export function ResetSection() {
       window.location.reload()
     } catch (err) {
       setSaving(false)
+      // Re-typing the confirm word per attempt is the whole point of the gate — a failed
+      // attempt must not leave it armed for a silent retry on the next open (Task 11 finding 3).
+      setConfirmText('')
       setHardMessage({
         kind: 'error',
         text: t('reset.hardFailed', { error: err instanceof ApiError ? err.message : String(err) }),
@@ -147,6 +150,7 @@ export function ResetSection() {
         confirmLabel={t('reset.hardConfirmButton')}
         variant="danger"
         confirmDisabled={confirmText !== CONFIRM_WORD}
+        confirmDescribedBy="reset-confirm-word-label"
         onConfirm={handleHardConfirm}
         onCancel={() => {
           setHardOpen(false)
@@ -167,7 +171,7 @@ export function ResetSection() {
           <a href="/export">{t('nav.export')}</a>
         </p>
         <div className="field">
-          <label className="label" htmlFor="reset-confirm-word">
+          <label id="reset-confirm-word-label" className="label" htmlFor="reset-confirm-word">
             {t('reset.confirmLabel')}
           </label>
           <input

@@ -26,12 +26,20 @@ function coveredMessage(code: string, other: string, t: T): string {
   return t('focus.covered', { code: narrower, broader })
 }
 
+interface Props {
+  /** Bumped by SettingsView whenever a coverage save succeeds. Folded into the preview cache
+   * key below (not used as a remount key — a coverage save must not discard an unsaved
+   * bransje/keyword draft, Task 11 finding 2): a code already previewed under the old coverage
+   * still fetches fresh, since the cache key it lived under no longer matches. */
+  previewVersion?: number
+}
+
 /** Settings → Fokus (spec v3.5 Part B): edits the server's discovery bransjer/keywords through
  * hugin.json, mirroring CoverageSection's shape (load once, keep a draft, one Save) and its
  * conventions for read-only mode, saving and errors. Also carries the Part C full-backfill
  * button — SyncHeader's polling must stay identity-independent (v3.2 trap), so it can't live
  * there. */
-export function FocusSection() {
+export function FocusSection({ previewVersion = 0 }: Props) {
   const [loaded, setLoaded] = useState<FocusConfigDto | null>(null)
   const [draft, setDraft] = useState<FocusConfigDto | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -47,9 +55,10 @@ export function FocusSection() {
   const { readOnly } = useReadOnly()
   const addCodeRef = useRef<HTMLInputElement>(null)
   const addKeywordRef = useRef<HTMLInputElement>(null)
-  // Cached per code, for the lifetime of this component instance. A remount (SettingsView would
-  // key on the coverage scope to force one) starts with a fresh Map — a count fetched under the
-  // old kommuner is a wrong number, not a stale one.
+  // Cached per code, keyed together with `previewVersion` so a coverage save (which bumps that
+  // prop) invalidates every cached count without needing a remount — a count fetched under the
+  // old kommuner is a wrong number, not a stale one, but the fix is a version-qualified key
+  // (Task 11 finding 2), not throwing away the whole component (and the unsaved draft with it).
   const previewCache = useRef(new Map<string, NacePreviewDto>())
 
   const load = useCallback(() => {
@@ -69,14 +78,15 @@ export function FocusSection() {
 
   const preview = async (code: string) => {
     if (!NACE_PATTERN.test(code)) return setPreviewText(t('focus.previewFailed'))
-    const cached = previewCache.current.get(code)
+    const cacheKey = `${previewVersion}:${code}`
+    const cached = previewCache.current.get(cacheKey)
     const result =
       cached ??
       (await api
         .getGuarded<NacePreviewDto>(`/api/config/focus/preview?nace=${encodeURIComponent(code)}`)
         .catch(() => null))
     if (!result) return setPreviewText(t('focus.previewFailed'))
-    previewCache.current.set(code, result)
+    previewCache.current.set(cacheKey, result)
     // Ruling 3: only a genuine zero count says "0 bedrifter" — a resolved, nonzero count with no
     // name shows the count honestly, with the code standing in for the missing name.
     const text =

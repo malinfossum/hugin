@@ -39,14 +39,16 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   const [removing, setRemoving] = useState<SourceDto | null>(null)
   const [listError, setListError] = useState<string | null>(null)
   const [focusCompanies, setFocusCompanies] = useState<CompanyDto[]>([])
-  // Bumped when CoverageSection's Save succeeds; used as FocusSection's key so a coverage
-  // change remounts it, resetting its per-code preview cache (v3.5 Task 11 ruling 2 — a cached
-  // count from the old coverage is a wrong number, not a stale one).
+  // Bumped when CoverageSection's Save succeeds; passed to FocusSection as `previewVersion` and
+  // folded into its preview cache key, so a code previewed under the old coverage fetches fresh
+  // instead of serving a stale count (v3.5 Task 11 ruling 2). Deliberately NOT a remount key
+  // (that was the original approach, and review finding 2 caught it): remounting would also
+  // throw away any bransje/keyword edit still sitting unsaved in FocusSection's own draft.
   const [coverageVersion, setCoverageVersion] = useState(0)
   const t = useT()
   const [lang, setLang] = useLang()
   const announce = useAnnounce()
-  const { readOnly } = useReadOnly()
+  const { readOnly, markScopeConfigured } = useReadOnly()
   const { focus, setFocus, resetFocus } = useFocus()
 
   const load = useCallback(() => {
@@ -371,9 +373,16 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         </fieldset>
       </section>
 
-      <CoverageSection onSaved={() => setCoverageVersion((v) => v + 1)} />
+      <CoverageSection
+        onSaved={() => {
+          setCoverageVersion((v) => v + 1)
+          // A scope was just written — the same live-value fix as first-run's onDone (Task 11
+          // finding 1), for the path that never goes through FirstRunDialog at all.
+          markScopeConfigured()
+        }}
+      />
 
-      <FocusSection key={coverageVersion} />
+      <FocusSection previewVersion={coverageVersion} />
 
       <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
         <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>

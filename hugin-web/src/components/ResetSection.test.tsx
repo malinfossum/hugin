@@ -231,4 +231,39 @@ describe('ResetSection', () => {
     expect(window.localStorage.getItem('hugin-focus')).not.toBeNull()
     expect(reload).not.toHaveBeenCalled()
   })
+
+  it('clears the typed confirmation after a failed hard reset, so reopening the dialog starts disabled again (Task 11 finding 3)', async () => {
+    const user = userEvent.setup()
+    const { fetchMock } = fakeServer({ resetStatus: 409 })
+    renderSection(fetchMock)
+
+    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
+    await user.click(screen.getByRole('button', { name: 'Slett alt' }))
+
+    await screen.findByText('Kunne ikke nullstille: En synk kjører — vent til den er ferdig.')
+
+    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    expect(screen.getByLabelText('Skriv NULLSTILL for å bekrefte')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'Slett alt' })).toBeDisabled()
+  })
+
+  it('focuses the dialog heading on open, not the Eksport link, and describes the disabled confirm button (Task 11 finding 4)', async () => {
+    const user = userEvent.setup()
+    renderSection(fakeServer().fetchMock)
+
+    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Slette alt og starte på nytt?' })
+    expect(
+      within(dialog).getByRole('heading', { name: 'Slette alt og starte på nytt?' })
+    ).toHaveFocus()
+
+    const confirm = screen.getByRole('button', { name: 'Slett alt' })
+    const describedBy = confirm.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)).toHaveTextContent(
+      'Skriv NULLSTILL for å bekrefte'
+    )
+  })
 })

@@ -715,24 +715,51 @@ describe('Dekning (coverage)', () => {
     await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
     await screen.findByText('Lagret — synkroniserer …')
 
-    // FocusSection remounted: its add-code field is empty again (fresh instance), and the
-    // preview endpoint has only been called once so far.
+    // FocusSection is NOT remounted (Task 11 finding 2 — a remount would also discard an
+    // unsaved draft): the preview endpoint has only been called once so far, invalidated
+    // through a version-qualified cache key instead.
     const previewCalls = server.fetchMock.mock.calls.filter(([u]) =>
       String(u).startsWith('/api/config/focus/preview')
     )
     expect(previewCalls).toHaveLength(1)
 
-    const focusSectionAfter = screen.getByRole('region', { name: 'Fokus' })
-    await user.type(within(focusSectionAfter).getByLabelText('Legg til bransje'), '62')
-    await user.click(within(focusSectionAfter).getByRole('button', { name: 'Vis antall' }))
+    // Same instance, same field still holding '62' from before the save — just click Preview
+    // again rather than retyping into a field a remount would have cleared.
+    await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
 
     expect(
-      await within(focusSectionAfter).findByText('62 · IT-tjenester — 20 bedrifter')
+      await within(focusSection).findByText('62 · IT-tjenester — 20 bedrifter')
     ).toBeInTheDocument()
     const previewCallsAfter = server.fetchMock.mock.calls.filter(([u]) =>
       String(u).startsWith('/api/config/focus/preview')
     )
     expect(previewCallsAfter).toHaveLength(2)
+  })
+
+  it('an unsaved Fokus draft (an added bransje not yet saved) survives a coverage save (Task 11 finding 2)', async () => {
+    const server = fakeServer([])
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const focusSection = await screen.findByRole('region', { name: 'Fokus' })
+
+    await user.type(within(focusSection).getByLabelText('Legg til bransje'), '47.911')
+    await user.click(
+      within(focusSection).getByRole('button', { name: 'Legg til bransje i listen' })
+    )
+    expect(within(focusSection).getByText('47.911')).toBeInTheDocument()
+
+    await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
+    await screen.findByText('Lagret — synkroniserer …')
+
+    // A coverage save must not have called Fokus's own PUT — the draft is still just local
+    // state, unsaved, and it is still there.
+    expect(within(focusSection).getByText('47.911')).toBeInTheDocument()
+    const focusPuts = server.fetchMock.mock.calls.filter(
+      ([u, i]) => u === '/api/config/focus' && (i?.method ?? 'GET') === 'PUT'
+    )
+    expect(focusPuts).toHaveLength(0)
   })
 
   it('switching language does not discard an unsaved coverage edit', async () => {

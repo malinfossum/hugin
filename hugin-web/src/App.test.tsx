@@ -360,6 +360,31 @@ describe('App first-run focus dialog', () => {
     expect(await screen.findByRole('dialog', { name: 'Hva vil du følge?' })).toBeInTheDocument()
   })
 
+  it('completing that same dialog actually closes it — scopeConfigured is a live value, not the boot-time snapshot (Task 11 finding 1)', async () => {
+    const fetchMock = fakeServer({ scopeConfigured: false })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    // Without the fix, `scopeConfigured === false` never stops being true (it's the frozen
+    // boot-time fetch, and this fake server always answers false), so the dialog reopens right
+    // after Start closes it — the fresh-install path this whole feature exists for.
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    )
+    // Nor did the user dismiss it via Escape — Start is what closed it.
+    expect(
+      fetchMock.mock.calls.some(
+        ([u, i]) =>
+          u === '/api/first-run-dismissed' && (i as RequestInit | undefined)?.method === 'POST'
+      )
+    ).toBe(false)
+  })
+
   it('stays closed for the rest of the session after an Esc-dismiss', async () => {
     const fetchMock = fakeServer()
     vi.stubGlobal('fetch', fetchMock)

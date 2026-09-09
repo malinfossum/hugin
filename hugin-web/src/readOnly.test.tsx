@@ -1,10 +1,18 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ReadOnlyProvider, useReadOnly } from './readOnly'
 
 function Probe() {
-  const { readOnly, resolved, scopeConfigured } = useReadOnly()
-  return <p>{`resolved=${resolved} readOnly=${readOnly} scopeConfigured=${scopeConfigured}`}</p>
+  const { readOnly, resolved, scopeConfigured, markScopeConfigured } = useReadOnly()
+  return (
+    <>
+      <p>{`resolved=${resolved} readOnly=${readOnly} scopeConfigured=${scopeConfigured}`}</p>
+      <button type="button" onClick={markScopeConfigured}>
+        mark
+      </button>
+    </>
+  )
 }
 
 function statusServer(body: unknown, ok = true) {
@@ -63,5 +71,28 @@ describe('ReadOnlyProvider', () => {
         screen.getByText('resolved=true readOnly=false scopeConfigured=false')
       ).toBeInTheDocument()
     )
+  })
+
+  it('markScopeConfigured flips scopeConfigured to true immediately, without another /api/status round-trip (Task 11 finding 1)', async () => {
+    const fetchMock = statusServer({ readOnly: false, scopeConfigured: false })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(
+      <ReadOnlyProvider>
+        <Probe />
+      </ReadOnlyProvider>
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByText('resolved=true readOnly=false scopeConfigured=false')
+      ).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: 'mark' }))
+
+    expect(
+      screen.getByText('resolved=true readOnly=false scopeConfigured=true')
+    ).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

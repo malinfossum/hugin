@@ -100,11 +100,11 @@ function fakeServer(opts: ServerOptions = {}) {
   return calls
 }
 
-function renderSection() {
+function renderSection(props: { previewVersion?: number } = {}) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <FocusSection />
+        <FocusSection {...props} />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -247,6 +247,34 @@ describe('FocusSection', () => {
     await screen.findByText(/45 bedrifter/)
 
     expect(calls.filter((c) => c.url.startsWith('/api/config/focus/preview'))).toHaveLength(2)
+  })
+
+  it('invalidates the preview cache when previewVersion changes, without remounting (Task 11 finding 2)', async () => {
+    const calls = fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      preview: { '63': { code: '63', name: 'Databehandling', units: 45 } },
+    })
+
+    const { rerender } = renderSection({ previewVersion: 0 })
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '63')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await screen.findByText(/45 bedrifter/)
+
+    rerender(
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusSection previewVersion={1} />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    )
+
+    // Same instance, not a remount — the typed code is still sitting in the field.
+    expect(screen.getByLabelText('Legg til bransje')).toHaveValue('63')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await waitFor(() => {
+      expect(calls.filter((c) => c.url.startsWith('/api/config/focus/preview'))).toHaveLength(2)
+    })
   })
 
   it('sends X-Hugin on the preview call (guarded GET)', async () => {

@@ -118,6 +118,56 @@ describe('ConfirmDialog', () => {
     expect(confirm).not.toHaveClass('btn-primary')
   })
 
+  it('focuses the heading when the dialog opens, not the first focusable child (Task 11 finding 4)', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Slett rad?"
+        confirmLabel="Slett"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      >
+        <a href="/somewhere">Et sted</a>
+      </ConfirmDialog>
+    )
+
+    expect(screen.getByRole('heading', { name: 'Slett rad?' })).toHaveFocus()
+  })
+
+  it('sets aria-describedby on the confirm button from confirmDescribedBy', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Slett rad?"
+        confirmLabel="Slett"
+        confirmDescribedBy="why-disabled"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      >
+        <p id="why-disabled">Fordi.</p>
+      </ConfirmDialog>
+    )
+
+    expect(screen.getByRole('button', { name: 'Slett' })).toHaveAttribute(
+      'aria-describedby',
+      'why-disabled'
+    )
+  })
+
+  it('leaves aria-describedby absent when confirmDescribedBy is omitted', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Slett rad?"
+        confirmLabel="Slett"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Slett' })).not.toHaveAttribute('aria-describedby')
+  })
+
   it('disables the confirm button when confirmDisabled is true, and it stays clickable when omitted', () => {
     const onConfirm = vi.fn()
     const { rerender } = render(

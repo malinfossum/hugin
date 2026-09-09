@@ -83,8 +83,10 @@ export interface StatusDto {
   pipelineEntries: number
   readOnly: boolean
   /** True when municipalities, fylker or allOfNorway is non-empty — false on a fresh install
-   * with no scope chosen yet (v3.5 Part A3). */
-  scopeConfigured: boolean
+   * with no scope chosen yet (v3.5 Part A3). Optional, not `| null`: an older or degraded
+   * response can omit the field entirely rather than sending it as an explicit null (Task 11
+   * finding 5) — readOnly.tsx's state mirrors that same absence rather than papering over it. */
+  scopeConfigured?: boolean
 }
 
 export interface SourceResultDto {
