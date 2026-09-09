@@ -97,6 +97,9 @@ function fakeServer(
       }
       return Promise.resolve(jsonResponse(kommuner))
     }
+    if (url === '/api/config/focus' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
+    }
     if (url === '/api/sync' && method === 'POST') {
       if (options.syncStatus) {
         return Promise.resolve(

@@ -1,0 +1,439 @@
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { LiveRegionProvider } from '../components/LiveRegion'
+import { LanguageProvider } from '../i18n'
+import { ReadOnlyProvider } from '../readOnly'
+import type { FocusConfigDto, NacePreviewDto } from '../types'
+import { FocusSection } from './FocusSection'
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(body === undefined ? null : JSON.stringify(body), {
+    status,
+    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+  })
+}
+
+const DEFAULT_FOCUS: FocusConfigDto = { naeringskoder: ['62'], keywords: ['utvikler'] }
+
+interface ServerOptions {
+  focus?: FocusConfigDto
+  status?: number
+  recommended?: string[]
+  /** code -> either the preview DTO, or a status code to fail the preview call with. */
+  preview?: Record<string, NacePreviewDto | number>
+  putStatus?: number
+  syncStatus?: number
+  full?: 'ok' | 'busy' | 'failed'
+}
+
+/** Fake server for FocusSection's five endpoints — mirrors the fetch-mocking setup used
+ * elsewhere in this codebase (e.g. FirstRunDialog.test.tsx): a single vi.fn matching on
+ * url+method, recording every call so a test can assert what was actually sent. */
+function fakeServer(opts: ServerOptions = {}) {
+  const focus = opts.focus ?? DEFAULT_FOCUS
+  const calls: { url: string; method: string; headers: Record<string, string>; body?: unknown }[] =
+    []
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    const method = init?.method ?? 'GET'
+    const headers: Record<string, string> = {}
+    new Headers(init?.headers).forEach((value, key) => {
+      headers[key] = value
+    })
+    calls.push({
+      url,
+      method,
+      headers,
+      body: init?.body ? JSON.parse(init.body as string) : undefined,
+    })
+
+    if (url === '/api/status') {
+      return Promise.resolve(
+        jsonResponse({
+          brreg: null,
+          nav: null,
+          reviewMark: null,
+          activeAds: 0,
+          companies: 0,
+          pipelineEntries: 0,
+          readOnly: false,
+        })
+      )
+    }
+    if (url === '/api/config/focus' && method === 'GET') {
+      if (opts.status) return Promise.resolve(jsonResponse({ title: 'nede' }, opts.status))
+      return Promise.resolve(jsonResponse(focus))
+    }
+    if (url === '/api/config/focus' && method === 'PUT') {
+      if (opts.putStatus) {
+        return Promise.resolve(
+          jsonResponse({ title: 'Kunne ikke skrive hugin.json' }, opts.putStatus)
+        )
+      }
+      const body = JSON.parse(init?.body as string)
+      return Promise.resolve(jsonResponse(body))
+    }
+    if (url === '/api/config/focus/recommended' && method === 'GET') {
+      return Promise.resolve(jsonResponse(opts.recommended ?? []))
+    }
+    if (url.startsWith('/api/config/focus/preview') && method === 'GET') {
+      const code = new URL(url, 'http://localhost').searchParams.get('nace') ?? ''
+      const entry = opts.preview?.[code]
+      if (entry === undefined) return Promise.reject(new Error(`no preview stub for ${code}`))
+      if (typeof entry === 'number')
+        return Promise.resolve(jsonResponse({ title: 'Brreg nede' }, entry))
+      return Promise.resolve(jsonResponse(entry))
+    }
+    if (url === '/api/sync' && method === 'POST') {
+      if (opts.syncStatus) return Promise.resolve(jsonResponse({ title: 'busy' }, opts.syncStatus))
+      return Promise.resolve(new Response(null, { status: 202 }))
+    }
+    if (url === '/api/sync?full=1' && method === 'POST') {
+      if (opts.full === 'busy') return Promise.resolve(jsonResponse({ title: 'busy' }, 409))
+      if (opts.full === 'failed') return Promise.resolve(jsonResponse({ title: 'feil' }, 500))
+      return Promise.resolve(new Response(null, { status: 202 }))
+    }
+    return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return calls
+}
+
+function renderSection() {
+  return render(
+    <LanguageProvider>
+      <LiveRegionProvider>
+        <FocusSection />
+      </LiveRegionProvider>
+    </LanguageProvider>
+  )
+}
+
+function renderReadOnly() {
+  return render(
+    <LanguageProvider>
+      <ReadOnlyProvider>
+        <LiveRegionProvider>
+          <FocusSection />
+        </LiveRegionProvider>
+      </ReadOnlyProvider>
+    </LanguageProvider>
+  )
+}
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('FocusSection', () => {
+  it('previews a code before adding it, and announces the count', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: ['utvikler'] },
+      preview: { '63': { code: '63', name: 'Databehandling', units: 45 } },
+    })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '63')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+
+    expect(await screen.findByText(/45 bedrifter/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/45 bedrifter/)
+  })
+
+  it('warns when a code is already covered by a broader one', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '62.010')
+
+    expect(await screen.findByText(/62\.010 dekkes allerede av 62/)).toBeInTheDocument()
+  })
+
+  it('warns the other direction too: typing a broader code over an already-listed narrower one (ruling 2)', async () => {
+    fakeServer({ focus: { naeringskoder: ['62.010'], keywords: [] } })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '62')
+
+    expect(await screen.findByText(/62\.010 dekkes allerede av 62/)).toBeInTheDocument()
+  })
+
+  it('removing the last keyword moves focus to the add field', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: ['utvikler'] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern nøkkelord «utvikler»' }))
+
+    expect(screen.getByLabelText('Legg til nøkkelord')).toHaveFocus()
+  })
+
+  it('does not move focus when a keyword is removed but others remain', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: ['utvikler', 'frontend'] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern nøkkelord «utvikler»' }))
+
+    expect(screen.getByLabelText('Legg til nøkkelord')).not.toHaveFocus()
+    expect(screen.queryByText('utvikler')).not.toBeInTheDocument()
+    expect(screen.getByText('frontend')).toBeInTheDocument()
+  })
+
+  it('adds a typed bransje code to the list and clears the field', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, '72')
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
+        name: 'Legg til i listen',
+      })
+    )
+
+    expect(screen.getByText('72')).toBeInTheDocument()
+    expect(input).toHaveValue('')
+  })
+
+  it('removes a bransje code from the list', async () => {
+    fakeServer({ focus: { naeringskoder: ['62', '72'], keywords: [] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern bransje 72' }))
+
+    expect(screen.queryByText('72')).not.toBeInTheDocument()
+    expect(screen.getByText('62')).toBeInTheDocument()
+  })
+
+  it('adds a typed keyword to the list', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til nøkkelord')
+    await userEvent.type(input, 'backend')
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Nøkkelord' })).getByRole('button', {
+        name: 'Legg til i listen',
+      })
+    )
+
+    expect(screen.getByText('backend')).toBeInTheDocument()
+  })
+
+  it('«Legg til anbefalte» adds only the recommended codes not already configured', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      recommended: ['62', '72', '63'],
+    })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
+
+    expect(await screen.findByText('72')).toBeInTheDocument()
+    expect(screen.getByText('63')).toBeInTheDocument()
+    // '62' was already there — still exactly one chip for it, not a duplicate.
+    expect(screen.getAllByText('62')).toHaveLength(1)
+  })
+
+  it('caches a preview per code within one mount, and fetches fresh again after a remount (scope-keyed cache)', async () => {
+    const calls = fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      preview: { '63': { code: '63', name: 'Databehandling', units: 45 } },
+    })
+
+    const { unmount } = renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '63')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await screen.findByText(/45 bedrifter/)
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await waitFor(() => {
+      expect(calls.filter((c) => c.url.startsWith('/api/config/focus/preview'))).toHaveLength(1)
+    })
+
+    unmount()
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '63')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await screen.findByText(/45 bedrifter/)
+
+    expect(calls.filter((c) => c.url.startsWith('/api/config/focus/preview'))).toHaveLength(2)
+  })
+
+  it('sends X-Hugin on the preview call (guarded GET)', async () => {
+    const calls = fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      preview: { '63': { code: '63', name: 'Databehandling', units: 45 } },
+    })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '63')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+    await screen.findByText(/45 bedrifter/)
+
+    const previewCall = calls.find((c) => c.url.startsWith('/api/config/focus/preview'))
+    expect(previewCall?.headers['x-hugin']).toBe('1')
+  })
+
+  it('shows a real nonzero count without claiming zero when Brreg returns no name (ruling 3)', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      preview: { '99': { code: '99', name: null, units: 7 } },
+    })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '99')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+
+    expect(await screen.findByText('99 — 7 bedrifter')).toBeInTheDocument()
+    expect(screen.queryByText(/— 0 bedrifter/)).not.toBeInTheDocument()
+  })
+
+  it('shows the literal zero-count text only for a genuine zero (name and units both empty)', async () => {
+    fakeServer({
+      focus: { naeringskoder: ['62'], keywords: [] },
+      preview: { '99': { code: '99', name: null, units: 0 } },
+    })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '99')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+
+    expect(await screen.findByText('99 — 0 bedrifter')).toBeInTheDocument()
+  })
+
+  it('shows a failure message, not a fabricated zero, when Brreg is unreachable', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] }, preview: { '99': 503 } })
+
+    renderSection()
+    await userEvent.type(await screen.findByLabelText('Legg til bransje'), '99')
+    await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
+
+    expect(await screen.findByText('Kunne ikke hente antall')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Kunne ikke hente antall')
+    expect(screen.getByRole('status')).not.toHaveTextContent(/bedrifter/)
+  })
+
+  it('a changed naeringskoder starts a sync on save', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, '72')
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
+        name: 'Legg til i listen',
+      })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
+    })
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret — synkroniserer …'))
+  })
+
+  it('a keywords-only change does not start a sync on save', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til nøkkelord')
+    await userEvent.type(input, 'backend')
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Nøkkelord' })).getByRole('button', {
+        name: 'Legg til i listen',
+      })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret — gjelder fra neste synk'))
+    expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(false)
+  })
+
+  it('a failed save shows a retryable error and does not sync', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] }, putStatus: 500 })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, '72')
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
+        name: 'Legg til i listen',
+      })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
+
+    expect(await screen.findByText(/Kunne ikke lagre fokus/)).toBeInTheDocument()
+    expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(false)
+  })
+
+  it('confirming the full backfill posts /api/sync?full=1 (ruling 4)', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Full NAV-gjennomgang' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent(/minutter/)
+    expect(dialog).toHaveTextContent(/aktive annonser/)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Full NAV-gjennomgang' }))
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.url === '/api/sync?full=1' && c.method === 'POST')).toBe(true)
+    })
+  })
+
+  it('cancelling the full-backfill dialog posts nothing', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Full NAV-gjennomgang' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Avbryt' }))
+
+    expect(calls.some((c) => c.url === '/api/sync?full=1')).toBe(false)
+  })
+
+  it('read-only mode disables every control and hides Save and the backfill button', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: ['utvikler'] } })
+    // ReadOnlyProvider itself reads /api/status; override it to readOnly: true for this test.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url === '/api/status') {
+          return Promise.resolve(
+            jsonResponse({
+              brreg: null,
+              nav: null,
+              reviewMark: null,
+              activeAds: 0,
+              companies: 0,
+              pipelineEntries: 0,
+              readOnly: true,
+            })
+          )
+        }
+        if (url === '/api/config/focus' && (init?.method ?? 'GET') === 'GET') {
+          return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: ['utvikler'] }))
+        }
+        return Promise.reject(new Error(`unhandled ${url}`))
+      })
+    )
+
+    renderReadOnly()
+
+    await waitFor(() =>
+      expect(screen.getByRole('group', { name: 'Fokus: bransjer og nøkkelord' })).toBeDisabled()
+    )
+    expect(screen.queryByRole('button', { name: 'Lagre fokus' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Full NAV-gjennomgang' })).not.toBeInTheDocument()
+  })
+
+  it('shows a retryable error when the initial load fails', async () => {
+    fakeServer({ status: 500 })
+
+    renderSection()
+
+    expect(await screen.findByText('Kunne ikke laste fokus.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Prøv igjen' })).toBeInTheDocument()
+  })
+})

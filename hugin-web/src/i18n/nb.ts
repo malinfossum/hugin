@@ -20,6 +20,7 @@ export const nb = {
   'common.back': 'Tilbake',
   'common.all': 'Alle',
   'common.branchTag': '[avdeling]',
+  'common.addToList': 'Legg til i listen',
 
   'status.active': 'Aktiv',
   'status.applied': 'Søkt',
@@ -201,6 +202,42 @@ export const nb = {
   'coverage.othersHint': 'Dekkes også, utenfor {fylke}',
   'coverage.otherFylke': '{fylke} (hele fylket)',
   'coverage.removeOther': 'Fjern {name}',
+
+  // Deliberately not the bare 'Fokus' the plan's brief gave: the pre-existing
+  // settings.focusHeading section ("Fokus" — the dashboard display filter) already claims that
+  // exact accessible name, and two regions/headings with the identical name break every
+  // getByRole('region'|'heading', { name: 'Fokus' }) query in SettingsView.test.tsx. Keeping
+  // "Fokus" as the recognizable lead word while disambiguating the rest.
+  'focus.heading': 'Fokus: bransjer og nøkkelord',
+  'focus.hint':
+    'Bransjer styrer hvilke bedrifter Hugin oppdager. Nøkkelord styrer hvilke annonser som lagres.',
+  'focus.bransjerLegend': 'Bransjer (næringskoder)',
+  'focus.addCode': 'Legg til bransje',
+  'focus.previewButton': 'Vis antall',
+  'focus.previewResult': '{code} · {name} — {units} bedrifter',
+  'focus.previewUnknown': '{code} — 0 bedrifter',
+  // Ruling 3: the count resolved but Brreg returned no name — shown honestly with the code
+  // standing in for the missing name, never previewUnknown's literal "0" for a real count.
+  'focus.previewNoName': '{code} — {units} bedrifter',
+  'focus.previewFailed': 'Kunne ikke hente antall',
+  'focus.covered': '{code} dekkes allerede av {broader}',
+  'focus.recommended': 'Legg til anbefalte',
+  'focus.removeCode': 'Fjern bransje {code}',
+  'focus.keywordsLegend': 'Nøkkelord',
+  'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',
+  'focus.addKeyword': 'Legg til nøkkelord',
+  'focus.removeKeyword': 'Fjern nøkkelord «{keyword}»',
+  'focus.save': 'Lagre fokus',
+  'focus.saved': 'Lagret — synkroniserer …',
+  'focus.savedNoSync': 'Lagret — gjelder fra neste synk',
+  'focus.saveFailed': 'Kunne ikke lagre fokus: {error}',
+  'focus.loadError': 'Kunne ikke laste fokus.',
+  // Part C full backfill (ruling 4): lives on this card, not SyncHeader (v3.2 polling trap).
+  'focus.backfillButton': 'Full NAV-gjennomgang',
+  'focus.backfillConfirmTitle': 'Kjøre full NAV-gjennomgang?',
+  'focus.backfillConfirmBody':
+    'Dette kan ta noen minutter. Annonser som er lukket kommer tilbake uten innhold, så gjennomgangen henter bare aktive annonser.',
+  'focus.backfillStarted': 'Full gjennomgang startet.',
 
   'focus.title': 'Hva vil du følge?',
   'focus.intro':

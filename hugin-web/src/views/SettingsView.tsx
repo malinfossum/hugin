@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react
 import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageSection } from '../components/CoverageSection'
+import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
 import { KNOWN_CATEGORIES, useFocus } from '../focus'
 import { FYLKER, fylkeOf } from '../fylker'
@@ -366,6 +367,8 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
       </section>
 
       <CoverageSection />
+
+      <FocusSection />
 
       <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
         <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>

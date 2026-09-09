@@ -119,3 +119,14 @@ export interface DiscoveryWriteRequest {
   fylker: string[]
   allOfNorway: boolean
 }
+
+export interface FocusConfigDto {
+  naeringskoder: string[]
+  keywords: string[]
+}
+
+export interface NacePreviewDto {
+  code: string
+  name: string | null
+  units: number
+}

@@ -72,6 +72,9 @@ function fakeServer(
       }
       return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
     }
+    if (url === '/api/config/focus' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
+    }
     if (url === '/api/sync' && method === 'POST') {
       return Promise.resolve(new Response(null, { status: 202 }))
     }

@@ -20,6 +20,7 @@ export const en = {
   'common.back': 'Back',
   'common.all': 'All',
   'common.branchTag': '[branch]',
+  'common.addToList': 'Add to the list',
 
   'status.active': 'Active',
   'status.applied': 'Applied',
@@ -201,6 +202,34 @@ export const en = {
   'coverage.othersHint': 'Also covered, outside {fylke}',
   'coverage.otherFylke': '{fylke} (whole county)',
   'coverage.removeOther': 'Remove {name}',
+
+  'focus.heading': 'Focus: industries and keywords',
+  'focus.hint':
+    'Industries control which companies Hugin discovers. Keywords control which ads are saved.',
+  'focus.bransjerLegend': 'Industries (NACE codes)',
+  'focus.addCode': 'Add industry',
+  'focus.previewButton': 'Show count',
+  'focus.previewResult': '{code} · {name} — {units} companies',
+  'focus.previewUnknown': '{code} — 0 companies',
+  'focus.previewNoName': '{code} — {units} companies',
+  'focus.previewFailed': 'Could not fetch the count',
+  'focus.covered': '{code} is already covered by {broader}',
+  'focus.recommended': 'Add recommended',
+  'focus.removeCode': 'Remove industry {code}',
+  'focus.keywordsLegend': 'Keywords',
+  'focus.keywordsHint': 'Changes apply to ads that arrive after the next sync.',
+  'focus.addKeyword': 'Add keyword',
+  'focus.removeKeyword': 'Remove keyword “{keyword}”',
+  'focus.save': 'Save focus',
+  'focus.saved': 'Saved — syncing …',
+  'focus.savedNoSync': 'Saved — applies from the next sync',
+  'focus.saveFailed': 'Could not save focus: {error}',
+  'focus.loadError': 'Could not load focus.',
+  'focus.backfillButton': 'Full NAV backfill',
+  'focus.backfillConfirmTitle': 'Run a full NAV backfill?',
+  'focus.backfillConfirmBody':
+    'This can take a few minutes. Closed ads come back stripped of content, so the backfill only recovers open ads.',
+  'focus.backfillStarted': 'Full backfill started.',
 
   'focus.title': 'What do you want to follow?',
   'focus.intro':

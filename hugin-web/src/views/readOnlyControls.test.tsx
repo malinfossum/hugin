@@ -88,6 +88,8 @@ function demoServer() {
         })
       )
     if (url === '/api/kommuner') return Promise.resolve(json([{ number: '3403', name: 'Hamar' }]))
+    if (url === '/api/config/focus')
+      return Promise.resolve(json({ naeringskoder: ['62'], keywords: ['utvikler'] }))
     return Promise.reject(new Error(`unhandled ${url}`))
   })
 }
@@ -150,5 +152,10 @@ describe('read-only mode hides write controls', () => {
       expect(screen.queryByRole('button', { name: 'Lagre dekning' })).not.toBeInTheDocument()
     )
     expect(screen.getByRole('group', { name: /Dekning/ })).toBeDisabled()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Lagre fokus' })).not.toBeInTheDocument()
+    )
+    expect(screen.queryByRole('button', { name: 'Full NAV-gjennomgang' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /Fokus:/ })).toBeDisabled()
   })
 })

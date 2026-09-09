@@ -348,6 +348,21 @@ input[type="text"] {
   }
 }
 
+/* Fokus card (v3.5 Part B): bransje codes and keywords, each a removable chip. Wraps
+   mobile-first — the list just grows taller on a narrow viewport, never scrolls sideways. */
+.focus-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.focus-chip button {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
 /* Demo banner (read-only showcase): a static region right after the header. */
 .demo-banner {
   background: var(--surface-1);
