@@ -85,6 +85,13 @@ public sealed record DiscoveryConfigDto(IReadOnlyList<MunicipalityRef> Municipal
 /// <summary>Numbers only — names are derived from the kommune register server-side (spec v3.4 Part A).</summary>
 public sealed record DiscoveryWriteRequest(IReadOnlyList<string>? MunicipalityNumbers, IReadOnlyList<string>? Fylker, bool AllOfNorway);
 
+public sealed record FocusConfigDto(IReadOnlyList<string> Naeringskoder, IReadOnlyList<string> Keywords)
+{
+    public static FocusConfigDto From(FocusConfig focus) => new(focus.Naeringskoder, focus.Keywords);
+}
+
+public sealed record FocusWriteRequest(IReadOnlyList<string>? Naeringskoder, IReadOnlyList<string>? Keywords);
+
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {
