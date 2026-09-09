@@ -91,7 +91,7 @@ public static class ReadEndpoints
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
             IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, IClock clock,
-            PublicModeOptions mode) =>
+            PublicModeOptions mode, IConfigSource configSource) =>
         {
             var brreg = await syncState.GetAsync("brreg");
             var nav = await syncState.GetAsync("nav");
@@ -102,7 +102,9 @@ public static class ReadEndpoints
                 (await ads.GetActiveAsync(clock.UtcNow)).Count,
                 (await companies.GetAllAsync()).Count,
                 (await pipeline.GetAllAsync()).Count,
-                mode.Enabled));
+                mode.Enabled,
+                configSource.Load() is { } cfg
+                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway)));
         });
     }
 
