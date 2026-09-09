@@ -67,7 +67,7 @@ The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin
 
 `municipalities`, `fylker` and `allOfNorway` are editable from the dashboard (first-run dialog and Settings → Dekning); `naeringskoder` and `keywords` are editable from Settings → Fokus, with a per-code company-count preview from Brreg and a "Legg til anbefalte" button that adds the curated default set. `categories`, `navToken` and `linkouts` stay hand-edited. Saving from the UI rewrites only the changed keys and keeps everything else as it was, after backing the file up to `hugin.json.bak`.
 
-Settings → Nullstilling resets in two levels: clearing the coverage (`municipalities`, `fylker`, `allOfNorway`) so the first-run dialog asks again, keeping the database — or deleting everything, which snapshots the database to `hugin.db.reset-<timestamp>.bak` first, then wipes the companies, ads, pipeline and review marks. Neither can be undone.
+Settings → Nullstilling resets in two levels: clearing the coverage (`municipalities`, `fylker`, `allOfNorway`) so the first-run dialog asks again, keeping the database — or deleting everything, which snapshots the database to `hugin.db.reset-<timestamp>.bak` first, then wipes the companies, ads, pipeline and review marks. To restore a snapshot, stop the app and rename `hugin.db.reset-<timestamp>.bak` to `hugin.db`, replacing the current file, before relaunching.
 
 A full NAV backfill button in Settings → Fokus walks the entire feed history to pick up ads matching a widened keyword list. It takes minutes and recovers open ads only — NAV returns closed ads content-stripped.
 

@@ -2,7 +2,6 @@
   "municipalities": [],
   "fylker": [],
   "allOfNorway": false,
-  "naeringskoder": ["62"],
   "keywords": [
     "utvikler",
     "developer",
@@ -23,7 +22,7 @@
   "categories": ["IT"],
   "navToken": null,
   "linkouts": [
-    { "label": "FINN — utvikler × Innlandet", "url": "<your finn.no saved search URL>" },
+    { "label": "FINN — utvikler", "url": "<your finn.no saved search URL>" },
     { "label": "LinkedIn — entry level", "url": "<your LinkedIn saved search URL>" }
   ]
 }
