@@ -41,14 +41,14 @@ A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App S
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies` / `--ads` (each with `--kommune <nr>`) browse the synced inventory |
 | `hugin export` | Writes data to stdout. `--format md\|txt\|json`, `--scope new\|category\|all` (`category` needs `--category <navn>`), `--include-active` |
 
-The first sync sets a baseline, so `hugin new` starts empty rather than listing the whole register — browse that initial inventory with `hugin list --companies`. `--config <path>` works here too; the database is created next to the config.
+A fresh install has no coverage until it is chosen — in the dashboard, or by hand under `municipalities` in `hugin.json`; `hugin sync` prints how before it exits. The first sync then sets a baseline, so `hugin new` starts empty rather than listing the whole register — browse that initial inventory with `hugin list --companies`. `--config <path>` works here too; the database is created next to the config.
 
 ## The localhost API as a machine interface
 
 The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin.db` — suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, and every state-changing request requires an `X-Hugin: 1` header (CSRF protection, not authentication — local processes are trusted).
 
-- **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`
-- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `PUT|DELETE /api/ads/{feedId}/link` · `POST /api/seen` · `POST /api/sync` · `PUT /api/config/discovery` · `POST /api/first-run-dismissed`
+- **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`, `/api/config/focus`, `/api/config/focus/recommended`
+- **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `PUT|DELETE /api/ads/{feedId}/link` · `POST /api/seen` · `POST /api/sync` (`?full=1` for a full backfill) · `PUT /api/config/discovery` · `PUT /api/config/focus` · `GET /api/config/focus/preview` (side-effecting, needs `X-Hugin: 1` too) · `POST /api/reset` · `POST /api/first-run-dismissed`
 
 ## Configuration
 
@@ -65,7 +65,11 @@ The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin
 | `linkouts` | `{ "label", "url" }` pairs — imported into the dashboard's Sources on first run only; manage them under Settings afterwards |
 | `navToken` | `null` fetches NAV's rotating public token automatically; set a registered token instead |
 
-The first three fields are also editable from the dashboard (first-run dialog and Settings → Dekning). Saving from the UI rewrites only those three keys and keeps every other key as it was, after backing the file up to `hugin.json.bak`. Everything below the line stays hand-edited until v3.5.
+`municipalities`, `fylker` and `allOfNorway` are editable from the dashboard (first-run dialog and Settings → Dekning); `naeringskoder` and `keywords` are editable from Settings → Fokus, with a per-code company-count preview from Brreg and a "Legg til anbefalte" button that adds the curated default set. `categories`, `navToken` and `linkouts` stay hand-edited. Saving from the UI rewrites only the changed keys and keeps everything else as it was, after backing the file up to `hugin.json.bak`.
+
+Settings → Nullstilling resets in two levels: clearing the coverage (`municipalities`, `fylker`, `allOfNorway`) so the first-run dialog asks again, keeping the database — or deleting everything, which snapshots the database to `hugin.db.reset-<timestamp>.bak` first, then wipes the companies, ads, pipeline and review marks. Neither can be undone.
+
+A full NAV backfill button in Settings → Fokus walks the entire feed history to pick up ads matching a widened keyword list. It takes minutes and recovers open ads only — NAV returns closed ads content-stripped.
 
 Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400).
 
