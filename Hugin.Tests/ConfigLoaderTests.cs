@@ -1,3 +1,4 @@
+using Hugin.Core.Config;
 using Hugin.Infrastructure;
 
 namespace Hugin.Tests;
@@ -11,7 +12,7 @@ public class ConfigLoaderTests
 
         Assert.That(warning, Is.Null);
         Assert.That(config.Municipalities, Is.Empty, "no default geography (spec v3.5 Part A)");
-        Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62" }));
+        Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62", "72", "63", "58.2", "64.19", "92", "61", "26.2" }));
     }
 
     [Test]
@@ -89,8 +90,15 @@ public class ConfigLoaderTests
 
         Assert.That(config.Keywords, Is.EqualTo(new[] { "rust" }));
         Assert.That(config.Municipalities, Is.Empty, "municipalities were not overridden — the default is empty");
-        Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62" }));
+        Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62", "72", "63", "58.2", "64.19", "92", "61", "26.2" }));
         Assert.That(config.NavToken, Is.Null);
+    }
+
+    [Test]
+    public void Default_naeringskoder_cover_the_curated_developer_adjacent_set()
+    {
+        Assert.That(new HuginConfig().Naeringskoder,
+            Is.EqualTo(new[] { "62", "72", "63", "58.2", "64.19", "92", "61", "26.2" }));
     }
 
     [Test]

@@ -23,8 +23,18 @@ public sealed class HuginConfig
     // Expands discovery to every kommune in the register — the widest scope, for national reach.
     public bool AllOfNorway { get; init; }
 
-    // SN2025 codes; the prefix "62" matches all sub-codes (the old "62.010" returns zero results).
-    public List<string> Naeringskoder { get; init; } = ["62"];
+    // SN2025 codes; a prefix matches all sub-codes ("62" covers 62.010). Measured against Brreg
+    // 2026-09-09 for four Innlandet kommuner: these eight add ~258 units on top of 62's 1 012.
+    // 64 is deliberately absent — it is 467 units of holding companies; 64.19 is the 35 banks.
+    public List<string> Naeringskoder { get; init; } =
+        ["62",     // IT-tjenester — consultancies and software houses
+         "72",     // Forskning og utviklingsarbeid — research institutes
+         "63",     // Databehandling, hosting, portaler
+         "58.2",   // Programvareutgivelse — product companies
+         "64.19",  // Bankvirksomhet — in-house dev teams
+         "92",     // Lotteri og gambling — Norsk Tipping
+         "61",     // Telekommunikasjon
+         "26.2"];  // Produksjon av datamaskiner
 
     // Deliberately broad — this is the recall net. "AI Engineer", "KI-utvikler" and
     // "Machine Learning Engineer" all contain one of these; the category gate below
