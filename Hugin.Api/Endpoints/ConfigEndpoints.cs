@@ -158,6 +158,28 @@ public static class ConfigEndpoints
                 return Results.Problem(statusCode: 503, title: $"Kunne ikke hente antall fra Brreg: {ex.Message}");
             }
         });
+
+        app.MapPost("/api/reset", async (ResetRequest request, ResetService reset, SyncRunner runner,
+            CancellationToken ct) =>
+        {
+            if (request.Mode is not ("scope" or "all"))
+                return Results.Problem(statusCode: 400, title: "Ukjent nullstillingsmodus.");
+            if (runner.Status.Running)
+                return Results.Problem(statusCode: 409, title: "En synk kjører — vent til den er ferdig.");
+
+            string? snapshot = null;
+            try
+            {
+                if (request.Mode == "all") snapshot = await reset.WipeAsync(ct);
+                reset.ClearScope();
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(statusCode: 500, title: $"Nullstillingen feilet: {ex.Message}");
+            }
+
+            return Results.Ok(new ResetResultDto(request.Mode, snapshot));
+        });
     }
 
     private static bool IsKommuneNumber(string n) => n.Length == 4 && n.All(char.IsAsciiDigit);

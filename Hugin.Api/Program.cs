@@ -107,6 +107,7 @@ builder.Services.AddScoped<PipelineService>();
 builder.Services.AddScoped<AdOverviewService>();
 builder.Services.AddScoped<ExtractService>();
 builder.Services.AddScoped<KommuneRegister>();
+builder.Services.AddScoped<ResetService>();
 
 builder.Services.AddSingleton<SyncRunner>();
 builder.Services.AddSingleton<BootSyncGate>();

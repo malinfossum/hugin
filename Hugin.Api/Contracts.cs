@@ -94,6 +94,10 @@ public sealed record FocusWriteRequest(IReadOnlyList<string>? Naeringskoder, IRe
 
 public sealed record NacePreviewDto(string Code, string? Name, int Units);
 
+public sealed record ResetRequest(string Mode);
+
+public sealed record ResetResultDto(string Mode, string? SnapshotPath);
+
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {

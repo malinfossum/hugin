@@ -169,6 +169,41 @@ public sealed class HuginDbInitializerTests
     }
 
     [Test]
+    public async Task A_reset_does_not_resurrect_the_seeded_sources()
+    {
+        // This is exactly what ResetService.WipeAsync deletes — the sources table itself, and
+        // the brreg/nav SyncStates rows only, never the "sources-seed" marker row. If a reset
+        // ever wiped that marker too, the next launch's InitAsync would silently re-import the
+        // three default sources and the config linkouts the user just deleted.
+        var path = Path.Combine(Path.GetTempPath(), $"hugin-reset-{Guid.NewGuid():N}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(path)).Options;
+
+            await using (var db = new HuginDbContext(options))
+            {
+                await HuginDbInitializer.InitAsync(db);
+                db.Sources.RemoveRange(db.Sources);
+                db.SyncStates.RemoveRange(db.SyncStates.Where(s => s.Source == "brreg" || s.Source == "nav"));
+                await db.SaveChangesAsync();
+            }
+
+            await using (var db = new HuginDbContext(options))
+                await HuginDbInitializer.InitAsync(db);
+
+            await using var check = new HuginDbContext(options);
+            Assert.That(await check.Sources.CountAsync(), Is.Zero,
+                "the sources-seed marker must survive a reset, or the defaults come back");
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+        }
+    }
+
+    [Test]
     public async Task InitAsync_does_not_reseed_after_every_source_is_deleted()
     {
         var path = Path.Combine(Path.GetTempPath(), $"hugin-seed-deleted-{Guid.NewGuid():N}.db");
