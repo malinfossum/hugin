@@ -6,13 +6,15 @@ public sealed record Linkout(string Label, string Url);
 
 /// <summary>
 /// Everything region-specific lives here, so Hugin works anywhere without code changes.
-/// Defaults cover Innlandet. Keywords filter <em>ads</em>, not companies — a company is
-/// interesting regardless of how its ads are worded.
+/// No default geography — an empty scope is a fresh install, not a fallback to some region.
+/// Keywords filter <em>ads</em>, not companies — a company is interesting regardless of how
+/// its ads are worded.
 /// </summary>
 public sealed class HuginConfig
 {
-    public List<MunicipalityRef> Municipalities { get; init; } =
-        [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405"), new("Ringsaker", "3411")];
+    // No default geography: which kommuner matter is only knowable by asking (spec v3.5 Part A).
+    // The first-run dialog writes this list; the CLI prints how to fill it by hand.
+    public List<MunicipalityRef> Municipalities { get; init; } = [];
 
     // 2-digit fylke prefixes (e.g. "39" = Vestfold og Telemark) — expands discovery to every
     // kommune in the fylke, resolved against the kommune register at sync time.

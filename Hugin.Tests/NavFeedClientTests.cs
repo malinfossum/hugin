@@ -10,13 +10,14 @@ public class NavFeedClientTests
 {
     private const string NavBase = "https://pam-stilling-feed.nav.no/";
 
-    // Config-only scope (empty kommune register) — every existing test fixture uses names
-    // that are configured directly (HAMAR, RINGSAKER), so this is byte-identical to the old
-    // config-only resolution.
-    private static readonly MunicipalityScope ConfigScope =
-        MunicipalityScope.Build(new HuginConfig(), new Dictionary<string, string>());
+    // No default geography any more (spec v3.5 Part A) — every fixture below resolves via
+    // HAMAR or RINGSAKER, so those two are configured explicitly to keep this byte-identical
+    // to the old config-only resolution.
+    private static readonly HuginConfig Config =
+        new() { Municipalities = [new("Hamar", "3403"), new("Ringsaker", "3411")] };
 
-    private static readonly HuginConfig Config = new();
+    private static readonly MunicipalityScope ConfigScope =
+        MunicipalityScope.Build(Config, new Dictionary<string, string>());
 
     private static readonly string TokenBody =
         "Current public token for Nav Job Vacancy Feed:\n" +

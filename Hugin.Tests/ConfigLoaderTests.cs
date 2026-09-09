@@ -10,7 +10,7 @@ public class ConfigLoaderTests
         var config = ConfigLoader.Parse("", out var warning);
 
         Assert.That(warning, Is.Null);
-        Assert.That(config.Municipalities.Select(m => m.Number), Does.Contain("3407"));
+        Assert.That(config.Municipalities, Is.Empty, "no default geography (spec v3.5 Part A)");
         Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62" }));
     }
 
@@ -20,7 +20,7 @@ public class ConfigLoaderTests
         var config = ConfigLoader.Parse("{ this is not json", out var warning);
 
         Assert.That(warning, Is.Not.Null);
-        Assert.That(config.Municipalities, Is.Not.Empty, "a broken config must not leave Hugin unusable");
+        Assert.That(config.Keywords, Is.Not.Empty, "a broken config must not leave Hugin unusable");
     }
 
     [Test]
@@ -88,7 +88,7 @@ public class ConfigLoaderTests
         var config = ConfigLoader.Parse("""{ "keywords": ["rust"] }""", out _);
 
         Assert.That(config.Keywords, Is.EqualTo(new[] { "rust" }));
-        Assert.That(config.Municipalities, Is.Not.Empty, "municipalities were not overridden");
+        Assert.That(config.Municipalities, Is.Empty, "municipalities were not overridden — the default is empty");
         Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62" }));
         Assert.That(config.NavToken, Is.Null);
     }
@@ -100,7 +100,7 @@ public class ConfigLoaderTests
         var loaded = ConfigLoader.Load(missing);
 
         Assert.That(loaded.Warning, Is.Null, "a missing config is normal on first run, not an error");
-        Assert.That(loaded.Config.Municipalities, Is.Not.Empty);
+        Assert.That(loaded.Config.Municipalities, Is.Empty, "no default geography (spec v3.5 Part A)");
         Assert.That(loaded.DatabasePath, Is.EqualTo(Path.Combine(Path.GetDirectoryName(missing)!, "hugin.db")));
     }
 }

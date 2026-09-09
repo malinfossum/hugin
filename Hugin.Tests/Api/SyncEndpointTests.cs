@@ -15,6 +15,9 @@ public sealed class SyncEndpointTests
     public async Task Post_sync_runs_to_completion_with_source_results()
     {
         using var factory = new ApiFactory();
+        // No default geography any more (spec v3.5 Part A) — this test is about the sync
+        // endpoint's own mechanics, not scope resolution, so give it an explicit one.
+        File.WriteAllText(factory.ConfigPath, """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
         using var client = factory.CreateApiClient();
 
         var post = await client.PostAsync("/api/sync", null);

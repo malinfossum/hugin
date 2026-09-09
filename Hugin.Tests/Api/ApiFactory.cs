@@ -42,6 +42,11 @@ public sealed class ApiFactory(bool autosync = false, bool existingDb = false, b
             builder.UseSetting("hugin:public", "true");
             builder.UseSetting("hugin:state", StateDir);
             builder.UseSetting("hugin:workingdb", DbPath);
+
+            // No default geography any more (spec v3.5 Part A) — the real demo always ships
+            // with a scope already chosen. IConfigSource below is wired to ConfigPath (not the
+            // state-dir file above) regardless of public mode, so that is where it belongs.
+            File.WriteAllText(ConfigPath, """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
         }
         builder.ConfigureServices(services =>
         {
@@ -64,10 +69,14 @@ public sealed class ApiFactory(bool autosync = false, bool existingDb = false, b
             services.AddSingleton<INavFeedClient>(Nav);
             services.AddSingleton<IWebsiteProber>(Prober);
 
-            // Otherwise-default config, but with one linkout so /api/status's passthrough is observable.
+            // Otherwise-default config, but with one linkout so /api/status's passthrough is
+            // observable, and Gjøvik configured so the read endpoints' kommune-name resolution
+            // (config wins over the register) stays exercised now that there is no default
+            // geography (spec v3.5 Part A).
             services.RemoveAll(typeof(HuginConfig));
             services.AddSingleton(new HuginConfig
             {
+                Municipalities = [new("Gjøvik", "3407")],
                 Linkouts = [new Linkout("Finn.no", "https://finn.no")],
             });
         });

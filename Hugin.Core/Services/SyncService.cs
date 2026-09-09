@@ -158,6 +158,11 @@ public sealed class SyncService(
                 return new SourceResult(false, 0,
                     $"Ugyldig kommunenummer i konfigurasjonen: «{invalid}» — må være 4 sifre");
 
+            // Nothing configured at all is the fresh-install case, not a register failure —
+            // the two need different messages because only one of them is the user's to fix.
+            if (config.Municipalities.Count == 0 && config.Fylker.Count == 0 && !config.AllOfNorway)
+                return new SourceResult(false, 0, "Ingen dekning valgt — velg kommuner i dashbordet");
+
             // An empty allow-set is not "no filter" — Brreg ignores `kommunenummer=` and answers
             // with every unit in the country, so chunking one empty chunk would quietly turn a
             // fylke-only scope into a nationwide fetch whenever the kommune register is still

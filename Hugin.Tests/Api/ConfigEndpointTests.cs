@@ -54,7 +54,7 @@ public sealed class ConfigEndpointTests
 
         var dto = await client.GetFromJsonAsync<DiscoveryConfigDto>("/api/config/discovery");
 
-        Assert.That(dto!.Municipalities.Select(m => m.Number), Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+        Assert.That(dto!.Municipalities, Is.Empty, "no default geography (spec v3.5 Part A)");
         Assert.That(dto.AllOfNorway, Is.False);
     }
 
