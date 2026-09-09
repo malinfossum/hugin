@@ -222,9 +222,9 @@ export const nb = {
   'focus.covered': '{code} dekkes allerede av {broader}',
   'focus.recommended': 'Legg til anbefalte',
   'focus.recommendedFailed': 'Kunne ikke hente anbefalte bransjer.',
-  'focus.recommendedAddedTotal': 'La til {count} anbefalte bransjer — {units} bedrifter totalt.',
+  'focus.recommendedAddedTotal': 'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt.',
   'focus.recommendedAddedPartial':
-    'La til {count} anbefalte bransjer — {units} bedrifter totalt for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
+    'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
   'focus.removeCode': 'Fjern bransje {code}',
   'focus.keywordsLegend': 'Nøkkelord',
   'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',

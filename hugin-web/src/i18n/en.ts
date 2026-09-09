@@ -219,9 +219,9 @@ export const en = {
   'focus.recommended': 'Add recommended',
   'focus.recommendedFailed': 'Could not fetch the recommended industries.',
   'focus.recommendedAddedTotal':
-    'Added {count} recommended industries — {units} companies in total.',
+    'Recommended industries added: {count} — {units} companies in total.',
   'focus.recommendedAddedPartial':
-    'Added {count} recommended industries — {units} companies in total for {known} of them (the rest unknown, Brreg was unreachable).',
+    'Recommended industries added: {count} — {units} companies in total for {known} of them (the rest unknown, Brreg was unreachable).',
   'focus.removeCode': 'Remove industry {code}',
   'focus.keywordsLegend': 'Keywords',
   'focus.keywordsHint': 'Changes apply to ads that arrive after the next sync.',

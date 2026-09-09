@@ -194,7 +194,7 @@ describe('FocusSection', () => {
     renderSection()
     await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
 
-    const expected = 'La til 2 anbefalte bransjer — 132 bedrifter totalt.'
+    const expected = 'Anbefalte bransjer lagt til: 2 — 132 bedrifter totalt.'
     expect(await screen.findByText(expected)).toBeInTheDocument()
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => expect(liveRegion).toHaveTextContent(expected))
@@ -215,7 +215,7 @@ describe('FocusSection', () => {
 
     expect(
       await screen.findByText(
-        'La til 2 anbefalte bransjer — 87 bedrifter totalt for 1 av dem (resten ukjent, Brreg var utilgjengelig).'
+        'Anbefalte bransjer lagt til: 2 — 87 bedrifter totalt for 1 av dem (resten ukjent, Brreg var utilgjengelig).'
       )
     ).toBeInTheDocument()
   })
