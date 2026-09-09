@@ -62,6 +62,20 @@ public sealed class SyncEndpointTests
     }
 
     [Test]
+    public async Task Sync_can_be_started_as_a_full_backfill()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsync("/api/sync?full=1", null);
+        Assert.That(response.IsSuccessStatusCode, Is.True);
+
+        var status = await PollUntilFinished(client);
+        Assert.That(status.Running, Is.False);
+        Assert.That(factory.Nav.FirstPageRequested, Is.True, "a backfill enters at the feed's oldest page");
+    }
+
+    [Test]
     public async Task Fresh_factory_never_syncs_on_boot()
     {
         using var factory = new ApiFactory();

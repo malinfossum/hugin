@@ -19,7 +19,7 @@ public sealed class SyncRunner(IServiceScopeFactory scopes, IClock clock, ILogge
 
     public SyncRunStatus Status { get { lock (_lock) return _status; } }
 
-    public bool TryStart()
+    public bool TryStart(bool full = false)
     {
         lock (_lock)
         {
@@ -27,18 +27,18 @@ public sealed class SyncRunner(IServiceScopeFactory scopes, IClock clock, ILogge
             _status = new SyncRunStatus(true, clock.UtcNow, null, null, null);
         }
 
-        _ = Task.Run(RunAsync);
+        _ = Task.Run(() => RunAsync(full));
         return true;
     }
 
-    private async Task RunAsync()
+    private async Task RunAsync(bool full)
     {
         SourceResult brreg, nav;
         await using var scope = scopes.CreateAsyncScope();
 
         try
         {
-            var summary = await scope.ServiceProvider.GetRequiredService<SyncService>().SyncAsync();
+            var summary = await scope.ServiceProvider.GetRequiredService<SyncService>().SyncAsync(fullNav: full);
             (brreg, nav) = (summary.Brreg, summary.Nav);
         }
         catch (Exception ex)
