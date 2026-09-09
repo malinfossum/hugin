@@ -20,7 +20,6 @@ export const nb = {
   'common.back': 'Tilbake',
   'common.all': 'Alle',
   'common.branchTag': '[avdeling]',
-  'common.addToList': 'Legg til i listen',
 
   'status.active': 'Aktiv',
   'status.applied': 'Søkt',
@@ -63,7 +62,7 @@ export const nb = {
   'settings.sourceMoved': 'Rekkefølge endret.',
   'settings.languageHeading': 'Språk',
   'settings.themeHeading': 'Tema',
-  'settings.focusHeading': 'Fokus',
+  'settings.focusHeading': 'Visningsfilter',
   'settings.focusHint': 'Styrer hva dashbordet og bedriftslisten viser som standard.',
   'settings.focusUpdated': 'Fokus oppdatert.',
   'settings.focusReset': 'Vis oppstartsvalget igjen',
@@ -203,16 +202,12 @@ export const nb = {
   'coverage.otherFylke': '{fylke} (hele fylket)',
   'coverage.removeOther': 'Fjern {name}',
 
-  // Deliberately not the bare 'Fokus' the plan's brief gave: the pre-existing
-  // settings.focusHeading section ("Fokus" — the dashboard display filter) already claims that
-  // exact accessible name, and two regions/headings with the identical name break every
-  // getByRole('region'|'heading', { name: 'Fokus' }) query in SettingsView.test.tsx. Keeping
-  // "Fokus" as the recognizable lead word while disambiguating the rest.
-  'focus.heading': 'Fokus: bransjer og nøkkelord',
+  'focus.heading': 'Fokus',
   'focus.hint':
     'Bransjer styrer hvilke bedrifter Hugin oppdager. Nøkkelord styrer hvilke annonser som lagres.',
   'focus.bransjerLegend': 'Bransjer (næringskoder)',
   'focus.addCode': 'Legg til bransje',
+  'focus.addCodeToList': 'Legg til bransje i listen',
   'focus.previewButton': 'Vis antall',
   'focus.previewResult': '{code} · {name} — {units} bedrifter',
   'focus.previewUnknown': '{code} — 0 bedrifter',
@@ -226,9 +221,9 @@ export const nb = {
   'focus.keywordsLegend': 'Nøkkelord',
   'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',
   'focus.addKeyword': 'Legg til nøkkelord',
+  'focus.addKeywordToList': 'Legg til nøkkelord i listen',
   'focus.removeKeyword': 'Fjern nøkkelord «{keyword}»',
   'focus.save': 'Lagre fokus',
-  'focus.saved': 'Lagret — synkroniserer …',
   'focus.savedNoSync': 'Lagret — gjelder fra neste synk',
   'focus.saveFailed': 'Kunne ikke lagre fokus: {error}',
   'focus.loadError': 'Kunne ikke laste fokus.',

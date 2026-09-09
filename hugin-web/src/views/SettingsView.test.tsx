@@ -44,7 +44,7 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
 ]
 
 /** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
- * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches, and the
+ * plus a GET /api/companies stub the Visningsfilter section's kommune select lazily fetches, and the
  * discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner, POST /api/sync) the
  * Dekning section always fetches on mount, in every scenario. Pass `null` as seed to make GET
  * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
@@ -440,21 +440,21 @@ describe('SettingsView', () => {
     })
   })
 
-  it('renders a Fokus heading with fylke/kommune selects and a category fieldset', async () => {
+  it('renders a Visningsfilter heading with fylke/kommune selects and a category fieldset', async () => {
     renderView(fakeServer([]).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     expect(within(section).getByLabelText('Fylke')).toBeInTheDocument()
     expect(within(section).getByLabelText('Kommune')).toBeInTheDocument()
     const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
     expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
   })
 
-  it('changing the Fokus fylke select announces and persists the choice', async () => {
+  it('changing the Visningsfilter fylke select announces and persists the choice', async () => {
     const user = userEvent.setup()
     renderView(fakeServer([]).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
@@ -464,7 +464,7 @@ describe('SettingsView', () => {
     expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
   })
 
-  it('narrows the Fokus kommune select by the chosen fylke, from lazily-fetched companies', async () => {
+  it('narrows the Visningsfilter kommune select by the chosen fylke, from lazily-fetched companies', async () => {
     const user = userEvent.setup()
     const companies = [
       company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
@@ -472,7 +472,7 @@ describe('SettingsView', () => {
     ]
     renderView(fakeServer([], companies).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     await waitFor(() => {
@@ -483,7 +483,7 @@ describe('SettingsView', () => {
     })
   })
 
-  it('choosing a Fokus kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
+  it('choosing a Visningsfilter kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
     const user = userEvent.setup()
     const companies = [
       company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
@@ -491,7 +491,7 @@ describe('SettingsView', () => {
     ]
     renderView(fakeServer([], companies).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     expect((within(section).getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
     await waitFor(() => {
       expect(within(within(section).getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(
@@ -503,12 +503,12 @@ describe('SettingsView', () => {
     expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
   })
 
-  it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
+  it('toggling a Visningsfilter category checkbox persists it and preserves the stored region', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: [] })
     renderView(fakeServer([]).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
+    await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
 
     expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
@@ -519,7 +519,7 @@ describe('SettingsView', () => {
     saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
     renderView(fakeServer([]).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
+    await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')

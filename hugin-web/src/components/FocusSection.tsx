@@ -45,6 +45,7 @@ export function FocusSection() {
   const t = useT()
   const announce = useAnnounce()
   const { readOnly } = useReadOnly()
+  const addCodeRef = useRef<HTMLInputElement>(null)
   const addKeywordRef = useRef<HTMLInputElement>(null)
   // Cached per code, for the lifetime of this component instance. A remount (SettingsView would
   // key on the coverage scope to force one) starts with a fresh Map — a count fetched under the
@@ -101,9 +102,14 @@ export function FocusSection() {
     setPreviewText(null)
   }
 
+  // Same defect class as removeKeyword below: removing the last bransje chip must not let focus
+  // fall to <body>. The input never unmounts across this update, so focusing it synchronously
+  // here is safe.
   const removeCode = (code: string) => {
     if (!draft) return
+    const wasLast = draft.naeringskoder.length === 1
     setDraft({ ...draft, naeringskoder: draft.naeringskoder.filter((c) => c !== code) })
+    if (wasLast) addCodeRef.current?.focus()
   }
 
   const handleAddRecommended = async () => {
@@ -166,12 +172,24 @@ export function FocusSection() {
       announce(t('focus.savedNoSync'))
       return
     }
+    // Mirrors CoverageSection's three-way split (started / already busy / failed to start) —
+    // a sync that never starts must never be announced as if it did. Reuses coverage's i18n
+    // keys since that wording ("Lagret — …") fits a saved-and-syncing focus change just as well.
     const sync = await api.post('/api/sync').then(
-      () => 'started' as const,
-      () => 'failed' as const
+      (): 'started' | 'busy' | 'failed' => 'started',
+      (err): 'busy' | 'failed' =>
+        err instanceof ApiError && err.status === 409 ? 'busy' : 'failed'
     )
     setSaving(false)
-    announce(t(sync === 'started' ? 'focus.saved' : 'focus.savedNoSync'))
+    announce(
+      t(
+        sync === 'busy'
+          ? 'coverage.savedSyncBusy'
+          : sync === 'failed'
+            ? 'coverage.savedSyncFailed'
+            : 'coverage.saved'
+      )
+    )
   }
 
   const handleBackfillConfirm = async () => {
@@ -237,6 +255,7 @@ export function FocusSection() {
                   </label>
                   <input
                     id="focus-add-code"
+                    ref={addCodeRef}
                     className="input"
                     type="text"
                     value={codeInput}
@@ -254,7 +273,7 @@ export function FocusSection() {
                   {t('focus.previewButton')}
                 </button>
                 <button type="submit" className="btn btn-ghost">
-                  {t('common.addToList')}
+                  {t('focus.addCodeToList')}
                 </button>
               </form>
               {coveredWarning && <p className="help">{coveredWarning}</p>}
@@ -303,7 +322,7 @@ export function FocusSection() {
                   />
                 </div>
                 <button type="submit" className="btn btn-ghost">
-                  {t('common.addToList')}
+                  {t('focus.addKeywordToList')}
                 </button>
               </form>
             </fieldset>

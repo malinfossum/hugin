@@ -183,11 +183,7 @@ describe('FocusSection', () => {
     renderSection()
     const input = await screen.findByLabelText('Legg til bransje')
     await userEvent.type(input, '72')
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
-        name: 'Legg til i listen',
-      })
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
 
     expect(screen.getByText('72')).toBeInTheDocument()
     expect(input).toHaveValue('')
@@ -209,11 +205,7 @@ describe('FocusSection', () => {
     renderSection()
     const input = await screen.findByLabelText('Legg til nøkkelord')
     await userEvent.type(input, 'backend')
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Nøkkelord' })).getByRole('button', {
-        name: 'Legg til i listen',
-      })
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til nøkkelord i listen' }))
 
     expect(screen.getByText('backend')).toBeInTheDocument()
   })
@@ -317,11 +309,7 @@ describe('FocusSection', () => {
     renderSection()
     const input = await screen.findByLabelText('Legg til bransje')
     await userEvent.type(input, '72')
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
-        name: 'Legg til i listen',
-      })
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
 
     await waitFor(() => {
@@ -337,11 +325,7 @@ describe('FocusSection', () => {
     renderSection()
     const input = await screen.findByLabelText('Legg til nøkkelord')
     await userEvent.type(input, 'backend')
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Nøkkelord' })).getByRole('button', {
-        name: 'Legg til i listen',
-      })
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til nøkkelord i listen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
@@ -355,15 +339,63 @@ describe('FocusSection', () => {
     renderSection()
     const input = await screen.findByLabelText('Legg til bransje')
     await userEvent.type(input, '72')
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Bransjer (næringskoder)' })).getByRole('button', {
-        name: 'Legg til i listen',
-      })
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
 
     expect(await screen.findByText(/Kunne ikke lagre fokus/)).toBeInTheDocument()
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(false)
+  })
+
+  it('says the codes apply next sync when a sync is already running (409, ruling: mirrors CoverageSection)', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] }, syncStatus: 409 })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, '72')
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
+    })
+    expect(await screen.findByText('Lagret — brukes ved neste synk')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+  })
+
+  it('says the sync could not start when the save went through but the sync did not (finding 3)', async () => {
+    const calls = fakeServer({ focus: { naeringskoder: ['62'], keywords: [] }, syncStatus: 500 })
+
+    renderSection()
+    const input = await screen.findByLabelText('Legg til bransje')
+    await userEvent.type(input, '72')
+    await userEvent.click(screen.getByRole('button', { name: 'Legg til bransje i listen' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
+    })
+    expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+  })
+
+  it('removing the last bransje chip moves focus to the add field (finding 4)', async () => {
+    fakeServer({ focus: { naeringskoder: ['62'], keywords: [] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern bransje 62' }))
+
+    expect(screen.getByLabelText('Legg til bransje')).toHaveFocus()
+  })
+
+  it('does not move focus when a bransje code is removed but others remain', async () => {
+    fakeServer({ focus: { naeringskoder: ['62', '72'], keywords: [] } })
+
+    renderSection()
+    await userEvent.click(await screen.findByRole('button', { name: 'Fjern bransje 62' }))
+
+    expect(screen.getByLabelText('Legg til bransje')).not.toHaveFocus()
+    expect(screen.queryByText('62')).not.toBeInTheDocument()
+    expect(screen.getByText('72')).toBeInTheDocument()
   })
 
   it('confirming the full backfill posts /api/sync?full=1 (ruling 4)', async () => {
@@ -393,8 +425,7 @@ describe('FocusSection', () => {
   })
 
   it('read-only mode disables every control and hides Save and the backfill button', async () => {
-    fakeServer({ focus: { naeringskoder: ['62'], keywords: ['utvikler'] } })
-    // ReadOnlyProvider itself reads /api/status; override it to readOnly: true for this test.
+    // ReadOnlyProvider itself reads /api/status; stub it to readOnly: true for this test.
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -421,9 +452,7 @@ describe('FocusSection', () => {
 
     renderReadOnly()
 
-    await waitFor(() =>
-      expect(screen.getByRole('group', { name: 'Fokus: bransjer og nøkkelord' })).toBeDisabled()
-    )
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Fokus' })).toBeDisabled())
     expect(screen.queryByRole('button', { name: 'Lagre fokus' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Full NAV-gjennomgang' })).not.toBeInTheDocument()
   })

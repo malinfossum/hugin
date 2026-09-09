@@ -156,6 +156,6 @@ describe('read-only mode hides write controls', () => {
       expect(screen.queryByRole('button', { name: 'Lagre fokus' })).not.toBeInTheDocument()
     )
     expect(screen.queryByRole('button', { name: 'Full NAV-gjennomgang' })).not.toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /Fokus:/ })).toBeDisabled()
+    expect(screen.getByRole('group', { name: 'Fokus' })).toBeDisabled()
   })
 })
