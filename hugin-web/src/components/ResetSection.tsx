@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../api'
 import { useFocus } from '../focus'
 import { useT } from '../i18n'
@@ -33,6 +33,7 @@ export function ResetSection() {
   const announce = useAnnounce()
   const { readOnly } = useReadOnly()
   const { resetFocus } = useFocus()
+  const reloadButtonRef = useRef<HTMLButtonElement>(null)
 
   // Best-effort — only used to show the counts in the hard-reset dialog. Missing counts just
   // means that paragraph doesn't render; it never blocks either button.
@@ -48,6 +49,15 @@ export function ResetSection() {
       cancelled = true
     }
   }, [])
+
+  // Move focus to the reload button once the success message appears. On success, both trigger
+  // buttons stay disabled (since `saving` stays true), so focus must move somewhere meaningful.
+  // The reload button is the natural next action after the person reads the snapshot path.
+  useEffect(() => {
+    if (hardMessage?.kind === 'success') {
+      reloadButtonRef.current?.focus()
+    }
+  }, [hardMessage])
 
   const handleScopeConfirm = async () => {
     setScopeOpen(false)
@@ -84,7 +94,8 @@ export function ResetSection() {
       // why the snapshot path was never seen: `window.location.reload()` cuts the page away
       // before React paints the message above. Leave `saving` true (both trigger buttons stay
       // disabled) and wait for the person to read the path and press the reload button below
-      // instead of reloading out from under them.
+      // instead of reloading out from under them. Focus will move to the reload button via a
+      // useEffect watching `hardMessage`.
     } catch (err) {
       setSaving(false)
       // Re-typing the confirm word per attempt is the whole point of the gate — a failed
@@ -118,7 +129,12 @@ export function ResetSection() {
         </p>
       )}
       {hardMessage?.kind === 'success' && (
-        <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+        <button
+          ref={reloadButtonRef}
+          type="button"
+          className="btn btn-primary"
+          onClick={() => window.location.reload()}
+        >
           {t('reset.hardReload')}
         </button>
       )}

@@ -220,6 +220,22 @@ describe('ResetSection', () => {
     expect(reload).toHaveBeenCalledTimes(1)
   })
 
+  it('moves focus to the reload button after a successful hard reset, so keyboard users are not dumped at the top of the page', async () => {
+    const user = userEvent.setup()
+    stubReload()
+    const { fetchMock } = fakeServer({
+      resetBody: { mode: 'all', snapshotPath: 'hugin.db.reset-20260909-120000.bak' },
+    })
+    renderSection(fetchMock)
+
+    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
+    await user.click(screen.getByRole('button', { name: 'Slett alt' }))
+
+    const reloadButton = await screen.findByRole('button', { name: 'Last siden på nytt' })
+    expect(reloadButton).toHaveFocus()
+  })
+
   it('surfaces a 409 (a sync is running) on the scope reset as a failure, not a success', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: [] })
