@@ -41,6 +41,12 @@ public sealed class FakeBrregClient : IBrregClient
     /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
     public Func<Task>? OnCall { get; set; }
 
+    /// <summary>Canned counts per nace code for preview tests.</summary>
+    public Dictionary<string, (int Units, string? Name)> Counts { get; init; } = [];
+
+    /// <summary>Every code CountAsync was actually called with — a rejected code must not appear.</summary>
+    public List<string> CountRequests { get; } = [];
+
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
     {
@@ -65,6 +71,15 @@ public sealed class FakeBrregClient : IBrregClient
         if (OnCall is not null) await OnCall();
         if (Throws || ThrowsOnGetKommuner) throw new HttpRequestException("brreg utilgjengelig");
         return Kommuner;
+    }
+
+    public async Task<(int Units, string? Name)> CountAsync(string naceCode,
+        IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
+    {
+        if (OnCall is not null) await OnCall();
+        CountRequests.Add(naceCode);
+        if (Throws) throw new HttpRequestException("brreg nede");
+        return Counts.TryGetValue(naceCode, out var hit) ? hit : (0, null);
     }
 }
 

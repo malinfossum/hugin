@@ -1,6 +1,8 @@
 using System.Globalization;
 using Hugin.Api.Services;
+using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
+using Hugin.Core.Services;
 using Hugin.Infrastructure;
 
 namespace Hugin.Api.Endpoints;
@@ -131,6 +133,30 @@ public static class ConfigEndpoints
             }
 
             return Results.Ok(FocusConfigDto.From(file.ReadFocus()));
+        });
+
+        app.MapGet("/api/config/focus/preview", async (string? nace, IBrregClient brreg, HuginConfigFile file,
+            IKommuneRepository kommuner, PublicModeOptions mode, CancellationToken ct) =>
+        {
+            // Refused outright in public mode: this is the one GET that acts outward, and a demo
+            // visitor must not be able to drive Brreg traffic from the hosted instance.
+            if (mode.Enabled) return Results.Problem(statusCode: 403, title: PublicMode.WriteRefusedTitle);
+
+            var code = nace?.Trim() ?? "";
+            if (!NaceCode.Pattern().IsMatch(code))
+                return Results.Problem(statusCode: 400,
+                    title: $"Ugyldig næringskode «{code}» — to siffer, eventuelt punktum og ett til tre siffer.");
+
+            var scope = MunicipalityScope.Build(file.Load(), await kommuner.GetAllAsync(ct));
+            try
+            {
+                var (units, name) = await brreg.CountAsync(code, scope.AllowedNumbers, ct);
+                return Results.Ok(new NacePreviewDto(code, name, units));
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(statusCode: 503, title: $"Kunne ikke hente antall fra Brreg: {ex.Message}");
+            }
         });
     }
 

@@ -92,6 +92,8 @@ public sealed record FocusConfigDto(IReadOnlyList<string> Naeringskoder, IReadOn
 
 public sealed record FocusWriteRequest(IReadOnlyList<string>? Naeringskoder, IReadOnlyList<string>? Keywords);
 
+public sealed record NacePreviewDto(string Code, string? Name, int Units);
+
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {

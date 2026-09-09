@@ -367,4 +367,39 @@ public sealed class ConfigEndpointTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
     }
+
+    [Test]
+    public async Task Preview_counts_units_and_refuses_callers_that_are_not_the_dashboard()
+    {
+        using var factory = new ApiFactory();
+        factory.Brreg.Counts["63"] = (45, "Databehandling, hosting og portaler");
+
+        // A page the user merely visits can send this GET; it must not reach Brreg.
+        using var driveByClient = factory.CreateClient();
+        var driveBy = await driveByClient.GetAsync("/api/config/focus/preview?nace=63");
+        Assert.That(driveBy.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), "a GET with a side effect still needs the header");
+
+        using var client = factory.CreateApiClient();
+        var preview = await client.GetFromJsonAsync<NacePreviewDto>("/api/config/focus/preview?nace=63");
+        Assert.That(preview!.Units, Is.EqualTo(45));
+        Assert.That(preview.Name, Is.EqualTo("Databehandling, hosting og portaler"));
+
+        var injected = await client.GetAsync("/api/config/focus/preview?nace=62%26size=1000");
+        Assert.That(injected.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(factory.Brreg.CountRequests, Is.EqualTo(new[] { "63" }), "a rejected code must never reach Brreg");
+    }
+
+    [Test]
+    public async Task Preview_degrades_to_a_service_unavailable_problem_when_brreg_is_down()
+    {
+        // The dashboard card must still render with the count simply unknown, rather than the
+        // request blowing up — a caught Brreg failure becomes a 503 Problem, not an unhandled 500.
+        using var factory = new ApiFactory();
+        factory.Brreg.Throws = true;
+        using var client = factory.CreateApiClient();
+
+        var response = await client.GetAsync("/api/config/focus/preview?nace=62");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
+    }
 }
