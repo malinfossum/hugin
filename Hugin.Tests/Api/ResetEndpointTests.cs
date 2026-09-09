@@ -60,6 +60,53 @@ public sealed class ResetEndpointTests
     }
 
     [Test]
+    public async Task Reset_all_snapshot_actually_contains_the_wiped_rows()
+    {
+        // Asserting File.Exists on the snapshot only proves a file with the right name landed on
+        // disk. Opening it and reading the rows back is what proves it is a real backup.
+        using var factory = new ApiFactory();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var now = DateTimeOffset.UtcNow;
+            var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await companies.UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+                now);
+            var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
+            await pipeline.UpsertAsync(new PipelineEntry
+            {
+                Orgnr = "934161181", Status = PipelineStatus.Active, Why = "fordi",
+                Created = now, Updated = now,
+            });
+        }
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsJsonAsync("/api/reset", new ResetRequest("all"));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var result = await response.Content.ReadFromJsonAsync<ResetResultDto>();
+
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(result!.SnapshotPath!)).Options;
+            await using var snapshotDb = new HuginDbContext(options);
+
+            var snapshotCompanies = await snapshotDb.Companies.Select(c => c.Orgnr).ToListAsync();
+            Assert.That(snapshotCompanies, Does.Contain("934161181"),
+                "the row wiped from the live db must survive in the snapshot taken just before the wipe");
+            var snapshotPipeline = await snapshotDb.Pipeline.Select(p => p.Orgnr).ToListAsync();
+            Assert.That(snapshotPipeline, Does.Contain("934161181"),
+                "the pipeline entry is the one thing a reset can never recover if the backup is not real");
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+        }
+
+        var status = await client.GetFromJsonAsync<StatusDto>("/api/status");
+        Assert.That(status!.Companies, Is.Zero, "confirms the row really is gone from the live database");
+    }
+
+    [Test]
     public async Task Reset_scope_keeps_the_data_and_the_bransjer()
     {
         using var factory = new ApiFactory();
@@ -127,6 +174,37 @@ public sealed class ResetEndpointTests
         }
 
         await SyncEndpointTests.PollUntilFinished(client);
+    }
+
+    [Test]
+    public async Task Reset_all_keeps_the_snapshot_path_in_the_error_when_clearing_scope_fails_after_the_wipe()
+    {
+        // Regression for a review finding: if ClearScope() throws after WipeAsync() already
+        // succeeded, the database is empty and a bare 500 would leave the user with no pointer
+        // to the backup that was just taken. Forcing ClearScope() to fail here means putting a
+        // directory where hugin.json should be — File.Move onto an existing directory throws,
+        // the same failure mode a locked or permission-denied config file would produce.
+        using var factory = new ApiFactory();
+        Directory.CreateDirectory(factory.ConfigPath);
+        using (var scope = factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+                .UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+                    DateTimeOffset.UtcNow);
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsJsonAsync("/api/reset", new ResetRequest("all"));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+
+        var snapshotDir = Path.GetDirectoryName(factory.DbPath)!;
+        var snapshots = Directory.GetFiles(snapshotDir, "hugin.db.reset-*.bak");
+        Assert.That(snapshots, Has.Length.EqualTo(1), "the wipe still ran and took its snapshot");
+        Assert.That(problem!.Title, Does.Contain(snapshots[0]),
+            "the error response must point at the backup so it is never lost");
+
+        var status = await client.GetFromJsonAsync<StatusDto>("/api/status");
+        Assert.That(status!.Companies, Is.Zero, "the wipe committed before the scope clear failed");
     }
 
     [Test]

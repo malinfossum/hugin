@@ -158,21 +158,25 @@ internal static class Program
                 ? (pages, ads) => { if (pages % 50 == 0) Console.WriteLine($"  nav: {pages} sider lest, {ads} annonser lagret …"); }
         : null);
 
-        // Special-case the no-coverage error to guide CLI-first users
+        // Special-case the no-coverage error to guide CLI-first users; every other outcome
+        // (success or any other failure, including a null error) goes through the same Line()
+        // format the nav line below uses.
         if (summary.Brreg.Succeeded)
         {
             Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
         }
-        else if (summary.Brreg.Error is { } brregError)
+        else if (summary.Brreg.Error is { } brregError
+            && brregError.StartsWith("Ingen dekning valgt", StringComparison.Ordinal))
         {
             Console.WriteLine($"Brreg: {brregError}");
-            if (brregError.StartsWith("Ingen dekning valgt", StringComparison.Ordinal))
-            {
-                var configPath = services.GetRequiredService<HuginConfigFile>().ConfigPath;
-                Console.WriteLine($"  Legg til kommuner i {configPath} under \"municipalities\", f.eks.");
-                Console.WriteLine("    \"municipalities\": [{ \"name\": \"Hamar\", \"number\": \"3403\" }]");
-                Console.WriteLine("  eller start hugin-api.exe og velg dekning i dashbordet.");
-            }
+            var configPath = services.GetRequiredService<HuginConfigFile>().ConfigPath;
+            Console.WriteLine($"  Legg til kommuner i {configPath} under \"municipalities\", f.eks.");
+            Console.WriteLine("    \"municipalities\": [{ \"name\": \"Hamar\", \"number\": \"3403\" }]");
+            Console.WriteLine("  eller start hugin-api.exe og velg dekning i dashbordet.");
+        }
+        else
+        {
+            Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
         }
 
         Console.WriteLine(Line("nav", summary.Nav, "annonser"));

@@ -175,7 +175,14 @@ public static class ConfigEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Problem(statusCode: 500, title: $"Nullstillingen feilet: {ex.Message}");
+                // If ClearScope() throws after WipeAsync() already ran, the database is empty and
+                // a bare 500 would strand the user with no pointer to the backup that was just
+                // taken. The path goes in the error response so it is never lost.
+                var title = snapshot is null
+                    ? $"Nullstillingen feilet: {ex.Message}"
+                    : $"Nullstillingen feilet etter at sikkerhetskopien ble tatt: {ex.Message} "
+                        + $"Databasen er tømt — kopien ligger på {snapshot}.";
+                return Results.Problem(statusCode: 500, title: title);
             }
 
             return Results.Ok(new ResetResultDto(request.Mode, snapshot));

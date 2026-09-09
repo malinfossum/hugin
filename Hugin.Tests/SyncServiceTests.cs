@@ -399,6 +399,21 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task No_coverage_message_keeps_the_prefix_hugin_web_SyncHeader_matches_on()
+    {
+        // hugin-web/src/views/dashboard/SyncHeader.tsx prefix-matches this exact literal
+        // ('Ingen dekning valgt') to special-case the no-coverage failure into a prompt with a
+        // button that reopens the coverage dialog. Nothing on the web side pins that string to
+        // this one — if SyncBrregAsync's wording changes, this test must go red before the
+        // dashboard's prompt silently stops firing.
+        var harness = Build(config: new HuginConfig { Municipalities = [] });
+
+        var summary = await harness.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Error, Does.StartWith("Ingen dekning valgt"));
+    }
+
+    [Test]
     public async Task An_empty_scope_fails_brreg_instead_of_fetching_all_of_norway()
     {
         // A fylke-only config plus an empty kommune register (fresh install, register fetch
