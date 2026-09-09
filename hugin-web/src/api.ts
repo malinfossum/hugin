@@ -36,10 +36,14 @@ async function requestText(path: string): Promise<string> {
 }
 
 const writeHeaders = { 'X-Hugin': '1', 'Content-Type': 'application/json' }
+const guardHeaders = { 'X-Hugin': '1' }
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
   getText: (path: string) => requestText(path),
+  /** A GET that acts outward on the caller's behalf (e.g. the focus preview's Brreg calls) is
+   * gated behind the same X-Hugin header as a write — plain `get` sends no headers at all. */
+  getGuarded: <T>(path: string) => request<T>(path, { headers: guardHeaders }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, {
       method: 'POST',

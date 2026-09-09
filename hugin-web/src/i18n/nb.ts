@@ -62,7 +62,7 @@ export const nb = {
   'settings.sourceMoved': 'Rekkefølge endret.',
   'settings.languageHeading': 'Språk',
   'settings.themeHeading': 'Tema',
-  'settings.focusHeading': 'Fokus',
+  'settings.focusHeading': 'Visningsfilter',
   'settings.focusHint': 'Styrer hva dashbordet og bedriftslisten viser som standard.',
   'settings.focusUpdated': 'Fokus oppdatert.',
   'settings.focusReset': 'Vis oppstartsvalget igjen',
@@ -202,6 +202,46 @@ export const nb = {
   'coverage.otherFylke': '{fylke} (hele fylket)',
   'coverage.removeOther': 'Fjern {name}',
 
+  'focus.heading': 'Fokus',
+  'focus.hint':
+    'Bransjer styrer hvilke bedrifter Hugin oppdager. Nøkkelord styrer hvilke annonser som lagres.',
+  'focus.bransjerLegend': 'Bransjer (næringskoder)',
+  'focus.addCode': 'Legg til bransje',
+  'focus.addCodeToList': 'Legg til bransje i listen',
+  'focus.previewButton': 'Vis antall',
+  'focus.previewResult': '{code} · {name} — {units} bedrifter',
+  'focus.previewUnknown': '{code} — 0 bedrifter',
+  // Ruling 3: the count resolved but Brreg returned no name — shown honestly with the code
+  // standing in for the missing name, never previewUnknown's literal "0" for a real count.
+  'focus.previewNoName': '{code} — {units} bedrifter',
+  'focus.previewFailed': 'Kunne ikke hente antall',
+  // A format failure is not a Brreg failure — previewFailed above claims a lookup that never
+  // ran. Used by both the preview button and Add, so a typo gets one honest answer either way.
+  'focus.invalidCode':
+    'Ugyldig bransjekode — to sifre, med valgfritt punktum og 1–3 sifre til (f.eks. «62» eller «58.2»).',
+  'focus.covered': '{code} dekkes allerede av {broader}',
+  'focus.recommended': 'Legg til anbefalte',
+  'focus.recommendedFailed': 'Kunne ikke hente anbefalte bransjer.',
+  'focus.recommendedAddedTotal': 'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt.',
+  'focus.recommendedAddedPartial':
+    'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
+  'focus.removeCode': 'Fjern bransje {code}',
+  'focus.keywordsLegend': 'Nøkkelord',
+  'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',
+  'focus.addKeyword': 'Legg til nøkkelord',
+  'focus.addKeywordToList': 'Legg til nøkkelord i listen',
+  'focus.removeKeyword': 'Fjern nøkkelord «{keyword}»',
+  'focus.save': 'Lagre fokus',
+  'focus.savedNoSync': 'Lagret — gjelder fra neste synk',
+  'focus.saveFailed': 'Kunne ikke lagre fokus: {error}',
+  'focus.loadError': 'Kunne ikke laste fokus.',
+  // Part C full backfill (ruling 4): lives on this card, not SyncHeader (v3.2 polling trap).
+  'focus.backfillButton': 'Full NAV-gjennomgang',
+  'focus.backfillConfirmTitle': 'Kjøre full NAV-gjennomgang?',
+  'focus.backfillConfirmBody':
+    'Dette kan ta noen minutter. Annonser som er lukket kommer tilbake uten innhold, så gjennomgangen henter bare aktive annonser.',
+  'focus.backfillStarted': 'Full gjennomgang startet.',
+
   'focus.title': 'Hva vil du følge?',
   'focus.intro':
     'Dekningen styrer hva Hugin henter; fokuset styrer hva du ser først. Begge kan endres i Innstillinger.',
@@ -214,4 +254,33 @@ export const nb = {
   'demo.banner':
     'Demo — skrivebeskyttet. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet. Pipelinen er eksempeldata. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
   'demo.repoLink': 'Kildekode på GitHub',
+
+  // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen — an
+  // empty result, not an error, so it gets a button instead of the generic failure banner.
+  'dashboard.noCoverageMessage': 'Ingen dekning valgt.',
+  'dashboard.noCoverageButton': 'Velg dekning',
+  'dashboard.noCoverageAnnounce': 'Ingen dekning valgt. Velg fylke, kommune eller hele landet.',
+
+  // v3.5 Part D — Nullstilling. Two levels, both danger-styled and behind a typed confirmation
+  // for the hard one; the confirm word itself stays "NULLSTILL" in both languages (spec-locked).
+  'reset.heading': 'Nullstilling',
+  'reset.hint': 'To nivåer for å begynne på nytt — velg det du trenger. Ingen av dem kan angres.',
+  'reset.scopeButton': 'Nullstill dekning',
+  'reset.scopeConfirmTitle': 'Nullstille dekningen?',
+  'reset.scopeConfirmBody':
+    'Kommuner, fylker og «hele landet» fjernes fra oppsettet. Bedrifter og annonser blir liggende uten å bli oppdatert. Bransjer og nøkkelord endres ikke. Oppstartsvalget vises igjen.',
+  'reset.scopeDone': 'Dekningen er nullstilt.',
+  'reset.scopeFailed': 'Kunne ikke nullstille dekningen: {error}',
+  'reset.hardButton': 'Start på nytt',
+  'reset.hardConfirmTitle': 'Slette alt og starte på nytt?',
+  'reset.hardConfirmIntro':
+    'Dette kan ikke angres. Pipelinen din forsvinner for godt — bedrifter og annonser kommer tilbake ved neste synk.',
+  'reset.hardCounts': '{companies} bedrifter, {activeAds} annonser, {pipelineEntries} i Søknader.',
+  'reset.hardConfirmButton': 'Slett alt',
+  'reset.confirmLabel': 'Skriv NULLSTILL for å bekrefte',
+  'reset.hardDone': 'Nullstilt. Sikkerhetskopi lagret: {path}',
+  'reset.hardFailed': 'Kunne ikke nullstille: {error}',
+  // D2: the snapshot path must genuinely be read, not fire past the user via an immediate
+  // reload — the reload now waits for this button instead of firing on its own.
+  'reset.hardReload': 'Last siden på nytt',
 } as const

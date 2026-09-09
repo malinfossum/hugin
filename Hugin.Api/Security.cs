@@ -16,6 +16,11 @@ public static class Security
 {
     private static readonly string[] AllowedHosts = ["localhost", "127.0.0.1", "[::1]"];
 
+    /// <summary>GETs that act outward rather than merely reading local state. They are exempt
+    /// from the write guard by method, so they are named here instead: without this, any page the
+    /// user visits could loop Brreg calls through Hugin with a no-cors fetch.</summary>
+    private static readonly string[] SideEffectingGets = ["/api/config/focus/preview"];
+
     public static IApplicationBuilder UseHuginSecurity(this IApplicationBuilder app, PublicModeOptions mode) =>
         app.Use(async (context, next) =>
         {
@@ -44,9 +49,11 @@ public static class Security
 
             var method = context.Request.Method;
             var isWrite = method != HttpMethods.Get && method != HttpMethods.Head && method != HttpMethods.Options;
-            if (isWrite && context.Request.Path.StartsWithSegments("/api"))
+            var needsHeader = isWrite
+                || SideEffectingGets.Any(p => context.Request.Path.StartsWithSegments(p));
+            if (needsHeader && context.Request.Path.StartsWithSegments("/api"))
             {
-                if (mode.Enabled)
+                if (mode.Enabled && isWrite)
                 {
                     await Results.Problem(statusCode: StatusCodes.Status403Forbidden,
                         title: PublicMode.WriteRefusedTitle).ExecuteAsync(context);

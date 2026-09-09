@@ -136,6 +136,13 @@ input[type="text"] {
   padding-block: 0.25rem;
 }
 
+/* Nullstilling (v3.5 Part D) — same "loud edge" treatment as .trenger-handling, in the
+   danger hue: both irreversible reset levels live here, so the section itself should read as
+   destructive before either button is ever clicked. */
+.reset-section {
+  border-inline-start: 3px solid var(--danger);
+}
+
 /* Content lists throughout the app are custom-styled rows, never bullet lists. */
 .frister-list ul,
 .nytt-siden-sist ul,
@@ -346,6 +353,28 @@ input[type="text"] {
   .coverage-kommuner {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Fokus card (v3.5 Part B): bransje codes and keywords, each a removable chip. Wraps
+   mobile-first — the list just grows taller on a narrow viewport, never scrolls sideways. */
+.focus-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.focus-chip button {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
+/* Fokus add rows: label+input pairs (taller .field wrapper) sit inside a .cluster with 44px
+   buttons. Centring against the wrapper misaligns buttons 15px above the input's baseline.
+   Align to the bottom instead so button edges line up with the input's bottom edge. */
+.focus-add-row {
+  align-items: flex-end;
 }
 
 /* Demo banner (read-only showcase): a static region right after the header. */

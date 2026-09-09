@@ -44,7 +44,7 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
 ]
 
 /** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
- * plus a GET /api/companies stub the Fokus section's kommune select lazily fetches, and the
+ * plus a GET /api/companies stub the Visningsfilter section's kommune select lazily fetches, and the
  * discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner, POST /api/sync) the
  * Dekning section always fetches on mount, in every scenario. Pass `null` as seed to make GET
  * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
@@ -63,6 +63,10 @@ function fakeServer(
     kommunerPending?: boolean
     putStatus?: number
     syncStatus?: number
+    /** Successive `units` counts GET /api/config/focus/preview?nace=62 answers with, one per
+     * call — the last value repeats once exhausted. Lets a test tell a fresh Brreg fetch apart
+     * from a cached one (Task 11 ruling 2). */
+    focusPreviewUnits?: number[]
   } = {}
 ) {
   let entries = (seed ?? []).map((s) => ({ ...s }))
@@ -70,6 +74,8 @@ function fakeServer(
   const discovery = options.discovery ?? DEFAULT_DISCOVERY
   const kommuner = options.kommuner ?? DEFAULT_KOMMUNER
   const puts: unknown[] = []
+  const focusPreviewUnits = options.focusPreviewUnits ?? [45]
+  let focusPreviewCalls = 0
 
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -96,6 +102,32 @@ function fakeServer(
         return Promise.resolve(jsonResponse({ title: 'Registeret er nede' }, { status: 503 }))
       }
       return Promise.resolve(jsonResponse(kommuner))
+    }
+    if (url === '/api/config/focus' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
+    }
+    if (url.startsWith('/api/config/focus/preview') && method === 'GET') {
+      const units = focusPreviewUnits[Math.min(focusPreviewCalls, focusPreviewUnits.length - 1)]
+      focusPreviewCalls += 1
+      return Promise.resolve(jsonResponse({ code: '62', name: 'IT-tjenester', units }))
+    }
+    if (url === '/api/status' && method === 'GET') {
+      return Promise.resolve(
+        jsonResponse({
+          brreg: null,
+          nav: null,
+          reviewMark: null,
+          activeAds: 0,
+          companies: companies.length,
+          pipelineEntries: 0,
+          readOnly: false,
+          scopeConfigured: true,
+        })
+      )
+    }
+    if (url === '/api/reset' && method === 'POST') {
+      const body = JSON.parse(init?.body as string)
+      return Promise.resolve(jsonResponse({ mode: body.mode, snapshotPath: null }))
     }
     if (url === '/api/sync' && method === 'POST') {
       if (options.syncStatus) {
@@ -437,21 +469,21 @@ describe('SettingsView', () => {
     })
   })
 
-  it('renders a Fokus heading with fylke/kommune selects and a category fieldset', async () => {
+  it('renders a Visningsfilter heading with fylke/kommune selects and a category fieldset', async () => {
     renderView(fakeServer([]).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     expect(within(section).getByLabelText('Fylke')).toBeInTheDocument()
     expect(within(section).getByLabelText('Kommune')).toBeInTheDocument()
     const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
     expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
   })
 
-  it('changing the Fokus fylke select announces and persists the choice', async () => {
+  it('changing the Visningsfilter fylke select announces and persists the choice', async () => {
     const user = userEvent.setup()
     renderView(fakeServer([]).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
@@ -461,7 +493,7 @@ describe('SettingsView', () => {
     expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
   })
 
-  it('narrows the Fokus kommune select by the chosen fylke, from lazily-fetched companies', async () => {
+  it('narrows the Visningsfilter kommune select by the chosen fylke, from lazily-fetched companies', async () => {
     const user = userEvent.setup()
     const companies = [
       company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
@@ -469,7 +501,7 @@ describe('SettingsView', () => {
     ]
     renderView(fakeServer([], companies).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
 
     await waitFor(() => {
@@ -480,7 +512,7 @@ describe('SettingsView', () => {
     })
   })
 
-  it('choosing a Fokus kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
+  it('choosing a Visningsfilter kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
     const user = userEvent.setup()
     const companies = [
       company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
@@ -488,7 +520,7 @@ describe('SettingsView', () => {
     ]
     renderView(fakeServer([], companies).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Fokus' })
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
     expect((within(section).getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
     await waitFor(() => {
       expect(within(within(section).getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(
@@ -500,12 +532,12 @@ describe('SettingsView', () => {
     expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
   })
 
-  it('toggling a Fokus category checkbox persists it and preserves the stored region', async () => {
+  it('toggling a Visningsfilter category checkbox persists it and preserves the stored region', async () => {
     const user = userEvent.setup()
     saveFocus({ fylke: '34', kommune: null, categories: [] })
     renderView(fakeServer([]).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
+    await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
 
     expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
@@ -516,7 +548,7 @@ describe('SettingsView', () => {
     saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
     renderView(fakeServer([]).fetchMock)
 
-    await screen.findByRole('heading', { name: 'Fokus' })
+    await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
@@ -664,6 +696,70 @@ describe('Dekning (coverage)', () => {
 
     expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
     expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+  })
+
+  it('a coverage save resets Fokus’s preview cache — a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
+    const server = fakeServer([], [], { focusPreviewUnits: [10, 20] })
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const focusSection = await screen.findByRole('region', { name: 'Fokus' })
+
+    await user.type(within(focusSection).getByLabelText('Legg til bransje'), '62')
+    await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
+    expect(
+      await within(focusSection).findByText('62 · IT-tjenester — 10 bedrifter')
+    ).toBeInTheDocument()
+
+    await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
+    await screen.findByText('Lagret — synkroniserer …')
+
+    // FocusSection is NOT remounted (Task 11 finding 2 — a remount would also discard an
+    // unsaved draft): the preview endpoint has only been called once so far, invalidated
+    // through a version-qualified cache key instead.
+    const previewCalls = server.fetchMock.mock.calls.filter(([u]) =>
+      String(u).startsWith('/api/config/focus/preview')
+    )
+    expect(previewCalls).toHaveLength(1)
+
+    // Same instance, same field still holding '62' from before the save — just click Preview
+    // again rather than retyping into a field a remount would have cleared.
+    await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
+
+    expect(
+      await within(focusSection).findByText('62 · IT-tjenester — 20 bedrifter')
+    ).toBeInTheDocument()
+    const previewCallsAfter = server.fetchMock.mock.calls.filter(([u]) =>
+      String(u).startsWith('/api/config/focus/preview')
+    )
+    expect(previewCallsAfter).toHaveLength(2)
+  })
+
+  it('an unsaved Fokus draft (an added bransje not yet saved) survives a coverage save (Task 11 finding 2)', async () => {
+    const server = fakeServer([])
+    const user = userEvent.setup()
+    renderView(server.fetchMock)
+    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const focusSection = await screen.findByRole('region', { name: 'Fokus' })
+
+    await user.type(within(focusSection).getByLabelText('Legg til bransje'), '47.911')
+    await user.click(
+      within(focusSection).getByRole('button', { name: 'Legg til bransje i listen' })
+    )
+    expect(within(focusSection).getByText('47.911')).toBeInTheDocument()
+
+    await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
+    await screen.findByText('Lagret — synkroniserer …')
+
+    // A coverage save must not have called Fokus's own PUT — the draft is still just local
+    // state, unsaved, and it is still there.
+    expect(within(focusSection).getByText('47.911')).toBeInTheDocument()
+    const focusPuts = server.fetchMock.mock.calls.filter(
+      ([u, i]) => u === '/api/config/focus' && (i?.method ?? 'GET') === 'PUT'
+    )
+    expect(focusPuts).toHaveLength(0)
   })
 
   it('switching language does not discard an unsaved coverage edit', async () => {

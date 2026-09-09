@@ -85,4 +85,15 @@ public sealed class PublicModeEndpointTests
 
         Assert.That(items!.Ads.Select(a => a.FeedId), Is.EqualTo(new[] { "open" }));
     }
+
+    [Test]
+    public async Task Preview_is_refused_in_public_mode()
+    {
+        using var factory = new ApiFactory(publicMode: true);
+        using var client = factory.CreateApiClient();
+
+        var response = await client.GetAsync("/api/config/focus/preview?nace=62");
+
+        Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Forbidden));
+    }
 }

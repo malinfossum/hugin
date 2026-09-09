@@ -27,8 +27,12 @@ public sealed class BootSyncTests
         var dismiss = await client.PostAsync("/api/first-run-dismissed", null);
         Assert.That(dismiss.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
+        // No default geography any more (spec v3.5 Part A) — dismiss releases the hold and the
+        // sync runs, but Brreg has nothing to fetch without a configured scope. The first-run
+        // dialog that fills it in is a later task; here only the hold/release timing is at stake.
         var status = await SyncEndpointTests.PollUntilFinished(client);
-        Assert.That(status.Brreg!.Succeeded, Is.True, "dismiss releases the hold with config defaults");
+        Assert.That(status.Brreg!.Succeeded, Is.False, "the sync ran, but no scope was ever configured");
+        Assert.That(status.Brreg.Error, Is.EqualTo("Ingen dekning valgt — velg kommuner i dashbordet"));
     }
 
     [Test]

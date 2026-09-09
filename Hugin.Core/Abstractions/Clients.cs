@@ -28,6 +28,12 @@ public interface IBrregClient
     /// <summary>The full kommune register (number → display name) — every kommune, not just
     /// the ones Hugin is configured to track.</summary>
     public Task<IReadOnlyList<Models.Kommune>> GetKommunerAsync(CancellationToken ct = default);
+
+    /// <summary>How many units one nace code has inside the given kommuner, plus the register's
+    /// own description of the code — read from `page.totalElements` with `size=1`, so it costs
+    /// two requests and no payload. Used by the dashboard's preview, never by sync.</summary>
+    public Task<(int Units, string? Name)> CountAsync(string naceCode,
+        IEnumerable<string> municipalityNumbers, CancellationToken ct = default);
 }
 
 public interface INavFeedClient

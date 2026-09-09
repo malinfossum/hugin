@@ -29,7 +29,7 @@ const VIEW_LABEL_KEYS: Record<ViewName, TranslationKey> = {
 
 function AppShell() {
   const { focus, setFocus } = useFocus()
-  const { readOnly, resolved } = useReadOnly()
+  const { readOnly, resolved, scopeConfigured, markScopeConfigured } = useReadOnly()
   const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
   // Whether first-run has been completed (scope written) — a returning user with a stored focus
   // has; a fresh one hasn't even after the focus is seeded on a failed PUT, so the dialog stays
@@ -37,9 +37,18 @@ function AppShell() {
   const [firstRunDone, setFirstRunDone] = useState(() => focus !== null)
   const h1Ref = useRef<HTMLHeadingElement>(null)
   // Never before /api/status has answered (a fresh visitor would see it flash, or worse, get it
-  // for real and a Save that can only 403), and never on the read-only demo.
+  // for real and a Save that can only 403), and never on the read-only demo. `scopeConfigured
+  // === false` catches a browser that already has a stored focus but the server has no scope
+  // (v3.5 Part A3/D1) — a stale localStorage focus alone can no longer hide that. Reuses the
+  // status ReadOnlyProvider already fetched at boot; no second poll. `scopeConfigured` is a live
+  // value (readOnly.tsx's `markScopeConfigured`), not a frozen snapshot: onDone below flips it
+  // the moment first-run writes a scope, so this condition actually clears instead of reopening
+  // the dialog it just closed (Task 11 finding 1).
   const focusDialogOpen =
-    resolved && !readOnly && (focus === null || !firstRunDone) && !focusPromptDismissed
+    resolved &&
+    !readOnly &&
+    (focus === null || !firstRunDone || scopeConfigured === false) &&
+    !focusPromptDismissed
   const prevFocusDialogOpen = useRef(focusDialogOpen)
   const [route, setRouteState] = useState<Route>(() => parseRoute(window.location.pathname))
   const view = route.view
@@ -76,7 +85,12 @@ function AppShell() {
   // its announce/refresh cycle regardless of which view is currently visible. Declared inside
   // AppShell (not module scope) so the thunks can close over theme state and callbacks.
   const VIEW_COMPONENTS: Record<ViewName, () => ReactElement> = {
-    dashboard: () => <DashboardView sourcesVersion={sourcesVersion} />,
+    dashboard: () => (
+      <DashboardView
+        sourcesVersion={sourcesVersion}
+        onRequestCoverage={() => setFocusPromptDismissed(false)}
+      />
+    ),
     applications: () => <ApplicationsView />,
     companies: () => (
       <BedrifterView
@@ -231,7 +245,14 @@ function AppShell() {
       <FirstRunDialog
         open={focusDialogOpen}
         onSaveFocus={(f, options) => setFocus(f, options)}
-        onDone={() => setFirstRunDone(true)}
+        onDone={() => {
+          setFirstRunDone(true)
+          // The scope was just written server-side — flip the live value now rather than
+          // waiting for a reload to re-fetch /api/status, or `scopeConfigured === false` (still
+          // the boot-time snapshot) would keep this same condition true and reopen the dialog
+          // right after it closes (Task 11 finding 1).
+          markScopeConfigured()
+        }}
         onDismiss={() => {
           setFocusPromptDismissed(true)
           // Releases a held boot sync on a fresh install; a no-op 204 otherwise.

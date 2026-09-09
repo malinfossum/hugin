@@ -15,7 +15,12 @@ function jsonResponse(body: unknown) {
  * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
  * carries the interesting scope/kommune scenarios. */
 function fakeServer(
-  options: { putFails?: boolean; readOnly?: boolean; statusFails?: boolean } = {}
+  options: {
+    putFails?: boolean
+    readOnly?: boolean
+    statusFails?: boolean
+    scopeConfigured?: boolean
+  } = {}
 ) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -38,6 +43,7 @@ function fakeServer(
           companies: 0,
           pipelineEntries: 0,
           readOnly: options.readOnly ?? false,
+          scopeConfigured: options.scopeConfigured ?? true,
         })
       )
     }
@@ -71,6 +77,9 @@ function fakeServer(
         )
       }
       return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+    }
+    if (url === '/api/config/focus' && method === 'GET') {
+      return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
     }
     if (url === '/api/sync' && method === 'POST') {
       return Promise.resolve(new Response(null, { status: 202 }))
@@ -337,6 +346,43 @@ describe('App first-run focus dialog', () => {
     render(<App />)
 
     expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+  })
+
+  it('the first-run dialog opens again when the server has no scope, even with a valid focus already stored (v3.5 Part A3)', async () => {
+    vi.stubGlobal('fetch', fakeServer({ scopeConfigured: false }))
+    window.localStorage.setItem(
+      'hugin-focus',
+      JSON.stringify({ v: 1, fylke: '34', kommune: null, categories: [] })
+    )
+
+    render(<App />)
+
+    expect(await screen.findByRole('dialog', { name: 'Hva vil du følge?' })).toBeInTheDocument()
+  })
+
+  it('completing that same dialog actually closes it — scopeConfigured is a live value, not the boot-time snapshot (Task 11 finding 1)', async () => {
+    const fetchMock = fakeServer({ scopeConfigured: false })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
+    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    // Without the fix, `scopeConfigured === false` never stops being true (it's the frozen
+    // boot-time fetch, and this fake server always answers false), so the dialog reopens right
+    // after Start closes it — the fresh-install path this whole feature exists for.
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
+    )
+    // Nor did the user dismiss it via Escape — Start is what closed it.
+    expect(
+      fetchMock.mock.calls.some(
+        ([u, i]) =>
+          u === '/api/first-run-dismissed' && (i as RequestInit | undefined)?.method === 'POST'
+      )
+    ).toBe(false)
   })
 
   it('stays closed for the rest of the session after an Esc-dismiss', async () => {

@@ -96,6 +96,27 @@ public class BrregClientTests
         Assert.That(result.Single(k => k.Number == "3454").Name, Is.EqualTo("Nord-Aurdal"));
     }
 
+    [Test]
+    public async Task CountAsync_reads_total_elements_and_description_from_both_paths()
+    {
+        // Reuses the existing enheter/underenheter fixtures — their page.totalElements (131, 146)
+        // and the first record's naeringskode1.beskrivelse are real Brreg response shapes.
+        var client = new BrregClient(HttpFixtures.Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("underenheter?", StringComparison.Ordinal))
+                return HttpFixtures.Json(HttpFixtures.ReadFixture("brreg-underenheter.json"));
+            if (url.Contains("enheter?", StringComparison.Ordinal))
+                return HttpFixtures.Json(HttpFixtures.ReadFixture("brreg-enheter.json"));
+            return HttpFixtures.NotFound();
+        }));
+
+        var (units, name) = await client.CountAsync("62", ["3405"]);
+
+        Assert.That(units, Is.EqualTo(131 + 146), "the two paths' totalElements are summed");
+        Assert.That(name, Is.EqualTo("Konsulentvirksomhet tilknyttet informasjonsteknologi og forvaltning og drift av it-systemer"));
+    }
+
     // Fake Brreg that filters a fixed unit set by the request's inclusive date bounds and reports
     // totalElements = matching count. `window` makes the client bisect long before 10k.
     private static (BrregClient Client, List<string> Requests) BisectingClient(

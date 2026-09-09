@@ -1,6 +1,8 @@
 using System.Globalization;
 using Hugin.Api.Services;
+using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
+using Hugin.Core.Services;
 using Hugin.Infrastructure;
 
 namespace Hugin.Api.Endpoints;
@@ -96,9 +98,106 @@ public static class ConfigEndpoints
             gate.Release();
             return Results.Ok(DiscoveryConfigDto.From(file.ReadDiscovery()));
         });
+
+        app.MapGet("/api/config/focus", (HuginConfigFile file) =>
+            Results.Ok(FocusConfigDto.From(file.ReadFocus())));
+
+        app.MapGet("/api/config/focus/recommended", () =>
+            Results.Ok(new HuginConfig().Naeringskoder));
+
+        app.MapPut("/api/config/focus", (HuginConfigFile file, FocusWriteRequest request) =>
+        {
+            var codes = Clean(request.Naeringskoder);
+            var keywords = Clean(request.Keywords);
+
+            if (codes.Count == 0)
+                return Results.Problem(statusCode: 400,
+                    title: "Ingen bransjer valgt — Brreg svarer med hele landet uten et næringskodefilter.");
+            if (codes.Count > MaxCodes || keywords.Count > MaxKeywords)
+                return Results.Problem(statusCode: 400,
+                    title: $"For mange oppføringer — maks {MaxCodes} bransjer og {MaxKeywords} nøkkelord.");
+            if (codes.Concat(keywords).FirstOrDefault(v => v.Length > MaxLength) is { } tooLong)
+                return Results.Problem(statusCode: 400,
+                    title: $"«{tooLong}» er lengre enn {MaxLength} tegn.");
+            if (codes.FirstOrDefault(c => !NaceCode.Pattern().IsMatch(c)) is { } badCode)
+                return Results.Problem(statusCode: 400,
+                    title: $"Ugyldig næringskode «{badCode}» — to siffer, eventuelt punktum og ett til tre siffer.");
+
+            try
+            {
+                file.WriteFocus(new FocusConfig(codes, keywords));
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(statusCode: 500, title: $"Kunne ikke skrive {ConfigLoader.FileName}: {ex.Message}");
+            }
+
+            return Results.Ok(FocusConfigDto.From(file.ReadFocus()));
+        });
+
+        app.MapGet("/api/config/focus/preview", async (string? nace, IBrregClient brreg, HuginConfigFile file,
+            IKommuneRepository kommuner, PublicModeOptions mode, CancellationToken ct) =>
+        {
+            // Refused outright in public mode: this is the one GET that acts outward, and a demo
+            // visitor must not be able to drive Brreg traffic from the hosted instance.
+            if (mode.Enabled) return Results.Problem(statusCode: 403, title: PublicMode.WriteRefusedTitle);
+
+            var code = nace?.Trim() ?? "";
+            if (!NaceCode.Pattern().IsMatch(code))
+                return Results.Problem(statusCode: 400,
+                    title: $"Ugyldig næringskode «{code}» — to siffer, eventuelt punktum og ett til tre siffer.");
+
+            var scope = MunicipalityScope.Build(file.Load(), await kommuner.GetAllAsync(ct));
+            try
+            {
+                var (units, name) = await brreg.CountAsync(code, scope.AllowedNumbers, ct);
+                return Results.Ok(new NacePreviewDto(code, name, units));
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(statusCode: 503, title: $"Kunne ikke hente antall fra Brreg: {ex.Message}");
+            }
+        });
+
+        app.MapPost("/api/reset", async (ResetRequest request, ResetService reset, SyncRunner runner,
+            CancellationToken ct) =>
+        {
+            if (request.Mode is not ("scope" or "all"))
+                return Results.Problem(statusCode: 400, title: "Ukjent nullstillingsmodus.");
+            if (runner.Status.Running)
+                return Results.Problem(statusCode: 409, title: "En synk kjører — vent til den er ferdig.");
+
+            string? snapshot = null;
+            try
+            {
+                if (request.Mode == "all") snapshot = await reset.WipeAsync(ct);
+                reset.ClearScope();
+            }
+            catch (Exception ex)
+            {
+                // If ClearScope() throws after WipeAsync() already ran, the database is empty and
+                // a bare 500 would strand the user with no pointer to the backup that was just
+                // taken. The path goes in the error response so it is never lost.
+                var title = snapshot is null
+                    ? $"Nullstillingen feilet: {ex.Message}"
+                    : $"Nullstillingen feilet etter at sikkerhetskopien ble tatt: {ex.Message} "
+                        + $"Databasen er tømt — kopien ligger på {snapshot}.";
+                return Results.Problem(statusCode: 500, title: title);
+            }
+
+            return Results.Ok(new ResetResultDto(request.Mode, snapshot));
+        });
     }
 
     private static bool IsKommuneNumber(string n) => n.Length == 4 && n.All(char.IsAsciiDigit);
 
     private static bool IsFylkePrefix(string f) => f.Length == 2 && f.All(char.IsAsciiDigit);
+
+    private const int MaxCodes = 50;
+    private const int MaxKeywords = 200;
+    private const int MaxLength = 40;
+
+    private static List<string> Clean(IReadOnlyList<string>? values) =>
+        (values ?? []).Select(v => v.Trim()).Where(v => v.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 }

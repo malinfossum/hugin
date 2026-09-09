@@ -6,7 +6,12 @@ namespace Hugin.Tests;
 
 public class AdFilterTests
 {
-    private static readonly HuginConfig Config = new();  // defaults: Innlandet municipalities + dev keywords
+    // No default geography any more (spec v3.5 Part A) — Gjøvik/Hamar/Lillehammer configured
+    // explicitly so the fixtures below keep testing what they always tested.
+    private static readonly HuginConfig Config = new()
+    {
+        Municipalities = [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405")],
+    };
     private static readonly Dictionary<string, string> EmptyRegister = [];
     private static readonly MunicipalityScope Scope = MunicipalityScope.Build(Config, EmptyRegister);
 
@@ -36,7 +41,7 @@ public class AdFilterTests
     [Test]
     public void Empty_keyword_list_matches_all_titles_in_region()
     {
-        var cfg = new HuginConfig { Keywords = [] };
+        var cfg = new HuginConfig { Municipalities = [new("Hamar", "3403")], Keywords = [] };
         var scope = MunicipalityScope.Build(cfg, EmptyRegister);
         Assert.That(AdFilter.Matches(Ad("Hva som helst", "3403"), cfg, scope), Is.True);
     }

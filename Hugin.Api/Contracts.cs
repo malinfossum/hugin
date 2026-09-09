@@ -64,7 +64,7 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly);
+    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured);
 
 public sealed record SourceDto(int Id, string Label, string Url, int Position)
 {
@@ -84,6 +84,19 @@ public sealed record DiscoveryConfigDto(IReadOnlyList<MunicipalityRef> Municipal
 
 /// <summary>Numbers only — names are derived from the kommune register server-side (spec v3.4 Part A).</summary>
 public sealed record DiscoveryWriteRequest(IReadOnlyList<string>? MunicipalityNumbers, IReadOnlyList<string>? Fylker, bool AllOfNorway);
+
+public sealed record FocusConfigDto(IReadOnlyList<string> Naeringskoder, IReadOnlyList<string> Keywords)
+{
+    public static FocusConfigDto From(FocusConfig focus) => new(focus.Naeringskoder, focus.Keywords);
+}
+
+public sealed record FocusWriteRequest(IReadOnlyList<string>? Naeringskoder, IReadOnlyList<string>? Keywords);
+
+public sealed record NacePreviewDto(string Code, string? Name, int Units);
+
+public sealed record ResetRequest(string Mode);
+
+public sealed record ResetResultDto(string Mode, string? SnapshotPath);
 
 /// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
 public static class StatusSlug

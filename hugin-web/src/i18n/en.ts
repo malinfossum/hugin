@@ -62,7 +62,7 @@ export const en = {
   'settings.sourceMoved': 'Order changed.',
   'settings.languageHeading': 'Language',
   'settings.themeHeading': 'Theme',
-  'settings.focusHeading': 'Focus',
+  'settings.focusHeading': 'Display filter',
   'settings.focusHint': 'Controls what the dashboard and company list show by default.',
   'settings.focusUpdated': 'Focus updated.',
   'settings.focusReset': 'Show the first-run choice again',
@@ -202,6 +202,42 @@ export const en = {
   'coverage.otherFylke': '{fylke} (whole county)',
   'coverage.removeOther': 'Remove {name}',
 
+  'focus.heading': 'Focus',
+  'focus.hint':
+    'Industries control which companies Hugin discovers. Keywords control which ads are saved.',
+  'focus.bransjerLegend': 'Industries (NACE codes)',
+  'focus.addCode': 'Add industry',
+  'focus.addCodeToList': 'Add industry to the list',
+  'focus.previewButton': 'Show count',
+  'focus.previewResult': '{code} · {name} — {units} companies',
+  'focus.previewUnknown': '{code} — 0 companies',
+  'focus.previewNoName': '{code} — {units} companies',
+  'focus.previewFailed': 'Could not fetch the count',
+  'focus.invalidCode':
+    'Invalid industry code — two digits, optionally a dot and 1–3 more digits (e.g. "62" or "58.2").',
+  'focus.covered': '{code} is already covered by {broader}',
+  'focus.recommended': 'Add recommended',
+  'focus.recommendedFailed': 'Could not fetch the recommended industries.',
+  'focus.recommendedAddedTotal':
+    'Recommended industries added: {count} — {units} companies in total.',
+  'focus.recommendedAddedPartial':
+    'Recommended industries added: {count} — {units} companies in total for {known} of them (the rest unknown, Brreg was unreachable).',
+  'focus.removeCode': 'Remove industry {code}',
+  'focus.keywordsLegend': 'Keywords',
+  'focus.keywordsHint': 'Changes apply to ads that arrive after the next sync.',
+  'focus.addKeyword': 'Add keyword',
+  'focus.addKeywordToList': 'Add keyword to the list',
+  'focus.removeKeyword': 'Remove keyword “{keyword}”',
+  'focus.save': 'Save focus',
+  'focus.savedNoSync': 'Saved — applies from the next sync',
+  'focus.saveFailed': 'Could not save focus: {error}',
+  'focus.loadError': 'Could not load focus.',
+  'focus.backfillButton': 'Full NAV backfill',
+  'focus.backfillConfirmTitle': 'Run a full NAV backfill?',
+  'focus.backfillConfirmBody':
+    'This can take a few minutes. Closed ads come back stripped of content, so the backfill only recovers open ads.',
+  'focus.backfillStarted': 'Full backfill started.',
+
   'focus.title': 'What do you want to follow?',
   'focus.intro':
     'Coverage controls what Hugin fetches; focus controls what you see first. Both can be changed in Settings.',
@@ -214,4 +250,28 @@ export const en = {
   'demo.banner':
     'Demo — read-only. Real job ads and companies from NAV and Brreg for Innlandet. The pipeline is sample data. No tracking, no cookies; your theme choice is stored only in your browser.',
   'demo.repoLink': 'Source code on GitHub',
+
+  'dashboard.noCoverageMessage': 'No coverage chosen.',
+  'dashboard.noCoverageButton': 'Choose coverage',
+  'dashboard.noCoverageAnnounce':
+    'No coverage chosen. Pick a county, municipality or all of Norway.',
+
+  'reset.heading': 'Reset',
+  'reset.hint': 'Two levels — pick the one you need. Neither can be undone.',
+  'reset.scopeButton': 'Reset coverage',
+  'reset.scopeConfirmTitle': 'Reset the coverage?',
+  'reset.scopeConfirmBody':
+    'Municipalities, counties and "all of Norway" are cleared from the setup. Companies and ads stay, but stop refreshing. Industries and keywords are unchanged. The first-run choice appears again.',
+  'reset.scopeDone': 'Coverage reset.',
+  'reset.scopeFailed': 'Could not reset the coverage: {error}',
+  'reset.hardButton': 'Start over',
+  'reset.hardConfirmTitle': 'Delete everything and start over?',
+  'reset.hardConfirmIntro':
+    'This cannot be undone. Your pipeline is gone for good — companies and ads come back on the next sync.',
+  'reset.hardCounts': '{companies} companies, {activeAds} ads, {pipelineEntries} in Applications.',
+  'reset.hardConfirmButton': 'Delete everything',
+  'reset.confirmLabel': 'Type NULLSTILL to confirm',
+  'reset.hardDone': 'Reset. Backup saved: {path}',
+  'reset.hardFailed': 'Could not reset: {error}',
+  'reset.hardReload': 'Reload the page',
 } as const

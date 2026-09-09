@@ -17,7 +17,10 @@ public class MunicipalityScopeTests
     [Test]
     public void Plain_config_allows_only_the_configured_numbers()
     {
-        var config = new HuginConfig(); // defaults: Gjøvik/Hamar/Lillehammer/Ringsaker
+        var config = new HuginConfig
+        {
+            Municipalities = [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405"), new("Ringsaker", "3411")],
+        };
         var scope = MunicipalityScope.Build(config, Register);
 
         Assert.That(scope.AllowedNumbers, Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
@@ -27,10 +30,10 @@ public class MunicipalityScopeTests
     [Test]
     public void ResolveName_resolves_any_known_name_regardless_of_the_gate()
     {
-        var config = new HuginConfig(); // defaults: Gjøvik/Hamar/Lillehammer/Ringsaker
+        var config = new HuginConfig(); // no default geography — resolution here comes from Register
         var scope = MunicipalityScope.Build(config, Register);
 
-        // Config name, case-insensitive.
+        // Register name, case-insensitive.
         Assert.That(scope.ResolveName("HAMAR"), Is.EqualTo("3403"));
         Assert.That(scope.ResolveName("hamar"), Is.EqualTo("3403"));
 
@@ -46,7 +49,7 @@ public class MunicipalityScopeTests
     [Test]
     public void Gate_is_separate_from_resolution_only_allowed_numbers_pass()
     {
-        var config = new HuginConfig();
+        var config = new HuginConfig { Municipalities = [new("Hamar", "3403")] };
         var scope = MunicipalityScope.Build(config, Register);
 
         var larvikNumber = scope.ResolveName("LARVIK");

@@ -40,7 +40,10 @@ public class SyncServiceTests
         ads ??= new FakeAdRepository();
         companies ??= new FakeCompanyRepository();
         prober ??= new FakeWebsiteProber();
-        config ??= new HuginConfig();
+        config ??= new HuginConfig
+        {
+            Municipalities = [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405"), new("Ringsaker", "3411")],
+        };
 
         kommuner ??= new FakeKommuneRepository();
         var syncState = new FakeSyncStateRepository();
@@ -384,6 +387,33 @@ public class SyncServiceTests
     }
 
     [Test]
+    public async Task Brreg_says_no_coverage_chosen_when_nothing_is_configured()
+    {
+        var harness = Build(config: new HuginConfig { Municipalities = [] });
+
+        var summary = await harness.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Succeeded, Is.False);
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ingen dekning valgt — velg kommuner i dashbordet"));
+        Assert.That(harness.Brreg.CompaniesRequests, Is.Empty, "nothing may be fetched without a scope");
+    }
+
+    [Test]
+    public async Task No_coverage_message_keeps_the_prefix_hugin_web_SyncHeader_matches_on()
+    {
+        // hugin-web/src/views/dashboard/SyncHeader.tsx prefix-matches this exact literal
+        // ('Ingen dekning valgt') to special-case the no-coverage failure into a prompt with a
+        // button that reopens the coverage dialog. Nothing on the web side pins that string to
+        // this one — if SyncBrregAsync's wording changes, this test must go red before the
+        // dashboard's prompt silently stops firing.
+        var harness = Build(config: new HuginConfig { Municipalities = [] });
+
+        var summary = await harness.Service.SyncAsync();
+
+        Assert.That(summary.Brreg.Error, Does.StartWith("Ingen dekning valgt"));
+    }
+
+    [Test]
     public async Task An_empty_scope_fails_brreg_instead_of_fetching_all_of_norway()
     {
         // A fylke-only config plus an empty kommune register (fresh install, register fetch
@@ -408,7 +438,11 @@ public class SyncServiceTests
         // then expand nothing, so AllowedNumbers collapses back to the plain configured set and
         // the SetEquals check takes the single-call path, same as an unscaled config.
         var brreg = new FakeBrregClient { Companies = { Company() } };
-        var config = new HuginConfig { AllOfNorway = true };
+        var config = new HuginConfig
+        {
+            Municipalities = [new("Gjøvik", "3407"), new("Hamar", "3403"), new("Lillehammer", "3405"), new("Ringsaker", "3411")],
+            AllOfNorway = true,
+        };
 
         var h = Build(brreg: brreg, config: config);
         var summary = await h.Service.SyncAsync();

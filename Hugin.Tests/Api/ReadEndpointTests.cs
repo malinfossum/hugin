@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Hugin.Api;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -356,5 +357,20 @@ public sealed class ReadEndpointTests
         Assert.That(dto!.ActiveAds, Is.EqualTo(1));
         Assert.That(dto.Companies, Is.EqualTo(1));
         Assert.That(dto.PipelineEntries, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Status_reports_whether_a_scope_has_been_chosen()
+    {
+        using var empty = new ApiFactory();
+        // No hugin.json at all is the fresh-install case the first-run dialog exists for.
+        var withoutScope = await empty.CreateClient().GetFromJsonAsync<StatusDto>("/api/status");
+        Assert.That(withoutScope!.ScopeConfigured, Is.False);
+
+        using var chosen = new ApiFactory();
+        File.WriteAllText(chosen.ConfigPath,
+            """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
+        var withScope = await chosen.CreateClient().GetFromJsonAsync<StatusDto>("/api/status");
+        Assert.That(withScope!.ScopeConfigured, Is.True);
     }
 }

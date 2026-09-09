@@ -15,6 +15,9 @@ public sealed class SyncEndpointTests
     public async Task Post_sync_runs_to_completion_with_source_results()
     {
         using var factory = new ApiFactory();
+        // No default geography any more (spec v3.5 Part A) — this test is about the sync
+        // endpoint's own mechanics, not scope resolution, so give it an explicit one.
+        File.WriteAllText(factory.ConfigPath, """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
         using var client = factory.CreateApiClient();
 
         var post = await client.PostAsync("/api/sync", null);
@@ -56,6 +59,34 @@ public sealed class SyncEndpointTests
 
         var status = await PollUntilFinished(client);
         Assert.That(status.Running, Is.False);
+    }
+
+    [Test]
+    public async Task Sync_can_be_started_as_a_full_backfill()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsync("/api/sync?full=1", null);
+        Assert.That(response.IsSuccessStatusCode, Is.True);
+
+        var status = await PollUntilFinished(client);
+        Assert.That(status.Running, Is.False);
+        Assert.That(factory.Nav.FirstPageRequested, Is.True, "a backfill enters at the feed's oldest page");
+    }
+
+    [Test]
+    public async Task Sync_full_backfill_accepts_true_spelling()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PostAsync("/api/sync?full=true", null);
+        Assert.That(response.IsSuccessStatusCode, Is.True);
+
+        var status = await PollUntilFinished(client);
+        Assert.That(status.Running, Is.False);
+        Assert.That(factory.Nav.FirstPageRequested, Is.True, "full=true also reaches the backfill path");
     }
 
     [Test]

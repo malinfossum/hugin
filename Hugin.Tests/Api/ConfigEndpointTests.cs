@@ -54,7 +54,7 @@ public sealed class ConfigEndpointTests
 
         var dto = await client.GetFromJsonAsync<DiscoveryConfigDto>("/api/config/discovery");
 
-        Assert.That(dto!.Municipalities.Select(m => m.Number), Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
+        Assert.That(dto!.Municipalities, Is.Empty, "no default geography (spec v3.5 Part A)");
         Assert.That(dto.AllOfNorway, Is.False);
     }
 
@@ -213,5 +213,193 @@ public sealed class ConfigEndpointTests
         var response = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest([], [], true));
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Get_focus_reads_the_curated_defaults_when_no_file_exists()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateClient();
+
+        var dto = await client.GetFromJsonAsync<FocusConfigDto>("/api/config/focus");
+
+        Assert.That(dto!.Naeringskoder, Is.EqualTo(new HuginConfig().Naeringskoder));
+        Assert.That(dto.Keywords, Is.EqualTo(new HuginConfig().Keywords));
+    }
+
+    [Test]
+    public async Task Get_focus_recommended_returns_the_eight_curated_codes_in_order()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateClient();
+
+        var codes = await client.GetFromJsonAsync<string[]>("/api/config/focus/recommended");
+
+        Assert.That(codes, Is.EqualTo(new[] { "62", "72", "63", "58.2", "64.19", "92", "61", "26.2" }));
+    }
+
+    [Test]
+    public async Task Focus_round_trips_and_rejects_what_it_must()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var ok = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62", "58.2", "62"], [" utvikler ", "developer"]));
+        Assert.That(ok.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var written = await ok.Content.ReadFromJsonAsync<FocusConfigDto>();
+        Assert.That(written!.Naeringskoder, Is.EqualTo(new[] { "62", "58.2" }), "deduped, order kept");
+        Assert.That(written.Keywords, Is.EqualTo(new[] { "utvikler", "developer" }), "trimmed");
+
+        var badCode = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62", "sixty-two"], ["utvikler"]));
+        Assert.That(badCode.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+        var noCodes = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest([], ["utvikler"]));
+        Assert.That(noCodes.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "an empty filter fetches all of Norway");
+
+        var noKeywords = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62"], []));
+        Assert.That(noKeywords.StatusCode, Is.EqualTo(HttpStatusCode.OK), "empty keywords means everything in the region");
+
+        var tooMany = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62"], Enumerable.Range(0, 201).Select(i => $"k{i}").ToList()));
+        Assert.That(tooMany.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Put_focus_rejects_a_bad_code_naming_the_offending_code()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62", "sixty-two"], ["utvikler"]));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+        Assert.That(problem!.Title, Does.Contain("sixty-two"));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
+    }
+
+    [Test]
+    public async Task Put_focus_rejects_more_than_50_codes_naming_the_limit()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(Enumerable.Range(10, 51).Select(i => i.ToString()).ToList(), []));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+        Assert.That(problem!.Title, Does.Contain("50"));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
+    }
+
+    [Test]
+    public async Task Put_focus_rejects_more_than_200_keywords_naming_the_limit()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62"], Enumerable.Range(0, 201).Select(i => $"k{i}").ToList()));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+        Assert.That(problem!.Title, Does.Contain("200"));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
+    }
+
+    [Test]
+    public async Task Put_focus_rejects_an_entry_longer_than_40_characters_naming_the_limit()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+        var tooLong = new string('a', 41);
+
+        var response = await client.PutAsJsonAsync("/api/config/focus",
+            new FocusWriteRequest(["62"], [tooLong]));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>();
+        Assert.That(problem!.Title, Does.Contain("40").And.Contain(tooLong));
+        Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
+    }
+
+    [Test]
+    public async Task Put_focus_keeps_hand_edited_keys()
+    {
+        using var factory = new ApiFactory();
+        File.WriteAllText(factory.ConfigPath, """{ "categories": ["IT"], "navToken": "abc", "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
+        using var client = factory.CreateApiClient();
+
+        await client.PutAsJsonAsync("/api/config/focus", new FocusWriteRequest(["62"], ["utvikler"]));
+
+        var text = File.ReadAllText(factory.ConfigPath);
+        Assert.That(text, Does.Contain("\"IT\"").And.Contain("\"navToken\": \"abc\"").And.Contain("\"Hamar\""));
+        Assert.That(File.Exists(factory.ConfigPath + ".bak"), Is.True);
+    }
+
+    [Test]
+    public async Task Put_focus_returns_500_and_leaves_the_file_untouched_when_the_write_fails()
+    {
+        using var factory = new ApiFactory();
+        File.WriteAllText(factory.ConfigPath, "{ this is not json");
+        using var client = factory.CreateApiClient();
+
+        var response = await client.PutAsJsonAsync("/api/config/focus", new FocusWriteRequest(["62"], ["utvikler"]));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(File.ReadAllText(factory.ConfigPath), Is.EqualTo("{ this is not json"));
+        Assert.That(File.Exists(factory.ConfigPath + ".bak"), Is.False);
+    }
+
+    [Test]
+    public async Task Put_focus_needs_the_write_header()
+    {
+        using var factory = new ApiFactory();
+        using var client = factory.CreateClient(); // no X-Hugin
+
+        var response = await client.PutAsJsonAsync("/api/config/focus", new FocusWriteRequest(["62"], []));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Preview_counts_units_and_refuses_callers_that_are_not_the_dashboard()
+    {
+        using var factory = new ApiFactory();
+        factory.Brreg.Counts["63"] = (45, "Databehandling, hosting og portaler");
+
+        // A page the user merely visits can send this GET; it must not reach Brreg.
+        using var driveByClient = factory.CreateClient();
+        var driveBy = await driveByClient.GetAsync("/api/config/focus/preview?nace=63");
+        Assert.That(driveBy.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), "a GET with a side effect still needs the header");
+
+        using var client = factory.CreateApiClient();
+        var preview = await client.GetFromJsonAsync<NacePreviewDto>("/api/config/focus/preview?nace=63");
+        Assert.That(preview!.Units, Is.EqualTo(45));
+        Assert.That(preview.Name, Is.EqualTo("Databehandling, hosting og portaler"));
+
+        var injected = await client.GetAsync("/api/config/focus/preview?nace=62%26size=1000");
+        Assert.That(injected.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(factory.Brreg.CountRequests, Is.EqualTo(new[] { "63" }), "a rejected code must never reach Brreg");
+    }
+
+    [Test]
+    public async Task Preview_degrades_to_a_service_unavailable_problem_when_brreg_is_down()
+    {
+        // The dashboard card must still render with the count simply unknown, rather than the
+        // request blowing up — a caught Brreg failure becomes a 503 Problem, not an unhandled 500.
+        using var factory = new ApiFactory();
+        factory.Brreg.Throws = true;
+        using var client = factory.CreateApiClient();
+
+        var response = await client.GetAsync("/api/config/focus/preview?nace=62");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
     }
 }

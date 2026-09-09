@@ -105,6 +105,39 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
         return results;
     }
 
+    public async Task<(int Units, string? Name)> CountAsync(string naceCode,
+        IEnumerable<string> municipalityNumbers, CancellationToken ct = default)
+    {
+        var kommuner = string.Concat(municipalityNumbers.Select(n => $"&kommunenummer={Uri.EscapeDataString(n)}"));
+        var query = $"naeringskode={Uri.EscapeDataString(naceCode)}{kommuner}&size=1";
+
+        var (mainUnits, name) = await CountOneAsync($"enheter?{query}", "enheter", ct);
+        var (branchUnits, branchName) = await CountOneAsync($"underenheter?{query}", "underenheter", ct);
+        return (mainUnits + branchUnits, name ?? branchName);
+    }
+
+    private async Task<(int Units, string? Name)> CountOneAsync(string url, string collection, CancellationToken ct)
+    {
+        using var response = await http.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+        var root = doc.RootElement;
+
+        var totalElements = 0;
+        if (root.TryGetProperty("page", out var paging) && paging.TryGetProperty("totalElements", out var elements))
+            totalElements = elements.GetInt32();
+
+        string? name = null;
+        if (root.TryGetProperty("_embedded", out var embedded)
+            && embedded.TryGetProperty(collection, out var items)
+            && items.EnumerateArray().FirstOrDefault() is { ValueKind: JsonValueKind.Object } first
+            && first.TryGetProperty("naeringskode1", out var nace))
+            name = String(nace, "beskrivelse");
+
+        return (totalElements, name);
+    }
+
     private async Task<RegisterCompany?> FetchOneAsync(string path, bool isBranch, CancellationToken ct)
     {
         using var response = await http.GetAsync(path, ct);
