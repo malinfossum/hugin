@@ -22,15 +22,21 @@ public sealed class ResetEndpointTests
         using var factory = new ApiFactory();
         using (var scope = factory.Services.CreateScope())
         {
+            var now = DateTimeOffset.UtcNow;
             var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
             await companies.UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
-                DateTimeOffset.UtcNow);
+                now);
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
                 Orgnr = "934161181", Status = PipelineStatus.Active, Why = "fordi",
-                Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
+                Created = now, Updated = now,
             });
+            var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+            await ads.UpsertAsync(new FeedAd("a1", "Utvikler", "Norkart AS", "934161181", "3405",
+                now, now.AddDays(5), "https://x", true, "IT"), now);
+            var reviewMark = scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>();
+            await reviewMark.SetAsync(now);
         }
         using var client = factory.CreateApiClient();
 
@@ -45,6 +51,8 @@ public sealed class ResetEndpointTests
         var status = await client.GetFromJsonAsync<StatusDto>("/api/status");
         Assert.That(status!.Companies, Is.Zero);
         Assert.That(status.PipelineEntries, Is.Zero);
+        Assert.That(status.ActiveAds, Is.Zero, "the Ads table is wiped too");
+        Assert.That(status.ReviewMark, Is.Null, "the ReviewMarks table is wiped too");
         Assert.That(status.ScopeConfigured, Is.False);
 
         var sources = await client.GetFromJsonAsync<List<SourceDto>>("/api/sources");
@@ -178,6 +186,44 @@ public sealed class ResetEndpointTests
 
             Assert.That(File.Exists(snapshot), Is.True);
             Assert.That(snapshot, Does.StartWith(dbPath));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task WipeAsync_deletes_brreg_and_nav_syncstates_but_keeps_the_sources_seed_marker()
+    {
+        // Binds the silent-resurrection guard to the real WipeAsync, not a replica of its
+        // logic: HuginDbInitializer.InitAsync only re-seeds the default sources and config
+        // linkouts when the "sources-seed" SyncStates row is gone. If WipeAsync's selective
+        // delete ever widened to the whole SyncStates table, this test must go red.
+        var dir = Path.Combine(Path.GetTempPath(), $"hugin-syncstates-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var configPath = Path.Combine(dir, "hugin.json");
+        var dbPath = Path.Combine(dir, "hugin.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(dbPath)).Options;
+            await using var db = new HuginDbContext(options);
+            // InitAsync seeds "sources-seed" already — add brreg/nav cursors for WipeAsync to delete.
+            await HuginDbInitializer.InitAsync(db, dbPath);
+            db.SyncStates.Add(new SyncState { Source = "brreg", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c1" });
+            db.SyncStates.Add(new SyncState { Source = "nav", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c2" });
+            await db.SaveChangesAsync();
+
+            var file = new HuginConfigFile(configPath);
+            var service = new ResetService(db, file, new FakeClock(DateTimeOffset.UtcNow));
+
+            await service.WipeAsync();
+
+            var remaining = await db.SyncStates.Select(s => s.Source).ToListAsync();
+            Assert.That(remaining, Is.EqualTo(new[] { "sources-seed" }),
+                "brreg and nav are gone; the seed marker survives so a re-launch does not resurrect the defaults");
         }
         finally
         {
