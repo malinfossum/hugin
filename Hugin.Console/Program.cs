@@ -158,7 +158,23 @@ internal static class Program
                 ? (pages, ads) => { if (pages % 50 == 0) Console.WriteLine($"  nav: {pages} sider lest, {ads} annonser lagret …"); }
         : null);
 
-        Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
+        // Special-case the no-coverage error to guide CLI-first users
+        if (summary.Brreg.Succeeded)
+        {
+            Console.WriteLine(Line("brreg", summary.Brreg, "selskaper"));
+        }
+        else if (summary.Brreg.Error is { } brregError)
+        {
+            Console.WriteLine($"Brreg: {brregError}");
+            if (brregError.StartsWith("Ingen dekning valgt", StringComparison.Ordinal))
+            {
+                var configPath = services.GetRequiredService<HuginConfigFile>().ConfigPath;
+                Console.WriteLine($"  Legg til kommuner i {configPath} under \"municipalities\", f.eks.");
+                Console.WriteLine("    \"municipalities\": [{ \"name\": \"Hamar\", \"number\": \"3403\" }]");
+                Console.WriteLine("  eller start hugin-api.exe og velg dekning i dashbordet.");
+            }
+        }
+
         Console.WriteLine(Line("nav", summary.Nav, "annonser"));
 
         if (summary.WebsitesChecked > 0)
