@@ -176,17 +176,71 @@ public class SyncServiceTests
     }
 
     [Test]
-    public async Task Full_sync_resumes_from_a_stored_cursor()
+    public async Task Full_sync_resumes_from_its_own_stored_position()
     {
         var nav = new FakeNavFeedClient(new FeedPage([Ad("a", "Backend-utvikler", "3403")], null, "side-9"));
 
         var h = Build(nav: nav);
-        await h.SyncState.SetAsync("nav", "side-8", Now);
+        await h.SyncState.SetAsync("nav-backfill", "side-8", Now);
         await h.Service.SyncAsync(fullNav: true);
 
         Assert.That(h.Nav.FirstPageRequested, Is.False);
         Assert.That(h.Nav.RequestedCursors, Is.EqualTo(new string?[] { "side-8" }),
             "an interrupted backfill continues where it stopped");
+    }
+
+    [Test]
+    public async Task Full_sync_ignores_the_incremental_cursor_and_walks_from_the_beginning()
+    {
+        // A normal sync parks the nav cursor at the tail. A backfill that resumed from it would
+        // read one page and report success — the widened-keywords case Part C exists for.
+        var nav = new FakeNavFeedClient(
+            new FeedPage([Ad("a", "Backend-utvikler", "3403")], "hale-side", "side-1"),
+            new FeedPage([Ad("b", "Frontend-utvikler", "3403")], null, "hale-side"));
+
+        var h = Build(nav: nav);
+        await h.SyncState.SetAsync("nav", "hale-side", Now);
+        var summary = await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(h.Nav.FirstPageRequested, Is.True, "a backfill must not start at the tail");
+        Assert.That(summary.Nav.Fetched, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Full_sync_that_reaches_the_tail_moves_the_incremental_cursor_and_forgets_its_position()
+    {
+        var nav = new FakeNavFeedClient(
+            new FeedPage([Ad("a", "Backend-utvikler", "3403")], "hale-side", "side-1"),
+            new FeedPage([Ad("b", "Frontend-utvikler", "3403")], null, "hale-side"));
+
+        var h = Build(nav: nav);
+        await h.SyncState.SetAsync("nav", "gammel-hale", Now.AddDays(-1));
+        await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(h.SyncState.Store["nav"].Cursor, Is.EqualTo("hale-side"),
+            "the next incremental sync continues from the tail the backfill reached");
+        Assert.That(h.SyncState.Store["nav-backfill"].Cursor, Is.Null,
+            "a finished backfill leaves nothing to resume; the next one starts over");
+    }
+
+    [Test]
+    public async Task Interrupted_full_sync_keeps_its_position_and_leaves_the_incremental_cursor_alone()
+    {
+        var nav = new FakeNavFeedClient(
+            new FeedPage([Ad("a", "Backend-utvikler", "3403")], "side-2", "side-1"),
+            new FeedPage([Ad("b", "Frontend-utvikler", "3403")], "side-3", "side-2"));
+        nav.OnCall = () => nav.RequestedCursors.Count == 1
+            ? throw new HttpRequestException("nede")
+            : Task.CompletedTask;
+
+        var h = Build(nav: nav);
+        await h.SyncState.SetAsync("nav", "hale-side", Now.AddDays(-1));
+        var summary = await h.Service.SyncAsync(fullNav: true);
+
+        Assert.That(summary.Nav.Succeeded, Is.False);
+        Assert.That(h.SyncState.Store["nav-backfill"].Cursor, Is.EqualTo("side-2"));
+        Assert.That(h.SyncState.Store["nav"].Cursor, Is.EqualTo("hale-side"),
+            "a half-done backfill must not send the daily sync back into history");
     }
 
     [Test]

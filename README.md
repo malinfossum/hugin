@@ -35,7 +35,7 @@ A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App S
 
 | Command | What it does |
 |---|---|
-| `hugin sync [--full]` | Pulls companies from Brreg and ads from NAV. `--full` walks the whole feed history — run once after setup; interrupted runs resume |
+| `hugin sync [--full]` | Pulls companies from Brreg and ads from NAV. `--full` walks the whole feed history from the oldest page — run once after setup and again after widening keywords; interrupted runs resume |
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies` / `--ads` (each with `--kommune <nr>`) browse the synced inventory |
