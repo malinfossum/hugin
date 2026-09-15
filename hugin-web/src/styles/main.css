@@ -378,6 +378,12 @@ input[type="text"] {
 }
 
 /* Demo banner (read-only showcase): a static region right after the header. */
+/* The design-system .app-shell is a two-row grid (header, main). The demo banner is a third
+   child, so without this it takes the stretching 1fr row and pushes main to the bottom of the
+   viewport whenever the view is shorter than the screen. */
+.app-shell:has(.demo-banner) {
+  grid-template-rows: auto auto 1fr;
+}
 .demo-banner {
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
