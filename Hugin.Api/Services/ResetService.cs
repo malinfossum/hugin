@@ -42,7 +42,7 @@ public sealed class ResetService(HuginDbContext db, HuginConfigFile file, IClock
             await db.ReviewMarks.ExecuteDeleteAsync(ct);
             // Selective on purpose: the "sources-seed" row is what stops HuginDbInitializer
             // re-importing the default sources and the config linkouts on the next launch.
-            await db.SyncStates.Where(s => s.Source == "brreg" || s.Source == "nav")
+            await db.SyncStates.Where(s => s.Source == "brreg" || s.Source == "nav" || s.Source == "nav-backfill")
                 .ExecuteDeleteAsync(ct);
             await tx.CommitAsync(ct);
         }

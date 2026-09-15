@@ -292,6 +292,7 @@ public sealed class ResetEndpointTests
             await HuginDbInitializer.InitAsync(db, dbPath);
             db.SyncStates.Add(new SyncState { Source = "brreg", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c1" });
             db.SyncStates.Add(new SyncState { Source = "nav", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c2" });
+            db.SyncStates.Add(new SyncState { Source = "nav-backfill", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c3" });
             await db.SaveChangesAsync();
 
             var file = new HuginConfigFile(configPath);
@@ -301,7 +302,7 @@ public sealed class ResetEndpointTests
 
             var remaining = await db.SyncStates.Select(s => s.Source).ToListAsync();
             Assert.That(remaining, Is.EqualTo(new[] { "sources-seed" }),
-                "brreg and nav are gone; the seed marker survives so a re-launch does not resurrect the defaults");
+                "brreg, nav and the backfill position are gone; the seed marker survives so a re-launch does not resurrect the defaults");
         }
         finally
         {

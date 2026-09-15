@@ -34,6 +34,8 @@ public sealed class SyncService(
     // gets a far higher ceiling that only a broken cursor chain could ever reach.
     private const int MaxPagesPerSync = 100;
     private const int MaxPagesFullSync = 20_000;
+    private const string NavState = "nav";
+    private const string NavBackfillState = "nav-backfill";
 
     // A website check is a "keep it fresh" background nicety, not tracked sync data — a small
     // daily slice keeps the whole tracked set current within a couple of weeks without ever
@@ -223,7 +225,10 @@ public sealed class SyncService(
 
         try
         {
-            var cursor = (await syncState.GetAsync("nav", ct))?.Cursor;
+            // A backfill keeps its own position: the daily sync parks "nav" at the tail, so a
+            // backfill that resumed from it would read one page and call the history done.
+            var stateKey = full ? NavBackfillState : NavState;
+            var cursor = (await syncState.GetAsync(stateKey, ct))?.Cursor;
             var maxPages = full ? MaxPagesFullSync : MaxPagesPerSync;
             var firstFetch = true;
 
@@ -265,10 +270,21 @@ public sealed class SyncService(
                 // until it fills and rolls over. Resuming from it — rather than from "newest"
                 // — is what stops those entries being skipped; re-reading it is harmless
                 // because upserts are idempotent.
-                await syncState.SetAsync("nav", cursor ?? feedPage.PageId, now, ct);
+                await syncState.SetAsync(stateKey, cursor ?? feedPage.PageId, now, ct);
 
                 onPage?.Invoke(page + 1, stored);
-                if (cursor is null) break;
+                if (cursor is not null) continue;
+
+                // A backfill that reached the tail hands that page to the daily sync and forgets
+                // its own position, so the next backfill starts over from the oldest page. An
+                // interrupted one leaves "nav" alone — the daily sync must not follow it back
+                // into history.
+                if (full)
+                {
+                    await syncState.SetAsync(NavState, feedPage.PageId, now, ct);
+                    await syncState.SetAsync(NavBackfillState, null, now, ct);
+                }
+                break;
             }
 
             return new SourceResult(true, stored, null);
