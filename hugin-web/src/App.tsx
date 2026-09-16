@@ -97,6 +97,7 @@ function AppShell() {
         selectedOrgnr={route.company}
         onOpenCompany={(orgnr) => navigate({ view: 'companies', company: orgnr })}
         onCloseCompany={() => navigate({ view: 'companies', company: null })}
+        onOpenSettings={() => switchView('settings')}
       />
     ),
     export: () => <EksportView />,

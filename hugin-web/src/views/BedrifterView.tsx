@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { displayCompanyName } from '../companyName'
+import { RegionChips } from '../components/RegionChips'
 import { useFocus } from '../focus'
-import { fylkeName, fylkeOf } from '../fylker'
 import { useT } from '../i18n'
+import { regionMatches } from '../regions'
 import type { CompanyDto } from '../types'
 import { CompanyDetail } from './CompanyDetail'
 
@@ -49,42 +50,26 @@ interface BedrifterViewProps {
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
   onCloseCompany: () => void
+  /** «Endre i Innstillinger» — the lens is edited in Settings only (spec v3.6 B4). */
+  onOpenSettings: () => void
 }
 
 export function BedrifterView({
   selectedOrgnr,
   onOpenCompany,
   onCloseCompany,
+  onOpenSettings,
 }: BedrifterViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
-  const { focus, setFocus } = useFocus()
-  // Derived straight from context every render — not local state. App keeps views mounted, so a
-  // focus change made elsewhere (Settings, or a reset) must reach an already-mounted Companies
-  // view immediately; a useState seeded once from focus would freeze at whatever it saw on
-  // first mount and go stale the moment focus changed out from under it (spec Part C: focus is
-  // reactive everywhere, not just on the view that happens to change it).
-  const fylke = focus?.fylke ?? ''
-  const kommune = focus?.kommune ?? ''
+  const { focus } = useFocus()
+  // Read from context every render — App keeps views mounted, so a lens change in Settings must
+  // reach this view without a remount.
   const [search, setSearch] = useState('')
   const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
-
-  // A manual region choice here IS an answer to the first-run question — write it back to the
-  // shared focus even when focus was still null, so the dialog doesn't reopen next launch.
-  // Categories are preserved as-is; this view never edits them (Settings owns that).
-  // A kommune picked while fylke is still '' (the all-of-Norway option) needs its fylke derived
-  // before storing — loadFocus rejects a kommune without a matching fylke, so the raw shape
-  // would round-trip as null on the next boot and silently drop the choice.
-  const writeBackRegion = (nextFylke: string, nextKommune: string) => {
-    setFocus({
-      fylke: nextFylke || fylkeOf(nextKommune),
-      kommune: nextKommune || null,
-      categories: focus?.categories ?? [],
-    })
-  }
 
   const load = useCallback(() => {
     setError(null)
@@ -113,30 +98,18 @@ export function BedrifterView({
     el.focus()
   }, [selectedOrgnr])
 
-  const fylker = useMemo(() => {
-    const present = new Set<string>()
-    for (const c of companies) {
-      const f = fylkeOf(c.kommune)
-      if (f) present.add(f)
-    }
-    return [...present]
-      .map((nr) => [nr, fylkeName(nr)] as const)
-      .sort(([, a], [, b]) => a.localeCompare(b))
+  const regions = focus?.regions ?? []
+
+  // Chip names come from the companies already loaded — this view stays fetch-free. A kommune
+  // with no company in the list shows by number, which is the RegionChips fallback.
+  const kommuneNames = useMemo(() => {
+    const names = new Map<string, string>()
+    for (const c of companies) if (c.kommune && c.kommuneNavn) names.set(c.kommune, c.kommuneNavn)
+    return names
   }, [companies])
 
-  const kommuner = useMemo(() => {
-    const byNumber = new Map<string, string>()
-    for (const c of companies) {
-      if (!c.kommune) continue
-      if (fylke && fylkeOf(c.kommune) !== fylke) continue
-      if (!byNumber.has(c.kommune)) byNumber.set(c.kommune, c.kommuneNavn ?? c.kommune)
-    }
-    return Array.from(byNumber.entries()).sort(([, a], [, b]) => a.localeCompare(b))
-  }, [companies, fylke])
-
   const filtered = companies.filter((c) => {
-    if (fylke && fylkeOf(c.kommune) !== fylke) return false
-    if (kommune && c.kommune !== kommune) return false
+    if (!regionMatches(c.kommune, regions)) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
     if (websiteFilter === 'has' && !c.website) return false
     if (websiteFilter === 'none' && c.website) return false
@@ -197,52 +170,14 @@ export function BedrifterView({
 
   return (
     <div className="bedrifter-view stack">
+      <div className="bedrifter-lens cluster cluster-sm">
+        <RegionChips regions={regions} kommuneNames={kommuneNames} />
+        <button type="button" className="btn btn-ghost" onClick={onOpenSettings}>
+          {t('companies.editInSettings')}
+        </button>
+      </div>
+
       <div className="bedrifter-filters cluster">
-        <div className="field">
-          <label className="label" htmlFor="bedrifter-fylke">
-            {t('companies.fylke')}
-          </label>
-          <select
-            id="bedrifter-fylke"
-            className="select"
-            value={fylke}
-            onChange={(event) => {
-              const next = event.target.value
-              const nextKommune = next && kommune && fylkeOf(kommune) !== next ? '' : kommune
-              writeBackRegion(next, nextKommune)
-            }}
-          >
-            <option value="">{t('common.all')}</option>
-            {fylker.map(([number, name]) => (
-              <option key={number} value={number}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label className="label" htmlFor="bedrifter-kommune">
-            {t('companies.kommune')}
-          </label>
-          <select
-            id="bedrifter-kommune"
-            className="select"
-            value={kommune}
-            onChange={(event) => {
-              const next = event.target.value
-              writeBackRegion(fylke, next)
-            }}
-          >
-            <option value="">{t('common.all')}</option>
-            {kommuner.map(([number, name]) => (
-              <option key={number} value={number}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="field">
           <label className="label" htmlFor="bedrifter-search">
             {t('companies.search')}

@@ -20,6 +20,7 @@ function fakeServer(
     readOnly?: boolean
     statusFails?: boolean
     scopeConfigured?: boolean
+    companies?: { orgnr: string; name: string; kommune: string | null }[]
   } = {}
 ) {
   return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -48,7 +49,7 @@ function fakeServer(
       )
     }
     if (url === '/api/companies') {
-      return Promise.resolve(jsonResponse([]))
+      return Promise.resolve(jsonResponse(options.companies ?? []))
     }
     if (url === '/api/sources') {
       return Promise.resolve(jsonResponse([]))
@@ -291,7 +292,13 @@ describe('App', () => {
   })
 
   it('read-only: seeds the focus from the server scope instead of asking', async () => {
-    const fetchMock = fakeServer({ readOnly: true })
+    const fetchMock = fakeServer({
+      readOnly: true,
+      companies: [
+        { orgnr: '1', name: 'Innlandet AS', kommune: '3403' },
+        { orgnr: '2', name: 'Oslo AS', kommune: '0301' },
+      ],
+    })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
     render(<App />)
@@ -299,15 +306,12 @@ describe('App', () => {
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
 
     // The seed is session-only state, not a side effect on its own — prove it actually reached
-    // the app's Focus context by reading it back from a view that renders it: Settings' focus
-    // Fylke select (disambiguated from CoverageSection's own Fylke select by id) should show the
-    // fylke the fake server's discovery config carried ('34' = Innlandet), not the unset default.
-    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
-    await waitFor(() =>
-      expect(screen.getByLabelText('Fylke', { selector: '#settings-focus-fylke' })).toHaveValue(
-        '34'
-      )
-    )
+    // the app's Focus context by reading it back from a view that filters by it: Bedrifter shows
+    // only companies in the seeded fylke ('34' = Innlandet, from the fake server's discovery
+    // config), not the unset default (which would show both).
+    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    await screen.findByText('Innlandet AS')
+    expect(screen.queryByText('Oslo AS')).not.toBeInTheDocument()
   })
 
   it('keeps the first-run dialog closed until /api/status has answered, then opens it locally', async () => {
@@ -421,9 +425,8 @@ describe('App first-run focus dialog', () => {
       expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
     )
     expect(JSON.parse(window.localStorage.getItem('hugin-focus') as string)).toEqual({
-      v: 1,
-      fylke: '34',
-      kommune: null,
+      v: 2,
+      regions: [{ fylke: '34', kommuner: [] }],
       categories: [],
     })
   })

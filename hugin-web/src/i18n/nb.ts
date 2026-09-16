@@ -250,6 +250,23 @@ export const nb = {
   'focus.categoriesHint': 'Ingen valgt = alle.',
   'focus.start': 'Start',
 
+  // Visningsfilter regions (v3.6): the chips in Settings and Bedrifter, and the area picker.
+  'areas.choose': 'Velg områder …',
+  'areas.dialogTitle': 'Velg områder',
+  'areas.searchLabel': 'Søk fylke eller kommune',
+  'areas.apply': 'Bruk',
+  'areas.wholeCountry': 'Hele Norge',
+  'areas.wholeFylke': 'hele fylket',
+  'areas.selectedOfTotal': '{n} av {total} valgt',
+  'areas.selected': '{n} valgt',
+  'areas.kommuneCount': '{n} kommuner',
+  'areas.remove': 'Fjern {fylke}',
+  'areas.hits': '{n} treff',
+  'areas.showKommuner': 'Vis kommuner i {fylke}',
+  'areas.hideKommuner': 'Skjul kommuner i {fylke}',
+  'areas.more': '+{n}',
+  'companies.editInSettings': 'Endre i Innstillinger',
+
   'demo.regionLabel': 'Demo',
   'demo.banner':
     'Demo — skrivebeskyttet. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet. Pipelinen er eksempeldata. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
