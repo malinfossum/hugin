@@ -397,6 +397,56 @@ input[type="text"] {
   min-block-size: 44px;
 }
 
+/* Area picker (v3.6): the dialog is capped to the viewport and only the fylke list scrolls,
+   so the search box and the Avbryt/Bruk footer stay put. Fylke rows are ≥44 px targets with
+   the tick box, the count and the disclosure on one line; kommuner sit indented under the
+   row, one column on a phone and three from 768 px (spec B1). */
+.area-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 90dvh;
+}
+.area-picker-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.area-fylke-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.area-fylke-label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.area-fylke-label input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.area-fylke-count {
+  font-size: var(--text-sm);
+}
+.area-kommuner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--space-2);
+  padding-inline-start: 1.75rem;
+}
+@media (min-width: 768px) {
+  .area-kommuner {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* Demo banner (read-only showcase): a static region right after the header. */
 /* The design-system .app-shell is a two-row grid (header, main). The demo banner is a third
    child, so without this it takes the stretching 1fr row and pushes main to the bottom of the
