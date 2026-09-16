@@ -432,6 +432,7 @@ input[type="text"] {
   align-items: center;
   gap: var(--space-2);
   min-height: 44px;
+  min-width: 0;
 }
 .area-fylke-label input[type="checkbox"] {
   width: 1.25rem;
@@ -439,6 +440,9 @@ input[type="text"] {
 }
 .area-fylke-count {
   font-size: var(--text-sm);
+}
+.area-fylke-row .icon-btn {
+  flex: none;
 }
 .area-kommuner {
   display: grid;
