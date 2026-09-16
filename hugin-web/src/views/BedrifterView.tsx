@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { displayCompanyName } from '../companyName'
+import { RegionChips } from '../components/RegionChips'
 import { useFocus } from '../focus'
 import { useT } from '../i18n'
 import { regionMatches } from '../regions'
@@ -49,12 +50,15 @@ interface BedrifterViewProps {
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
   onCloseCompany: () => void
+  /** «Endre i Innstillinger» — the lens is edited in Settings only (spec v3.6 B4). */
+  onOpenSettings: () => void
 }
 
 export function BedrifterView({
   selectedOrgnr,
   onOpenCompany,
   onCloseCompany,
+  onOpenSettings,
 }: BedrifterViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -95,6 +99,15 @@ export function BedrifterView({
   }, [selectedOrgnr])
 
   const regions = focus?.regions ?? []
+
+  // Chip names come from the companies already loaded — this view stays fetch-free. A kommune
+  // with no company in the list shows by number, which is the RegionChips fallback.
+  const kommuneNames = useMemo(() => {
+    const names = new Map<string, string>()
+    for (const c of companies) if (c.kommune && c.kommuneNavn) names.set(c.kommune, c.kommuneNavn)
+    return names
+  }, [companies])
+
   const filtered = companies.filter((c) => {
     if (!regionMatches(c.kommune, regions)) return false
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
@@ -157,6 +170,13 @@ export function BedrifterView({
 
   return (
     <div className="bedrifter-view stack">
+      <div className="bedrifter-lens cluster cluster-sm">
+        <RegionChips regions={regions} kommuneNames={kommuneNames} />
+        <button type="button" className="btn btn-ghost" onClick={onOpenSettings}>
+          {t('companies.editInSettings')}
+        </button>
+      </div>
+
       <div className="bedrifter-filters cluster">
         <div className="field">
           <label className="label" htmlFor="bedrifter-search">

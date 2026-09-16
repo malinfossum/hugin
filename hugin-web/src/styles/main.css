@@ -397,6 +397,11 @@ input[type="text"] {
   min-block-size: 44px;
 }
 
+/* Bedrifter reads the lens, Settings edits it: chips and the link share one wrapping row. */
+.bedrifter-lens {
+  align-items: center;
+}
+
 /* Area picker (v3.6): the dialog is capped to the viewport and only the fylke list scrolls,
    so the search box and the Avbryt/Bruk footer stay put. Fylke rows are ≥44 px targets with
    the tick box, the count and the disclosure on one line; kommuner sit indented under the

@@ -12,13 +12,14 @@ import { BedrifterView } from './BedrifterView'
 /** BedrifterView no longer owns selection state (App/routing does) — this harness stands in
  * for that, so the existing click-through tests can drive open/close the same way a user
  * would, without each test wiring its own useState. */
-function BedrifterViewHarness() {
+function BedrifterViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: () => void }) {
   const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
   return (
     <BedrifterView
       selectedOrgnr={selectedOrgnr}
       onOpenCompany={setSelectedOrgnr}
       onCloseCompany={() => setSelectedOrgnr(null)}
+      onOpenSettings={onOpenSettings}
     />
   )
 }
@@ -106,13 +107,13 @@ function fakeServer(companies: CompanyDto[], details: Record<string, CompanyDeta
   return fetchMock
 }
 
-function renderView(fetchMock: ReturnType<typeof vi.fn>) {
+function renderView(fetchMock: ReturnType<typeof vi.fn>, onOpenSettings?: () => void) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
         <FocusProvider>
-          <BedrifterViewHarness />
+          <BedrifterViewHarness onOpenSettings={onOpenSettings} />
         </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
@@ -490,6 +491,7 @@ describe('BedrifterView', () => {
             selectedOrgnr="915787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={vi.fn()}
+            onOpenSettings={() => {}}
           />
         </LiveRegionProvider>
       </LanguageProvider>
@@ -515,6 +517,7 @@ describe('BedrifterView', () => {
             selectedOrgnr="915787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={onCloseCompany}
+            onOpenSettings={() => {}}
           />
         </LiveRegionProvider>
       </LanguageProvider>
@@ -592,6 +595,44 @@ describe('BedrifterView', () => {
     await user.click(screen.getByRole('button', { name: 'Clear region externally' }))
 
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+  })
+
+  it('shows the display filter as read-only chips named from the loaded companies, with a link to Settings', async () => {
+    saveFocus({ regions: [{ fylke: '34', kommuner: ['3403'] }], categories: [] })
+    const onOpenSettings = vi.fn()
+    const user = userEvent.setup()
+    renderView(
+      fakeServer(
+        [company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' })],
+        {}
+      ),
+      onOpenSettings
+    )
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Innlandet: Hamar')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Fjern/ })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Fylke')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Endre i Innstillinger' }))
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('a null focus reads «Hele Norge» and filters nothing', async () => {
+    renderView(
+      fakeServer(
+        [
+          company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
+          company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+        ],
+        {}
+      )
+    )
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Hele Norge')).toBeInTheDocument()
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 })
