@@ -1,5 +1,6 @@
 import type { Focus } from './focus'
 import { fylkeOf } from './fylker'
+import { normalizeRegions, type Region } from './regions'
 import type {
   DiscoveryConfigDto,
   DiscoveryWriteRequest,
@@ -114,14 +115,23 @@ export function removeOtherFylke(draft: CoverageDraft, fylke: string): CoverageD
   }
 }
 
-/** Seeds the render lens from the chosen scope: Focus holds at most one kommune, so only a
- * single checked kommune narrows it; several checked keep the lens at the fylke. */
+/** Seeds the render lens from the chosen scope without loss (spec v3.6 A5): the rendered fylke
+ * with its ticked kommuner, every other whole fylke, and the other kommuner grouped by fylke —
+ * merged into an existing narrowed region, absorbed by an existing whole one. */
 export function toFocusSeed(draft: CoverageDraft, categories: string[]): Focus {
-  return {
-    fylke: draft.fylke || null,
-    kommune: draft.kommuner.length === 1 ? draft.kommuner[0] : null,
-    categories,
+  if (!draft.fylke) return { regions: [], categories }
+  const byFylke = new Map<string, Region>()
+  byFylke.set(draft.fylke, { fylke: draft.fylke, kommuner: [...draft.kommuner] })
+  for (const fylke of draft.others.fylker) byFylke.set(fylke, { fylke, kommuner: [] })
+  for (const m of draft.others.municipalities) {
+    const fylke = fylkeOf(m.number)
+    if (!fylke) continue
+    const existing = byFylke.get(fylke)
+    if (!existing) byFylke.set(fylke, { fylke, kommuner: [m.number] })
+    else if (existing.kommuner.length > 0) existing.kommuner.push(m.number)
+    // an existing whole fylke already contains it
   }
+  return { regions: normalizeRegions([...byFylke.values()]), categories }
 }
 
 export function kommunerInFylke(all: KommuneDto[], fylke: string): KommuneDto[] {

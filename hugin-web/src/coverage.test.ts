@@ -208,27 +208,98 @@ describe('removeOtherKommune / removeOtherFylke', () => {
   })
 })
 
-describe('toFocusSeed', () => {
-  it('seeds the lens: fylke, a single checked kommune, and the categories', () => {
+describe('toFocusSeed (v3.6, lossless)', () => {
+  const oslo = { name: 'Oslo', number: '0301' }
+  const trondheim = { name: 'Trondheim', number: '5001' }
+  const gjovik = { name: 'Gjøvik', number: '3407' }
+
+  it('one fylke with several kommuner seeds all of them', () => {
     expect(
-      toFocusSeed({ fylke: '34', kommuner: ['3405'], others: NO_OTHERS }, ['Utvikling'])
-    ).toEqual({
-      fylke: '34',
-      kommune: '3405',
-      categories: ['Utvikling'],
-    })
-    expect(toFocusSeed({ fylke: '34', kommuner: ['3405', '3403'], others: NO_OTHERS }, [])).toEqual(
-      {
-        fylke: '34',
-        kommune: null,
-        categories: [],
-      }
-    )
-    expect(toFocusSeed({ fylke: '', kommuner: [], others: NO_OTHERS }, [])).toEqual({
-      fylke: null,
-      kommune: null,
+      toFocusSeed({ fylke: '34', kommuner: ['3405', '3403'], others: NO_OTHERS }, ['Utvikling'])
+    ).toEqual({ regions: [{ fylke: '34', kommuner: ['3403', '3405'] }], categories: ['Utvikling'] })
+  })
+
+  it('one fylke with no kommuner seeds the whole fylke', () => {
+    expect(toFocusSeed({ fylke: '34', kommuner: [], others: NO_OTHERS }, [])).toEqual({
+      regions: [{ fylke: '34', kommuner: [] }],
       categories: [],
     })
+  })
+
+  it('all of Norway seeds empty regions, whatever others holds', () => {
+    expect(
+      toFocusSeed(
+        { fylke: '', kommuner: [], others: { municipalities: [oslo], fylker: ['39'] } },
+        []
+      )
+    ).toEqual({ regions: [], categories: [] })
+  })
+
+  it('other fylker become whole regions', () => {
+    expect(
+      toFocusSeed(
+        { fylke: '34', kommuner: ['3403'], others: { municipalities: [], fylker: ['39', '03'] } },
+        []
+      ).regions
+    ).toEqual([
+      { fylke: '03', kommuner: [] },
+      { fylke: '34', kommuner: ['3403'] },
+      { fylke: '39', kommuner: [] },
+    ])
+  })
+
+  it('other municipalities are grouped by fylke into narrowed regions', () => {
+    expect(
+      toFocusSeed(
+        {
+          fylke: '34',
+          kommuner: [],
+          others: {
+            municipalities: [trondheim, oslo, { name: 'Malvik', number: '5031' }],
+            fylker: [],
+          },
+        },
+        []
+      ).regions
+    ).toEqual([
+      { fylke: '03', kommuner: ['0301'] },
+      { fylke: '34', kommuner: [] },
+      { fylke: '50', kommuner: ['5001', '5031'] },
+    ])
+  })
+
+  it('a municipality in a whole other fylke is absorbed', () => {
+    expect(
+      toFocusSeed(
+        { fylke: '34', kommuner: [], others: { municipalities: [oslo], fylker: ['03'] } },
+        []
+      ).regions
+    ).toEqual([
+      { fylke: '03', kommuner: [] },
+      { fylke: '34', kommuner: [] },
+    ])
+  })
+
+  it('a municipality of the main fylke merges into a narrowed main region, deduped', () => {
+    expect(
+      toFocusSeed(
+        {
+          fylke: '34',
+          kommuner: ['3403'],
+          others: { municipalities: [gjovik, { name: 'Hamar', number: '3403' }], fylker: [] },
+        },
+        []
+      ).regions
+    ).toEqual([{ fylke: '34', kommuner: ['3403', '3407'] }])
+  })
+
+  it('a municipality of the main fylke is absorbed when the main fylke is whole', () => {
+    expect(
+      toFocusSeed(
+        { fylke: '34', kommuner: [], others: { municipalities: [gjovik], fylker: [] } },
+        []
+      ).regions
+    ).toEqual([{ fylke: '34', kommuner: [] }])
   })
 })
 

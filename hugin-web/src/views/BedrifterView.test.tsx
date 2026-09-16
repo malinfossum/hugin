@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { formatDate } from '../dates'
-import { FocusProvider, loadFocus, saveFocus, useFocus } from '../focus'
+import { FocusProvider, saveFocus, useFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
 import { BedrifterView } from './BedrifterView'
@@ -32,14 +32,11 @@ function ExternalFocusSetter() {
     <div>
       <button
         type="button"
-        onClick={() => setFocus({ fylke: '03', kommune: null, categories: [] })}
+        onClick={() => setFocus({ regions: [{ fylke: '03', kommuner: [] }], categories: [] })}
       >
         Set Oslo externally
       </button>
-      <button
-        type="button"
-        onClick={() => setFocus({ fylke: null, kommune: null, categories: [] })}
-      >
+      <button type="button" onClick={() => setFocus({ regions: [], categories: [] })}>
         Clear region externally
       </button>
     </div>
@@ -166,78 +163,6 @@ describe('BedrifterView', () => {
 
     expect(await screen.findByText('1 bedrift')).toBeInTheDocument()
     expect(screen.queryByText('2 bedrifter')).not.toBeInTheDocument()
-  })
-
-  it('filters by kommune select', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '0301' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '4601' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Kommune'), '4601')
-
-    expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
-    expect(screen.getByText('Beta Software')).toBeInTheDocument()
-  })
-
-  it('offers a Fylke select with options derived from loaded companies', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
-    ]
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    const fylke = screen.getByLabelText('Fylke')
-    const optionLabels = within(fylke)
-      .getAllByRole('option')
-      .map((o) => o.textContent)
-    expect(optionLabels).toEqual(['Alle', 'Innlandet', 'Oslo'])
-  })
-
-  it('choosing a fylke hides companies outside it and narrows the kommune options', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-      company({ orgnr: '2', name: 'Gamle AS', kommune: '3405', kommuneNavn: 'Lillehammer' }),
-      company({ orgnr: '3', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
-
-    expect(screen.getByText('Acme AS')).toBeInTheDocument()
-    expect(screen.getByText('Gamle AS')).toBeInTheDocument()
-    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
-
-    const kommuneOptions = within(screen.getByLabelText('Kommune'))
-      .getAllByRole('option')
-      .map((o) => o.textContent)
-    expect(kommuneOptions).toEqual(['Alle', 'Hamar', 'Lillehammer'])
-  })
-
-  it('switching fylke resets an incompatible kommune filter', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
-    await user.selectOptions(screen.getByLabelText('Kommune'), '3403')
-
-    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
-
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Oslo')
-
-    expect(screen.getByText('Beta Software')).toBeInTheDocument()
-    expect((screen.getByLabelText('Kommune') as HTMLSelectElement).value).toBe('')
   })
 
   it('filters by website select: All shows both, Has website only companies with a website, No website only those without', async () => {
@@ -601,76 +526,38 @@ describe('BedrifterView', () => {
     expect(onCloseCompany).toHaveBeenCalledTimes(1)
   })
 
-  it('initializes the fylke select from a stored focus', async () => {
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+  it('filters the list by the stored regions — whole fylke and narrowed fylke', async () => {
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
+      company({ orgnr: '2', name: 'Gamle AS', kommune: '3405', kommuneNavn: 'Lillehammer' }),
+      company({ orgnr: '3', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
     ]
+    const { unmount } = renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    expect(screen.getByText('Gamle AS')).toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+    unmount()
+
+    saveFocus({ regions: [{ fylke: '34', kommuner: ['3403'] }], categories: [] })
     renderView(fakeServer(companies, {}))
 
     await screen.findByText('Acme AS')
-    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('34')
-    // Fylke filter is applied from the seeded focus straight away.
+    expect(screen.queryByText('Gamle AS')).not.toBeInTheDocument()
     expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
   })
 
-  it('changing the kommune select writes the choice back to stored focus', async () => {
+  it('a company without a kommune is shown whatever the regions are (fails open)', async () => {
+    saveFocus({ regions: [{ fylke: '39', kommuner: [] }], categories: [] })
     const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '0301', kommuneNavn: 'Oslo' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '3403', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '1', name: 'Ukjent AS', kommune: null, kommuneNavn: null }),
+      company({ orgnr: '2', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
     ]
-    const user = userEvent.setup()
     renderView(fakeServer(companies, {}))
 
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
-    await user.selectOptions(screen.getByLabelText('Kommune'), '3403')
-
-    expect(loadFocus()).toEqual({ fylke: '34', kommune: '3403', categories: [] })
-  })
-
-  it('choosing a kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '0301', kommuneNavn: 'Oslo' }),
-      company({ orgnr: '2', name: 'Beta Software', kommune: '3403', kommuneNavn: 'Hamar' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
-    await user.selectOptions(screen.getByLabelText('Kommune'), '0301')
-
-    expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
-  })
-
-  it('write-back happens even when no focus was stored yet (a manual choice is an answer)', async () => {
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    expect(loadFocus()).toBeNull()
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
-
-    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
-  })
-
-  it('a region write-back preserves existing categories from focus', async () => {
-    saveFocus({ fylke: null, kommune: null, categories: ['Utvikling'] })
-    const companies = [
-      company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
-    ]
-    const user = userEvent.setup()
-    renderView(fakeServer(companies, {}))
-
-    await screen.findByText('Acme AS')
-    await user.selectOptions(screen.getByLabelText('Fylke'), 'Innlandet')
-
-    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+    expect(await screen.findByText('Ukjent AS')).toBeInTheDocument()
+    expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
   })
 
   it('reacts live to a focus change made outside the view — context is the single reactive owner', async () => {
@@ -698,14 +585,12 @@ describe('BedrifterView', () => {
     // list must pick it up immediately, without the view being remounted.
     await user.click(screen.getByRole('button', { name: 'Set Oslo externally' }))
 
-    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('03')
     expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
 
     // A reset-style external change (clearing the region) restores the full list, same way.
     await user.click(screen.getByRole('button', { name: 'Clear region externally' }))
 
-    expect((screen.getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })

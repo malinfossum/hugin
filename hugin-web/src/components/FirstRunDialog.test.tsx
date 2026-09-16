@@ -96,10 +96,27 @@ describe('FirstRunDialog v2', () => {
     const put = calls.find((c) => c.method === 'PUT')
     expect(put?.body).toEqual({ municipalityNumbers: ['3405'], fylker: [], allOfNorway: false })
     expect(onSaveFocus).toHaveBeenCalledWith(
-      { fylke: '34', kommune: '3405', categories: ['Utvikling'] },
+      { regions: [{ fylke: '34', kommuner: ['3405'] }], categories: ['Utvikling'] },
       { persist: true }
     )
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
+  })
+
+  it('Start with several kommuner ticked seeds all of them — the lens no longer collapses to the fylke', async () => {
+    fakeServer()
+    const user = userEvent.setup()
+    const onSaveFocus = vi.fn()
+    const onDone = vi.fn()
+    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
+
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1))
+    expect(onSaveFocus).toHaveBeenCalledWith(
+      { regions: [{ fylke: '34', kommuner: ['3403', '3405'] }], categories: [] },
+      { persist: true }
+    )
   })
 
   it('a failed PUT still seeds the focus, shows a retryable alert and stays open', async () => {
@@ -117,7 +134,7 @@ describe('FirstRunDialog v2', () => {
     )
     expect(onSaveFocus).toHaveBeenCalledTimes(1)
     expect(onSaveFocus).toHaveBeenCalledWith(
-      { fylke: '34', kommune: null, categories: [] },
+      { regions: [{ fylke: '34', kommuner: ['3403', '3405'] }], categories: [] },
       { persist: false }
     )
     expect(onDone).not.toHaveBeenCalled()
@@ -153,7 +170,7 @@ describe('FirstRunDialog v2', () => {
       allOfNorway: false,
     })
     expect(onSaveFocus).toHaveBeenCalledWith(
-      { fylke: '34', kommune: null, categories: [] },
+      { regions: [{ fylke: '34', kommuner: [] }], categories: [] },
       { persist: true }
     )
   })

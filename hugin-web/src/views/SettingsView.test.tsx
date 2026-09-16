@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider, loadFocus, saveFocus } from '../focus'
 import { LanguageProvider } from '../i18n'
-import type { CompanyDto, DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
+import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -16,20 +16,6 @@ function jsonResponse(body: unknown, init: { status?: number } = {}) {
 
 function source(overrides: Partial<SourceDto> = {}): SourceDto {
   return { id: 1, label: 'FINN', url: 'https://finn.no', position: 0, ...overrides }
-}
-
-function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
-  return {
-    orgnr: '915787630',
-    name: 'Acme AS',
-    kommune: '0301',
-    kommuneNavn: null,
-    naceCode: '62.010',
-    isBranch: false,
-    website: null,
-    parentOrgnr: null,
-    ...overrides,
-  }
 }
 
 const DEFAULT_DISCOVERY: DiscoveryConfigDto = {
@@ -44,18 +30,15 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
 ]
 
 /** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
- * plus a GET /api/companies stub the Visningsfilter section's kommune select lazily fetches, and the
- * discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner, POST /api/sync) the
- * Dekning section always fetches on mount, in every scenario. Pass `null` as seed to make GET
- * /api/sources reject (load-failure scenarios); `companies` defaults to empty, which is fine
- * wherever a test doesn't care about kommune options. `discovery`/`kommuner` seed the Dekning
- * section, `kommunerDown` makes GET /api/kommuner fail (the fylke-only degraded mode), and
- * `putStatus` makes the PUT fail with that status instead of echoing `discovery` back;
- * `syncStatus` makes POST /api/sync answer with that status (409 = one already runs).
+ * plus the discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner,
+ * POST /api/sync) the Dekning section always fetches on mount, in every scenario. Pass `null`
+ * as seed to make GET /api/sources reject (load-failure scenarios). `discovery`/`kommuner` seed
+ * the Dekning section, `kommunerDown` makes GET /api/kommuner fail (the fylke-only degraded
+ * mode), and `putStatus` makes the PUT fail with that status instead of echoing `discovery`
+ * back; `syncStatus` makes POST /api/sync answer with that status (409 = one already runs).
  * Returns `{ fetchMock, puts }` — `puts` records every PUT /api/config/discovery body. */
 function fakeServer(
   seed: SourceDto[] | null,
-  companies: CompanyDto[] = [],
   options: {
     discovery?: DiscoveryConfigDto
     kommuner?: KommuneDto[]
@@ -81,9 +64,6 @@ function fakeServer(
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
 
-    if (url === '/api/companies' && method === 'GET') {
-      return Promise.resolve(jsonResponse(companies))
-    }
     if (url === '/api/config/discovery' && method === 'GET') {
       return Promise.resolve(jsonResponse(discovery))
     }
@@ -118,7 +98,7 @@ function fakeServer(
           nav: null,
           reviewMark: null,
           activeAds: 0,
-          companies: companies.length,
+          companies: 0,
           pipelineEntries: 0,
           readOnly: false,
           scopeConfigured: true,
@@ -469,83 +449,23 @@ describe('SettingsView', () => {
     })
   })
 
-  it('renders a Visningsfilter heading with fylke/kommune selects and a category fieldset', async () => {
-    renderView(fakeServer([]).fetchMock)
-
-    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
-    expect(within(section).getByLabelText('Fylke')).toBeInTheDocument()
-    expect(within(section).getByLabelText('Kommune')).toBeInTheDocument()
-    const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
-    expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
-  })
-
-  it('changing the Visningsfilter fylke select announces and persists the choice', async () => {
-    const user = userEvent.setup()
-    renderView(fakeServer([]).fetchMock)
-
-    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
-    await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
-
-    const liveRegion = document.querySelector('[aria-live="polite"]')
-    await waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Fokus oppdatert.')
-    })
-    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: [] })
-  })
-
-  it('narrows the Visningsfilter kommune select by the chosen fylke, from lazily-fetched companies', async () => {
-    const user = userEvent.setup()
-    const companies = [
-      company({ orgnr: '1', kommune: '3403', kommuneNavn: 'Hamar' }),
-      company({ orgnr: '2', kommune: '0301', kommuneNavn: 'Oslo' }),
-    ]
-    renderView(fakeServer([], companies).fetchMock)
-
-    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
-    await user.selectOptions(within(section).getByLabelText('Fylke'), 'Innlandet')
-
-    await waitFor(() => {
-      const kommuneOptions = within(within(section).getByLabelText('Kommune'))
-        .getAllByRole('option')
-        .map((o) => o.textContent)
-      expect(kommuneOptions).toEqual(['Alle', 'Hamar'])
-    })
-  })
-
-  it('choosing a Visningsfilter kommune with fylke still on Alle derives and stores the fylke (loadFocus round-trips it)', async () => {
-    const user = userEvent.setup()
-    const companies = [
-      company({ orgnr: '1', kommune: '0301', kommuneNavn: 'Oslo' }),
-      company({ orgnr: '2', kommune: '3403', kommuneNavn: 'Hamar' }),
-    ]
-    renderView(fakeServer([], companies).fetchMock)
-
-    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
-    expect((within(section).getByLabelText('Fylke') as HTMLSelectElement).value).toBe('')
-    await waitFor(() => {
-      expect(within(within(section).getByLabelText('Kommune')).getAllByRole('option')).toHaveLength(
-        3
-      )
-    })
-    await user.selectOptions(within(section).getByLabelText('Kommune'), '0301')
-
-    expect(loadFocus()).toEqual({ fylke: '03', kommune: '0301', categories: [] })
-  })
-
   it('toggling a Visningsfilter category checkbox persists it and preserves the stored region', async () => {
     const user = userEvent.setup()
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('checkbox', { name: 'Utvikling' }))
 
-    expect(loadFocus()).toEqual({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+    expect(loadFocus()).toEqual({
+      regions: [{ fylke: '34', kommuner: [] }],
+      categories: ['Utvikling'],
+    })
   })
 
   it('reset button announces and clears the stored focus', async () => {
     const user = userEvent.setup()
-    saveFocus({ fylke: '34', kommune: null, categories: ['Utvikling'] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: ['Utvikling'] })
     renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('heading', { name: 'Visningsfilter' })
@@ -556,6 +476,16 @@ describe('SettingsView', () => {
       expect(liveRegion).toHaveTextContent('Oppstartsvalget vises ved neste start.')
     })
     expect(loadFocus()).toBeNull()
+  })
+
+  it('renders a Visningsfilter heading with the category fieldset and no region selects', async () => {
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    expect(within(section).queryByLabelText('Fylke')).not.toBeInTheDocument()
+    expect(within(section).queryByLabelText('Kommune')).not.toBeInTheDocument()
+    const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
+    expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
   })
 })
 
@@ -591,7 +521,7 @@ describe('Dekning (coverage)', () => {
   })
 
   it('a failed save shows an alert and does not sync', async () => {
-    const server = fakeServer([], [], { putStatus: 500 })
+    const server = fakeServer([], { putStatus: 500 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
     const section = await screen.findByRole('region', { name: 'Dekning' })
@@ -609,7 +539,7 @@ describe('Dekning (coverage)', () => {
   it('says the new scope applies next sync when one is already running', async () => {
     // The running sync read the old scope before the save, so announcing "syncing …" would
     // promise a fetch that is not happening.
-    const server = fakeServer([], [], { syncStatus: 409 })
+    const server = fakeServer([], { syncStatus: 409 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
     const section = await screen.findByRole('region', { name: 'Dekning' })
@@ -624,7 +554,7 @@ describe('Dekning (coverage)', () => {
   it('saves the fylke alone when the kommune list is unavailable', async () => {
     // No checkboxes are rendered in this mode, so the prefilled kommuner are invisible and
     // un-clearable — and the API would reject numbers it cannot verify. Save the fylke.
-    const server = fakeServer([], [], { kommunerDown: true })
+    const server = fakeServer([], { kommunerDown: true })
     const user = userEvent.setup()
     renderView(server.fetchMock)
     const section = await screen.findByRole('region', { name: 'Dekning' })
@@ -643,7 +573,7 @@ describe('Dekning (coverage)', () => {
   it('a save keeps coverage outside the rendered fylke, and lists it', async () => {
     // The real hugin.json is multi-fylke (Innlandet kommuner + Larvik). The cascade renders one
     // fylke, so a save used to write only what it showed and silently dropped Larvik.
-    const server = fakeServer([], [], {
+    const server = fakeServer([], {
       discovery: {
         municipalities: [
           { name: 'Hamar', number: '3403' },
@@ -675,7 +605,7 @@ describe('Dekning (coverage)', () => {
   it('Save stays disabled until the kommune list has settled', async () => {
     // A save in the loading window would have gone through effectiveDraft with no list and
     // widened the scope to the fylke alone.
-    const server = fakeServer([], [], { kommunerPending: true })
+    const server = fakeServer([], { kommunerPending: true })
     renderView(server.fetchMock)
     const section = await screen.findByRole('region', { name: 'Dekning' })
     await within(section).findByLabelText('Fylke')
@@ -687,7 +617,7 @@ describe('Dekning (coverage)', () => {
   })
 
   it('says the sync could not start when the save went through but the sync did not', async () => {
-    const server = fakeServer([], [], { syncStatus: 500 })
+    const server = fakeServer([], { syncStatus: 500 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
     const section = await screen.findByRole('region', { name: 'Dekning' })
@@ -699,7 +629,7 @@ describe('Dekning (coverage)', () => {
   })
 
   it('a coverage save resets Fokus’s preview cache — a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
-    const server = fakeServer([], [], { focusPreviewUnits: [10, 20] })
+    const server = fakeServer([], { focusPreviewUnits: [10, 20] })
     const user = userEvent.setup()
     renderView(server.fetchMock)
     const coverageSection = await screen.findByRole('region', { name: 'Dekning' })

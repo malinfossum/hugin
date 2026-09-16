@@ -140,7 +140,7 @@ describe('ResetSection', () => {
 
   it('Nullstill dekning posts { mode: "scope" } and resets the stored focus', async () => {
     const user = userEvent.setup()
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const { fetchMock, posts } = fakeServer()
     renderSection(fetchMock)
 
@@ -174,7 +174,7 @@ describe('ResetSection', () => {
   it('Start på nytt posts { mode: "all" }, shows the returned snapshot path and resets focus without reloading yet', async () => {
     const user = userEvent.setup()
     const reload = stubReload()
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const { fetchMock, posts } = fakeServer({
       resetBody: { mode: 'all', snapshotPath: 'hugin.db.reset-20260909-120000.bak' },
     })
@@ -238,7 +238,7 @@ describe('ResetSection', () => {
 
   it('surfaces a 409 (a sync is running) on the scope reset as a failure, not a success', async () => {
     const user = userEvent.setup()
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const { fetchMock } = fakeServer({ resetStatus: 409 })
     renderSection(fetchMock)
 
@@ -259,7 +259,7 @@ describe('ResetSection', () => {
   it('surfaces a 409 on the hard reset the same way, without wiping the stored focus or reloading', async () => {
     const user = userEvent.setup()
     const reload = stubReload()
-    saveFocus({ fylke: '34', kommune: null, categories: [] })
+    saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const { fetchMock } = fakeServer({ resetStatus: 409 })
     renderSection(fetchMock)
 
