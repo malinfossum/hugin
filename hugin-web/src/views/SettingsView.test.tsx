@@ -487,6 +487,130 @@ describe('SettingsView', () => {
     const fieldset = within(section).getByRole('group', { name: 'Kategorier' })
     expect(within(fieldset).getAllByRole('checkbox')).toHaveLength(2)
   })
+
+  it('shows the stored regions as chips named from /api/kommuner, plus «Velg områder …»', async () => {
+    saveFocus({
+      regions: [
+        { fylke: '34', kommuner: ['3403'] },
+        { fylke: '39', kommuner: [] },
+      ],
+      categories: [],
+    })
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    await waitFor(() => expect(within(section).getByText('Innlandet: Hamar')).toBeInTheDocument())
+    expect(within(section).getByText('Vestfold: hele fylket')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: 'Velg områder …' })).toBeInTheDocument()
+  })
+
+  it('chip ✕ removes that region at once, announces, and persists', async () => {
+    const user = userEvent.setup()
+    saveFocus({
+      regions: [
+        { fylke: '34', kommuner: [] },
+        { fylke: '39', kommuner: [] },
+      ],
+      categories: ['Utvikling'],
+    })
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    await user.click(within(section).getByRole('button', { name: 'Fjern Innlandet' }))
+
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Fokus oppdatert.'))
+    expect(loadFocus()).toEqual({
+      regions: [{ fylke: '39', kommuner: [] }],
+      categories: ['Utvikling'],
+    })
+    expect(within(section).queryByText(/^Innlandet/)).not.toBeInTheDocument()
+  })
+
+  it('«Velg områder …» opens the picker; Bruk applies, announces, closes, and keeps the categories', async () => {
+    const user = userEvent.setup()
+    saveFocus({ regions: [], categories: ['Utvikling'] })
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    expect(within(section).getByText('Hele Norge')).toBeInTheDocument()
+    await user.click(within(section).getByRole('button', { name: 'Velg områder …' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Velg områder' })
+    await user.click(within(dialog).getByRole('button', { name: 'Vis kommuner i Innlandet' }))
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Lillehammer' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Bruk' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Velg områder' })).not.toBeInTheDocument()
+    )
+    const liveRegion = document.querySelector('[aria-live="polite"]')
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Fokus oppdatert.'))
+    expect(loadFocus()).toEqual({
+      regions: [{ fylke: '34', kommuner: ['3405'] }],
+      categories: ['Utvikling'],
+    })
+    expect(within(section).getByText('Innlandet: Lillehammer')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: 'Velg områder …' })).toHaveFocus()
+  })
+
+  it('Avbryt discards the draft and announces nothing', async () => {
+    const user = userEvent.setup()
+    saveFocus({ regions: [], categories: [] })
+    renderView(fakeServer([]).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    await user.click(within(section).getByRole('button', { name: 'Velg områder …' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Velg områder' })
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Vestfold' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Avbryt' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Velg områder' })).not.toBeInTheDocument()
+    )
+    expect(loadFocus()).toEqual({ regions: [], categories: [] })
+    expect(within(section).getByText('Hele Norge')).toBeInTheDocument()
+    // announce() posts after a 50 ms timer — give it that window, then assert silence.
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('')
+  })
+
+  it('fetches the kommune register once, even when the picker opens twice', async () => {
+    const user = userEvent.setup()
+    const { fetchMock } = fakeServer([])
+    renderView(fetchMock)
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    await screen.findByRole('region', { name: 'Dekning' })
+    const kommunerCalls = () =>
+      fetchMock.mock.calls.filter(([input]) => String(input) === '/api/kommuner').length
+    await waitFor(() => expect(kommunerCalls()).toBeGreaterThan(0))
+    const before = kommunerCalls()
+
+    await user.click(within(section).getByRole('button', { name: 'Velg områder …' }))
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Avbryt' })
+    )
+    await user.click(within(section).getByRole('button', { name: 'Velg områder …' }))
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Avbryt' })
+    )
+
+    expect(kommunerCalls()).toBe(before)
+  })
+
+  it('with the register down the chips fall back to numbers and the picker still opens', async () => {
+    const user = userEvent.setup()
+    saveFocus({ regions: [{ fylke: '34', kommuner: ['3403'] }], categories: [] })
+    renderView(fakeServer([], { kommunerDown: true }).fetchMock)
+
+    const section = await screen.findByRole('region', { name: 'Visningsfilter' })
+    expect(within(section).getByText('Innlandet: 3403')).toBeInTheDocument()
+    await user.click(within(section).getByRole('button', { name: 'Velg områder …' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Velg områder' })
+    expect(within(dialog).getByText(/Kommunelisten er ikke tilgjengelig/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Bruk' })).toBeEnabled()
+  })
 })
 
 describe('Dekning (coverage)', () => {
