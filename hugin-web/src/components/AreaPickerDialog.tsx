@@ -42,14 +42,6 @@ export function searchKey(text: string): string {
     .replace(/æ/g, 'ae')
 }
 
-/** A row is a hit when the query prefixes one of its name's words — not a raw substring match,
- * which would also hit e.g. "Lillehammer" for the query "ham" (it contains "ham" mid-word). */
-function matchesKey(name: string, key: string): boolean {
-  return searchKey(name)
-    .split(/[^a-z]+/)
-    .some((word) => word.startsWith(key))
-}
-
 /** The Visningsfilter editor (spec v3.6 B1). Renders nothing while closed; the panel below
  * mounts on open, so its draft, search and expand state are seeded fresh every time. */
 export function AreaPickerDialog(props: Props) {
@@ -95,8 +87,8 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
   const searching = key !== ''
   const rows = [...FYLKER.entries()].map(([fylke, name]) => {
     const all = byFylke.get(fylke) ?? []
-    const fylkeHit = searching && matchesKey(name, key)
-    const kommuneHits = searching ? all.filter((k) => matchesKey(k.name, key)) : []
+    const fylkeHit = searching && searchKey(name).includes(key)
+    const kommuneHits = searching ? all.filter((k) => searchKey(k.name).includes(key)) : []
     const visible = !searching || fylkeHit || kommuneHits.length > 0
     return {
       fylke,

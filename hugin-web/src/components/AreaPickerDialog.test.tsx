@@ -167,8 +167,9 @@ describe('AreaPickerDialog', () => {
     expect(fylkeBox('Innlandet')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: 'Vestfold' })).not.toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Hamar' })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Lillehammer' })).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: 'Gjøvik' })).not.toBeInTheDocument()
-    await waitFor(() => expect(liveRegion()).toHaveTextContent('1 treff'))
+    await waitFor(() => expect(liveRegion()).toHaveTextContent('2 treff'))
 
     await user.clear(screen.getByLabelText('Søk fylke eller kommune'))
 
