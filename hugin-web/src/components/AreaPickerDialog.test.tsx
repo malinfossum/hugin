@@ -178,6 +178,18 @@ describe('AreaPickerDialog', () => {
     expect(screen.queryByRole('checkbox', { name: 'Hamar' })).not.toBeInTheDocument()
   })
 
+  it('a whitespace-only query is not a search: every fylke row stays visible, nothing announced', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.type(screen.getByLabelText('Søk fylke eller kommune'), '   ')
+
+    expect(
+      screen.getAllByRole('listitem').filter((li) => li.classList.contains('area-fylke'))
+    ).toHaveLength(FYLKER.size)
+    expect(liveRegion()?.textContent).toBe('')
+  })
+
   it('a fylke-name hit lists all of that fylke’s kommuner, diacritic-insensitively', async () => {
     const user = userEvent.setup()
     renderDialog()

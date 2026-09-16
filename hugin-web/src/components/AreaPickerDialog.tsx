@@ -37,7 +37,7 @@ export function searchKey(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/ø/g, 'o')
     .replace(/æ/g, 'ae')
 }
@@ -83,7 +83,7 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
     return map
   }, [kommuner])
 
-  const key = searchKey(query)
+  const key = searchKey(query.trim())
   const searching = key !== ''
   const rows = [...FYLKER.entries()].map(([fylke, name]) => {
     const all = byFylke.get(fylke) ?? []
@@ -213,7 +213,7 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
                     aria-label={t(row.isExpanded ? 'areas.hideKommuner' : 'areas.showKommuner', {
                       fylke: row.name,
                     })}
-                    disabled={!listReady}
+                    disabled={!listReady || searching}
                     onClick={() => toggleExpanded(row.fylke)}
                   >
                     <span aria-hidden="true">{row.isExpanded ? '▴' : '▾'}</span>

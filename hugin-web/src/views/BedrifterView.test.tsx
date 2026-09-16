@@ -584,8 +584,8 @@ describe('BedrifterView', () => {
     await screen.findByText('Acme AS')
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
 
-    // A focus change from outside this view (e.g. Settings) — the select and the filtered
-    // list must pick it up immediately, without the view being remounted.
+    // A focus change from outside this view (e.g. Settings) — the filtered list must pick
+    // it up immediately, without the view being remounted.
     await user.click(screen.getByRole('button', { name: 'Set Oslo externally' }))
 
     expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()

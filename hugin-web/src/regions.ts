@@ -14,7 +14,7 @@ export interface Region {
  * fixed-width digit strings, so plain string sort is numeric sort. */
 export function normalizeRegions(regions: Region[]): Region[] {
   return [...regions]
-    .sort((a, b) => a.fylke.localeCompare(b.fylke))
+    .sort((a, b) => (a.fylke < b.fylke ? -1 : a.fylke > b.fylke ? 1 : 0))
     .map((r) => ({ fylke: r.fylke, kommuner: [...new Set(r.kommuner)].sort() }))
 }
 
