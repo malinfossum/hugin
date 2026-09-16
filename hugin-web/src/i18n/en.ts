@@ -246,6 +246,23 @@ export const en = {
   'focus.categoriesHint': 'None selected = all.',
   'focus.start': 'Start',
 
+  // Visningsfilter regions (v3.6): the chips in Settings and Bedrifter, and the area picker.
+  'areas.choose': 'Choose areas …',
+  'areas.dialogTitle': 'Choose areas',
+  'areas.searchLabel': 'Search county or municipality',
+  'areas.apply': 'Apply',
+  'areas.wholeCountry': 'All of Norway',
+  'areas.wholeFylke': 'whole county',
+  'areas.selectedOfTotal': '{n} of {total} selected',
+  'areas.selected': '{n} selected',
+  'areas.kommuneCount': '{n} municipalities',
+  'areas.remove': 'Remove {fylke}',
+  'areas.hits': '{n} hits',
+  'areas.showKommuner': 'Show municipalities in {fylke}',
+  'areas.hideKommuner': 'Hide municipalities in {fylke}',
+  'areas.more': '+{n}',
+  'companies.editInSettings': 'Change in Settings',
+
   'demo.regionLabel': 'Demo',
   'demo.banner':
     'Demo — read-only. Real job ads and companies from NAV and Brreg for Innlandet. The pipeline is sample data. No tracking, no cookies; your theme choice is stored only in your browser.',

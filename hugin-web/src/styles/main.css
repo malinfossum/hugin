@@ -377,6 +377,26 @@ input[type="text"] {
   align-items: flex-end;
 }
 
+/* Visningsfilter chips (v3.6): one chip per region, wrapping like the Fokus chips. The ✕ keeps
+   the 44 px floor even inside a badge. */
+.region-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.region-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.region-chip button {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+}
+
 /* Demo banner (read-only showcase): a static region right after the header. */
 /* The design-system .app-shell is a two-row grid (header, main). The demo banner is a third
    child, so without this it takes the stretching 1fr row and pushes main to the bottom of the
