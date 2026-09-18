@@ -17,41 +17,9 @@
   },
   "dst": [
     {
-      "type": "domainStory:actorPerson",
-      "name": "Malin",
-      "id": "shape_1000",
-      "x": 100,
-      "y": 100,
-      "pickedColor": "black"
-    },
-    {
-      "type": "domainStory:actorSystem",
-      "name": "Hugin",
-      "id": "shape_1001",
-      "x": 320,
-      "y": 100,
-      "pickedColor": "black"
-    },
-    {
-      "type": "domainStory:actorSystem",
-      "name": "NAV",
-      "id": "shape_1002",
-      "x": 540,
-      "y": 100,
-      "pickedColor": "black"
-    },
-    {
-      "type": "domainStory:actorSystem",
-      "name": "Brønnøysundregistrene",
-      "id": "shape_1003",
-      "x": 760,
-      "y": 100,
-      "pickedColor": "black"
-    },
-    {
       "type": "domainStory:workObjectInfo",
       "name": "Sync",
-      "id": "shape_1004",
+      "id": "shape_1000",
       "x": 100,
       "y": 340,
       "pickedColor": "black"
@@ -59,7 +27,7 @@
     {
       "type": "domainStory:workObjectDocument",
       "name": "Focus profile",
-      "id": "shape_1005",
+      "id": "shape_1001",
       "x": 320,
       "y": 340,
       "pickedColor": "black"
@@ -67,7 +35,7 @@
     {
       "type": "domainStory:workObjectDocument",
       "name": "Ads",
-      "id": "shape_1006",
+      "id": "shape_1002",
       "x": 540,
       "y": 340,
       "pickedColor": "black"
@@ -75,16 +43,48 @@
     {
       "type": "domainStory:workObjectDocument",
       "name": "Company",
-      "id": "shape_1007",
+      "id": "shape_1003",
       "x": 760,
       "y": 340,
       "pickedColor": "black"
     },
     {
       "type": "domainStory:workObjectDocument",
-      "name": "New ads",
-      "id": "shape_1008",
+      "name": "Ads",
+      "id": "shape_1004",
       "x": 980,
+      "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "New ads",
+      "id": "shape_1005",
+      "x": 1200,
+      "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "New ads",
+      "id": "shape_1006",
+      "x": 1420,
+      "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "Ads",
+      "id": "shape_1007",
+      "x": 1640,
+      "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "Company",
+      "id": "shape_1008",
+      "x": 1860,
       "y": 340,
       "pickedColor": "black"
     },
@@ -92,8 +92,48 @@
       "type": "domainStory:workObjectDocument",
       "name": "Shortlist",
       "id": "shape_1009",
-      "x": 1200,
+      "x": 2080,
       "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:workObjectDocument",
+      "name": "New ads",
+      "id": "shape_1010",
+      "x": 2300,
+      "y": 340,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:actorSystem",
+      "name": "NAV",
+      "id": "shape_1011",
+      "x": 540,
+      "y": 100,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:actorSystem",
+      "name": "Brønnøysundregistrene",
+      "id": "shape_1012",
+      "x": 760,
+      "y": 100,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:actorSystem",
+      "name": "Hugin",
+      "id": "shape_1013",
+      "x": 1178,
+      "y": 100,
+      "pickedColor": "black"
+    },
+    {
+      "type": "domainStory:actorPerson",
+      "name": "Malin",
+      "id": "shape_1014",
+      "x": 1514,
+      "y": 100,
       "pickedColor": "black"
     },
     {
@@ -104,23 +144,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 138,
-            "y": 175
+            "x": 1514,
+            "y": 144
           },
-          "x": 138,
-          "y": 175
+          "x": 1514,
+          "y": 144
         },
         {
           "original": {
-            "x": 138,
-            "y": 340
+            "x": 175,
+            "y": 371
           },
-          "x": 138,
-          "y": 340
+          "x": 175,
+          "y": 371
         }
       ],
-      "source": "shape_1000",
-      "target": "shape_1004",
+      "source": "shape_1014",
+      "target": "shape_1000",
       "pickedColor": "black"
     },
     {
@@ -131,23 +171,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 172,
-            "y": 340
+            "x": 175,
+            "y": 369
           },
-          "x": 172,
-          "y": 340
+          "x": 175,
+          "y": 369
         },
         {
           "original": {
-            "x": 323,
-            "y": 175
+            "x": 1178,
+            "y": 146
           },
-          "x": 323,
-          "y": 175
+          "x": 1178,
+          "y": 146
         }
       ],
-      "source": "shape_1004",
-      "target": "shape_1001",
+      "source": "shape_1000",
+      "target": "shape_1013",
       "pickedColor": "black"
     },
     {
@@ -158,23 +198,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 358,
-            "y": 175
+            "x": 1178,
+            "y": 148
           },
-          "x": 358,
-          "y": 175
+          "x": 1178,
+          "y": 148
         },
         {
           "original": {
-            "x": 358,
-            "y": 340
+            "x": 395,
+            "y": 367
           },
-          "x": 358,
-          "y": 340
+          "x": 395,
+          "y": 367
         }
       ],
-      "source": "shape_1001",
-      "target": "shape_1005",
+      "source": "shape_1013",
+      "target": "shape_1001",
       "pickedColor": "black"
     },
     {
@@ -185,23 +225,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 392,
-            "y": 175
+            "x": 1178,
+            "y": 152
           },
-          "x": 392,
-          "y": 175
+          "x": 1178,
+          "y": 152
         },
         {
           "original": {
-            "x": 543,
-            "y": 340
+            "x": 615,
+            "y": 363
           },
-          "x": 543,
-          "y": 340
+          "x": 615,
+          "y": 363
         }
       ],
-      "source": "shape_1001",
-      "target": "shape_1006",
+      "source": "shape_1013",
+      "target": "shape_1002",
       "pickedColor": "black"
     },
     {
@@ -227,8 +267,8 @@
           "y": 175
         }
       ],
-      "source": "shape_1006",
-      "target": "shape_1002",
+      "source": "shape_1002",
+      "target": "shape_1011",
       "pickedColor": "black"
     },
     {
@@ -239,23 +279,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 395,
-            "y": 158
+            "x": 1178,
+            "y": 159
           },
-          "x": 395,
-          "y": 158
+          "x": 1178,
+          "y": 159
         },
         {
           "original": {
-            "x": 760,
-            "y": 357
+            "x": 835,
+            "y": 356
           },
-          "x": 760,
-          "y": 357
+          "x": 835,
+          "y": 356
         }
       ],
-      "source": "shape_1001",
-      "target": "shape_1007",
+      "source": "shape_1013",
+      "target": "shape_1003",
       "pickedColor": "black"
     },
     {
@@ -281,8 +321,8 @@
           "y": 175
         }
       ],
-      "source": "shape_1007",
-      "target": "shape_1003",
+      "source": "shape_1003",
+      "target": "shape_1012",
       "pickedColor": "black"
     },
     {
@@ -293,23 +333,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 392,
+            "x": 1185,
             "y": 175
           },
-          "x": 392,
+          "x": 1185,
           "y": 175
         },
         {
           "original": {
-            "x": 543,
+            "x": 1048,
             "y": 340
           },
-          "x": 543,
+          "x": 1048,
           "y": 340
         }
       ],
-      "source": "shape_1001",
-      "target": "shape_1006",
+      "source": "shape_1013",
+      "target": "shape_1004",
       "pickedColor": "black"
     },
     {
@@ -320,23 +360,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 395,
-            "y": 151
+            "x": 1219,
+            "y": 175
           },
-          "x": 395,
-          "y": 151
+          "x": 1219,
+          "y": 175
         },
         {
           "original": {
-            "x": 980,
-            "y": 364
+            "x": 1234,
+            "y": 340
           },
-          "x": 980,
-          "y": 364
+          "x": 1234,
+          "y": 340
         }
       ],
-      "source": "shape_1001",
-      "target": "shape_1008",
+      "source": "shape_1013",
+      "target": "shape_1005",
       "pickedColor": "black"
     },
     {
@@ -347,23 +387,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 980,
-            "y": 367
+            "x": 1275,
+            "y": 349
           },
-          "x": 980,
-          "y": 367
+          "x": 1275,
+          "y": 349
         },
         {
           "original": {
-            "x": 175,
-            "y": 148
+            "x": 1514,
+            "y": 166
           },
-          "x": 175,
-          "y": 148
+          "x": 1514,
+          "y": 166
         }
       ],
-      "source": "shape_1008",
-      "target": "shape_1000",
+      "source": "shape_1005",
+      "target": "shape_1014",
       "pickedColor": "black"
     },
     {
@@ -374,23 +414,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 175,
-            "y": 148
+            "x": 1537,
+            "y": 175
           },
-          "x": 175,
-          "y": 148
+          "x": 1537,
+          "y": 175
         },
         {
           "original": {
-            "x": 980,
-            "y": 367
+            "x": 1472,
+            "y": 340
           },
-          "x": 980,
-          "y": 367
+          "x": 1472,
+          "y": 340
         }
       ],
-      "source": "shape_1000",
-      "target": "shape_1008",
+      "source": "shape_1014",
+      "target": "shape_1006",
       "pickedColor": "black"
     },
     {
@@ -401,23 +441,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 175,
-            "y": 158
+            "x": 1571,
+            "y": 175
           },
-          "x": 175,
-          "y": 158
+          "x": 1571,
+          "y": 175
         },
         {
           "original": {
-            "x": 540,
-            "y": 357
+            "x": 1658,
+            "y": 340
           },
-          "x": 540,
-          "y": 357
+          "x": 1658,
+          "y": 340
         }
       ],
-      "source": "shape_1000",
-      "target": "shape_1006",
+      "source": "shape_1014",
+      "target": "shape_1007",
       "pickedColor": "black"
     },
     {
@@ -428,23 +468,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 543,
-            "y": 340
+            "x": 1640,
+            "y": 358
           },
-          "x": 543,
-          "y": 340
+          "x": 1640,
+          "y": 358
         },
         {
           "original": {
-            "x": 392,
-            "y": 175
+            "x": 1253,
+            "y": 157
           },
-          "x": 392,
-          "y": 175
+          "x": 1253,
+          "y": 157
         }
       ],
-      "source": "shape_1006",
-      "target": "shape_1001",
+      "source": "shape_1007",
+      "target": "shape_1013",
       "pickedColor": "black"
     },
     {
@@ -455,23 +495,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 175,
-            "y": 151
+            "x": 1589,
+            "y": 164
           },
-          "x": 175,
-          "y": 151
+          "x": 1589,
+          "y": 164
         },
         {
           "original": {
-            "x": 760,
-            "y": 364
+            "x": 1860,
+            "y": 351
           },
-          "x": 760,
-          "y": 364
+          "x": 1860,
+          "y": 351
         }
       ],
-      "source": "shape_1000",
-      "target": "shape_1007",
+      "source": "shape_1014",
+      "target": "shape_1008",
       "pickedColor": "black"
     },
     {
@@ -482,23 +522,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 760,
-            "y": 357
+            "x": 1860,
+            "y": 364
           },
-          "x": 760,
-          "y": 357
+          "x": 1860,
+          "y": 364
         },
         {
           "original": {
-            "x": 395,
-            "y": 158
+            "x": 1253,
+            "y": 151
           },
-          "x": 395,
-          "y": 158
+          "x": 1253,
+          "y": 151
         }
       ],
-      "source": "shape_1007",
-      "target": "shape_1001",
+      "source": "shape_1008",
+      "target": "shape_1013",
       "pickedColor": "black"
     },
     {
@@ -509,22 +549,22 @@
       "waypoints": [
         {
           "original": {
-            "x": 175,
-            "y": 146
+            "x": 1589,
+            "y": 153
           },
-          "x": 175,
-          "y": 146
+          "x": 1589,
+          "y": 153
         },
         {
           "original": {
-            "x": 1200,
-            "y": 369
+            "x": 2080,
+            "y": 362
           },
-          "x": 1200,
-          "y": 369
+          "x": 2080,
+          "y": 362
         }
       ],
-      "source": "shape_1000",
+      "source": "shape_1014",
       "target": "shape_1009",
       "pickedColor": "black"
     },
@@ -536,23 +576,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 1200,
-            "y": 367
+            "x": 2080,
+            "y": 368
           },
-          "x": 1200,
-          "y": 367
+          "x": 2080,
+          "y": 368
         },
         {
           "original": {
-            "x": 395,
-            "y": 148
+            "x": 1253,
+            "y": 147
           },
-          "x": 395,
-          "y": 148
+          "x": 1253,
+          "y": 147
         }
       ],
       "source": "shape_1009",
-      "target": "shape_1001",
+      "target": "shape_1013",
       "pickedColor": "black"
     },
     {
@@ -563,23 +603,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 175,
-            "y": 148
+            "x": 1589,
+            "y": 149
           },
-          "x": 175,
-          "y": 148
+          "x": 1589,
+          "y": 149
         },
         {
           "original": {
-            "x": 980,
-            "y": 367
+            "x": 2300,
+            "y": 366
           },
-          "x": 980,
-          "y": 367
+          "x": 2300,
+          "y": 366
         }
       ],
-      "source": "shape_1000",
-      "target": "shape_1008",
+      "source": "shape_1014",
+      "target": "shape_1010",
       "pickedColor": "black"
     },
     {
@@ -590,23 +630,23 @@
       "waypoints": [
         {
           "original": {
-            "x": 980,
-            "y": 364
+            "x": 2300,
+            "y": 369
           },
-          "x": 980,
-          "y": 364
+          "x": 2300,
+          "y": 369
         },
         {
           "original": {
-            "x": 395,
-            "y": 151
+            "x": 1253,
+            "y": 146
           },
-          "x": 395,
-          "y": 151
+          "x": 1253,
+          "y": 146
         }
       ],
-      "source": "shape_1008",
-      "target": "shape_1001",
+      "source": "shape_1010",
+      "target": "shape_1013",
       "pickedColor": "black"
     },
     {
