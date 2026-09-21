@@ -143,7 +143,7 @@ describe('read-only mode hides write controls', () => {
 
   it('SettingsView shows sources and coverage without any editing', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<SettingsView theme="dark" onToggleTheme={() => {}} onSourcesChanged={() => {}} />)
+    wrap(<SettingsView onSourcesChanged={() => {}} />)
     await screen.findByText('FINN')
     expect(screen.queryByRole('button', { name: 'Legg til lenke' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeInTheDocument()

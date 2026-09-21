@@ -6,13 +6,11 @@ import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
 import { ResetSection } from '../components/ResetSection'
 import { VisningsfilterSection } from '../components/VisningsfilterSection'
-import { useLang, useT } from '../i18n'
+import { useT } from '../i18n'
 import { useReadOnly } from '../readOnly'
 import type { SourceDto } from '../types'
 
 interface Props {
-  theme: 'dark' | 'light'
-  onToggleTheme: () => void
   onSourcesChanged: () => void
 }
 
@@ -23,12 +21,12 @@ interface SourceFormState {
 
 const EMPTY_FORM: SourceFormState = { label: '', url: '' }
 
-/** Settings view (spec v3.2 item 8): sources CRUD + reorder, plus language and theme — the
- * "home" for these prefs, while the topbar keeps its own quick toggles. The Dekning section
- * (v3.4) lives in CoverageSection, and the Visningsfilter card (v3.6) lives in
- * VisningsfilterSection. Brreg/NAV aren't editable here — they're fixed, i18n-sourced entries
- * shown on the dashboard's SourcesCard, not rows in this list. */
-export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) {
+/** Settings view (spec v3.2 item 8): sources CRUD + reorder. Language and theme are topbar
+ * toggles only (v3.6.1) — they used to be duplicated as cards here. The Dekning section (v3.4)
+ * lives in CoverageSection, and the Visningsfilter card (v3.6) lives in VisningsfilterSection.
+ * Brreg/NAV aren't editable here — they're fixed, i18n-sourced entries shown on the dashboard's
+ * SourcesCard, not rows in this list. */
+export function SettingsView({ onSourcesChanged }: Props) {
   const [sources, setSources] = useState<SourceDto[]>([])
   const [addForm, setAddForm] = useState<SourceFormState>(EMPTY_FORM)
   const [addError, setAddError] = useState<string | null>(null)
@@ -44,7 +42,6 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
   // throw away any bransje/keyword edit still sitting unsaved in FocusSection's own draft.
   const [coverageVersion, setCoverageVersion] = useState(0)
   const t = useT()
-  const [lang, setLang] = useLang()
   const announce = useAnnounce()
   const { readOnly, markScopeConfigured } = useReadOnly()
 
@@ -284,31 +281,6 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
         )}
       </section>
 
-      <section aria-labelledby="settings-language-heading" className="card settings-group">
-        <h2 id="settings-language-heading">{t('settings.languageHeading')}</h2>
-        <fieldset className="lang-toggle cluster cluster-sm">
-          <legend className="visually-hidden">{t('lang.toggleLabel')}</legend>
-          <span className="segmented">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-pressed={lang === 'nb'}
-              onClick={() => setLang('nb')}
-            >
-              NO
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              aria-pressed={lang === 'en'}
-              onClick={() => setLang('en')}
-            >
-              EN
-            </button>
-          </span>
-        </fieldset>
-      </section>
-
       <CoverageSection
         onSaved={() => {
           setCoverageVersion((v) => v + 1)
@@ -321,18 +293,6 @@ export function SettingsView({ theme, onToggleTheme, onSourcesChanged }: Props) 
       <FocusSection previewVersion={coverageVersion} />
 
       <VisningsfilterSection />
-
-      <section aria-labelledby="settings-theme-heading" className="card settings-group">
-        <h2 id="settings-theme-heading">{t('settings.themeHeading')}</h2>
-        <button
-          type="button"
-          className="btn btn-ghost icon-btn"
-          onClick={onToggleTheme}
-          aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
-        >
-          <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-        </button>
-      </section>
 
       <ResetSection />
 

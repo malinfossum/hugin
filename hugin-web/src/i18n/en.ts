@@ -8,7 +8,8 @@ export const en = {
   'nav.export': 'Export',
   'nav.settings': 'Settings',
 
-  'lang.toggleLabel': 'Language',
+  'lang.switchToEn': 'Switch to English',
+  'lang.switchToNb': 'Bytt til norsk',
 
   'theme.toggleToLight': 'Switch to light theme',
   'theme.toggleToDark': 'Switch to dark theme',
@@ -60,8 +61,6 @@ export const en = {
   'settings.sourceSaved': 'Source saved.',
   'settings.sourceRemoved': 'Source removed.',
   'settings.sourceMoved': 'Order changed.',
-  'settings.languageHeading': 'Language',
-  'settings.themeHeading': 'Theme',
   'settings.focusHeading': 'Display filter',
   'settings.focusHint': 'Controls what the dashboard and company list show by default.',
   'settings.focusUpdated': 'Focus updated.',

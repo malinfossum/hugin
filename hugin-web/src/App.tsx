@@ -5,7 +5,7 @@ import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { fromDiscoveryConfig, toFocusSeed } from './coverage'
 import { FocusProvider, KNOWN_CATEGORIES, useFocus } from './focus'
-import { LanguageProvider, type TranslationKey, useT } from './i18n'
+import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
 import { ReadOnlyProvider, useReadOnly } from './readOnly'
 import { parseRoute, type Route, routePath } from './routing'
 import type { DiscoveryConfigDto } from './types'
@@ -59,6 +59,7 @@ function AppShell() {
   // A ref mirrors the latest route for that handler without re-subscribing it on every render.
   const routeRef = useRef(route)
   const t = useT()
+  const [lang, setLang] = useLang()
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   )
@@ -101,9 +102,7 @@ function AppShell() {
       />
     ),
     export: () => <EksportView />,
-    settings: () => (
-      <SettingsView theme={theme} onToggleTheme={toggleTheme} onSourcesChanged={bumpSources} />
-    ),
+    settings: () => <SettingsView onSourcesChanged={bumpSources} />,
   }
 
   // Applies a parsed/target route to state: marks its view visited (for keep-mounted) and
@@ -205,14 +204,27 @@ function AppShell() {
                   ))}
                 </ul>
               </nav>
-              <button
-                type="button"
-                className="nav-link"
-                onClick={toggleTheme}
-                aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
-              >
-                <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-              </button>
+              {/* Both quick toggles show what they switch TO: the sun in dark mode, «EN» in
+                  Norwegian. Settings has no copy of either (v3.6.1). The wrapper is what the
+                  phone layout hoists up beside the brand (main.css .topbar-toggles). */}
+              <div className="topbar-toggles cluster cluster-sm">
+                <button
+                  type="button"
+                  className="nav-link"
+                  onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
+                  aria-label={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
+                >
+                  <span aria-hidden="true">{lang === 'nb' ? 'EN' : 'NO'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="nav-link"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
+                >
+                  <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </header>

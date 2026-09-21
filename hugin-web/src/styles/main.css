@@ -38,12 +38,24 @@ h3 {
 }
 
 /* Touch targets ≥44px (a11y spec) — mobile-first, applies at every breakpoint. */
-button,
+button {
+  min-height: 44px;
+}
+
+/* Every text control is exactly the button height. The DS gives .input/.select the same
+   2.75rem min-height as .btn but adds 0.75rem block padding on top of the 1.6 line-height, so
+   an input renders 51.6 px and a select 47 px (line-height: normal) beside a 44 px button —
+   three heights on one row, and labels that no longer share a baseline. A fixed block-size
+   with no block padding lands all of them on one edge; inputs and selects centre their own
+   text vertically. Textareas keep the DS padding (multi-line). */
 select,
 input[type="date"],
 input[type="search"],
-input[type="text"] {
-  min-height: 44px;
+input[type="text"],
+.input,
+.select {
+  block-size: 44px;
+  padding-block: 0;
 }
 
 /* .nav-link (design-system/components/nav.css) is sized at 2.5rem — below the 44px floor
@@ -51,6 +63,33 @@ input[type="text"] {
    rather than editing the read-only design-system. */
 .nav-link {
   min-height: 44px;
+}
+
+/* Topbar on phones: the brand and the two quick toggles share the first row, the nav takes a
+   full row under them — otherwise the toggles wrap onto a third row where they read as two
+   more nav entries. The controls wrapper dissolves (display: contents) so flex order can seat
+   the toggles beside the brand while the DOM keeps nav before toggles for tab order. */
+.topbar-controls {
+  display: contents;
+}
+.topbar-controls nav {
+  order: 3;
+  flex-basis: 100%;
+}
+.topbar-toggles {
+  order: 2;
+}
+@media (min-width: 768px) {
+  .topbar-controls {
+    display: flex;
+  }
+  .topbar-controls nav {
+    order: 0;
+    flex-basis: auto;
+  }
+  .topbar-toggles {
+    order: 0;
+  }
 }
 
 /* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent
@@ -67,36 +106,6 @@ input[type="text"] {
   width: 2rem;
   height: 2rem;
   color: rgb(var(--accent-rgb));
-}
-
-/* <fieldset> is the semantic grouping element for the NO/EN language toggle (a11y lint
-   prefers it over a bare role="group" div) — strip its default border/padding/min-width so
-   it lays out as a plain button cluster instead of a boxed form section. */
-.lang-toggle {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-}
-
-/* One segmented control instead of two floating buttons (spec v3.1 item 22).
-   Buttons keep aria-pressed; the active segment gets the accent-soft fill. */
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-.segmented .btn {
-  border-radius: 0;
-  border: 0;
-}
-.segmented .btn + .btn {
-  border-inline-start: 1px solid var(--border-strong);
-}
-.segmented .btn[aria-pressed="true"] {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
 }
 
 /* Vertical rhythm for <main>; .container already handles inline padding + max-width. */
@@ -235,6 +244,14 @@ input[type="text"] {
 
 .bedrifter-filters {
   align-items: flex-end;
+}
+
+/* Sync header: the source names are the labels of the card, the timestamps the values. The
+   whole list is muted, so the terms take the full text ink and weight to stand apart from the
+   dates under them — a label must read as a label, not as more of the same text. */
+.sync-times dt {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* Company detail — definition list as a two-column term/value grid. */
