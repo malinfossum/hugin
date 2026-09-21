@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider, loadFocus, saveFocus } from '../focus'
-import { LanguageProvider } from '../i18n'
+import { LanguageProvider, useLang } from '../i18n'
 import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
 import { SettingsView } from './SettingsView'
 
@@ -161,32 +161,34 @@ function fakeServer(
   return { fetchMock, puts }
 }
 
+/** Stand-in for the topbar language toggle: the real one lives in App, outside this view, so a
+ * sibling under the same LanguageProvider is what a language switch looks like from here. */
+function LangSwitch() {
+  const [, setLang] = useLang()
+  return (
+    <button type="button" onClick={() => setLang('en')}>
+      Switch to English
+    </button>
+  )
+}
+
 function renderView(
   fetchMock: ReturnType<typeof vi.fn>,
-  props: Partial<{
-    theme: 'dark' | 'light'
-    onToggleTheme: () => void
-    onSourcesChanged: () => void
-  }> = {}
+  props: Partial<{ onSourcesChanged: () => void; withLangSwitch: boolean }> = {}
 ) {
   vi.stubGlobal('fetch', fetchMock)
-  const onToggleTheme = props.onToggleTheme ?? vi.fn()
   const onSourcesChanged = props.onSourcesChanged ?? vi.fn()
-  const theme = props.theme ?? 'dark'
   const utils = render(
     <LanguageProvider>
       <LiveRegionProvider>
         <FocusProvider>
-          <SettingsView
-            theme={theme}
-            onToggleTheme={onToggleTheme}
-            onSourcesChanged={onSourcesChanged}
-          />
+          {props.withLangSwitch && <LangSwitch />}
+          <SettingsView onSourcesChanged={onSourcesChanged} />
         </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
   )
-  return { ...utils, onToggleTheme, onSourcesChanged }
+  return { ...utils, onSourcesChanged }
 }
 
 afterEach(() => {
@@ -336,24 +338,13 @@ describe('SettingsView', () => {
     expect(moveDownButtons[1]).toBeDisabled()
   })
 
-  it('language section renders the NO/EN pressed-state buttons', async () => {
+  it('carries no language or theme controls — both live in the topbar', async () => {
     renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
-    const noButton = screen.getByRole('button', { name: 'NO' })
-    const enButton = screen.getByRole('button', { name: 'EN' })
-    expect(noButton).toHaveAttribute('aria-pressed', 'true')
-    expect(enButton).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('theme section calls onToggleTheme', async () => {
-    const user = userEvent.setup()
-    const { onToggleTheme } = renderView(fakeServer([]).fetchMock, { theme: 'dark' })
-
-    await screen.findByRole('button', { name: 'Legg til lenke' })
-    await user.click(screen.getByRole('button', { name: 'Bytt til lyst tema' }))
-
-    expect(onToggleTheme).toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: 'Språk' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Tema' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Bytt til lyst tema' })).not.toBeInTheDocument()
   })
 
   it('shows a load error with retry on GET failure, and recovers on retry', async () => {
@@ -819,11 +810,11 @@ describe('Dekning (coverage)', () => {
   it('switching language does not discard an unsaved coverage edit', async () => {
     const server = fakeServer([])
     const user = userEvent.setup()
-    renderView(server.fetchMock)
+    renderView(server.fetchMock, { withLangSwitch: true })
     const section = await screen.findByRole('region', { name: 'Dekning' })
 
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
-    await user.click(screen.getByRole('button', { name: 'EN' }))
+    await user.click(screen.getByRole('button', { name: 'Switch to English' }))
 
     expect(within(section).getByRole('checkbox', { name: 'Lillehammer' })).toBeChecked()
     const discoveryGets = server.fetchMock.mock.calls.filter(

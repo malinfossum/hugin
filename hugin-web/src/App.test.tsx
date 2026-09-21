@@ -132,27 +132,23 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Dashbord' })).not.toHaveAttribute('aria-current')
   })
 
-  it('switches to English via Settings: labels change, <html lang> and localStorage update', async () => {
+  it('switches to English from the topbar: labels change, <html lang> and localStorage update', async () => {
     vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
-    // The language toggle lives in Settings only — the header carries just nav + theme.
-    expect(screen.queryByRole('button', { name: 'EN' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
-
-    const noButton = screen.getByRole('button', { name: 'NO' })
-    const enButton = screen.getByRole('button', { name: 'EN' })
-    expect(noButton).toHaveAttribute('aria-pressed', 'true')
-    expect(enButton).toHaveAttribute('aria-pressed', 'false')
+    // The language toggle sits in the topbar beside the theme toggle, and shows the language
+    // it switches TO — the same convention as the sun/moon icon.
+    const enButton = screen.getByRole('button', { name: 'Switch to English' })
+    expect(enButton).toHaveTextContent('EN')
 
     await user.click(enButton)
 
     expect(screen.getByRole('button', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dashbord' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Applications' })).toBeInTheDocument()
-    expect(enButton).toHaveAttribute('aria-pressed', 'true')
-    expect(noButton).toHaveAttribute('aria-pressed', 'false')
+    // Once in English the same button offers the way back.
+    expect(screen.getByRole('button', { name: 'Bytt til norsk' })).toHaveTextContent('NO')
     expect(document.documentElement.lang).toBe('en')
     expect(window.localStorage.getItem('hugin-lang')).toBe('en')
   })
@@ -204,12 +200,11 @@ describe('App', () => {
     await user.type(search, 'Acme')
     expect(search).toHaveValue('Acme')
 
-    await user.click(screen.getByRole('button', { name: 'Innstillinger' }))
-    await user.click(screen.getByRole('button', { name: 'EN' }))
+    await user.click(screen.getByRole('button', { name: 'Switch to English' }))
 
     expect(screen.getByLabelText('Search')).toHaveValue('Acme')
 
-    await user.click(screen.getByRole('button', { name: 'NO' }))
+    await user.click(screen.getByRole('button', { name: 'Bytt til norsk' }))
 
     expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
   })

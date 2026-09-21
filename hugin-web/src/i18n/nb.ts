@@ -8,7 +8,8 @@ export const nb = {
   'nav.export': 'Eksport',
   'nav.settings': 'Innstillinger',
 
-  'lang.toggleLabel': 'Språk',
+  'lang.switchToEn': 'Switch to English',
+  'lang.switchToNb': 'Bytt til norsk',
 
   'theme.toggleToLight': 'Bytt til lyst tema',
   'theme.toggleToDark': 'Bytt til mørkt tema',
@@ -60,8 +61,6 @@ export const nb = {
   'settings.sourceSaved': 'Kilde lagret.',
   'settings.sourceRemoved': 'Kilde fjernet.',
   'settings.sourceMoved': 'Rekkefølge endret.',
-  'settings.languageHeading': 'Språk',
-  'settings.themeHeading': 'Tema',
   'settings.focusHeading': 'Visningsfilter',
   'settings.focusHint': 'Styrer hva dashbordet og bedriftslisten viser som standard.',
   'settings.focusUpdated': 'Fokus oppdatert.',
