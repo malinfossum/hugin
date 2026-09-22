@@ -35,3 +35,6 @@ hugin-web/node_modules/
 # Demo publish output (Linux) — rebuilt from publish-demo.ps1
 publish-linux/
 hugin-demo.zip
+
+# Local-only notes — my own working material, never published
+*.private.md
