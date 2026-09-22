@@ -31,7 +31,7 @@ Browse active ads, the company inventory (one row per company, branches as tabs 
 
 A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App Service (free tier: the first visit after idle takes a few seconds). Real job ads and companies from NAV and Brreg for Innlandet, a seeded example pipeline, no personal data, no tracking. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
 
-[`docs/prosjektnotat.md`](docs/prosjektnotat.md) is a plain-language summary in Norwegian of what Hugin is, how it works, how it is built and where it stands.
+[`docs/project-note.md`](docs/project-note.md) is a plain-language summary of what Hugin is, how it works, how it is built and where it stands.
 
 ## CLI
 
