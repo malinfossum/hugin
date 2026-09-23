@@ -1,0 +1,20 @@
+# Keeps this repo's public face honest: description, topics, homepage, the
+# Stack section, versions and links, all checked against the README.
+# The checker lives in malinfossum/workbench — docs/repo-hygiene.md.
+name: Repo hygiene
+
+on:
+  push:
+    branches: [main]
+    paths: ["README.md"]
+  pull_request:
+    paths: ["README.md"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  hygiene:
+    uses: malinfossum/workbench/.github/workflows/repo-hygiene.yml@main
+    with:
+      mode: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && 'warn' || 'strict' }}
