@@ -42,22 +42,6 @@ button {
   min-height: 44px;
 }
 
-/* Every text control is exactly the button height. The DS gives .input/.select the same
-   2.75rem min-height as .btn but adds 0.75rem block padding on top of the 1.6 line-height, so
-   an input renders 51.6 px and a select 47 px (line-height: normal) beside a 44 px button —
-   three heights on one row, and labels that no longer share a baseline. A fixed block-size
-   with no block padding lands all of them on one edge; inputs and selects centre their own
-   text vertically. Textareas keep the DS padding (multi-line). */
-select,
-input[type="date"],
-input[type="search"],
-input[type="text"],
-.input,
-.select {
-  block-size: 44px;
-  padding-block: 0;
-}
-
 /* .nav-link (design-system/components/nav.css) is sized at 2.5rem — below the 44px floor
    above, and a class selector beats that bare-element rule on specificity. Restore it here
    rather than editing the read-only design-system. */
