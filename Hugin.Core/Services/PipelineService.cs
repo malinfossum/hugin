@@ -10,6 +10,7 @@ public sealed class CompanyNotFoundException(string orgnr)
 }
 
 public sealed record TrackResult(PipelineEntry Entry, bool CompanyFetchedFromBrreg, string? Warning);
+public sealed record UntrackResult(PipelineRemoval Removal, string? CompanyName);
 
 /// <summary>
 /// Moves a company through the outreach pipeline. Tracking is deliberately unconstrained by
@@ -61,5 +62,16 @@ public sealed class PipelineService(
             : null;
 
         return new TrackResult(entry, fetchedFromBrreg, warning);
+    }
+
+    /// <summary>Removes one pipeline entry (and the manual ad links to it). The company row
+    /// stays. Null when the orgnr is not tracked. Never touches the network.</summary>
+    public async Task<UntrackResult?> UntrackAsync(string orgnr, CancellationToken ct = default)
+    {
+        var removal = await pipeline.DeleteAsync(orgnr, ct);
+        if (removal is null) return null;
+
+        var company = await companies.GetAsync(orgnr, ct);
+        return new UntrackResult(removal, company?.Name);
     }
 }

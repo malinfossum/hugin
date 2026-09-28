@@ -85,4 +85,26 @@ public class CommandParserTests
     [Test]
     public void Unknown_verb_is_invalid()
         => Assert.That(CommandParser.Parse(["dance"]), Is.TypeOf<InvalidCommand>());
+
+    [Test]
+    public void Untrack() => Assert.That(CommandParser.Parse(["untrack", "111111111"]), Is.EqualTo(new UntrackCommand("111111111")));
+
+    [Test]
+    public void Untrack_without_orgnr_is_invalid()
+        => Assert.That(CommandParser.Parse(["untrack"]),
+            Is.EqualTo(new InvalidCommand("mangler orgnr — bruk: hugin untrack <orgnr>")));
+
+    [Test]
+    public void Untrack_with_an_extra_argument_is_invalid()
+        => Assert.That(CommandParser.Parse(["untrack", "111111111", "222222222"]),
+            Is.EqualTo(new InvalidCommand("uventet argument '222222222'")));
+
+    [Test]
+    public void Untrack_with_an_option_is_invalid()
+        => Assert.That(CommandParser.Parse(["untrack", "111111111", "--why", "x"]),
+            Is.EqualTo(new InvalidCommand("ukjent valg '--why' for denne kommandoen")));
+
+    [Test]
+    public void Unknown_verb_lists_untrack()
+        => Assert.That(((InvalidCommand)CommandParser.Parse(["slett"])).Error, Does.Contain("untrack"));
 }

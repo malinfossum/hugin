@@ -173,4 +173,51 @@ public class PipelineServiceTests
 
         Assert.That(result.Entry.Starred, Is.False);
     }
+
+    [Test]
+    public async Task Untrack_returns_the_removed_entry_and_the_company_name()
+    {
+        var h = await BuildAsync();
+        await h.Service.TrackAsync("934161181", PipelineStatus.Applied, "grunn", "notat", null);
+
+        var result = await h.Service.UntrackAsync("934161181");
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Removal.Entry.Orgnr, Is.EqualTo("934161181"));
+        Assert.That(result.Removal.Entry.Note, Is.EqualTo("notat"));
+        Assert.That(result.CompanyName, Is.EqualTo("Norkart AS avd Lillehammer"));
+        Assert.That(h.Pipeline.Store, Is.Empty);
+        Assert.That(h.Companies.Store.ContainsKey("934161181"), Is.True, "companies are never deleted");
+    }
+
+    [Test]
+    public async Task Untrack_of_an_untracked_orgnr_returns_null()
+    {
+        var h = await BuildAsync();
+
+        Assert.That(await h.Service.UntrackAsync("934161181"), Is.Null);
+    }
+
+    [Test]
+    public async Task Untrack_without_a_company_row_gives_a_null_name()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        h.Pipeline.Store.Add(new PipelineEntry { Orgnr = "111111111", Created = T1, Updated = T1 });
+
+        var result = await h.Service.UntrackAsync("111111111");
+
+        Assert.That(result!.CompanyName, Is.Null);
+        Assert.That(h.Pipeline.Store, Is.Empty);
+    }
+
+    [Test]
+    public async Task Untrack_never_calls_brreg()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        h.Pipeline.Store.Add(new PipelineEntry { Orgnr = "111111111", Created = T1, Updated = T1 });
+
+        await h.Service.UntrackAsync("111111111");
+
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.Empty, "untrack never touches the network");
+    }
 }
