@@ -416,7 +416,7 @@ public sealed class PublicSecurityTests
     public async Task Every_write_verb_under_api_is_refused()
     {
         using var client = _factory.CreateApiClient();
-        var put = await client.PutAsJsonAsync("/api/pipeline/922425620", new { status = "active" });
+        var put = await client.PutAsJsonAsync("/api/pipeline/444444444", new { status = "active" });
         var del = await client.DeleteAsync("/api/ads/x/hide");
         var sync = await client.PostAsync("/api/sync", null);
         Assert.Multiple(() =>
@@ -1064,7 +1064,7 @@ public sealed class DemoSeederTests
             .UseSqlite(HuginDbInitializer.ConnectionString(_mode.WorkingDbPath)).Options;
         _db = new HuginDbContext(options);
         await HuginDbInitializer.InitAsync(_db);
-        _db.Companies.Add(new Company { Orgnr = "922425620", Name = "TRETOEN AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
+        _db.Companies.Add(new Company { Orgnr = "444444444", Name = "BERGLI DESIGN AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
     }
 
@@ -1086,13 +1086,13 @@ public sealed class DemoSeederTests
     {
         var entries = DemoSeeder.Parse("""
             [
-              { "orgnr": "922425620", "status": "active", "why": "Demo." },
+              { "orgnr": "444444444", "status": "active", "why": "Demo." },
               { "orgnr": "12345", "status": "active", "why": "kort orgnr" },
-              { "orgnr": "983398308", "status": "hired", "why": "ukjent status" },
-              { "orgnr": "935567343", "status": "active", "why": "" }
+              { "orgnr": "555555555", "status": "hired", "why": "ukjent status" },
+              { "orgnr": "666666666", "status": "active", "why": "" }
             ]
             """, out var problems);
-        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "922425620" }));
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "444444444" }));
         Assert.That(problems, Has.Count.EqualTo(3));
         Assert.That(problems[0], Does.Contain("12345"));
     }
@@ -1108,7 +1108,7 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_inserts_an_absent_entry_for_a_known_company()
     {
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(1));
         var entry = await _db.Pipeline.SingleAsync();
         Assert.That(entry.Status, Is.EqualTo(PipelineStatus.Active));
@@ -1119,9 +1119,9 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_never_updates_an_existing_entry()
     {
-        _db.Pipeline.Add(new PipelineEntry { Orgnr = "922425620", Status = PipelineStatus.Applied, Why = "handwritten", Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow });
+        _db.Pipeline.Add(new PipelineEntry { Orgnr = "444444444", Status = PipelineStatus.Applied, Why = "handwritten", Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
         var entry = await _db.Pipeline.SingleAsync();
         Assert.That(entry.Why, Is.EqualTo("handwritten"));
@@ -1131,11 +1131,11 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_skips_an_unknown_company_so_the_next_sync_can_retry()
     {
-        WriteSeed("""[{ "orgnr": "983398308", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "555555555", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
         Assert.That(await _db.Pipeline.AnyAsync(), Is.False);
 
-        _db.Companies.Add(new Company { Orgnr = "983398308", Name = "ARRIBATEC CLOUD AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
+        _db.Companies.Add(new Company { Orgnr = "555555555", Name = "ASKELI CLOUD AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(1));
     }
@@ -1144,7 +1144,7 @@ public sealed class DemoSeederTests
     public async Task Apply_is_a_no_op_without_a_file_or_outside_public_mode()
     {
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0), "no seed file");
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder(PublicModeOptions.Off).ApplyAsync(), Is.EqualTo(0), "normal mode ignores the file");
     }
 }
@@ -1295,9 +1295,9 @@ git commit -m "feat(api): idempotent demo pipeline seeder"
     public async Task Public_mode_seeds_the_pipeline_and_writes_the_snapshot_after_the_boot_sync()
     {
         using var factory = new ApiFactory(autosync: true, publicMode: true);
-        factory.Brreg.Companies.Add(new RegisterCompany("922425620", "TRETOEN AS", "3403", "62.100", null, false, null));
+        factory.Brreg.Companies.Add(new RegisterCompany("444444444", "BERGLI DESIGN AS", "3403", "62.100", null, false, null));
         File.WriteAllText(Path.Combine(factory.StateDir, "demo-pipeline.json"),
-            """[{ "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
+            """[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
         using var client = factory.CreateClient();
 
         var status = await SyncEndpointTests.PollUntilFinished(client);
@@ -1309,7 +1309,7 @@ git commit -m "feat(api): idempotent demo pipeline seeder"
         var options = new DbContextOptionsBuilder<Hugin.Infrastructure.Data.HuginDbContext>()
             .UseSqlite(Hugin.Infrastructure.Data.HuginDbInitializer.ConnectionString(snapshotPath)).Options;
         await using var snapshot = new Hugin.Infrastructure.Data.HuginDbContext(options);
-        Assert.That(await snapshot.Pipeline.AnyAsync(p => p.Orgnr == "922425620"), Is.True);
+        Assert.That(await snapshot.Pipeline.AnyAsync(p => p.Orgnr == "444444444"), Is.True);
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     }
 
@@ -1741,13 +1741,13 @@ function json(body: unknown) {
 }
 
 const AD = {
-  feedId: 'a1', title: 'Utvikler', employer: 'TRETOEN AS', employerOrgnr: '922425620', kommune: '3403',
+  feedId: 'a1', title: 'Utvikler', employer: 'BERGLI DESIGN AS', employerOrgnr: '444444444', kommune: '3403',
   expires: '2099-01-01T00:00:00Z', daysLeft: 30, category: 'IT / Utvikling', sourceUrl: 'https://example.org',
   pipelineStatus: null, hidden: false, isActive: true, published: '2026-09-01T00:00:00Z', linkedOrgnr: null,
 }
 
 const ENTRY = {
-  orgnr: '922425620', companyName: 'TRETOEN AS', status: 'active', starred: false,
+  orgnr: '444444444', companyName: 'BERGLI DESIGN AS', status: 'active', starred: false,
   why: 'Demo.', note: null, svar: null, updated: '2026-09-01T00:00:00Z', adsExpired: false,
 }
 
@@ -1808,7 +1808,7 @@ describe('read-only mode hides write controls', () => {
   it('ApplicationsView has no star or edit', async () => {
     vi.stubGlobal('fetch', demoServer())
     wrap(<ApplicationsView />)
-    await screen.findByText('TRETOEN AS')
+    await screen.findByText('BERGLI DESIGN AS')
     expect(screen.queryByRole('button', { name: 'Gi stjerne' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeInTheDocument()
   })
@@ -2010,18 +2010,17 @@ git commit -m "feat(web): hide every write control in read-only mode"
 }
 ```
 
-- [ ] **Step 2: Demo pipeline.** Create `demo/demo-pipeline.json` — four real Innlandet IT employers present in the Innlandet ×4 snapshot, `active` only, one neutral why:
+- [ ] **Step 2: Demo pipeline.** Create `demo/demo-pipeline.json` — three real Innlandet IT employers present in the Innlandet ×4 snapshot, `active` only, one neutral why:
 
 ```json
 [
-  { "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "983398308", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "935567343", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "925836613", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
+  { "orgnr": "989773518", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
+  { "orgnr": "915168175", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
+  { "orgnr": "965309926", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
 ]
 ```
 
-(TRETOEN AS, Arribatec Cloud AS, Sopra Steria avd Hamar, Norsk Tipping AS — Norsk Tipping is NACE 92 and is not in the discovery walk, so it stays "skipped, retried after sync" until it appears as an enriched ad employer; that is the seeder's documented behaviour and a live demonstration of it. Swap it for another 62-company from the snapshot if an empty fourth badge bothers you at deploy time.)
+(Digitaliseringsfabrikken AS, KulturIT AS, Vitec HK Data AS. This list was updated 2026-09-28 — see spec corrections 11 and 14.)
 
 - [ ] **Step 3: Publish script.** Create `publish-demo.ps1`:
 

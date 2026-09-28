@@ -80,7 +80,7 @@ Both clients are interfaces in Core (`IBrregClient`, `INavFeedClient`); HTTP imp
 **Sync semantics (all sources):** at-least-once. Upserts are idempotent; `SyncState.Cursor` advances only **after** the batch commits, so a crash mid-sync re-fetches rather than skips.
 
 **Brreg Enhetsregisteret** — open, no auth.
-`GET https://data.brreg.no/enhetsregisteret/api/enheter?naeringskode={codes}&kommunenummer={numbers}` **and the same query against `/underenheter`** — paginated JSON; walk all pages, upsert by orgnr. Querying `/enheter` alone misses branch offices entirely: regional consultancy offices (Sopra Steria avd Hamar, Bouvet Innlandet, Atea Hamar) are underenheter of Oslo-registered parents and never match a kommunenummer filter on hovedenheter.
+`GET https://data.brreg.no/enhetsregisteret/api/enheter?naeringskode={codes}&kommunenummer={numbers}` **and the same query against `/underenheter`** — paginated JSON; walk all pages, upsert by orgnr. Querying `/enheter` alone misses branch offices entirely: regional consultancy offices (Bouvet Innlandet, Atea Hamar) are underenheter of Oslo-registered parents and never match a kommunenummer filter on hovedenheter.
 
 **NAV stillingsfeed** — free, JWT bearer.
 Docs: navikt.github.io/pam-stilling-feed. On 401, refetch the public token from `/api/publicToken` and retry once. Consume the feed incrementally from the stored cursor; filter to configured municipalities + keywords before storing.

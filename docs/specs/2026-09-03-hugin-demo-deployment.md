@@ -104,7 +104,7 @@ without also restoring an older snapshot: the working copy would carry a newer s
 
 ```json
 [
-  { "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
+  { "orgnr": "989773518", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
 ]
 ```
 
@@ -328,3 +328,13 @@ matches UTC, snapshot copied back to `/home/data` after the boot sync. Deviation
     with no «starter tom», `lastSyncUtc` stayed at the first boot sync (19:44 UTC) through all
     three, and the snapshot's mtime never moved — no boot sync inside the 6 h throttle. Check
     the F1 quota graph and the startup log after the first full day.
+
+## Seed swap 2026-09-28
+
+14. **The seed now holds three firms picked only for the demo**: Digitaliseringsfabrikken AS
+    (989773518, Hamar), KulturIT AS (915168175, Lillehammer) and Vitec HK Data AS (965309926,
+    Ringsaker), all NACE 62 and inside the demo scope. Because the seeder never updates or
+    removes rows, a new `demo-pipeline.json` alone leaves the old rows in the snapshot. The
+    swap is: stop the app, download `/home/data/hugin.db`, `hugin untrack` each old orgnr
+    against it with the demo config beside it, upload the db and the new seed, start the app.
+    The next boot seeds the new firms.
