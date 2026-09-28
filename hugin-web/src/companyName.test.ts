@@ -3,10 +3,10 @@ import { displayCompanyName } from './companyName'
 
 describe('displayCompanyName', () => {
   it('title-cases an all-caps Brreg name, suffix stays uppercase', () => {
-    expect(displayCompanyName('NORSK TIPPING AS')).toBe('Norsk Tipping AS')
+    expect(displayCompanyName('NYFJELL SPILL AS')).toBe('Nyfjell Spill AS')
   })
   it('handles branch names', () => {
-    expect(displayCompanyName('SOPRA STERIA AVD HAMAR')).toBe('Sopra Steria Avd Hamar')
+    expect(displayCompanyName('SOLBAKKEN DATA AVD HAMAR')).toBe('Solbakken Data Avd Hamar')
   })
   it('title-cases each hyphenated part', () => {
     expect(displayCompanyName('EL-INSTALLATØREN GJØVIK DA')).toBe('El-Installatøren Gjøvik DA')
@@ -17,7 +17,7 @@ describe('displayCompanyName', () => {
     expect(displayCompanyName('EKSEMPEL HF')).toBe('Eksempel HF')
   })
   it('passes mixed-case names through untouched', () => {
-    expect(displayCompanyName('Norsk Tipping AS')).toBe('Norsk Tipping AS')
+    expect(displayCompanyName('Nyfjell Spill AS')).toBe('Nyfjell Spill AS')
     expect(displayCompanyName('innit AS')).toBe('innit AS')
   })
   it('handles norwegian letters', () => {

@@ -25,7 +25,7 @@ public sealed class DemoSeederTests
             .UseSqlite(HuginDbInitializer.ConnectionString(_mode.WorkingDbPath)).Options;
         _db = new HuginDbContext(options);
         await HuginDbInitializer.InitAsync(_db);
-        _db.Companies.Add(new Company { Orgnr = "922425620", Name = "TRETOEN AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
+        _db.Companies.Add(new Company { Orgnr = "444444444", Name = "BERGLI DESIGN AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
     }
 
@@ -47,13 +47,13 @@ public sealed class DemoSeederTests
     {
         var entries = DemoSeeder.Parse("""
             [
-              { "orgnr": "922425620", "status": "active", "why": "Demo." },
+              { "orgnr": "444444444", "status": "active", "why": "Demo." },
               { "orgnr": "12345", "status": "active", "why": "kort orgnr" },
-              { "orgnr": "983398308", "status": "hired", "why": "ukjent status" },
-              { "orgnr": "935567343", "status": "active", "why": "" }
+              { "orgnr": "555555555", "status": "hired", "why": "ukjent status" },
+              { "orgnr": "666666666", "status": "active", "why": "" }
             ]
             """, out var problems);
-        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "922425620" }));
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "444444444" }));
         Assert.That(problems, Has.Count.EqualTo(3));
         Assert.That(problems[0], Does.Contain("12345"));
     }
@@ -69,7 +69,7 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_inserts_an_absent_entry_for_a_known_company()
     {
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(1));
         var entry = await _db.Pipeline.SingleAsync();
         Assert.That(entry.Status, Is.EqualTo(PipelineStatus.Active));
@@ -80,9 +80,9 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_never_updates_an_existing_entry()
     {
-        _db.Pipeline.Add(new PipelineEntry { Orgnr = "922425620", Status = PipelineStatus.Applied, Why = "handwritten", Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow });
+        _db.Pipeline.Add(new PipelineEntry { Orgnr = "444444444", Status = PipelineStatus.Applied, Why = "handwritten", Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
         var entry = await _db.Pipeline.SingleAsync();
         Assert.That(entry.Why, Is.EqualTo("handwritten"));
@@ -92,11 +92,11 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Apply_skips_an_unknown_company_so_the_next_sync_can_retry()
     {
-        WriteSeed("""[{ "orgnr": "983398308", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "555555555", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
         Assert.That(await _db.Pipeline.AnyAsync(), Is.False);
 
-        _db.Companies.Add(new Company { Orgnr = "983398308", Name = "ARRIBATEC CLOUD AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
+        _db.Companies.Add(new Company { Orgnr = "555555555", Name = "ASKELI CLOUD AS", FirstSeen = DateTimeOffset.UtcNow, LastSeenInRegister = DateTimeOffset.UtcNow });
         await _db.SaveChangesAsync();
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(1));
     }
@@ -105,14 +105,14 @@ public sealed class DemoSeederTests
     public async Task Apply_is_a_no_op_without_a_file_or_outside_public_mode()
     {
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0), "no seed file");
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo." }]""");
         Assert.That(await Seeder(PublicModeOptions.Off).ApplyAsync(), Is.EqualTo(0), "normal mode ignores the file");
     }
 
     [Test]
     public async Task Apply_logs_and_seeds_nothing_when_the_file_cannot_be_read()
     {
-        WriteSeed("""[{ "orgnr": "922425620", "status": "active", "why": "Demo." }]""");
+        WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo." }]""");
         using var locked = new FileStream(_mode.SeedPath, FileMode.Open, FileAccess.Read, FileShare.None);
         Assert.That(await Seeder().ApplyAsync(), Is.EqualTo(0));
         Assert.That(await _db.Pipeline.AnyAsync(), Is.False);

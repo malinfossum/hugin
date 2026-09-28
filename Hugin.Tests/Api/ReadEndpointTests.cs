@@ -218,17 +218,17 @@ public sealed class ReadEndpointTests
         using (var scope = _factory.Services.CreateScope())
         {
             var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
-            await repo.UpsertAsync(new RegisterCompany("925836613", "Norsk Tipping AS", "3407", "62.100", null,
+            await repo.UpsertAsync(new RegisterCompany("777777777", "Nyfjell Spill AS", "3407", "62.100", null,
                 false, null), now);
             // Muni 4601 sorts after 0301 — asserting on kommune order, not insertion order, catches an
             // impl that accidentally orders by name only (which would put these two the other way).
-            await repo.UpsertAsync(new RegisterCompany("111111111", "Norsk Tipping AS Avd B", "4601", "62.100",
-                "925836613", true, null), now);
-            await repo.UpsertAsync(new RegisterCompany("222222222", "Norsk Tipping AS Avd A", "0301", "62.100",
-                "925836613", true, null), now);
+            await repo.UpsertAsync(new RegisterCompany("111111111", "Nyfjell Spill AS Avd B", "4601", "62.100",
+                "777777777", true, null), now);
+            await repo.UpsertAsync(new RegisterCompany("222222222", "Nyfjell Spill AS Avd A", "0301", "62.100",
+                "777777777", true, null), now);
         }
 
-        var response = await _client.GetAsync("/api/companies/925836613");
+        var response = await _client.GetAsync("/api/companies/777777777");
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
         var dto = await response.Content.ReadFromJsonAsync<CompanyDetailDtoProbe>();
@@ -243,10 +243,10 @@ public sealed class ReadEndpointTests
         using (var scope = _factory.Services.CreateScope())
         {
             var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
-            await repo.UpsertAsync(new RegisterCompany("925836613", "Norsk Tipping AS", "3407", "62.100", null,
+            await repo.UpsertAsync(new RegisterCompany("777777777", "Nyfjell Spill AS", "3407", "62.100", null,
                 false, null), now);
-            await repo.UpsertAsync(new RegisterCompany("111111111", "Norsk Tipping AS Avd B", "4601", "62.100",
-                "925836613", true, null), now);
+            await repo.UpsertAsync(new RegisterCompany("111111111", "Nyfjell Spill AS Avd B", "4601", "62.100",
+                "777777777", true, null), now);
         }
 
         var response = await _client.GetAsync("/api/companies/111111111");

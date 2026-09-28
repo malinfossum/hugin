@@ -265,8 +265,8 @@ describe('FristerList', () => {
       ad({
         feedId: 'a1',
         title: 'Utvikler',
-        employer: 'Norsk Tipping AS',
-        employerOrgnr: '972483672',
+        employer: 'Nyfjell Spill AS',
+        employerOrgnr: '787878787',
         pipelineStatus: null,
       }),
     ]
@@ -278,7 +278,7 @@ describe('FristerList', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/pipeline/972483672',
+        '/api/pipeline/787878787',
         expect.objectContaining({
           method: 'PUT',
           headers: expect.objectContaining({ 'X-Hugin': '1' }),
@@ -289,7 +289,7 @@ describe('FristerList', () => {
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Norsk Tipping AS følges nå opp under Søknader.')
+      expect(liveRegion).toHaveTextContent('Nyfjell Spill AS følges nå opp under Søknader.')
     })
   })
 
@@ -299,22 +299,22 @@ describe('FristerList', () => {
       ad({
         feedId: 'a1',
         title: 'Utvikler',
-        employer: 'NORSK TIPPING AS',
-        employerOrgnr: '972483672',
+        employer: 'NYFJELL SPILL AS',
+        employerOrgnr: '787878787',
         pipelineStatus: null,
       }),
     ]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('Norsk Tipping AS')).toBeInTheDocument()
-    expect(within(rows[0]).queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+    expect(within(rows[0]).getByText('Nyfjell Spill AS')).toBeInTheDocument()
+    expect(within(rows[0]).queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
 
     await user.click(within(rows[0]).getByRole('button', { name: 'Følg opp' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Norsk Tipping AS følges nå opp under Søknader.')
+      expect(liveRegion).toHaveTextContent('Nyfjell Spill AS følges nå opp under Søknader.')
     })
   })
 
@@ -464,7 +464,7 @@ describe('FristerList', () => {
   })
 
   it('does not show a track button for an already-tracked company', async () => {
-    const ads = [ad({ feedId: 'a1', employerOrgnr: '972483672', pipelineStatus: 'active' })]
+    const ads = [ad({ feedId: 'a1', employerOrgnr: '787878787', pipelineStatus: 'active' })]
     renderList(fakeServer(ads))
 
     await screen.findAllByRole('listitem')

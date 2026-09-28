@@ -123,11 +123,11 @@ public sealed class AdOverviewServiceTests
     [Test]
     public async Task Pipeline_overview_links_ads_through_the_root_chain_like_the_badges_do()
     {
-        // NT case inverted: entry tracked under the child, the ad carries the parent orgnr.
+        // Branch case inverted: entry tracked under the child, the ad carries the parent orgnr.
         var now = DateTimeOffset.UtcNow;
-        var ads = AdsWith(ExpiredAd("a", "972483672", now));
-        var pipeline = PipelineWith(MakeEntry("925836613", PipelineStatus.Active, now));
-        var companies = CompaniesWith(MakeCompany("925836613", parentOrgnr: "972483672"));
+        var ads = AdsWith(ExpiredAd("a", "787878787", now));
+        var pipeline = PipelineWith(MakeEntry("777777777", PipelineStatus.Active, now));
+        var companies = CompaniesWith(MakeCompany("777777777", parentOrgnr: "787878787"));
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
 
         Assert.That((await sut.GetPipelineOverviewAsync()).Single().AdsExpired, Is.True);
@@ -175,15 +175,15 @@ public sealed class AdOverviewServiceTests
     }
 
     [Test]
-    public async Task Root_match_NT_case_ad_reports_untracked_parent_of_tracked_child()
+    public async Task Root_match_branch_case_ad_reports_untracked_parent_of_tracked_child()
     {
-        // Real case: tracked orgnr 925836613 has ParentOrgnr 972483672, but 972483672
+        // Branch case: tracked orgnr 777777777 has ParentOrgnr 787878787, but 787878787
         // itself has no company row (it's an ultimate registry unit brreg doesn't expose here).
         // NAV's ad carries the parent orgnr; the pipeline entry is stored under the tracked child.
         var now = DateTimeOffset.UtcNow;
-        var ads = AdsWith(MakeAd("a", orgnr: "972483672"));
-        var pipeline = PipelineWith(MakeEntry("925836613", PipelineStatus.Active, now));
-        var companies = CompaniesWith(MakeCompany("925836613", parentOrgnr: "972483672"));
+        var ads = AdsWith(MakeAd("a", orgnr: "787878787"));
+        var pipeline = PipelineWith(MakeEntry("777777777", PipelineStatus.Active, now));
+        var companies = CompaniesWith(MakeCompany("777777777", parentOrgnr: "787878787"));
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), companies);
 
         var result = await sut.GetAsync();

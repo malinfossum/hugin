@@ -14,8 +14,8 @@ function jsonResponse(body: unknown, init: { status?: number } = {}) {
 
 function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
   return {
-    orgnr: '925836613',
-    name: 'Norsk Tipping AS',
+    orgnr: '777777777',
+    name: 'Nyfjell Spill AS',
     kommune: '3403',
     kommuneNavn: 'Hamar',
     naceCode: '62.010',
@@ -30,8 +30,8 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
   return {
     feedId: 'a1',
     title: 'Utvikler',
-    employer: 'Norsk Tipping AS',
-    employerOrgnr: '925836613',
+    employer: 'Nyfjell Spill AS',
+    employerOrgnr: '777777777',
     kommune: '3403',
     expires: '2026-08-25T00:00:00Z',
     daysLeft: null,
@@ -65,7 +65,7 @@ function fakeServer(details: Record<string, CompanyDetailDto>) {
   return { fetchMock, calls }
 }
 
-function renderDetail(fetchMock: ReturnType<typeof vi.fn>, orgnr = '925836613') {
+function renderDetail(fetchMock: ReturnType<typeof vi.fn>, orgnr = '777777777') {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LanguageProvider>
@@ -81,37 +81,37 @@ afterEach(() => {
 describe('CompanyDetail', () => {
   it('renders no tablist when the unit has no branches', async () => {
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: company(), ads: [], branches: [] },
+      '777777777': { company: company(), ads: [], branches: [] },
     }
     const { fetchMock } = fakeServer(details)
     renderDetail(fetchMock)
 
-    await screen.findByRole('heading', { name: 'Norsk Tipping AS' })
+    await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
   })
 
   it('renders a tablist with the main unit plus one tab per branch, labeled by kommuneNavn', async () => {
     const oslo = company({
-      orgnr: '972483672',
-      name: 'NORSK TIPPING AS AVDELING OSLO',
+      orgnr: '787878787',
+      name: 'NYFJELL SPILL AS AVDELING OSLO',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Oslo',
     })
     const bergen = company({
       orgnr: '111222333',
-      name: 'NORSK TIPPING AS AVDELING BERGEN',
+      name: 'NYFJELL SPILL AS AVDELING BERGEN',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Bergen',
     })
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: company(), ads: [], branches: [oslo, bergen] },
+      '777777777': { company: company(), ads: [], branches: [oslo, bergen] },
     }
     const { fetchMock } = fakeServer(details)
     renderDetail(fetchMock)
 
-    await screen.findByRole('heading', { name: 'Norsk Tipping AS' })
+    await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })
     const tablist = await screen.findByRole('tablist', { name: 'Enheter' })
     const tabs = within(tablist).getAllByRole('tab')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Hovedenhet', 'Oslo', 'Bergen'])
@@ -124,27 +124,27 @@ describe('CompanyDetail', () => {
   it('falls back to the display name when a branch has no kommuneNavn, or it duplicates another branch tab', async () => {
     const noKommune = company({
       orgnr: '1',
-      name: 'NORSK TIPPING AS AVDELING X',
+      name: 'NYFJELL SPILL AS AVDELING X',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: null,
     })
     const dupA = company({
       orgnr: '2',
-      name: 'NORSK TIPPING AS AVDELING OSLO',
+      name: 'NYFJELL SPILL AS AVDELING OSLO',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Oslo',
     })
     const dupB = company({
       orgnr: '3',
-      name: 'NORSK TIPPING AS AVDELING OSLO SENTRUM',
+      name: 'NYFJELL SPILL AS AVDELING OSLO SENTRUM',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Oslo',
     })
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: company(), ads: [], branches: [noKommune, dupA, dupB] },
+      '777777777': { company: company(), ads: [], branches: [noKommune, dupA, dupB] },
     }
     const { fetchMock } = fakeServer(details)
     renderDetail(fetchMock)
@@ -153,28 +153,28 @@ describe('CompanyDetail', () => {
     const tabs = within(tablist).getAllByRole('tab')
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Hovedenhet',
-      'Norsk Tipping AS Avdeling X',
-      'Norsk Tipping AS Avdeling Oslo',
-      'Norsk Tipping AS Avdeling Oslo Sentrum',
+      'Nyfjell Spill AS Avdeling X',
+      'Nyfjell Spill AS Avdeling Oslo',
+      'Nyfjell Spill AS Avdeling Oslo Sentrum',
     ])
   })
 
   it('clicking a branch tab fetches that unit and renders its dl + ad history', async () => {
     const oslo = company({
-      orgnr: '972483672',
-      name: 'NORSK TIPPING AS AVDELING OSLO',
+      orgnr: '787878787',
+      name: 'NYFJELL SPILL AS AVDELING OSLO',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Oslo',
       website: 'https://oslo.example',
     })
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': {
+      '777777777': {
         company: company(),
         ads: [ad({ feedId: 'main-ad', title: 'Hovedannonse' })],
         branches: [oslo],
       },
-      '972483672': {
+      '787878787': {
         company: oslo,
         ads: [ad({ feedId: 'oslo-ad', title: 'Oslo-annonse' })],
         branches: [],
@@ -184,13 +184,13 @@ describe('CompanyDetail', () => {
     const user = userEvent.setup()
     renderDetail(fetchMock)
 
-    await screen.findByRole('heading', { name: 'Norsk Tipping AS' })
+    await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })
     expect(screen.getByText('Hovedannonse')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Oslo' }))
 
     expect(
-      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
+      await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
     ).toBeInTheDocument()
     expect(screen.getByText('Oslo-annonse')).toBeInTheDocument()
     expect(screen.queryByText('Hovedannonse')).not.toBeInTheDocument()
@@ -200,28 +200,28 @@ describe('CompanyDetail', () => {
     // Switching back to the main tab does not refetch it — the cache holds it.
     await user.click(screen.getByRole('tab', { name: 'Hovedenhet' }))
     await screen.findByText('Hovedannonse')
-    expect(calls['925836613']).toBe(1)
-    expect(calls['972483672']).toBe(1)
+    expect(calls['777777777']).toBe(1)
+    expect(calls['787878787']).toBe(1)
   })
 
   it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft — roving tabindex', async () => {
     const oslo = company({
-      orgnr: '972483672',
-      name: 'NORSK TIPPING AS AVDELING OSLO',
+      orgnr: '787878787',
+      name: 'NYFJELL SPILL AS AVDELING OSLO',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Oslo',
     })
     const bergen = company({
       orgnr: '111222333',
-      name: 'NORSK TIPPING AS AVDELING BERGEN',
+      name: 'NYFJELL SPILL AS AVDELING BERGEN',
       isBranch: true,
-      parentOrgnr: '925836613',
+      parentOrgnr: '777777777',
       kommuneNavn: 'Bergen',
     })
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: company(), ads: [], branches: [oslo, bergen] },
-      '972483672': { company: oslo, ads: [], branches: [] },
+      '777777777': { company: company(), ads: [], branches: [oslo, bergen] },
+      '787878787': { company: oslo, ads: [], branches: [] },
       '111222333': { company: bergen, ads: [], branches: [] },
     }
     const { fetchMock } = fakeServer(details)

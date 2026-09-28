@@ -15,9 +15,9 @@ describe('routing', () => {
   })
 
   it('parses "/companies/<orgnr>" with the company set', () => {
-    expect(parseRoute('/companies/972483672')).toEqual({
+    expect(parseRoute('/companies/787878787')).toEqual({
       view: 'companies',
-      company: '972483672',
+      company: '787878787',
     })
   })
 
@@ -40,11 +40,11 @@ describe('routing', () => {
   })
 
   it('round-trips a company deep link', () => {
-    const route = parseRoute('/companies/972483672')
-    expect(routePath(route)).toBe('/companies/972483672')
+    const route = parseRoute('/companies/787878787')
+    expect(routePath(route)).toBe('/companies/787878787')
   })
 
   it('routePath ignores a stray company on non-companies views', () => {
-    expect(routePath({ view: 'dashboard', company: '972483672' })).toBe('/')
+    expect(routePath({ view: 'dashboard', company: '787878787' })).toBe('/')
   })
 })

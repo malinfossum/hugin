@@ -135,7 +135,7 @@ describe('NyttSidenSist', () => {
       companies: [
         {
           orgnr: '915787630',
-          name: 'NORSK TIPPING AS',
+          name: 'NYFJELL SPILL AS',
           kommune: '0301',
           kommuneNavn: null,
           naceCode: '62.010',
@@ -148,7 +148,7 @@ describe('NyttSidenSist', () => {
         {
           feedId: 'a1',
           title: 'Utvikler',
-          employer: 'NORSK TIPPING AS',
+          employer: 'NYFJELL SPILL AS',
           employerOrgnr: '915787630',
           kommune: '0301',
           expires: null,
@@ -165,11 +165,11 @@ describe('NyttSidenSist', () => {
     })
     renderView(fakeServer(dto))
 
-    expect(await screen.findByText('Norsk Tipping AS')).toBeInTheDocument()
+    expect(await screen.findByText('Nyfjell Spill AS')).toBeInTheDocument()
     const adRow = (await screen.findByText('Utvikler')).closest('li')
     if (!adRow) throw new Error('row not found')
-    expect(adRow).toHaveTextContent('Norsk Tipping AS')
-    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+    expect(adRow).toHaveTextContent('Nyfjell Spill AS')
+    expect(screen.queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
   })
 
   it('POSTs the exact asOf string from the fetched NewDto when the dialog is confirmed', async () => {
