@@ -288,6 +288,21 @@ internal static class Program
             if (!string.IsNullOrWhiteSpace(result.Entry.Note)) Console.WriteLine($"  Notat: {result.Entry.Note}");
             if (!string.IsNullOrWhiteSpace(result.Entry.SvarText)) Console.WriteLine($"  Svar: {result.Entry.SvarText}");
 
+            if (result.Related.Count > 0)
+            {
+                Console.Error.WriteLine("⚠ ligner på noe du allerede følger opp:");
+                foreach (var related in result.Related)
+                {
+                    var reason = related.Kind == RelationKind.Family
+                        ? "samme hovedenhet i Enhetsregisteret"
+                        : $"samme merkenavn «{BrandName.Token(related.Name)}»";
+                    Console.Error.WriteLine(
+                        $"  {related.Entry.Orgnr} {related.Name} ({StatusLabel(related.Entry.Status)}) — {reason}");
+                }
+
+                Console.Error.WriteLine($"  Angre: hugin untrack {result.Entry.Orgnr}");
+            }
+
             if (result.Warning is not null) Console.Error.WriteLine($"⚠ {result.Warning}");
 
             return 0;
