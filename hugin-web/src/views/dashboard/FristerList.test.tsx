@@ -35,8 +35,8 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
 }
 
 const TRACKED = [
-  { orgnr: '222222222', companyName: 'Eccera IT Solutions AS', status: 'applied' },
-  { orgnr: '333333333', companyName: 'Arribatec AS', status: 'active' },
+  { orgnr: '222222222', companyName: 'AKME IT Solutions AS', status: 'applied' },
+  { orgnr: '333333333', companyName: 'Abel Testfirma AS', status: 'active' },
 ]
 
 /** Fake server: GET /api/ads (non-hidden only) / ?hidden=true (all, flagged); POST/DELETE hide
@@ -319,11 +319,11 @@ describe('FristerList', () => {
   })
 
   it('links an untracked ad to a tracked company by hand: pick, confirm, PUT, badge, announce', async () => {
-    // Sister-company case: the ad is posted by Eccera Professionals AS, the tracked entry is
-    // Eccera IT Solutions AS, and no registry chain joins them.
+    // Sister-company case: the ad is posted by AKME Professionals AS, the tracked entry is
+    // AKME IT Solutions AS, and no registry chain joins them.
     const user = userEvent.setup()
     const fetchMock = fakeServer([
-      ad({ feedId: 'a1', employer: 'Eccera Professionals AS', employerOrgnr: '111111111' }),
+      ad({ feedId: 'a1', employer: 'AKME Professionals AS', employerOrgnr: '111111111' }),
     ])
     renderList(fetchMock)
     const row = (await screen.findAllByRole('listitem'))[0]
@@ -334,8 +334,8 @@ describe('FristerList', () => {
       within(select)
         .getAllByRole('option')
         .map((o) => o.textContent)
-    ).toEqual(['Velg bedrift …', 'Arribatec AS', 'Eccera IT Solutions AS'])
-    await user.selectOptions(select, 'Eccera IT Solutions AS')
+    ).toEqual(['Velg bedrift …', 'Abel Testfirma AS', 'AKME IT Solutions AS'])
+    await user.selectOptions(select, 'AKME IT Solutions AS')
     await user.click(within(row).getByRole('button', { name: 'Koble' }))
 
     await waitFor(() => {
@@ -354,7 +354,7 @@ describe('FristerList', () => {
     expect(within(updated).queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
     await waitFor(() =>
       expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
-        'Annonsen er koblet til Eccera IT Solutions AS.'
+        'Annonsen er koblet til AKME IT Solutions AS.'
       )
     )
   })
@@ -402,7 +402,7 @@ describe('FristerList', () => {
     await user.click(within(row).getByRole('button', { name: 'Koble til bedrift' }))
     await user.selectOptions(
       await within(row).findByLabelText('Koble annonsen til'),
-      'Eccera IT Solutions AS'
+      'AKME IT Solutions AS'
     )
     await user.click(within(row).getByRole('button', { name: 'Koble' }))
     const linked = await screen.findByRole('button', { name: 'Koble fra' })
