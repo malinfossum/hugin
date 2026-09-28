@@ -11,6 +11,10 @@ public class BrandNameTests
     [TestCase("ØSTLANDSK DIGITAL AS", "østlandsk")]
     [TestCase("Akme-Gruppen AS", "akme")]
     [TestCase("Akme Professionals", "akme")]
+    [TestCase("STATENS AKMEVERK", "akmeverk")]
+    [TestCase("DET NORSKE FJELLTOPP AS", "fjelltopp")]
+    [TestCase("STIFTELSEN AKME", "akme")]
+    [TestCase("DEN AKME SKOLEN", "akme")]
     public void Token_is_the_first_distinctive_word(string name, string expected) =>
         Assert.That(BrandName.Token(name), Is.EqualTo(expected));
 

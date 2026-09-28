@@ -13,6 +13,7 @@ public static class BrandName
     {
         "asa", "ans", "nuf", "enk", "avd", "avdeling",
         "norsk", "norske", "norge", "norway", "nordic", "the", "and", "for",
+        "den", "det", "statens", "stiftelsen",
         "data", "digital", "tech", "teknologi", "technology", "systems", "system",
         "solutions", "services", "service", "consulting", "konsulent",
         "group", "gruppen", "holding", "partner", "partners",

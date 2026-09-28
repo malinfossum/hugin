@@ -16,11 +16,12 @@ public class PipelineServiceTests
         new("934161181", "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
 
     private sealed record Harness(PipelineService Service, FakePipelineRepository Pipeline,
-        FakeCompanyRepository Companies, FakeBrregClient Brreg, FakeClock Clock);
+        FakeCompanyRepository Companies, FakeBrregClient Brreg, FakeClock Clock, FakeAdRepository Ads);
 
     private static async Task<Harness> BuildAsync(bool withKnownCompany = true, RegisterCompany? inBrreg = null)
     {
-        var pipeline = new FakePipelineRepository();
+        var ads = new FakeAdRepository();
+        var pipeline = new FakePipelineRepository { Ads = ads };
         var companies = new FakeCompanyRepository();
         var clock = new FakeClock(T1);
 
@@ -29,7 +30,7 @@ public class PipelineServiceTests
         var brreg = new FakeBrregClient();
         if (inBrreg is not null) brreg.ByOrgnr[inBrreg.Orgnr] = inBrreg;
 
-        return new Harness(new PipelineService(pipeline, companies, brreg, clock), pipeline, companies, brreg, clock);
+        return new Harness(new PipelineService(pipeline, companies, brreg, clock), pipeline, companies, brreg, clock, ads);
     }
 
     private static Task Register(Harness h, string orgnr, string name, string? parent = null) =>
@@ -184,25 +185,26 @@ public class PipelineServiceTests
     [Test]
     public async Task Untrack_returns_the_removed_entry_and_the_company_name()
     {
-        var h = await BuildAsync();
-        await h.Service.TrackAsync("934161181", PipelineStatus.Applied, "grunn", "notat", null);
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", "notat", null);
 
-        var result = await h.Service.UntrackAsync("934161181");
+        var result = await h.Service.UntrackAsync("111111111");
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result!.Removal.Entry.Orgnr, Is.EqualTo("934161181"));
+        Assert.That(result!.Removal.Entry.Orgnr, Is.EqualTo("111111111"));
         Assert.That(result.Removal.Entry.Note, Is.EqualTo("notat"));
-        Assert.That(result.CompanyName, Is.EqualTo("Norkart AS avd Lillehammer"));
+        Assert.That(result.CompanyName, Is.EqualTo("AKME PROFESSIONALS AS"));
         Assert.That(h.Pipeline.Store, Is.Empty);
-        Assert.That(h.Companies.Store.ContainsKey("934161181"), Is.True, "companies are never deleted");
+        Assert.That(h.Companies.Store.ContainsKey("111111111"), Is.True, "companies are never deleted");
     }
 
     [Test]
     public async Task Untrack_of_an_untracked_orgnr_returns_null()
     {
-        var h = await BuildAsync();
+        var h = await BuildAsync(withKnownCompany: false);
 
-        Assert.That(await h.Service.UntrackAsync("934161181"), Is.Null);
+        Assert.That(await h.Service.UntrackAsync("111111111"), Is.Null);
     }
 
     [Test]
@@ -226,6 +228,21 @@ public class PipelineServiceTests
         await h.Service.UntrackAsync("111111111");
 
         Assert.That(h.Brreg.ByOrgnrRequests, Is.Empty, "untrack never touches the network");
+    }
+
+    [Test]
+    public async Task Untrack_clears_manual_ad_links_to_the_removed_company()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        await h.Ads.UpsertAsync(new FeedAd("a", "Utvikler", null, "222222222", "3403", T1, null, null, true), T1);
+        await h.Ads.SetLinkedOrgnrAsync("a", "111111111");
+        await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", null, null);
+
+        var result = await h.Service.UntrackAsync("111111111");
+
+        Assert.That(result!.Removal.LinksCleared, Is.EqualTo(1));
+        Assert.That(h.Ads.Store["a"].LinkedOrgnr, Is.Null);
     }
 
     [Test]
