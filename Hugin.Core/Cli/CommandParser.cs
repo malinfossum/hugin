@@ -26,10 +26,11 @@ public static class CommandParser
             "sync" => ParseSync(args),
             "new" => ParseNew(args),
             "track" => ParseTrack(args),
+            "untrack" => ParseUntrack(args),
             "list" => ParseList(args),
             "export" => ParseExport(args),
             "help" or "--help" or "-h" => new HelpCommand(),
-            var verb => new InvalidCommand($"ukjent kommando '{verb}' — bruk sync | new | track | list | export"),
+            var verb => new InvalidCommand($"ukjent kommando '{verb}' — bruk sync | new | track | untrack | list | export"),
         };
     }
 
@@ -61,6 +62,14 @@ public static class CommandParser
             options.GetValueOrDefault("why"),
             options.GetValueOrDefault("note"),
             options.GetValueOrDefault("svar"));
+    }
+
+    private static Command ParseUntrack(string[] args)
+    {
+        if (args.Length < 2) return new InvalidCommand("mangler orgnr — bruk: hugin untrack <orgnr>");
+
+        var (_, error) = ReadOptions(args, 2, []);
+        return error is not null ? new InvalidCommand(error) : new UntrackCommand(args[1]);
     }
 
     private static Command ParseList(string[] args)

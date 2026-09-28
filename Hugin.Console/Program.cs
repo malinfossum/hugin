@@ -67,6 +67,7 @@ internal static class Program
             SyncCommand cmd => await RunSyncAsync(services, cmd),
             NewCommand cmd => await RunNewAsync(services, cmd, loaded.Config),
             TrackCommand cmd => await RunTrackAsync(services, cmd),
+            UntrackCommand cmd => await RunUntrackAsync(services, cmd),
             ListCommand cmd => await RunListAsync(services, cmd, loaded.Config),
             ExportCommand cmd => await RunExportAsync(services, cmd),
             _ => 2,
@@ -287,6 +288,21 @@ internal static class Program
             if (!string.IsNullOrWhiteSpace(result.Entry.Note)) Console.WriteLine($"  Notat: {result.Entry.Note}");
             if (!string.IsNullOrWhiteSpace(result.Entry.SvarText)) Console.WriteLine($"  Svar: {result.Entry.SvarText}");
 
+            if (result.Related.Count > 0)
+            {
+                Console.Error.WriteLine("⚠ ligner på noe du allerede følger opp:");
+                foreach (var related in result.Related)
+                {
+                    var reason = related.Kind == RelationKind.Family
+                        ? "samme hovedenhet i Enhetsregisteret"
+                        : $"samme merkenavn «{BrandName.Token(related.Name)}»";
+                    Console.Error.WriteLine(
+                        $"  {related.Entry.Orgnr} {related.Name} ({StatusLabel(related.Entry.Status)}) — {reason}");
+                }
+
+                Console.Error.WriteLine($"  Angre: hugin untrack {result.Entry.Orgnr}");
+            }
+
             if (result.Warning is not null) Console.Error.WriteLine($"⚠ {result.Warning}");
 
             return 0;
@@ -303,6 +319,34 @@ internal static class Program
             Console.Error.WriteLine($"Feil: fikk ikke kontakt med Enhetsregisteret ({ex.Message}) — prøv igjen senere.");
             return 1;
         }
+    }
+
+    private static async Task<int> RunUntrackAsync(IServiceProvider services, UntrackCommand command)
+    {
+        var result = await services.GetRequiredService<PipelineService>().UntrackAsync(command.Orgnr);
+        if (result is null)
+        {
+            Console.Error.WriteLine($"Feil: {command.Orgnr} følges ikke opp.");
+            return 1;
+        }
+
+        // No confirmation prompt (the CLI runs unattended), so this printout is the only record
+        // left of the entry — everything needed to re-track it by hand.
+        var entry = result.Removal.Entry;
+        var who = result.CompanyName is null ? entry.Orgnr : $"{entry.Orgnr} {result.CompanyName}";
+        Console.WriteLine($"Fjernet {who} fra oppfølgingen.");
+        Console.WriteLine($"  Status: {StatusLabel(entry.Status)}");
+        if (entry.Starred) Console.WriteLine("  Stjernemerket: ja");
+        if (!string.IsNullOrWhiteSpace(entry.Why)) Console.WriteLine($"  Grunn: {entry.Why}");
+        if (!string.IsNullOrWhiteSpace(entry.Note)) Console.WriteLine($"  Notat: {entry.Note}");
+        if (!string.IsNullOrWhiteSpace(entry.SvarText)) Console.WriteLine($"  Svar: {entry.SvarText}");
+        Console.WriteLine($"  Opprettet: {entry.Created.ToLocalTime():yyyy-MM-dd}");
+        Console.WriteLine($"  Sist endret: {entry.Updated.ToLocalTime():yyyy-MM-dd}");
+
+        var links = result.Removal.LinksCleared;
+        if (links > 0) Console.WriteLine($"  {links} {(links == 1 ? "annonselenke" : "annonselenker")} fjernet.");
+
+        return 0;
     }
 
     private static async Task<int> RunListAsync(IServiceProvider services, ListCommand command, HuginConfig config)
@@ -413,6 +457,7 @@ internal static class Program
               hugin new [--seen]                  Vis alt nytt siden sist; --seen flytter merket
               hugin track <orgnr> <status>        Sett status: active | applied | answered
                   [--why "..."] [--note "..."] [--svar "..."]
+              hugin untrack <orgnr>               Fjern en bedrift fra oppfølgingen
               hugin list [--status <status>]      Vis pipelinen
               hugin list --companies [--kommune <nr>]   Bla i alle synkede selskaper
               hugin list --ads [--kommune <nr>]   Vis aktive annonser

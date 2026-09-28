@@ -9,7 +9,16 @@ public sealed class CompanyNotFoundException(string orgnr)
     public string Orgnr { get; } = orgnr;
 }
 
-public sealed record TrackResult(PipelineEntry Entry, bool CompanyFetchedFromBrreg, string? Warning);
+public enum RelationKind { Family, Brand }
+
+/// <summary>A tracked entry that looks related to a company tracked for the first time:
+/// same registry root (<see cref="RelationKind.Family"/>) or same brand word
+/// (<see cref="RelationKind.Brand"/>). Family wins when both hold.</summary>
+public sealed record RelatedEntry(PipelineEntry Entry, string Name, RelationKind Kind);
+
+public sealed record TrackResult(PipelineEntry Entry, bool CompanyFetchedFromBrreg, string? Warning,
+    IReadOnlyList<RelatedEntry> Related);
+public sealed record UntrackResult(PipelineRemoval Removal, string? CompanyName);
 
 /// <summary>
 /// Moves a company through the outreach pipeline. Tracking is deliberately unconstrained by
@@ -27,14 +36,16 @@ public sealed class PipelineService(
     {
         var now = clock.UtcNow;
         var fetchedFromBrreg = false;
+        var companyName = (await companies.GetAsync(orgnr, ct))?.Name;
 
-        if (await companies.GetAsync(orgnr, ct) is null)
+        if (companyName is null)
         {
             var fetched = await brreg.GetByOrgnrAsync(orgnr, ct)
                 ?? throw new CompanyNotFoundException(orgnr);
 
             await companies.UpsertAsync(fetched, now, ct);
             fetchedFromBrreg = true;
+            companyName = fetched.Name;
         }
 
         var existing = await pipeline.GetByOrgnrAsync(orgnr, ct);
@@ -60,6 +71,46 @@ public sealed class PipelineService(
             ? $"mangler begrunnelse — legg til hvorfor {orgnr} er interessant (--why \"...\")"
             : null;
 
-        return new TrackResult(entry, fetchedFromBrreg, warning);
+        // Only a new row warns: re-tracking an entry means the relationship was accepted once.
+        IReadOnlyList<RelatedEntry> related = existing is null ? await FindRelativesAsync(orgnr, companyName, ct) : [];
+
+        return new TrackResult(entry, fetchedFromBrreg, warning, related);
+    }
+
+    /// <summary>One pass over the pipeline (tens of rows, up to <see cref="RegistryRoot.MaxHops"/>
+    /// lookups each), once per new track. The new row is already stored, so it skips its own
+    /// orgnr; an entry whose company row is missing is skipped. Newest first, like <c>list</c>.</summary>
+    private async Task<IReadOnlyList<RelatedEntry>> FindRelativesAsync(string orgnr, string name, CancellationToken ct)
+    {
+        var newRoot = await RegistryRoot.ResolveAsync(companies, orgnr, ct);
+        var newToken = BrandName.Token(name);
+        var related = new List<RelatedEntry>();
+
+        foreach (var entry in await pipeline.GetAllAsync(ct: ct))
+        {
+            if (entry.Orgnr == orgnr) continue;
+            if (await companies.GetAsync(entry.Orgnr, ct) is not { } company) continue;
+
+            if (await RegistryRoot.ResolveAsync(companies, entry.Orgnr, ct) == newRoot)
+                related.Add(new RelatedEntry(entry, company.Name, RelationKind.Family));
+            else if (newToken is not null && BrandName.Token(company.Name) == newToken)
+                related.Add(new RelatedEntry(entry, company.Name, RelationKind.Brand));
+        }
+
+        return related
+            .OrderByDescending(r => r.Entry.Updated)
+            .ThenBy(r => r.Entry.Orgnr, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>Removes one pipeline entry (and the manual ad links to it). The company row
+    /// stays. Null when the orgnr is not tracked. Never touches the network.</summary>
+    public async Task<UntrackResult?> UntrackAsync(string orgnr, CancellationToken ct = default)
+    {
+        var removal = await pipeline.DeleteAsync(orgnr, ct);
+        if (removal is null) return null;
+
+        var company = await companies.GetAsync(orgnr, ct);
+        return new UntrackResult(removal, company?.Name);
     }
 }

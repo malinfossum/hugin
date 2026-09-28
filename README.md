@@ -40,6 +40,7 @@ A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App S
 | `hugin sync [--full]` | Pulls companies from Brreg and ads from NAV. `--full` walks the whole feed history from the oldest page — run once after setup and again after widening keywords; interrupted runs resume |
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
+| `hugin untrack <orgnr>` | Removes one pipeline row and clears manual ad links to it. The company stays. Cannot be undone — the printout lists what was removed |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies` / `--ads` (each with `--kommune <nr>`) browse the synced inventory |
 | `hugin export` | Writes data to stdout. `--format md\|txt\|json`, `--scope new\|category\|all` (`category` needs `--category <navn>`), `--include-active` |
 

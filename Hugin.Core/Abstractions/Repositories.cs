@@ -78,7 +78,16 @@ public interface IPipelineRepository
     public Task<IReadOnlyList<Models.PipelineEntry>> GetUpdatedAfterAsync(DateTimeOffset after, CancellationToken ct = default);
 
     public Task UpsertAsync(Models.PipelineEntry entry, CancellationToken ct = default);
+
+    /// <summary>Removes the entry for <paramref name="orgnr"/> and clears every manual ad link
+    /// (<see cref="Models.Ad.LinkedOrgnr"/>) pointing at it, in one save. Returns the removed
+    /// entry and how many links were cleared; null when the orgnr is not tracked.</summary>
+    public Task<PipelineRemoval?> DeleteAsync(string orgnr, CancellationToken ct = default);
 }
+
+/// <summary>What <see cref="IPipelineRepository.DeleteAsync"/> removed — the only record left
+/// of the entry afterwards.</summary>
+public sealed record PipelineRemoval(Models.PipelineEntry Entry, int LinksCleared);
 
 public interface ISyncStateRepository
 {

@@ -16,11 +16,12 @@ public class PipelineServiceTests
         new("934161181", "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
 
     private sealed record Harness(PipelineService Service, FakePipelineRepository Pipeline,
-        FakeCompanyRepository Companies, FakeBrregClient Brreg, FakeClock Clock);
+        FakeCompanyRepository Companies, FakeBrregClient Brreg, FakeClock Clock, FakeAdRepository Ads);
 
     private static async Task<Harness> BuildAsync(bool withKnownCompany = true, RegisterCompany? inBrreg = null)
     {
-        var pipeline = new FakePipelineRepository();
+        var ads = new FakeAdRepository();
+        var pipeline = new FakePipelineRepository { Ads = ads };
         var companies = new FakeCompanyRepository();
         var clock = new FakeClock(T1);
 
@@ -29,8 +30,15 @@ public class PipelineServiceTests
         var brreg = new FakeBrregClient();
         if (inBrreg is not null) brreg.ByOrgnr[inBrreg.Orgnr] = inBrreg;
 
-        return new Harness(new PipelineService(pipeline, companies, brreg, clock), pipeline, companies, brreg, clock);
+        return new Harness(new PipelineService(pipeline, companies, brreg, clock), pipeline, companies, brreg, clock, ads);
     }
+
+    private static Task Register(Harness h, string orgnr, string name, string? parent = null) =>
+        h.Companies.UpsertAsync(new RegisterCompany(orgnr, name, "3403", "62.100", parent, parent is not null, null), T1);
+
+    private static void Tracked(Harness h, string orgnr, DateTimeOffset updated,
+        PipelineStatus status = PipelineStatus.Applied) =>
+        h.Pipeline.Store.Add(new PipelineEntry { Orgnr = orgnr, Status = status, Created = updated, Updated = updated });
 
     [Test]
     public async Task Known_company_creates_entry()
@@ -172,5 +180,230 @@ public class PipelineServiceTests
         var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, null, null, null, starred: false);
 
         Assert.That(result.Entry.Starred, Is.False);
+    }
+
+    [Test]
+    public async Task Untrack_returns_the_removed_entry_and_the_company_name()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", "notat", null);
+
+        var result = await h.Service.UntrackAsync("111111111");
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Removal.Entry.Orgnr, Is.EqualTo("111111111"));
+        Assert.That(result.Removal.Entry.Note, Is.EqualTo("notat"));
+        Assert.That(result.CompanyName, Is.EqualTo("AKME PROFESSIONALS AS"));
+        Assert.That(h.Pipeline.Store, Is.Empty);
+        Assert.That(h.Companies.Store.ContainsKey("111111111"), Is.True, "companies are never deleted");
+    }
+
+    [Test]
+    public async Task Untrack_of_an_untracked_orgnr_returns_null()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+
+        Assert.That(await h.Service.UntrackAsync("111111111"), Is.Null);
+    }
+
+    [Test]
+    public async Task Untrack_without_a_company_row_gives_a_null_name()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        h.Pipeline.Store.Add(new PipelineEntry { Orgnr = "111111111", Created = T1, Updated = T1 });
+
+        var result = await h.Service.UntrackAsync("111111111");
+
+        Assert.That(result!.CompanyName, Is.Null);
+        Assert.That(h.Pipeline.Store, Is.Empty);
+    }
+
+    [Test]
+    public async Task Untrack_never_calls_brreg()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        h.Pipeline.Store.Add(new PipelineEntry { Orgnr = "111111111", Created = T1, Updated = T1 });
+
+        await h.Service.UntrackAsync("111111111");
+
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.Empty, "untrack never touches the network");
+    }
+
+    [Test]
+    public async Task Untrack_clears_manual_ad_links_to_the_removed_company()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        await h.Ads.UpsertAsync(new FeedAd("a", "Utvikler", null, "222222222", "3403", T1, null, null, true), T1);
+        await h.Ads.SetLinkedOrgnrAsync("a", "111111111");
+        await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", null, null);
+
+        var result = await h.Service.UntrackAsync("111111111");
+
+        Assert.That(result!.Removal.LinksCleared, Is.EqualTo(1));
+        Assert.That(h.Ads.Store["a"].LinkedOrgnr, Is.Null);
+    }
+
+    [Test]
+    public async Task A_branch_of_a_tracked_parent_is_family()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "200000000", "NORDLYS KONSULENT AS");
+        await Register(h, "111111111", "BERGTATT AS AVD HAMAR", parent: "200000000");
+        Tracked(h, "200000000", T1);
+        h.Clock.UtcNow = T2;
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related, Has.Count.EqualTo(1));
+        Assert.That(result.Related[0].Entry.Orgnr, Is.EqualTo("200000000"));
+        Assert.That(result.Related[0].Name, Is.EqualTo("NORDLYS KONSULENT AS"));
+        Assert.That(result.Related[0].Kind, Is.EqualTo(RelationKind.Family));
+        Assert.That(h.Pipeline.Store, Has.Count.EqualTo(2), "warn, never block");
+    }
+
+    [Test]
+    public async Task The_parent_of_a_tracked_branch_is_family()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "200000000", "NORDLYS KONSULENT AS");
+        await Register(h, "111111111", "BERGTATT AS AVD HAMAR", parent: "200000000");
+        Tracked(h, "111111111", T1);
+
+        var result = await h.Service.TrackAsync("200000000", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related.Select(r => (r.Entry.Orgnr, r.Kind)),
+            Is.EqualTo(new[] { ("111111111", RelationKind.Family) }));
+    }
+
+    [Test]
+    public async Task Two_branches_of_a_parent_without_its_own_row_are_family()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "NORDLYS AS AVD HAMAR", parent: "300000000");
+        await Register(h, "222222222", "BERGTATT AS AVD GJØVIK", parent: "300000000");
+        Tracked(h, "222222222", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related.Select(r => (r.Entry.Orgnr, r.Kind)),
+            Is.EqualTo(new[] { ("222222222", RelationKind.Family) }));
+    }
+
+    [Test]
+    public async Task A_branch_sharing_a_brand_with_a_standalone_tracked_company_is_brand()
+    {
+        // The shape that triggered v3.7: the new branch's parent is not tracked, and the tracked
+        // company is a separate company with no parent — only the brand word links them.
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "222222222", "AKME IT SOLUTIONS AS");
+        await Register(h, "111111111", "AKME PROFESSIONALS AS AVD HEDMARK", parent: "333333333");
+        Tracked(h, "222222222", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", null, null);
+
+        Assert.That(result.Related.Select(r => (r.Entry.Orgnr, r.Name, r.Kind)),
+            Is.EqualTo(new[] { ("222222222", "AKME IT SOLUTIONS AS", RelationKind.Brand) }));
+    }
+
+    [Test]
+    public async Task A_company_fetched_from_brreg_on_this_call_is_compared_by_its_fetched_name()
+    {
+        var branch = new RegisterCompany("111111111", "AKME PROFESSIONALS AS AVD HEDMARK", "3403", "62.100",
+            "333333333", true, null);
+        var h = await BuildAsync(withKnownCompany: false, inBrreg: branch);
+        await Register(h, "222222222", "AKME IT SOLUTIONS AS");
+        Tracked(h, "222222222", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", null, null);
+
+        Assert.That(result.CompanyFetchedFromBrreg, Is.True);
+        Assert.That(result.Related.Select(r => r.Kind), Is.EqualTo(new[] { RelationKind.Brand }));
+    }
+
+    [Test]
+    public async Task Unrelated_companies_give_no_relatives_and_the_new_row_is_not_its_own_relative()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "222222222", "FJELLTOPP DATA AS");
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        Tracked(h, "222222222", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related, Is.Empty);
+    }
+
+    [Test]
+    public async Task Generic_only_names_give_no_relatives()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "222222222", "NORSK DATA SYSTEMS AS");
+        await Register(h, "111111111", "IT DATA AS");
+        Tracked(h, "222222222", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related, Is.Empty);
+    }
+
+    [Test]
+    public async Task Re_tracking_an_existing_entry_never_warns()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "222222222", "AKME IT SOLUTIONS AS");
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        Tracked(h, "222222222", T1);
+        Tracked(h, "111111111", T1, PipelineStatus.Active);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Applied, "grunn", null, null);
+
+        Assert.That(result.Related, Is.Empty);
+    }
+
+    [Test]
+    public async Task Family_and_brand_on_one_entry_is_one_family_line()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "200000000", "AKME AS");
+        await Register(h, "111111111", "AKME AS AVD HAMAR", parent: "200000000");
+        Tracked(h, "200000000", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related.Select(r => r.Kind), Is.EqualTo(new[] { RelationKind.Family }));
+    }
+
+    [Test]
+    public async Task Relatives_are_ordered_newest_first_then_by_orgnr()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "444444444", "AKME DRIFT AS");
+        await Register(h, "333333333", "AKME SKY AS");
+        await Register(h, "222222222", "AKME KODE AS");
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        Tracked(h, "444444444", T1);
+        Tracked(h, "333333333", T1);
+        Tracked(h, "222222222", T1.AddHours(-1));
+        h.Clock.UtcNow = T2;
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related.Select(r => r.Entry.Orgnr),
+            Is.EqualTo(new[] { "333333333", "444444444", "222222222" }));
+    }
+
+    [Test]
+    public async Task A_tracked_entry_without_a_company_row_is_skipped()
+    {
+        var h = await BuildAsync(withKnownCompany: false);
+        await Register(h, "111111111", "AKME PROFESSIONALS AS");
+        Tracked(h, "999999999", T1);
+
+        var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);
+
+        Assert.That(result.Related, Is.Empty);
+        Assert.That(h.Pipeline.Store, Has.Count.EqualTo(2));
     }
 }

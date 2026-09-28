@@ -241,6 +241,22 @@ public sealed class EfPipelineRepository(HuginDbContext db) : IPipelineRepositor
 
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task<PipelineRemoval?> DeleteAsync(string orgnr, CancellationToken ct = default)
+    {
+        var entry = await db.Pipeline.FirstOrDefaultAsync(p => p.Orgnr == orgnr, ct);
+        if (entry is null) return null;
+
+        // A link must never outlive its entry: PUT /api/ads/{feedId}/link refuses an untracked
+        // target, and the dashboard would otherwise offer «Koble fra» for a link to nothing.
+        var linked = await db.Ads.Where(a => a.LinkedOrgnr == orgnr).ToListAsync(ct);
+        foreach (var ad in linked) ad.LinkedOrgnr = null;
+
+        db.Pipeline.Remove(entry);
+        await db.SaveChangesAsync(ct);
+
+        return new PipelineRemoval(entry, linked.Count);
+    }
 }
 
 public sealed class EfSyncStateRepository(HuginDbContext db) : ISyncStateRepository

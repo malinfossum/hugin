@@ -30,8 +30,6 @@ public sealed record PipelineOverview(PipelineEntry Entry, bool AdsExpired);
 public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pipeline, IClock clock,
     ICompanyRepository companies)
 {
-    private const int MaxRootHops = 4;
-
     public async Task<IReadOnlyList<AdOverview>> GetAsync(string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default)
     {
@@ -91,7 +89,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         var byRoot = new Dictionary<string, PipelineEntry>();
         foreach (var entry in entries)
         {
-            var root = await ResolveRootAsync(entry.Orgnr, ct);
+            var root = await RegistryRoot.ResolveAsync(companies, entry.Orgnr, ct);
             byRoot.TryAdd(root, entry); // collisions: first-wins
         }
 
@@ -105,24 +103,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         if (ad.LinkedOrgnr is { } link && index.ByOrgnr.TryGetValue(link, out var linked)) return linked;
         if (ad.EmployerOrgnr is not { } orgnr) return null;
         if (index.ByOrgnr.TryGetValue(orgnr, out var exact)) return exact;
-        return index.ByRoot.GetValueOrDefault(await ResolveRootAsync(orgnr, ct));
+        return index.ByRoot.GetValueOrDefault(await RegistryRoot.ResolveAsync(companies, orgnr, ct));
     }
 
-    /// <summary>
-    /// Follows ParentOrgnr upward from <paramref name="orgnr"/>, at most <see cref="MaxRootHops"/>
-    /// hops, stopping at a missing company row, a missing parent, or a self-reference. A missing
-    /// company row for an orgnr means the orgnr is its own root.
-    /// </summary>
-    private async Task<string> ResolveRootAsync(string orgnr, CancellationToken ct)
-    {
-        var current = orgnr;
-        for (var hop = 0; hop < MaxRootHops; hop++)
-        {
-            var company = await companies.GetAsync(current, ct);
-            if (company?.ParentOrgnr is not { } parent || parent == current) break;
-            current = parent;
-        }
-
-        return current;
-    }
 }

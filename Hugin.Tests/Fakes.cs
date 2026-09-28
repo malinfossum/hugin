@@ -314,6 +314,10 @@ internal sealed class FakePipelineRepository : IPipelineRepository
 {
     public List<PipelineEntry> Store { get; } = [];
 
+    /// <summary>When set, <see cref="DeleteAsync"/> clears links in this store, like the EF
+    /// repository does in the same save.</summary>
+    public FakeAdRepository? Ads { get; init; }
+
     public Task<PipelineEntry?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default) =>
         Task.FromResult(Store.FirstOrDefault(p => p.Orgnr == orgnr));
 
@@ -343,6 +347,18 @@ internal sealed class FakePipelineRepository : IPipelineRepository
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<PipelineRemoval?> DeleteAsync(string orgnr, CancellationToken ct = default)
+    {
+        var entry = Store.FirstOrDefault(p => p.Orgnr == orgnr);
+        if (entry is null) return Task.FromResult<PipelineRemoval?>(null);
+
+        Store.Remove(entry);
+        var linked = Ads?.Store.Values.Where(a => a.LinkedOrgnr == orgnr).ToList() ?? [];
+        foreach (var ad in linked) ad.LinkedOrgnr = null;
+
+        return Task.FromResult<PipelineRemoval?>(new PipelineRemoval(entry, linked.Count));
     }
 }
 
