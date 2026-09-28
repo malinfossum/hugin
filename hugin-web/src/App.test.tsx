@@ -137,10 +137,11 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // The language toggle sits in the topbar beside the theme toggle, and shows the language
-    // it switches TO — the same convention as the sun/moon icon.
+    // The language toggle sits in the topbar beside the theme toggle as a globe icon; its
+    // name (and tooltip) says the language it switches TO.
     const enButton = screen.getByRole('button', { name: 'Switch to English' })
-    expect(enButton).toHaveTextContent('EN')
+    expect(enButton).toHaveAttribute('title', 'Switch to English')
+    expect(enButton.querySelector('svg.toggle-icon')).not.toBeNull()
 
     await user.click(enButton)
 
@@ -148,7 +149,10 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: 'Dashbord' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Applications' })).toBeInTheDocument()
     // Once in English the same button offers the way back.
-    expect(screen.getByRole('button', { name: 'Bytt til norsk' })).toHaveTextContent('NO')
+    expect(screen.getByRole('button', { name: 'Bytt til norsk' })).toHaveAttribute(
+      'title',
+      'Bytt til norsk'
+    )
     expect(document.documentElement.lang).toBe('en')
     expect(window.localStorage.getItem('hugin-lang')).toBe('en')
   })

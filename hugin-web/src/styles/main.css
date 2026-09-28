@@ -92,6 +92,14 @@ button {
   color: rgb(var(--accent-rgb));
 }
 
+/* Icon inside a topbar quick toggle (the language globe). Sized in em so its drawn circle
+   (~14 px at 16 px text) matches the ☀ glyph's ink beside it, measured 14 × 13 px. */
+.toggle-icon {
+  display: block;
+  width: 0.9375em;
+  height: 0.9375em;
+}
+
 /* Vertical rhythm for <main>; .container already handles inline padding + max-width. */
 .main-content {
   padding-block: var(--space-4);

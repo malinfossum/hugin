@@ -204,17 +204,33 @@ function AppShell() {
                   ))}
                 </ul>
               </nav>
-              {/* Both quick toggles show what they switch TO: the sun in dark mode, «EN» in
-                  Norwegian. Settings has no copy of either (v3.6.1). The wrapper is what the
-                  phone layout hoists up beside the brand (main.css .topbar-toggles). */}
+              {/* Both quick toggles are icons. The theme glyph shows what it switches TO (the
+                  sun in dark mode); the globe cannot, so its label doubles as a tooltip.
+                  Settings has no copy of either (v3.6.1). The wrapper is what the phone layout
+                  hoists up beside the brand (main.css .topbar-toggles). */}
               <div className="topbar-toggles cluster cluster-sm">
                 <button
                   type="button"
                   className="nav-link"
                   onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
                   aria-label={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
+                  title={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
                 >
-                  <span aria-hidden="true">{lang === 'nb' ? 'EN' : 'NO'}</span>
+                  <svg
+                    className="toggle-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                    <path d="M2 12h20" />
+                  </svg>
                 </button>
                 <button
                   type="button"
