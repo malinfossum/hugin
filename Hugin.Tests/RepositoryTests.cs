@@ -501,4 +501,71 @@ public class RepositoryTests
         Assert.That((await repo.GetByEmployerAsync("111111111")).Select(a => a.FeedId), Is.EqualTo(new[] { "a" }),
             "the posting employer keeps its history too");
     }
+
+    private static PipelineEntry TrackedEntry(string orgnr) => new()
+    {
+        Orgnr = orgnr, Status = PipelineStatus.Applied, Starred = true, Why = "grunn",
+        Created = T1, Updated = T2,
+    };
+
+    private static FeedAd AdFrom(string feedId, string employerOrgnr) =>
+        new(feedId, "Utvikler", null, employerOrgnr, "3405", T1, T1.AddDays(30), null, true);
+
+    [Test]
+    public async Task Pipeline_delete_removes_the_entry_and_returns_it()
+    {
+        var pipeline = new EfPipelineRepository(_db);
+        await pipeline.UpsertAsync(TrackedEntry("111111111"));
+        await pipeline.UpsertAsync(TrackedEntry("222222222"));
+
+        var removed = await pipeline.DeleteAsync("111111111");
+
+        Assert.That(removed, Is.Not.Null);
+        Assert.That(removed!.Entry.Orgnr, Is.EqualTo("111111111"));
+        Assert.That(removed.Entry.Status, Is.EqualTo(PipelineStatus.Applied));
+        Assert.That(removed.Entry.Starred, Is.True);
+        Assert.That(removed.LinksCleared, Is.Zero);
+        Assert.That(await pipeline.GetByOrgnrAsync("111111111"), Is.Null);
+        Assert.That(await pipeline.GetByOrgnrAsync("222222222"), Is.Not.Null);
+    }
+
+    [Test]
+    public async Task Pipeline_delete_clears_links_to_the_entry_and_leaves_the_rest()
+    {
+        var pipeline = new EfPipelineRepository(_db);
+        var ads = new EfAdRepository(_db);
+        await pipeline.UpsertAsync(TrackedEntry("111111111"));
+        await pipeline.UpsertAsync(TrackedEntry("222222222"));
+        await ads.UpsertAsync(AdFrom("a", "111111111"), T1);
+        await ads.UpsertAsync(AdFrom("b", "333333333"), T1);
+        await ads.UpsertAsync(AdFrom("c", "333333333"), T1);
+        await ads.SetLinkedOrgnrAsync("a", "111111111");
+        await ads.SetLinkedOrgnrAsync("b", "111111111");
+        await ads.SetLinkedOrgnrAsync("c", "222222222");
+
+        var removed = await pipeline.DeleteAsync("111111111");
+
+        Assert.That(removed!.LinksCleared, Is.EqualTo(2));
+        var byId = await _db.Ads.AsNoTracking().ToDictionaryAsync(a => a.FeedId);
+        Assert.That(byId["a"].LinkedOrgnr, Is.Null);
+        Assert.That(byId["b"].LinkedOrgnr, Is.Null);
+        Assert.That(byId["c"].LinkedOrgnr, Is.EqualTo("222222222"), "a link to another entry stays");
+        Assert.That(byId["a"].EmployerOrgnr, Is.EqualTo("111111111"), "the feed's own employer is untouched");
+    }
+
+    [Test]
+    public async Task Pipeline_delete_of_an_untracked_orgnr_returns_null_and_changes_nothing()
+    {
+        var pipeline = new EfPipelineRepository(_db);
+        var ads = new EfAdRepository(_db);
+        await pipeline.UpsertAsync(TrackedEntry("222222222"));
+        await ads.UpsertAsync(AdFrom("a", "333333333"), T1);
+        await ads.SetLinkedOrgnrAsync("a", "111111111"); // a dangling link, e.g. from a race
+
+        var removed = await pipeline.DeleteAsync("111111111");
+
+        Assert.That(removed, Is.Null);
+        Assert.That(await pipeline.GetAllAsync(), Has.Count.EqualTo(1));
+        Assert.That((await _db.Ads.AsNoTracking().SingleAsync()).LinkedOrgnr, Is.EqualTo("111111111"));
+    }
 }
