@@ -168,11 +168,11 @@ public class NavFeedClientTests
     [Test]
     public async Task Employer_without_homepage_maps_to_null()
     {
-        // Norsk Tipping-shaped fixture: employer object present, but with no homepage field —
+        // Nyfjell Spill-shaped fixture: employer object present, but with no homepage field —
         // this must not throw and must not fall back to some other URL.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"77777777-7777-7777-7777-777777777777",
-             "status":"ACTIVE","title":"Utvikler","businessName":"Norsk Tipping AS",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Nyfjell Spill AS",
              "municipal":"HAMAR","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-z"}
             """;
         const string detail = """
@@ -180,7 +180,7 @@ public class NavFeedClientTests
              "sistEndret":"2026-08-18T09:00:00+02:00",
              "ad_content":{"uuid":"77777777-7777-7777-7777-777777777777",
               "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/7",
-              "employer":{"name":"Norsk Tipping AS","orgnr":"917365908"},
+              "employer":{"name":"Nyfjell Spill AS","orgnr":"917365908"},
               "workLocations":[{"municipal":"HAMAR"}],
               "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
             """;

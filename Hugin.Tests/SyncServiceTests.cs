@@ -613,21 +613,21 @@ public class SyncServiceTests
     [Test]
     public async Task Unknown_ad_employer_is_fetched_from_brreg_and_upserted()
     {
-        // The NT case: the ad's employerOrgnr is an underenhet the discovery filter never
+        // The branch case: the ad's employerOrgnr is an underenhet the discovery filter never
         // pulled locally (wrong NACE code), but Brreg still knows it and its ParentOrgnr.
         var brreg = new FakeBrregClient
         {
-            ByOrgnr = { ["972483672"] = new RegisterCompany("972483672", "NT avd X", "3403", "92.000", "925836613", true, null) },
+            ByOrgnr = { ["787878787"] = new RegisterCompany("787878787", "NYFJELL SPILL AVD X", "3403", "92.000", "777777777", true, null) },
         };
-        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "972483672")], null));
+        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "787878787")], null));
 
         var h = Build(brreg: brreg, nav: nav);
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Nav.Succeeded, Is.True);
-        Assert.That(h.Companies.Store.ContainsKey("972483672"), Is.True);
-        Assert.That(h.Companies.Store["972483672"].ParentOrgnr, Is.EqualTo("925836613"));
-        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "972483672" }));
+        Assert.That(h.Companies.Store.ContainsKey("787878787"), Is.True);
+        Assert.That(h.Companies.Store["787878787"].ParentOrgnr, Is.EqualTo("777777777"));
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "787878787" }));
     }
 
     [Test]
@@ -656,13 +656,13 @@ public class SyncServiceTests
     [Test]
     public async Task Ad_with_bare_host_homepage_adopts_it_as_an_https_url()
     {
-        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "www.norsk-tipping.no" };
+        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "www.nyfjell-spill.no" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
         h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
 
         await h.Service.SyncAsync();
 
-        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://www.norsk-tipping.no"));
+        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://www.nyfjell-spill.no"));
     }
 
     [Test]
@@ -715,7 +715,7 @@ public class SyncServiceTests
     public async Task Brreg_failure_during_enrichment_does_not_fail_sync_or_skip_the_ad()
     {
         var brreg = new FakeBrregClient { ThrowsOnGetByOrgnr = true };
-        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "972483672")], null));
+        var nav = new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "787878787")], null));
 
         var h = Build(brreg: brreg, nav: nav);
         var summary = await h.Service.SyncAsync();
@@ -723,7 +723,7 @@ public class SyncServiceTests
         Assert.That(summary.Nav.Succeeded, Is.True);
         Assert.That(summary.Brreg.Succeeded, Is.True, "only the employer lookup should have failed, not discovery");
         Assert.That(h.Ads.Store.ContainsKey("a"), Is.True);
-        Assert.That(h.Companies.Store.ContainsKey("972483672"), Is.False);
+        Assert.That(h.Companies.Store.ContainsKey("787878787"), Is.False);
     }
 
     [Test]
@@ -731,15 +731,15 @@ public class SyncServiceTests
     {
         var brreg = new FakeBrregClient
         {
-            ByOrgnr = { ["972483672"] = new RegisterCompany("972483672", "NT avd X", "3403", "92.000", "925836613", true, null) },
+            ByOrgnr = { ["787878787"] = new RegisterCompany("787878787", "NYFJELL SPILL AVD X", "3403", "92.000", "777777777", true, null) },
         };
         var nav = new FakeNavFeedClient(new FeedPage(
-            [AdWithEmployer("a", "972483672"), AdWithEmployer("b", "972483672")], null));
+            [AdWithEmployer("a", "787878787"), AdWithEmployer("b", "787878787")], null));
 
         var h = Build(brreg: brreg, nav: nav);
         await h.Service.SyncAsync();
 
-        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "972483672" }));
+        Assert.That(h.Brreg.ByOrgnrRequests, Is.EqualTo(new[] { "787878787" }));
         Assert.That(h.Ads.Store.Keys, Is.EquivalentTo(new[] { "a", "b" }));
     }
 

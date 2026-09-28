@@ -188,11 +188,11 @@ describe('ApplicationsView', () => {
 
   it('displays an all-caps Brreg company name in title case', async () => {
     renderView(
-      fakeServer([entry({ orgnr: '1', companyName: 'NORSK TIPPING AS', status: 'active' })])
+      fakeServer([entry({ orgnr: '1', companyName: 'NYFJELL SPILL AS', status: 'active' })])
     )
 
-    expect(await screen.findByText('Norsk Tipping AS')).toBeInTheDocument()
-    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+    expect(await screen.findByText('Nyfjell Spill AS')).toBeInTheDocument()
+    expect(screen.queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
   })
 
   it('edit-submit PUTs the right body and announces "Lagret."', async () => {

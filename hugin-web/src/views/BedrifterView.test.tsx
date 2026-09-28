@@ -151,11 +151,11 @@ describe('BedrifterView', () => {
 
   it('counts rendered rows, not raw units — a branch+parent pair (2 units, 1 row) is singular', async () => {
     const companies = [
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613',
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777',
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
@@ -287,39 +287,39 @@ describe('BedrifterView', () => {
   })
 
   it('displays an all-caps Brreg name in title case, in the row and the detail heading', async () => {
-    const companies = [company({ orgnr: '1', name: 'NORSK TIPPING AS', kommuneNavn: 'Oslo' })]
+    const companies = [company({ orgnr: '1', name: 'NYFJELL SPILL AS', kommuneNavn: 'Oslo' })]
     const details: Record<string, CompanyDetailDto> = {
       '1': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
 
-    await screen.findByText('Norsk Tipping AS')
-    expect(screen.queryByText('NORSK TIPPING AS')).not.toBeInTheDocument()
+    await screen.findByText('Nyfjell Spill AS')
+    expect(screen.queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Norsk Tipping AS/ }))
-    expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Nyfjell Spill AS/ }))
+    expect(await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })).toBeInTheDocument()
   })
 
   it('renders exactly one list row for a company with branches — branches moved into CompanyDetail', async () => {
     const companies = [
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613',
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777',
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
       company({ orgnr: '3', name: 'Standalone AS' }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: companies[0], ads: [], branches: [companies[1]] },
+      '777777777': { company: companies[0], ads: [], branches: [companies[1]] },
     }
     const user = userEvent.setup()
     const { container } = renderView(fakeServer(companies, details))
 
-    await screen.findByText('Norsk Tipping AS')
+    await screen.findByText('Nyfjell Spill AS')
     expect(screen.getByText('Standalone AS')).toBeInTheDocument()
 
     // One group per hovedenhet/standalone (2), not one row per unit (3) — and no branch row
@@ -328,39 +328,39 @@ describe('BedrifterView', () => {
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
     expect(
-      screen.queryByText('Norsk Tipping AS Avdeling Oslo', { exact: false })
+      screen.queryByText('Nyfjell Spill AS Avdeling Oslo', { exact: false })
     ).not.toBeInTheDocument()
     expect(container.querySelector('details')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Norsk Tipping AS/ }))
+    await user.click(screen.getByRole('button', { name: /Nyfjell Spill AS/ }))
 
     // The branch now surfaces as a tab inside the detail, not a row in the list.
-    expect(await screen.findByRole('heading', { name: 'Norsk Tipping AS' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })).toBeInTheDocument()
     const tablist = screen.getByRole('tablist')
     expect(within(tablist).getByRole('tab', { name: 'Oslo' })).toBeInTheDocument()
   })
 
   it('does not treat a branch-of-a-branch as its own group main (guards non-two-tier chains)', async () => {
     const companies = [
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613',
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777',
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
       company({
         orgnr: '111222333',
-        name: 'NORSK TIPPING AS AVDELING OSLO SENTRUM',
-        parentOrgnr: '972483672', // parent is itself a branch — not a valid hovedenhet
+        name: 'NYFJELL SPILL AS AVDELING OSLO SENTRUM',
+        parentOrgnr: '787878787', // parent is itself a branch — not a valid hovedenhet
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
     ]
     const { container } = renderView(fakeServer(companies, {}))
 
-    await screen.findByText('Norsk Tipping AS')
+    await screen.findByText('Nyfjell Spill AS')
 
     // A's group (with B nested, invisible in the list) + C's standalone row — 2 groups, not 3.
     const outerList = container.querySelector('.bedrifter-view > ul')
@@ -368,16 +368,16 @@ describe('BedrifterView', () => {
     expect(outerList.children).toHaveLength(2)
 
     // C falls back to a standalone row, since its "parent" B is itself a branch.
-    expect(screen.getByText('Norsk Tipping AS Avdeling Oslo Sentrum')).toBeInTheDocument()
+    expect(screen.getByText('Nyfjell Spill AS Avdeling Oslo Sentrum')).toBeInTheDocument()
   })
 
   it('a standalone branch (parent not loaded) is tagged [branch] at top level', async () => {
     window.localStorage.setItem('hugin-lang', 'en')
     const companies = [
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613', // parent org number is not in the loaded companies list
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777', // parent org number is not in the loaded companies list
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
@@ -385,69 +385,69 @@ describe('BedrifterView', () => {
     renderView(fakeServer(companies, {}))
 
     expect(
-      await screen.findByRole('button', { name: /Norsk Tipping AS Avdeling Oslo \[branch\]/ })
+      await screen.findByRole('button', { name: /Nyfjell Spill AS Avdeling Oslo \[branch\]/ })
     ).toBeInTheDocument()
   })
 
   it("groups appear at the MAIN unit's position, not a branch's earlier position in the source list", async () => {
     const companies = [
       // The branch is listed before its own hovedenhet here — a naive first-seen-position
-      // grouping would surface "Norsk Tipping AS" first (its branch is seen at index 0).
+      // grouping would surface "Nyfjell Spill AS" first (its branch is seen at index 0).
       // The fix orders by the main's own index, so "Mellomstor AS" (index 1) comes first.
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613',
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777',
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
       company({ orgnr: 'mellomstor', name: 'Mellomstor AS' }),
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
     ]
     const { container } = renderView(fakeServer(companies, {}))
 
-    await screen.findByText('Norsk Tipping AS')
+    await screen.findByText('Nyfjell Spill AS')
 
     const outerList = container.querySelector('.bedrifter-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     const rowNames = Array.from(outerList.querySelectorAll('.bedrifter-row strong')).map(
       (el) => el.textContent
     )
-    expect(rowNames).toEqual(['Mellomstor AS', 'Norsk Tipping AS'])
+    expect(rowNames).toEqual(['Mellomstor AS', 'Nyfjell Spill AS'])
   })
 
   it('Tilbake from a branch tab returns to the list and refocuses the main row', async () => {
     const companies = [
-      company({ orgnr: '925836613', name: 'NORSK TIPPING AS', kommuneNavn: 'Hamar' }),
+      company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
-        orgnr: '972483672',
-        name: 'NORSK TIPPING AS AVDELING OSLO',
-        parentOrgnr: '925836613',
+        orgnr: '787878787',
+        name: 'NYFJELL SPILL AS AVDELING OSLO',
+        parentOrgnr: '777777777',
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '925836613': { company: companies[0], ads: [], branches: [companies[1]] },
-      '972483672': { company: companies[1], ads: [], branches: [] },
+      '777777777': { company: companies[0], ads: [], branches: [companies[1]] },
+      '787878787': { company: companies[1], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
 
-    await screen.findByText('Norsk Tipping AS')
-    const mainRow = screen.getByRole('button', { name: /Norsk Tipping AS/ })
+    await screen.findByText('Nyfjell Spill AS')
+    const mainRow = screen.getByRole('button', { name: /Nyfjell Spill AS/ })
     await user.click(mainRow)
 
     const branchTab = await screen.findByRole('tab', { name: 'Oslo' })
     await user.click(branchTab)
     expect(
-      await screen.findByRole('heading', { name: /Norsk Tipping AS Avdeling Oslo/ })
+      await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
     ).toBeInTheDocument()
 
     const back = await screen.findByRole('button', { name: 'Tilbake' })
     await user.click(back)
 
-    const reopenedRow = await screen.findByRole('button', { name: /Norsk Tipping AS/ })
+    const reopenedRow = await screen.findByRole('button', { name: /Nyfjell Spill AS/ })
     await waitFor(() => {
       expect(document.activeElement).toBe(reopenedRow)
     })

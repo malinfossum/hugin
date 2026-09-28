@@ -20,8 +20,8 @@ function json(body: unknown) {
 const AD = {
   feedId: 'a1',
   title: 'Utvikler',
-  employer: 'TRETOEN AS',
-  employerOrgnr: '922425620',
+  employer: 'BERGLI DESIGN AS',
+  employerOrgnr: '444444444',
   kommune: '3403',
   expires: '2099-01-01T00:00:00Z',
   daysLeft: 30,
@@ -35,8 +35,8 @@ const AD = {
 }
 
 const ENTRY = {
-  orgnr: '922425620',
-  companyName: 'TRETOEN AS',
+  orgnr: '444444444',
+  companyName: 'BERGLI DESIGN AS',
   status: 'active',
   starred: false,
   why: 'Demo.',
@@ -135,8 +135,8 @@ describe('read-only mode hides write controls', () => {
   it('ApplicationsView has no star or edit', async () => {
     vi.stubGlobal('fetch', demoServer())
     wrap(<ApplicationsView />)
-    // displayCompanyName title-cases the raw all-caps "TRETOEN AS" from the fixture.
-    await screen.findByText('Tretoen AS')
+    // displayCompanyName title-cases the raw all-caps "BERGLI DESIGN AS" from the fixture.
+    await screen.findByText('Bergli Design AS')
     expect(screen.queryByRole('button', { name: 'Gi stjerne' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeInTheDocument()
   })

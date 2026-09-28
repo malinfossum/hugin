@@ -24,7 +24,7 @@ public sealed class PublicSecurityTests
     public async Task Every_write_verb_under_api_is_refused()
     {
         using var client = _factory.CreateApiClient();
-        var put = await client.PutAsJsonAsync("/api/pipeline/922425620", new { status = "active" });
+        var put = await client.PutAsJsonAsync("/api/pipeline/444444444", new { status = "active" });
         var del = await client.DeleteAsync("/api/ads/x/hide");
         var sync = await client.PostAsync("/api/sync", null);
         Assert.Multiple(() =>

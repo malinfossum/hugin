@@ -144,12 +144,12 @@ public sealed class BootSyncTests
     public async Task Public_mode_seeds_the_pipeline_and_writes_the_snapshot_after_the_boot_sync()
     {
         using var factory = new ApiFactory(autosync: true, publicMode: true);
-        factory.Brreg.Companies.Add(new RegisterCompany("922425620", "TRETOEN AS", "3403", "62.100", null, false, null));
+        factory.Brreg.Companies.Add(new RegisterCompany("444444444", "BERGLI DESIGN AS", "3403", "62.100", null, false, null));
         // StateDir itself isn't created until ConfigureWebHost runs (lazily, on the first
         // CreateClient() call below) — create it now so the seed file is in place before boot.
         Directory.CreateDirectory(factory.StateDir);
         File.WriteAllText(Path.Combine(factory.StateDir, "demo-pipeline.json"),
-            """[{ "orgnr": "922425620", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
+            """[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
         using var client = factory.CreateClient();
 
         var status = await SyncEndpointTests.PollUntilFinished(client);
@@ -161,7 +161,7 @@ public sealed class BootSyncTests
         var options = new DbContextOptionsBuilder<Hugin.Infrastructure.Data.HuginDbContext>()
             .UseSqlite(Hugin.Infrastructure.Data.HuginDbInitializer.ConnectionString(snapshotPath)).Options;
         await using var snapshot = new Hugin.Infrastructure.Data.HuginDbContext(options);
-        Assert.That(await snapshot.Pipeline.AnyAsync(p => p.Orgnr == "922425620"), Is.True);
+        Assert.That(await snapshot.Pipeline.AnyAsync(p => p.Orgnr == "444444444"), Is.True);
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
     }
 

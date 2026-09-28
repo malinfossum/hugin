@@ -10,7 +10,7 @@ public class PipelineServiceTests
     private static readonly DateTimeOffset T2 = T1.AddDays(1);
 
     // NACE 92 — the discovery filter would never surface it, but tracking must still work.
-    private const string NorskTipping = "925836613";
+    private const string NyfjellSpill = "777777777";
 
     private static RegisterCompany Known() =>
         new("934161181", "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
@@ -57,15 +57,15 @@ public class PipelineServiceTests
     [Test]
     public async Task Unknown_orgnr_is_fetched_from_brreg_and_stored()
     {
-        var tipping = new RegisterCompany(NorskTipping, "NORSK TIPPING AS", "3407", "92.000", null, false, null);
-        var h = await BuildAsync(inBrreg: tipping);
+        var spill = new RegisterCompany(NyfjellSpill, "NYFJELL SPILL AS", "3407", "92.000", null, false, null);
+        var h = await BuildAsync(inBrreg: spill);
 
-        var result = await h.Service.TrackAsync(NorskTipping, PipelineStatus.Active, "stor IT-avdeling", null, null);
+        var result = await h.Service.TrackAsync(NyfjellSpill, PipelineStatus.Active, "stor IT-avdeling", null, null);
 
         Assert.That(result.CompanyFetchedFromBrreg, Is.True);
-        Assert.That(h.Companies.Store.ContainsKey(NorskTipping), Is.True,
+        Assert.That(h.Companies.Store.ContainsKey(NyfjellSpill), Is.True,
             "the NACE filter governs discovery, never tracking");
-        Assert.That(h.Companies.Store[NorskTipping].NaceCode, Is.EqualTo("92.000"));
+        Assert.That(h.Companies.Store[NyfjellSpill].NaceCode, Is.EqualTo("92.000"));
     }
 
     [Test]
