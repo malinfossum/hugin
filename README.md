@@ -1,10 +1,10 @@
 # Hugin
 
-![Hugin — job radar for the Norwegian developer market](docs/brand/banner.png)
+![Hugin: job radar for the Norwegian developer market](docs/brand/banner.png)
 
-Hugin is a job radar for the Norwegian developer job market: it watches public registries for new companies and job ads in your region and tracks your outreach pipeline — from the command line or a local web dashboard.
+Hugin is a job radar for the Norwegian developer job market: it watches public registries for new companies and job ads in your region and tracks your outreach pipeline. Use it from the command line or a local web dashboard.
 
-Named after Odin's raven of thought, who flies out each morning and returns with tidings — while his sibling Munin remembers.
+Named after Odin's raven of thought, who flies out each morning and returns with tidings. His sibling Munin remembers.
 
 ## Stack
 
@@ -14,18 +14,18 @@ C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a R
 
 Get it from the [Releases page](https://github.com/malinfossum/hugin/releases):
 
-- **`Hugin.exe`** — single self-contained file, dashboard only, no .NET install needed. Put it anywhere and double-click. The dashboard opens at `http://localhost:5111` and asks which part of Norway to cover on first run. A `hugin.json` beside the exe (start from `hugin.json.example`) is optional and overrides the defaults.
-- **Zip** — `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+- **`Hugin.exe`**: single self-contained file, dashboard only, no .NET install needed. Put it anywhere and double-click. The dashboard opens at `http://localhost:5111` and asks which part of Norway to cover on first run. A `hugin.json` beside the exe (start from `hugin.json.example`) is optional and overrides the defaults.
+- **Zip**: `hugin.exe` (CLI) + `hugin-api.exe` (dashboard) sharing one `hugin.json`/`hugin.db`. Requires the [.NET 10 runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
-`hugin.json` and the `hugin.db` database are gitignored — the pipeline holds your own outreach history.
+`hugin.json` and the `hugin.db` database are gitignored. The pipeline holds your own outreach history.
 
 ## Web dashboard
 
-Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered` (an `Active` entry whose ads have all expired moves to `Expired` on its own, and back when a new ad appears), star the ones you want to apply to, link an ad by hand to the company you track when the registry chain does not join them, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources; language (English/bokmål) and dark/light theme are the two toggles in the top bar — both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work. The display filter (Settings → Visningsfilter) is a per-browser lens over what the dashboard and the company list show: any number of fylker, each whole or narrowed to chosen kommuner, plus NAV categories. It is edited in Settings only; the company list shows the current choice and links there.
+Browse active ads, the company inventory (one row per company, branches as tabs on the detail page), and the Applications view; track outreach through `Active` → `Applied` → `Answered` (an `Active` entry whose ads have all expired moves to `Expired` on its own, and back when a new ad appears), star the ones you want to apply to, link an ad by hand to the company you track when the registry chain does not join them, and download a data extract (`.md`/`.txt`/`.json`). Settings manages the link-out Sources; language (English/bokmål) and dark/light theme are the two toggles in the top bar. Both default from your browser and remember your choice. Every view is a real URL, so back/forward, reload, and deep links work. The display filter (Settings → Visningsfilter) is a per-browser lens over what the dashboard and the company list show: any number of fylker, each whole or narrowed to chosen kommuner, plus NAV categories. It is edited in Settings only; the company list shows the current choice and links there.
 
 `--port` picks the port (default `5111`), `--config <path>` points at a different `hugin.json`, `--no-browser` skips the launch. For development, run `dotnet run --project Hugin.Api` and `cd hugin-web && npm run dev` side by side.
 
-`--public --state <dir>` runs the **hosted demo mode**: all interfaces, every write refused, config and seed file read from `<dir>`, database snapshot persisted there after each sync. It is for the demo server only — never run it on a machine holding a real pipeline, it serves everything in the state dir to anyone who reaches the port.
+`--public --state <dir>` runs the **hosted demo mode**: all interfaces, every write refused, config and seed file read from `<dir>`, database snapshot persisted there after each sync. It is for the demo server only. Never run it on a machine holding a real pipeline, it serves everything in the state dir to anyone who reaches the port.
 
 ## Demo
 
@@ -37,18 +37,18 @@ A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App S
 
 | Command | What it does |
 |---|---|
-| `hugin sync [--full]` | Pulls companies from Brreg and ads from NAV. `--full` walks the whole feed history from the oldest page — run once after setup and again after widening keywords; interrupted runs resume |
+| `hugin sync [--full]` | Pulls companies from Brreg and ads from NAV. `--full` walks the whole feed history from the oldest page. Run it once after setup and again after widening keywords; interrupted runs resume |
 | `hugin new [--seen]` | Everything first seen since the last review; `--seen` advances the mark |
 | `hugin track <orgnr> <status>` | Sets pipeline status: `active`, `applied`, `answered`. Options: `--why`, `--note`, `--svar` |
-| `hugin untrack <orgnr>` | Removes one pipeline row and clears manual ad links to it. The company stays. Cannot be undone — the printout lists what was removed |
+| `hugin untrack <orgnr>` | Removes one pipeline row and clears manual ad links to it. The company stays. Cannot be undone. The printout lists what was removed |
 | `hugin list [--status <s>]` | Shows the pipeline; `--companies` / `--ads` (each with `--kommune <nr>`) browse the synced inventory |
 | `hugin export` | Writes data to stdout. `--format md\|txt\|json`, `--scope new\|category\|all` (`category` needs `--category <navn>`), `--include-active` |
 
-A fresh install has no coverage until it is chosen — in the dashboard, or by hand under `municipalities` in `hugin.json`; `hugin sync` prints how before it exits. The first sync then sets a baseline, so `hugin new` starts empty rather than listing the whole register — browse that initial inventory with `hugin list --companies`. `--config <path>` works here too; the database is created next to the config.
+A fresh install has no coverage until it is chosen. Choose it in the dashboard, or by hand under `municipalities` in `hugin.json`; `hugin sync` prints how before it exits. The first sync then sets a baseline, so `hugin new` starts empty rather than listing the whole register. Browse that initial inventory with `hugin list --companies`. `--config <path>` works here too; the database is created next to the config.
 
 ## The localhost API as a machine interface
 
-The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin.db` — suitable for scripting or AI/tooling integration against your own data. It binds to loopback only, and every state-changing request requires an `X-Hugin: 1` header (CSRF protection, not authentication — local processes are trusted).
+The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin.db`. It suits scripting or AI/tooling integration against your own data. It binds to loopback only, and every state-changing request requires an `X-Hugin: 1` header. It is CSRF protection, not authentication: local processes are trusted.
 
 - **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`, `/api/config/focus`, `/api/config/focus/recommended`
 - **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `PUT|DELETE /api/ads/{feedId}/link` · `POST /api/seen` · `POST /api/sync` (`?full=1` for a full backfill) · `PUT /api/config/discovery` · `PUT /api/config/focus` · `GET /api/config/focus/preview` (side-effecting, needs `X-Hugin: 1` too) · `POST /api/reset` · `POST /api/first-run-dismissed`
@@ -59,29 +59,29 @@ The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin
 
 | Field | What it does |
 |---|---|
-| `municipalities` | `{ "name", "number" }` pairs — Brreg kommune numbers to watch |
-| `fylker` | 2-digit fylke codes — expands to every kommune in the fylke |
+| `municipalities` | `{ "name", "number" }` pairs of Brreg kommune numbers to watch |
+| `fylker` | 2-digit fylke codes. Each expands to every kommune in the fylke |
 | `allOfNorway` | `true` watches every kommune in the register |
 | `naeringskoder` | SN2025 industry codes; a prefix like `"62"` matches every sub-code |
-| `keywords` | The ad-title recall net — can stay broad, `categories` narrows it |
+| `keywords` | The ad-title recall net. It can stay broad because `categories` narrows it |
 | `categories` | NAV occupation categories (default `["IT"]`) filter out keyword coincidences; uncategorized ads always pass |
-| `linkouts` | `{ "label", "url" }` pairs — imported into the dashboard's Sources on first run only; manage them under Settings afterwards |
+| `linkouts` | `{ "label", "url" }` pairs, imported into the dashboard's Sources on first run only; manage them under Settings afterwards |
 | `navToken` | `null` fetches NAV's rotating public token automatically; set a registered token instead |
 
 `municipalities`, `fylker` and `allOfNorway` are editable from the dashboard (first-run dialog and Settings → Dekning); `naeringskoder` and `keywords` are editable from Settings → Fokus, with a per-code company-count preview from Brreg and a "Legg til anbefalte" button that adds the curated default set. `categories`, `navToken` and `linkouts` stay hand-edited. Saving from the UI rewrites only the changed keys and keeps everything else as it was, after backing the file up to `hugin.json.bak`.
 
-Settings → Nullstilling resets in two levels: clearing the coverage (`municipalities`, `fylker`, `allOfNorway`) so the first-run dialog asks again, keeping the database — or deleting everything, which snapshots the database to `hugin.db.reset-<timestamp>.bak` first, then wipes the companies, ads, pipeline and review marks. To restore a snapshot, stop the app and rename `hugin.db.reset-<timestamp>.bak` to `hugin.db`, replacing the current file, before relaunching.
+Settings → Nullstilling resets in two levels. The first clears the coverage (`municipalities`, `fylker`, `allOfNorway`) so the first-run dialog asks again, and keeps the database. The second deletes everything: it snapshots the database to `hugin.db.reset-<timestamp>.bak` first, then wipes the companies, ads, pipeline and review marks. To restore a snapshot, stop the app and rename `hugin.db.reset-<timestamp>.bak` to `hugin.db`, replacing the current file, before relaunching.
 
-A full NAV backfill button in Settings → Fokus walks the entire feed history to pick up ads matching a widened keyword list. It takes minutes and recovers open ads only — NAV returns closed ads content-stripped.
+A full NAV backfill button in Settings → Fokus walks the entire feed history to pick up ads matching a widened keyword list. It takes minutes and recovers open ads only. NAV returns closed ads content-stripped.
 
 Municipality numbers come from [Brreg's kommune register](https://data.brreg.no/enhetsregisteret/api/kommuner?size=400).
 
 ## Data sources
 
-- **Enhetsregisteret** (Brønnøysundregistrene) — open company data, no authentication. Reads both hovedenheter and underenheter, because regional branch offices are registered as underenheter of parents elsewhere.
-- **NAV stillingsfeed** (arbeidsplassen.no) — job ads under the [API terms](https://arbeidsplassen.nav.no/vilkar-api): the required deep-link is stored, and an expired ad is never presented as active.
+- **Enhetsregisteret** (Brønnøysundregistrene): open company data, no authentication. Reads both hovedenheter and underenheter, because regional branch offices are registered as underenheter of parents elsewhere.
+- **NAV stillingsfeed** (arbeidsplassen.no): job ads under the [API terms](https://arbeidsplassen.nav.no/vilkar-api): the required deep-link is stored, and an expired ad is never presented as active.
 
-Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor proff.no permits scraping — Hugin lists them (plus LinkedIn) as **Sources**: link-out reminders to check by hand.
+Ads posted only on finn.no are not in the NAV feed, and neither finn.no nor proff.no permits scraping. Hugin lists them (plus LinkedIn) as **Sources**: link-out reminders to check by hand.
 
 ## Build from source
 
@@ -97,7 +97,7 @@ cp hugin.json.example hugin.json
 .\build.ps1
 ```
 
-This builds the frontend, publishes both exes into `publish\`, and a self-contained single-file `Hugin.exe` (frontend embedded) into `publish-single\`. Run `publish\hugin-api.exe` — or `publish-single\Hugin.exe` — for the dashboard.
+This builds the frontend, publishes both exes into `publish\`, and a self-contained single-file `Hugin.exe` (frontend embedded) into `publish-single\`. Run `publish\hugin-api.exe` (or `publish-single\Hugin.exe`) for the dashboard.
 
 ## Tests
 
