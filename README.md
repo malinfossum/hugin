@@ -25,7 +25,7 @@ Browse active ads, the company inventory (one row per company, branches as tabs 
 
 `--port` picks the port (default `5111`), `--config <path>` points at a different `hugin.json`, `--no-browser` skips the launch. For development, run `dotnet run --project Hugin.Api` and `cd hugin-web && npm run dev` side by side.
 
-`--public --state <dir>` runs the **hosted demo mode**: all interfaces, every write refused, config and seed file read from `<dir>`, database snapshot persisted there after each sync. It is for the demo server only. Never run it on a machine holding a real pipeline, it serves everything in the state dir to anyone who reaches the port.
+`--public --state <dir>` runs the **hosted demo mode**: all interfaces, every write refused, config and seed file read from `<dir>`, database snapshot persisted there after each sync. It is for the demo server only. Never run it on a machine holding a real pipeline. It serves everything in the state dir to anyone who reaches the port.
 
 ## Demo
 
