@@ -1,6 +1,6 @@
 # Keeps this repo's public face honest: description, topics, homepage, the
 # Stack section, versions and links, all checked against the README.
-# The checker lives in malinfossum/workbench — docs/repo-hygiene.md.
+# The checker lives in malinfossum/ward: docs/repo-hygiene.md.
 name: Repo hygiene
 
 on:
@@ -15,6 +15,6 @@ on:
 
 jobs:
   hygiene:
-    uses: malinfossum/workbench/.github/workflows/repo-hygiene.yml@main
+    uses: malinfossum/ward/.github/workflows/repo-hygiene.yml@v1
     with:
       mode: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && 'warn' || 'strict' }}
