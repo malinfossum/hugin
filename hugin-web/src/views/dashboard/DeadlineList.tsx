@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../../api'
-import { displayCompanyName } from '../../companyName'
 import { useAnnounce } from '../../components/LiveRegion'
-import { formatDate } from '../../dates'
-import { adMatchesFocus, useFocus } from '../../focus'
+import { adMatchesFocus, useFocus } from '../../context/focus'
+import { useReadOnly } from '../../context/readOnly'
 import { type T, useT } from '../../i18n'
-import { pipelineLabel } from '../../pipelineLabels'
-import { useReadOnly } from '../../readOnly'
-import type { AdDto, PipelineDto } from '../../types'
+import { ApiError, api } from '../../lib/api'
+import { displayCompanyName } from '../../lib/companyName'
+import { formatDate } from '../../lib/dates'
+import { pipelineLabel } from '../../lib/pipelineLabels'
+import type { AdDto, PipelineDto } from '../../lib/types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
   if (daysLeft === null) return undefined
@@ -31,11 +31,11 @@ function daysLeftBadgeClass(daysLeft: number | null): string {
 }
 
 function daysLeftText(daysLeft: number | null, t: T): string {
-  if (daysLeft === null) return t('frister.none')
-  if (daysLeft < 0) return t('frister.expiredBadge')
-  if (daysLeft === 0) return t('frister.todayBadge')
-  if (daysLeft === 1) return t('frister.dayBadgeOne')
-  return t('frister.daysBadge', { n: daysLeft })
+  if (daysLeft === null) return t('deadlines.none')
+  if (daysLeft < 0) return t('deadlines.expiredBadge')
+  if (daysLeft === 0) return t('deadlines.todayBadge')
+  if (daysLeft === 1) return t('deadlines.dayBadgeOne')
+  return t('deadlines.daysBadge', { n: daysLeft })
 }
 
 function formatExpires(expires: string | null): string | null {
@@ -44,7 +44,7 @@ function formatExpires(expires: string | null): string | null {
 
 type Show = 'active' | 'all'
 
-export function FristerList({ refreshKey }: { refreshKey: number }) {
+export function DeadlineList({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
   const [show, setShow] = useState<Show>('active')
   const [error, setError] = useState<string | null>(null)
@@ -76,7 +76,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     return api
       .get<AdDto[]>(path)
       .then(setAds)
-      .catch(() => setError(t('frister.loadError')))
+      .catch(() => setError(t('deadlines.loadError')))
   }, [show, t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
@@ -113,12 +113,12 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     try {
       await api.post(`/api/ads/${feedId}/hide`)
     } catch {
-      setError(t('frister.hideError'))
+      setError(t('deadlines.hideError'))
       return
     }
     pendingFocus.current = nextFeedId
     await load()
-    announce(t('frister.hiddenAnnounce'))
+    announce(t('deadlines.hiddenAnnounce'))
   }
 
   const handleTrack = async (ad: AdDto) => {
@@ -126,23 +126,23 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     try {
       await api.put(`/api/pipeline/${ad.employerOrgnr}`, { status: 'active' })
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('frister.trackError'))
+      setError(err instanceof ApiError ? err.message : t('deadlines.trackError'))
       return
     }
     await load()
     const displayName = ad.employer ? displayCompanyName(ad.employer) : ad.employerOrgnr
-    announce(t('frister.trackedAnnounce', { name: displayName }))
+    announce(t('deadlines.trackedAnnounce', { name: displayName }))
   }
 
   const handleAngreSkjul = async (feedId: string) => {
     try {
       await api.del(`/api/ads/${feedId}/hide`)
     } catch {
-      setError(t('frister.unhideError'))
+      setError(t('deadlines.unhideError'))
       return
     }
     await load()
-    announce(t('frister.unhiddenAnnounce'))
+    announce(t('deadlines.unhiddenAnnounce'))
   }
 
   const openLink = async (feedId: string) => {
@@ -157,7 +157,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
         )
       )
     } catch {
-      setError(t('frister.linkError'))
+      setError(t('deadlines.linkError'))
       returnFocusTo.current = feedId
       setLinking(null)
     }
@@ -175,45 +175,45 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
     try {
       await api.put(`/api/ads/${feedId}/link`, { orgnr: target.orgnr })
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('frister.linkError'))
+      setError(err instanceof ApiError ? err.message : t('deadlines.linkError'))
       return
     }
     setLinking(null)
     setLinkTarget('')
     pendingFocus.current = feedId
     await load()
-    announce(t('frister.linkedAnnounce', { name: displayCompanyName(target.companyName) }))
+    announce(t('deadlines.linkedAnnounce', { name: displayCompanyName(target.companyName) }))
   }
 
   const handleUnlink = async (feedId: string) => {
     try {
       await api.del(`/api/ads/${feedId}/link`)
     } catch {
-      setError(t('frister.unlinkError'))
+      setError(t('deadlines.unlinkError'))
       return
     }
     pendingFocus.current = feedId
     await load()
-    announce(t('frister.unlinkedAnnounce'))
+    announce(t('deadlines.unlinkedAnnounce'))
   }
 
   return (
-    <section aria-labelledby="frister-heading" className="frister-list card stack">
-      <h2 id="frister-heading" ref={headingRef} tabIndex={-1}>
-        {t('frister.heading')}
+    <section aria-labelledby="deadlines-heading" className="deadline-list card stack">
+      <h2 id="deadlines-heading" ref={headingRef} tabIndex={-1}>
+        {t('deadlines.heading')}
       </h2>
       <div className="field">
-        <label className="label" htmlFor="frister-show">
-          {t('frister.showLabel')}
+        <label className="label" htmlFor="deadlines-show">
+          {t('deadlines.showLabel')}
         </label>
         <select
-          id="frister-show"
+          id="deadlines-show"
           className="select"
           value={show}
           onChange={(event) => setShow(event.target.value as Show)}
         >
-          <option value="active">{t('frister.showDefault')}</option>
-          <option value="all">{t('frister.showAll')}</option>
+          <option value="active">{t('deadlines.showDefault')}</option>
+          <option value="all">{t('deadlines.showAll')}</option>
         </select>
       </div>
       {error && (
@@ -256,12 +256,12 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   className="btn btn-ghost"
                   onClick={() => handleUnlink(ad.feedId)}
                 >
-                  {t('frister.unlink')}
+                  {t('deadlines.unlink')}
                 </button>
               )}
               {!readOnly && !ad.pipelineStatus && ad.employerOrgnr && (
                 <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
-                  {t('frister.track')}
+                  {t('deadlines.track')}
                 </button>
               )}
               {!readOnly && !ad.pipelineStatus && linking !== ad.feedId && (
@@ -274,7 +274,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   }}
                   onClick={() => openLink(ad.feedId)}
                 >
-                  {t('frister.link')}
+                  {t('deadlines.link')}
                 </button>
               )}
               {!readOnly &&
@@ -284,7 +284,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                     className="btn btn-ghost"
                     onClick={() => handleAngreSkjul(ad.feedId)}
                   >
-                    {t('frister.undoHide')}
+                    {t('deadlines.undoHide')}
                   </button>
                 ) : (
                   <button
@@ -296,7 +296,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                     }}
                     onClick={() => handleSkjul(ad.feedId)}
                   >
-                    {t('frister.hide')}
+                    {t('deadlines.hide')}
                   </button>
                 ))}
             </div>
@@ -304,7 +304,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
               <div className="frist-link cluster cluster-sm">
                 <div className="field">
                   <label className="label" htmlFor={`frist-link-${ad.feedId}`}>
-                    {t('frister.linkLabel')}
+                    {t('deadlines.linkLabel')}
                   </label>
                   <select
                     id={`frist-link-${ad.feedId}`}
@@ -313,7 +313,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                     value={linkTarget}
                     onChange={(event) => setLinkTarget(event.target.value)}
                   >
-                    <option value="">{t('frister.linkPlaceholder')}</option>
+                    <option value="">{t('deadlines.linkPlaceholder')}</option>
                     {tracked.map((c) => (
                       <option key={c.orgnr} value={c.orgnr}>
                         {displayCompanyName(c.companyName)}
@@ -327,7 +327,7 @@ export function FristerList({ refreshKey }: { refreshKey: number }) {
                   disabled={!linkTarget}
                   onClick={() => handleLink(ad.feedId)}
                 >
-                  {t('frister.linkConfirm')}
+                  {t('deadlines.linkConfirm')}
                 </button>
                 <button
                   type="button"

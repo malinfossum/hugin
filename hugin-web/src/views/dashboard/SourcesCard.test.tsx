@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../../i18n'
-import type { SourceDto } from '../../types'
+import type { SourceDto } from '../../lib/types'
 import { SourcesCard } from './SourcesCard'
 
 function sourceDto(overrides: Partial<SourceDto> = {}): SourceDto {

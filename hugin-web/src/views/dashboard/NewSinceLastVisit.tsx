@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../../api'
-import { displayCompanyName } from '../../companyName'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
+import { useReadOnly } from '../../context/readOnly'
 import { useT } from '../../i18n'
-import { useReadOnly } from '../../readOnly'
-import type { CompanyDto, NewDto } from '../../types'
+import { api } from '../../lib/api'
+import { displayCompanyName } from '../../lib/companyName'
+import type { CompanyDto, NewDto } from '../../lib/types'
 
 /** Groups companies by kommune, preserving first-seen order of both groups and members. */
 function groupByKommune(companies: CompanyDto[]): [string, CompanyDto[]][] {
@@ -19,7 +19,7 @@ function groupByKommune(companies: CompanyDto[]): [string, CompanyDto[]][] {
   return [...groups.entries()]
 }
 
-export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
+export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
   const [data, setData] = useState<NewDto | undefined>(undefined)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,8 +81,8 @@ export function NyttSidenSist({ refreshKey }: { refreshKey: number }) {
   const hasNew = !!data && (data.companies.length > 0 || data.ads.length > 0)
 
   return (
-    <section aria-labelledby="nytt-heading" className="nytt-siden-sist card stack">
-      <h2 id="nytt-heading" ref={headingRef} tabIndex={-1}>
+    <section aria-labelledby="new-since-heading" className="new-since-last-visit card stack">
+      <h2 id="new-since-heading" ref={headingRef} tabIndex={-1}>
         {t('newSince.heading')}
       </h2>
       {error && (

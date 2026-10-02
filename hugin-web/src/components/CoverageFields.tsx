@@ -1,13 +1,13 @@
+import { useT } from '../i18n'
 import {
   type CoverageDraft,
   kommunerInFylke,
   removeOtherFylke,
   removeOtherKommune,
   switchFylke,
-} from '../coverage'
-import { FYLKER, fylkeName, fylkeOf } from '../fylker'
-import { useT } from '../i18n'
-import type { KommuneDto } from '../types'
+} from '../lib/coverage'
+import { FYLKER, fylkeName, fylkeOf } from '../lib/fylker'
+import type { KommuneDto } from '../lib/types'
 
 interface Props {
   idPrefix: string

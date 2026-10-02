@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, api } from '../api'
+import { useReadOnly } from '../context/readOnly'
+import { useT } from '../i18n'
+import { ApiError, api } from '../lib/api'
 import {
   type CoverageDraft,
   effectiveDraft,
   fromDiscoveryConfig,
   toDiscoveryRequest,
-} from '../coverage'
-import { useT } from '../i18n'
-import { useReadOnly } from '../readOnly'
-import type { DiscoveryConfigDto, KommuneDto } from '../types'
+} from '../lib/coverage'
+import type { DiscoveryConfigDto, KommuneDto } from '../lib/types'
 import { CoverageFields } from './CoverageFields'
 import { useAnnounce } from './LiveRegion'
 

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../../api'
 import { useT } from '../../i18n'
-import { sourceLabel } from '../../links'
-import type { SourceDto } from '../../types'
+import { api } from '../../lib/api'
+import { sourceLabel } from '../../lib/links'
+import type { SourceDto } from '../../lib/types'
 
 /** The db-backed sources row from the old SyncHeader linkouts, now its own card (spec v3.2
  * item 6). Brreg and NAV are always first and come from i18n, not the fetched list — a fetch

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FYLKER } from '../fylker'
+import { FYLKER } from '../lib/fylker'
 import { FirstRunDialog } from './FirstRunDialog'
 
 function jsonResponse(body: unknown, status = 200) {

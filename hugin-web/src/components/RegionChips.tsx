@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useRef } from 'react'
-import { fylkeName } from '../fylker'
 import { useT } from '../i18n'
-import type { Region } from '../regions'
+import { fylkeName } from '../lib/fylker'
+import type { Region } from '../lib/regions'
 
 interface Props {
   regions: Region[]
@@ -21,7 +21,7 @@ const SHOWN_WHEN_COLLAPSED = 3
 /** The Visningsfilter summary (spec v3.6 B2): one chip per region, «Innlandet: Hamar, Gjøvik»
  * or «Vestfold: hele fylket», «Hele Norge» when there are none. The ✕ that had focus unmounts
  * with its chip, so focus is moved by hand through a pending ref applied after the list
- * re-renders (the FristerList pattern): next chip, else previous, else the fallback. */
+ * re-renders (the DeadlineList pattern): next chip, else previous, else the fallback. */
 export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef }: Props) {
   const t = useT()
   const removeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())

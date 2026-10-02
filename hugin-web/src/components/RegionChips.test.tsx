@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Region } from '../regions'
+import type { Region } from '../lib/regions'
 import { RegionChips } from './RegionChips'
 
 const NAMES = new Map([

@@ -1,4 +1,4 @@
-import type { Focus } from './focus'
+import type { Focus } from '../context/focus'
 import { fylkeOf } from './fylker'
 import { normalizeRegions, type Region } from './regions'
 import type {

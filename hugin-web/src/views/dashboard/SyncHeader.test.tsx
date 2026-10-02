@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
-import type { StatusDto, SyncRunStatus } from '../../types'
+import type { StatusDto, SyncRunStatus } from '../../lib/types'
 import { SyncHeader } from './SyncHeader'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from '../api'
 import { useAnnounce } from '../components/LiveRegion'
 import { type TranslationKey, useT } from '../i18n'
+import { api } from '../lib/api'
 
 type Scope = 'new' | 'category' | 'all'
 type Format = 'md' | 'txt' | 'json'
@@ -28,7 +28,7 @@ function buildUrl(scope: Scope, format: Format, category: string, includeActive:
   return `/api/extract?${params.toString()}`
 }
 
-export function EksportView() {
+export function ExportView() {
   const [scope, setScope] = useState<Scope | ''>('')
   const [format, setFormat] = useState<Format>('md')
   const [category, setCategory] = useState('')
@@ -85,14 +85,14 @@ export function EksportView() {
   }
 
   return (
-    <div className="eksport-view stack">
-      <div className="eksport-controls cluster">
+    <div className="export-view stack">
+      <div className="export-controls cluster">
         <div className="field">
-          <label className="label" htmlFor="eksport-scope">
+          <label className="label" htmlFor="export-scope">
             {t('export.scope')}
           </label>
           <select
-            id="eksport-scope"
+            id="export-scope"
             className="select"
             value={scope}
             onChange={(event) => setScope(event.target.value as Scope)}
@@ -110,11 +110,11 @@ export function EksportView() {
 
         {scope === 'category' && (
           <div className="field">
-            <label className="label" htmlFor="eksport-category">
+            <label className="label" htmlFor="export-category">
               {t('export.category')}
             </label>
             <input
-              id="eksport-category"
+              id="export-category"
               className="input"
               type="text"
               value={category}
@@ -125,11 +125,11 @@ export function EksportView() {
         )}
 
         <div className="field">
-          <label className="label" htmlFor="eksport-format">
+          <label className="label" htmlFor="export-format">
             {t('export.format')}
           </label>
           <select
-            id="eksport-format"
+            id="export-format"
             className="select"
             value={format}
             onChange={(event) => setFormat(event.target.value as Format)}
@@ -144,11 +144,11 @@ export function EksportView() {
 
         {scope === 'all' && (
           <div className="field">
-            <label className="label" htmlFor="eksport-entries">
+            <label className="label" htmlFor="export-entries">
               {t('export.entriesLabel')}
             </label>
             <select
-              id="eksport-entries"
+              id="export-entries"
               className="select"
               value={entries}
               onChange={(event) => setEntries(event.target.value as Entries)}
@@ -180,7 +180,7 @@ export function EksportView() {
         </p>
       ) : (
         <div className="panel">
-          <pre className="eksport-markdown">{preview}</pre>
+          <pre className="export-markdown">{preview}</pre>
         </div>
       )}
     </div>

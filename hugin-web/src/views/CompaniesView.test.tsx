@@ -3,19 +3,19 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
-import { formatDate } from '../dates'
-import { FocusProvider, saveFocus, useFocus } from '../focus'
+import { FocusProvider, saveFocus, useFocus } from '../context/focus'
 import { LanguageProvider } from '../i18n'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
-import { BedrifterView } from './BedrifterView'
+import { formatDate } from '../lib/dates'
+import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
+import { CompaniesView } from './CompaniesView'
 
-/** BedrifterView no longer owns selection state (App/routing does) — this harness stands in
+/** CompaniesView no longer owns selection state (App/routing does) — this harness stands in
  * for that, so the existing click-through tests can drive open/close the same way a user
  * would, without each test wiring its own useState. */
-function BedrifterViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: () => void }) {
+function CompaniesViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: () => void }) {
   const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
   return (
-    <BedrifterView
+    <CompaniesView
       selectedOrgnr={selectedOrgnr}
       onOpenCompany={setSelectedOrgnr}
       onCloseCompany={() => setSelectedOrgnr(null)}
@@ -25,7 +25,7 @@ function BedrifterViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: 
 }
 
 /** Test-only stand-in for "somewhere else" (Settings, or the first-run dialog) writing to the
- * shared FocusContext — proves BedrifterView reads focus live rather than mirroring it into
+ * shared FocusContext — proves CompaniesView reads focus live rather than mirroring it into
  * local state that would go stale once written from outside the view. */
 function ExternalFocusSetter() {
   const { setFocus } = useFocus()
@@ -113,7 +113,7 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>, onOpenSettings?: () => 
     <LanguageProvider>
       <LiveRegionProvider>
         <FocusProvider>
-          <BedrifterViewHarness onOpenSettings={onOpenSettings} />
+          <CompaniesViewHarness onOpenSettings={onOpenSettings} />
         </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
@@ -125,7 +125,7 @@ afterEach(() => {
   window.localStorage.removeItem('hugin-focus')
 })
 
-describe('BedrifterView', () => {
+describe('CompaniesView', () => {
   it('filters by name search case-insensitively (substring)', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS' }),
@@ -324,7 +324,7 @@ describe('BedrifterView', () => {
 
     // One group per hovedenhet/standalone (2), not one row per unit (3) — and no branch row
     // hiding inside a nested list either.
-    const outerList = container.querySelector('.bedrifter-view > ul')
+    const outerList = container.querySelector('.companies-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
     expect(
@@ -363,7 +363,7 @@ describe('BedrifterView', () => {
     await screen.findByText('Nyfjell Spill AS')
 
     // A's group (with B nested, invisible in the list) + C's standalone row — 2 groups, not 3.
-    const outerList = container.querySelector('.bedrifter-view > ul')
+    const outerList = container.querySelector('.companies-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
 
@@ -408,9 +408,9 @@ describe('BedrifterView', () => {
 
     await screen.findByText('Nyfjell Spill AS')
 
-    const outerList = container.querySelector('.bedrifter-view > ul')
+    const outerList = container.querySelector('.companies-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
-    const rowNames = Array.from(outerList.querySelectorAll('.bedrifter-row strong')).map(
+    const rowNames = Array.from(outerList.querySelectorAll('.companies-row strong')).map(
       (el) => el.textContent
     )
     expect(rowNames).toEqual(['Mellomstor AS', 'Nyfjell Spill AS'])
@@ -487,7 +487,7 @@ describe('BedrifterView', () => {
     render(
       <LanguageProvider>
         <LiveRegionProvider>
-          <BedrifterView
+          <CompaniesView
             selectedOrgnr="915787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={vi.fn()}
@@ -513,7 +513,7 @@ describe('BedrifterView', () => {
     render(
       <LanguageProvider>
         <LiveRegionProvider>
-          <BedrifterView
+          <CompaniesView
             selectedOrgnr="915787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={onCloseCompany}
@@ -575,7 +575,7 @@ describe('BedrifterView', () => {
         <LiveRegionProvider>
           <FocusProvider>
             <ExternalFocusSetter />
-            <BedrifterViewHarness />
+            <CompaniesViewHarness />
           </FocusProvider>
         </LiveRegionProvider>
       </LanguageProvider>

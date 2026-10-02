@@ -1,8 +1,8 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../api'
+import { useReadOnly } from '../context/readOnly'
 import { type T, useT } from '../i18n'
-import { useReadOnly } from '../readOnly'
-import type { FocusConfigDto, NacePreviewDto } from '../types'
+import { ApiError, api } from '../lib/api'
+import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
 

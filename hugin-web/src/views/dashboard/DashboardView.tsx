@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { FristerList } from './FristerList'
-import { NyttSidenSist } from './NyttSidenSist'
+import { DeadlineList } from './DeadlineList'
+import { NeedsAction } from './NeedsAction'
+import { NewSinceLastVisit } from './NewSinceLastVisit'
 import { SourcesCard } from './SourcesCard'
 import { SyncHeader } from './SyncHeader'
-import { TrengerHandling } from './TrengerHandling'
 
 interface DashboardViewProps {
   sourcesVersion: number
@@ -21,9 +21,9 @@ export function DashboardView({ sourcesVersion, onRequestCoverage }: DashboardVi
         onRequestCoverage={onRequestCoverage}
       />
       <SourcesCard refreshToken={sourcesVersion} />
-      <TrengerHandling refreshKey={refreshKey} />
-      <FristerList refreshKey={refreshKey} />
-      <NyttSidenSist refreshKey={refreshKey} />
+      <NeedsAction refreshKey={refreshKey} />
+      <DeadlineList refreshKey={refreshKey} />
+      <NewSinceLastVisit refreshKey={refreshKey} />
     </div>
   )
 }

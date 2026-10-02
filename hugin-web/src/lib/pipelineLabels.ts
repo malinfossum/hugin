@@ -1,4 +1,4 @@
-import type { T } from './i18n'
+import type { T } from '../i18n'
 import type { PipelineStatusSlug } from './types'
 
 /** Localized label for a pipeline status slug — a function of the current language rather

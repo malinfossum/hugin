@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../api'
-import { displayCompanyName } from '../companyName'
 import { RegionChips } from '../components/RegionChips'
-import { useFocus } from '../focus'
+import { useFocus } from '../context/focus'
 import { useT } from '../i18n'
-import { regionMatches } from '../regions'
-import type { CompanyDto } from '../types'
+import { api } from '../lib/api'
+import { displayCompanyName } from '../lib/companyName'
+import { regionMatches } from '../lib/regions'
+import type { CompanyDto } from '../lib/types'
 import { CompanyDetail } from './CompanyDetail'
 
 interface CompanyGroup {
@@ -46,7 +46,7 @@ function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
   )
 }
 
-interface BedrifterViewProps {
+interface CompaniesViewProps {
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
   onCloseCompany: () => void
@@ -54,12 +54,12 @@ interface BedrifterViewProps {
   onOpenSettings: () => void
 }
 
-export function BedrifterView({
+export function CompaniesView({
   selectedOrgnr,
   onOpenCompany,
   onCloseCompany,
   onOpenSettings,
-}: BedrifterViewProps) {
+}: CompaniesViewProps) {
   const [companies, setCompanies] = useState<CompanyDto[]>([])
   const [error, setError] = useState<string | null>(null)
   const { focus } = useFocus()
@@ -134,10 +134,10 @@ export function BedrifterView({
   // for one because its own parent wasn't loaded (an "orphan" branch). The tag only makes sense
   // in that second case: a real hovedenhet is never itself a branch.
   const renderRow = (c: CompanyDto) => (
-    <div className="bedrifter-item">
+    <div className="companies-item">
       <button
         type="button"
-        className="panel panel-hover bedrifter-row"
+        className="panel panel-hover companies-row"
         ref={(el) => {
           if (el) rowRefs.current.set(c.orgnr, el)
           else rowRefs.current.delete(c.orgnr)
@@ -169,21 +169,21 @@ export function BedrifterView({
   }
 
   return (
-    <div className="bedrifter-view stack">
-      <div className="bedrifter-lens cluster cluster-sm">
+    <div className="companies-view stack">
+      <div className="companies-lens cluster cluster-sm">
         <RegionChips regions={regions} kommuneNames={kommuneNames} />
         <button type="button" className="btn btn-ghost" onClick={onOpenSettings}>
           {t('companies.editInSettings')}
         </button>
       </div>
 
-      <div className="bedrifter-filters cluster">
+      <div className="companies-filters cluster">
         <div className="field">
-          <label className="label" htmlFor="bedrifter-search">
+          <label className="label" htmlFor="companies-search">
             {t('companies.search')}
           </label>
           <input
-            id="bedrifter-search"
+            id="companies-search"
             className="input"
             type="search"
             value={search}
@@ -192,11 +192,11 @@ export function BedrifterView({
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="bedrifter-website-filter">
+          <label className="label" htmlFor="companies-website-filter">
             {t('companies.websiteFilterLabel')}
           </label>
           <select
-            id="bedrifter-website-filter"
+            id="companies-website-filter"
             className="select"
             value={websiteFilter}
             onChange={(event) => setWebsiteFilter(event.target.value as '' | 'has' | 'none')}

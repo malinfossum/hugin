@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
-import type { NewDto } from '../../types'
-import { NyttSidenSist } from './NyttSidenSist'
+import type { NewDto } from '../../lib/types'
+import { NewSinceLastVisit } from './NewSinceLastVisit'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -94,7 +94,7 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <NyttSidenSist refreshKey={refreshKey} />
+        <NewSinceLastVisit refreshKey={refreshKey} />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -104,7 +104,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('NyttSidenSist', () => {
+describe('NewSinceLastVisit', () => {
   it('renders the empty-state text when no sync has ever run (204)', async () => {
     renderView(fakeServer(null))
 
@@ -272,7 +272,7 @@ describe('NyttSidenSist', () => {
     const { rerender } = render(
       <LanguageProvider>
         <LiveRegionProvider>
-          <NyttSidenSist refreshKey={0} />
+          <NewSinceLastVisit refreshKey={0} />
         </LiveRegionProvider>
       </LanguageProvider>
     )
@@ -308,7 +308,7 @@ describe('NyttSidenSist', () => {
     rerender(
       <LanguageProvider>
         <LiveRegionProvider>
-          <NyttSidenSist refreshKey={1} />
+          <NewSinceLastVisit refreshKey={1} />
         </LiveRegionProvider>
       </LanguageProvider>
     )

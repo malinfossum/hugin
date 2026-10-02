@@ -23,7 +23,7 @@ dialog:not([open]) {
 /* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
    up to 1.75rem) is sized for marketing/hero pages — on a data-dense dashboard it read as way
    too loud. Hugin's real page title is a visually-hidden h1 (see App.tsx), and every visible
-   section title is an h2 (FristerList, NyttSidenSist, TrengerHandling, ApplicationsView,
+   section title is an h2 (DeadlineList, NewSinceLastVisit, NeedsAction, ApplicationsView,
    CompanyDetail), so this is the scale that actually matters here. Steps each level down one
    DS token rather than picking arbitrary sizes, so it stays consistent with the rest of the
    type system across every view. */
@@ -126,18 +126,18 @@ button {
 /* Trenger handling — the loudest element on the dashboard: a warning alert surface plus a
    strong accent border. Still not decoration-only: the heading and each row's frist text
    carry the meaning on their own. */
-.trenger-handling {
+.needs-action {
   border-inline-start: 3px solid var(--warning);
 }
-.trenger-handling ul {
+.needs-action ul {
   list-style: none;
   padding: 0;
 }
-.trenger-handling li {
+.needs-action li {
   padding-block: 0.25rem;
 }
 
-/* Nullstilling (v3.5 Part D) — same "loud edge" treatment as .trenger-handling, in the
+/* Nullstilling (v3.5 Part D) — same "loud edge" treatment as .needs-action, in the
    danger hue: both irreversible reset levels live here, so the section itself should read as
    destructive before either button is ever clicked. */
 .reset-section {
@@ -145,10 +145,10 @@ button {
 }
 
 /* Content lists throughout the app are custom-styled rows, never bullet lists. */
-.frister-list ul,
-.nytt-siden-sist ul,
+.deadline-list ul,
+.new-since-last-visit ul,
 .applications-view ul,
-.bedrifter-view ul,
+.companies-view ul,
 .company-detail ul,
 .sources-card ul {
   list-style: none;
@@ -199,7 +199,7 @@ button {
 
 /* Bedrifter row button: name+branch tag stacked over kommune on mobile, spread across a
    single line from tablet up. */
-.bedrifter-row {
+.companies-row {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -208,25 +208,25 @@ button {
   text-align: left;
 }
 @media (min-width: 768px) {
-  .bedrifter-row {
+  .companies-row {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
   }
 }
-.bedrifter-row strong {
+.companies-row strong {
   font-weight: 500;
 }
 
 /* Bedrifter row container: the row button and its CompanyLink stack on mobile,
    sit side by side from tablet up. */
-.bedrifter-item {
+.companies-item {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 @media (min-width: 768px) {
-  .bedrifter-item {
+  .companies-item {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -234,7 +234,7 @@ button {
   }
 }
 
-.bedrifter-filters {
+.companies-filters {
   align-items: flex-end;
 }
 
@@ -282,14 +282,14 @@ button {
   }
 }
 
-.eksport-markdown {
+.export-markdown {
   overflow-x: auto;
   font-family: var(--font-mono);
 }
 
 /* Pickers and the Download/Copy cluster share one baseline (labels above inputs
    make the naked button cluster sit high without this). */
-.eksport-controls {
+.export-controls {
   align-items: flex-end;
 }
 
@@ -407,7 +407,7 @@ button {
 }
 
 /* Bedrifter reads the lens, Settings edits it: chips and the link share one wrapping row. */
-.bedrifter-lens {
+.companies-lens {
   align-items: center;
 }
 

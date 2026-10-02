@@ -2,9 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
-import { FocusProvider, loadFocus, saveFocus } from '../focus'
+import { FocusProvider, loadFocus, saveFocus } from '../context/focus'
 import { LanguageProvider, useLang } from '../i18n'
-import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../types'
+import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../lib/types'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
