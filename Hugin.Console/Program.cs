@@ -326,7 +326,7 @@ internal static class Program
         var result = await services.GetRequiredService<PipelineService>().UntrackAsync(command.Orgnr);
         if (result is null)
         {
-            Console.Error.WriteLine($"Feil: {command.Orgnr} følges ikke opp.");
+            Console.Error.WriteLine($"Feil: du følger ikke med på {command.Orgnr}.");
             return 1;
         }
 
