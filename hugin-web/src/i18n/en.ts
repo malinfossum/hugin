@@ -69,7 +69,8 @@ export const en = {
   'settings.focusResetDone': 'The first-run choice will show again.',
 
   'needsAction.heading': 'Needs action',
-  'needsAction.description': "Ads from companies you're watching that close within 7 days.",
+  'needsAction.description':
+    "Ads from companies you're watching that close within 7 days or have already closed.",
   'needsAction.loadError': 'Could not load ads.',
   'needsAction.notApplied': 'watching, not applied',
   'needsAction.item': '{title} — {status} — {deadline}',
@@ -85,9 +86,9 @@ export const en = {
   'deadlines.showAll': 'Including hidden',
   'deadlines.hide': 'Hide',
   'deadlines.undoHide': 'Undo hide',
-  'deadlines.track': 'Track',
-  'deadlines.trackedAnnounce': '{name} is now tracked under Applications.',
-  'deadlines.trackError': 'Could not track the company.',
+  'deadlines.track': 'Watch',
+  'deadlines.trackedAnnounce': "You're now watching {name} under Applications.",
+  'deadlines.trackError': 'Could not watch the company.',
   'deadlines.loadError': 'Could not load deadlines.',
   'deadlines.hideError': 'Could not hide the ad.',
   'deadlines.unhideError': 'Could not restore the ad.',

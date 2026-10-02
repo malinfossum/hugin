@@ -151,7 +151,7 @@ describe('DashboardView', () => {
 
     expectDescription(
       'Trenger handling',
-      'Annonser fra bedrifter du følger med på, med frist innen 7 dager.'
+      'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.'
     )
     expectDescription('Frister', 'Åpne annonser i området ditt, nærmeste frist først.')
     expectDescription(
@@ -168,7 +168,7 @@ describe('DashboardView', () => {
 
     expectDescription(
       'Needs action',
-      "Ads from companies you're watching that close within 7 days."
+      "Ads from companies you're watching that close within 7 days or have already closed."
     )
     expectDescription('Deadlines', 'Open ads in your area, closest deadline first.')
     expectDescription(

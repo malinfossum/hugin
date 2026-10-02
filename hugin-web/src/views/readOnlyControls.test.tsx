@@ -127,7 +127,7 @@ describe('read-only mode hides write controls', () => {
     vi.stubGlobal('fetch', demoServer())
     wrap(<DeadlineList refreshKey={0} />)
     await screen.findByText('Utvikler')
-    for (const name of ['Følg opp', 'Koble til bedrift', 'Skjul']) {
+    for (const name of ['Følg med', 'Koble til bedrift', 'Skjul']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
   })

@@ -69,7 +69,8 @@ export const nb = {
   'settings.focusResetDone': 'Oppstartsvalget vises ved neste start.',
 
   'needsAction.heading': 'Trenger handling',
-  'needsAction.description': 'Annonser fra bedrifter du følger med på, med frist innen 7 dager.',
+  'needsAction.description':
+    'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.',
   'needsAction.loadError': 'Kunne ikke laste annonser.',
   'needsAction.notApplied': 'følger med, ikke søkt',
   'needsAction.item': '{title} — {status} — {deadline}',
@@ -85,9 +86,9 @@ export const nb = {
   'deadlines.showAll': 'Også skjulte',
   'deadlines.hide': 'Skjul',
   'deadlines.undoHide': 'Angre skjul',
-  'deadlines.track': 'Følg opp',
-  'deadlines.trackedAnnounce': '{name} følges nå opp under Søknader.',
-  'deadlines.trackError': 'Kunne ikke følge opp bedriften.',
+  'deadlines.track': 'Følg med',
+  'deadlines.trackedAnnounce': 'Du følger nå med på {name} under Søknader.',
+  'deadlines.trackError': 'Kunne ikke følge med på bedriften.',
   'deadlines.loadError': 'Kunne ikke laste frister.',
   'deadlines.hideError': 'Kunne ikke skjule annonsen.',
   'deadlines.unhideError': 'Kunne ikke gjenopprette annonsen.',

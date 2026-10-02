@@ -34,7 +34,7 @@ public static class WriteEndpoints
             string feedId, LinkRequest request) =>
         {
             if (await pipeline.GetByOrgnrAsync(request.Orgnr) is null)
-                return Results.Problem(statusCode: 400, title: $"Orgnr {request.Orgnr} følges ikke opp — følg opp bedriften først.");
+                return Results.Problem(statusCode: 400, title: $"Du følger ikke med på orgnr {request.Orgnr}. Følg med på bedriften først.");
             return await SetLink(ads, feedId, request.Orgnr);
         });
         app.MapDelete("/api/ads/{feedId}/link", (IAdRepository ads, string feedId) => SetLink(ads, feedId, null));

@@ -267,7 +267,7 @@ describe('DeadlineList', () => {
     expect(retry).toBeInTheDocument()
   })
 
-  it('tracks a company on Følg opp, PUTs the pipeline endpoint and announces', async () => {
+  it('tracks a company on Følg med, PUTs the pipeline endpoint and announces', async () => {
     const user = userEvent.setup()
     const ads = [
       ad({
@@ -282,7 +282,7 @@ describe('DeadlineList', () => {
     renderList(fetchMock)
 
     await screen.findAllByRole('listitem')
-    await user.click(screen.getByRole('button', { name: 'Følg opp' }))
+    await user.click(screen.getByRole('button', { name: 'Følg med' }))
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -297,7 +297,7 @@ describe('DeadlineList', () => {
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Nyfjell Spill AS følges nå opp under Søknader.')
+      expect(liveRegion).toHaveTextContent('Du følger nå med på Nyfjell Spill AS under Søknader.')
     })
   })
 
@@ -318,11 +318,11 @@ describe('DeadlineList', () => {
     expect(within(rows[0]).getByText('Nyfjell Spill AS')).toBeInTheDocument()
     expect(within(rows[0]).queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
 
-    await user.click(within(rows[0]).getByRole('button', { name: 'Følg opp' }))
+    await user.click(within(rows[0]).getByRole('button', { name: 'Følg med' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Nyfjell Spill AS følges nå opp under Søknader.')
+      expect(liveRegion).toHaveTextContent('Du følger nå med på Nyfjell Spill AS under Søknader.')
     })
   })
 
@@ -359,7 +359,7 @@ describe('DeadlineList', () => {
     const updated = (await screen.findAllByRole('listitem'))[0]
     expect(within(updated).getByText('Søkt')).toBeInTheDocument()
     expect(within(updated).getByRole('button', { name: 'Koble fra' })).toBeInTheDocument()
-    expect(within(updated).queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
+    expect(within(updated).queryByRole('button', { name: 'Følg med' })).not.toBeInTheDocument()
     await waitFor(() =>
       expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
         'Annonsen er koblet til AKME IT Solutions AS.'
@@ -463,7 +463,7 @@ describe('DeadlineList', () => {
     })
     const updated = (await screen.findAllByRole('listitem'))[0]
     expect(within(updated).queryByText('Søkt')).not.toBeInTheDocument()
-    expect(within(updated).getByRole('button', { name: 'Følg opp' })).toBeInTheDocument()
+    expect(within(updated).getByRole('button', { name: 'Følg med' })).toBeInTheDocument()
     await waitFor(() =>
       expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent(
         'Koblingen er fjernet.'
@@ -476,7 +476,7 @@ describe('DeadlineList', () => {
     renderList(fakeServer(ads))
 
     await screen.findAllByRole('listitem')
-    expect(screen.queryByRole('button', { name: 'Følg opp' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Følg med' })).not.toBeInTheDocument()
   })
 
   describe('with a saved focus', () => {
