@@ -75,10 +75,10 @@ describe('NeedsAction', () => {
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Skal med/)
-    expect(item).toHaveTextContent('aktiv, ikke søkt — frist om 3 dager')
+    expect(item).toHaveTextContent('følger med, ikke søkt — frist om 3 dager')
 
     const today = screen.getByText(/Frist i dag/)
-    expect(today).toHaveTextContent('aktiv, ikke søkt — frist i dag')
+    expect(today).toHaveTextContent('følger med, ikke søkt — frist i dag')
 
     expect(screen.queryByText(/Feil status/)).not.toBeInTheDocument()
     expect(screen.queryByText(/For langt unna/)).not.toBeInTheDocument()
@@ -90,7 +90,7 @@ describe('NeedsAction', () => {
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
-    expect(item).toHaveTextContent('aktiv, ikke søkt — frist utløpt')
+    expect(item).toHaveTextContent('følger med, ikke søkt — frist utløpt')
   })
 
   it('renders nothing when there are no near-frist active entries', async () => {

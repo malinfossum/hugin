@@ -89,7 +89,7 @@ describe('ApplicationsView', () => {
 
     await screen.findByText('Aktiv-firma')
 
-    const activeSection = screen.getByRole('heading', { name: 'Aktiv' }).closest('section')
+    const activeSection = screen.getByRole('heading', { name: 'Følger med' }).closest('section')
     const appliedSection = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
     const answeredSection = screen.getByRole('heading', { name: 'Svar' }).closest('section')
     if (!activeSection || !appliedSection || !answeredSection) {
@@ -120,7 +120,7 @@ describe('ApplicationsView', () => {
 
     await screen.findByText('Utgått-firma')
 
-    const activeSection = screen.getByRole('heading', { name: 'Aktiv' }).closest('section')
+    const activeSection = screen.getByRole('heading', { name: 'Følger med' }).closest('section')
     const expiredSection = screen.getByRole('heading', { name: 'Utgått' }).closest('section')
     const appliedSection = screen.getByRole('heading', { name: 'Søkt' }).closest('section')
     if (!activeSection || !expiredSection || !appliedSection) throw new Error('section not found')
@@ -156,13 +156,13 @@ describe('ApplicationsView', () => {
     expect(within(statusSelect).queryByRole('option', { name: 'Utgått' })).not.toBeInTheDocument()
   })
 
-  it('shows the active-hint text under the Aktiv heading', async () => {
+  it('shows the hint text under the Følger med heading', async () => {
     renderView(fakeServer([entry({ orgnr: '1', companyName: 'Aktiv-firma', status: 'active' })]))
 
     await screen.findByText('Aktiv-firma')
 
     expect(
-      screen.getByText('Aktiv-oppføringer tas bare med i eksporten når du velger det.')
+      screen.getByText('Bedrifter du følger med på tas bare med i eksporten når du velger det.')
     ).toBeInTheDocument()
   })
 

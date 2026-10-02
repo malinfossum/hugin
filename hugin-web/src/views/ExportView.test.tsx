@@ -71,7 +71,7 @@ describe('ExportView', () => {
     })
   })
 
-  it('choosing Inkluder aktive refetches with includeActive=true', async () => {
+  it('choosing Inkluder de du følger med på refetches with includeActive=true', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
     const user = userEvent.setup()
@@ -83,7 +83,7 @@ describe('ExportView', () => {
     })
 
     expect(screen.getByLabelText('Oppføringer')).toHaveValue('default')
-    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder aktive')
+    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder de du følger med på')
 
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
@@ -103,13 +103,13 @@ describe('ExportView', () => {
     expect(screen.getByLabelText('Oppføringer')).toBeInTheDocument()
   })
 
-  it('leaving the All scope after choosing Inkluder aktive drops includeActive from the URL', async () => {
+  it('leaving the All scope after choosing Inkluder de du følger med på drops includeActive from the URL', async () => {
     const fetchMock = fakeServer()
     renderView(fetchMock)
     const user = userEvent.setup()
 
     await user.selectOptions(screen.getByLabelText('Omfang'), 'Alt')
-    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder aktive')
+    await user.selectOptions(screen.getByLabelText('Oppføringer'), 'Inkluder de du følger med på')
     await vi.waitFor(() => {
       const urls = fetchMock.mock.calls.map(([u]) => u)
       expect(urls).toContain('/api/extract?scope=all&format=md&includeActive=true')

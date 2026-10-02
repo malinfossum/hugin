@@ -22,7 +22,7 @@ export const nb = {
   'common.all': 'Alle',
   'common.branchTag': '[avdeling]',
 
-  'status.active': 'Aktiv',
+  'status.active': 'Følger med',
   'status.applied': 'Søkt',
   'status.answered': 'Svar',
   'status.expired': 'Utgått',
@@ -71,7 +71,7 @@ export const nb = {
   'needsAction.heading': 'Trenger handling',
   'needsAction.description': 'Annonser fra bedrifter du følger med på, med frist innen 7 dager.',
   'needsAction.loadError': 'Kunne ikke laste annonser.',
-  'needsAction.notApplied': 'aktiv, ikke søkt',
+  'needsAction.notApplied': 'følger med, ikke søkt',
   'needsAction.item': '{title} — {status} — {deadline}',
   'needsAction.deadlineToday': 'frist i dag',
   'needsAction.deadlineExpired': 'frist utløpt',
@@ -126,7 +126,8 @@ export const nb = {
   'applications.sortStarred': 'Stjerne først',
   'applications.sortUpdated': 'Sist oppdatert',
   'applications.sortName': 'Navn',
-  'applications.activeHint': 'Aktiv-oppføringer tas bare med i eksporten når du velger det.',
+  'applications.activeHint':
+    'Bedrifter du følger med på tas bare med i eksporten når du velger det.',
   'applications.expiredHint':
     'Alle annonsene har gått ut. Oppføringen flyttes tilbake når det kommer en ny.',
   'applications.missingWhy': '⚠ mangler begrunnelse',
@@ -183,7 +184,7 @@ export const nb = {
   'export.scopeChoose': 'Velg …',
   'export.entriesLabel': 'Oppføringer',
   'export.entriesDefault': 'Kun søkt og svar',
-  'export.entriesAll': 'Inkluder aktive',
+  'export.entriesAll': 'Inkluder de du følger med på',
   'export.enterCategoryHint': 'Skriv inn en kategori for å se forhåndsvisning.',
   'export.loadError': 'Kunne ikke laste eksport.',
   'export.copiedAnnounce': 'Kopiert til utklippstavlen.',
