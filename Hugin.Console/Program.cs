@@ -283,7 +283,7 @@ internal static class Program
             if (result.CompanyFetchedFromBrreg)
                 Console.WriteLine($"Hentet {command.Orgnr} fra Enhetsregisteret.");
 
-            Console.WriteLine($"{result.Entry.Orgnr}: {StatusLabel(result.Entry.Status)}");
+            Console.WriteLine($"{result.Entry.Orgnr}: {CliLabels.Status(result.Entry.Status)}");
             if (!string.IsNullOrWhiteSpace(result.Entry.Why)) Console.WriteLine($"  Grunn: {result.Entry.Why}");
             if (!string.IsNullOrWhiteSpace(result.Entry.Note)) Console.WriteLine($"  Notat: {result.Entry.Note}");
             if (!string.IsNullOrWhiteSpace(result.Entry.SvarText)) Console.WriteLine($"  Svar: {result.Entry.SvarText}");
@@ -297,7 +297,7 @@ internal static class Program
                         ? "samme hovedenhet i Enhetsregisteret"
                         : $"samme merkenavn «{BrandName.Token(related.Name)}»";
                     Console.Error.WriteLine(
-                        $"  {related.Entry.Orgnr} {related.Name} ({StatusLabel(related.Entry.Status)}) — {reason}");
+                        $"  {related.Entry.Orgnr} {related.Name} ({CliLabels.Status(related.Entry.Status)}) — {reason}");
                 }
 
                 Console.Error.WriteLine($"  Angre: hugin untrack {result.Entry.Orgnr}");
@@ -335,7 +335,7 @@ internal static class Program
         var entry = result.Removal.Entry;
         var who = result.CompanyName is null ? entry.Orgnr : $"{entry.Orgnr} {result.CompanyName}";
         Console.WriteLine($"Fjernet {who} fra oppfølgingen.");
-        Console.WriteLine($"  Status: {StatusLabel(entry.Status)}");
+        Console.WriteLine($"  Status: {CliLabels.Status(entry.Status)}");
         if (entry.Starred) Console.WriteLine("  Stjernemerket: ja");
         if (!string.IsNullOrWhiteSpace(entry.Why)) Console.WriteLine($"  Grunn: {entry.Why}");
         if (!string.IsNullOrWhiteSpace(entry.Note)) Console.WriteLine($"  Notat: {entry.Note}");
@@ -412,7 +412,7 @@ internal static class Program
         foreach (var entry in entries)
         {
             var company = await repository.GetAsync(entry.Orgnr);
-            Console.WriteLine($"{entry.Updated:yyyy-MM-dd}  {StatusLabel(entry.Status),-16}  "
+            Console.WriteLine($"{entry.Updated:yyyy-MM-dd}  {CliLabels.Status(entry.Status),-16}  "
                 + $"{company?.Name ?? entry.Orgnr}");
             Console.WriteLine($"    Grunn: {(string.IsNullOrWhiteSpace(entry.Why) ? "⚠ mangler begrunnelse" : entry.Why)}");
         }
@@ -438,14 +438,6 @@ internal static class Program
 
     private static string MunicipalityName(HuginConfig config, string? number) =>
         config.Municipalities.FirstOrDefault(m => m.Number == number)?.Name ?? number ?? "ukjent";
-
-    private static string StatusLabel(PipelineStatus status) => status switch
-    {
-        PipelineStatus.Active => "aktiv",
-        PipelineStatus.Applied => "søkt",
-        PipelineStatus.Answered => "svar",
-        _ => status.ToString(),
-    };
 
     private static void PrintUsage()
     {
