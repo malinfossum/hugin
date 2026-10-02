@@ -7,8 +7,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import { FYLKER, fylkeOf } from '../fylker'
 import { useT } from '../i18n'
+import { FYLKER, fylkeOf } from '../lib/fylker'
 import {
   normalizeRegions,
   type Region,
@@ -17,8 +17,8 @@ import {
   tickKommune,
   untickFylke,
   untickKommune,
-} from '../regions'
-import type { KommuneDto } from '../types'
+} from '../lib/regions'
+import type { KommuneDto } from '../lib/types'
 import { useAnnounce } from './LiveRegion'
 
 interface Props {

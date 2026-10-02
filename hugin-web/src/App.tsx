@@ -1,18 +1,18 @@
 import { type ReactElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { api } from './api'
 import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
-import { fromDiscoveryConfig, toFocusSeed } from './coverage'
-import { FocusProvider, KNOWN_CATEGORIES, useFocus } from './focus'
+import { FocusProvider, KNOWN_CATEGORIES, useFocus } from './context/focus'
+import { ReadOnlyProvider, useReadOnly } from './context/readOnly'
 import { LanguageProvider, type TranslationKey, useLang, useT } from './i18n'
-import { ReadOnlyProvider, useReadOnly } from './readOnly'
-import { parseRoute, type Route, routePath } from './routing'
-import type { DiscoveryConfigDto } from './types'
+import { api } from './lib/api'
+import { fromDiscoveryConfig, toFocusSeed } from './lib/coverage'
+import { parseRoute, type Route, routePath } from './lib/routing'
+import type { DiscoveryConfigDto } from './lib/types'
 import { ApplicationsView } from './views/ApplicationsView'
-import { BedrifterView } from './views/BedrifterView'
+import { CompaniesView } from './views/CompaniesView'
 import { DashboardView } from './views/dashboard/DashboardView'
-import { EksportView } from './views/EksportView'
+import { ExportView } from './views/ExportView'
 import { SettingsView } from './views/SettingsView'
 import './styles/main.css'
 
@@ -94,14 +94,14 @@ function AppShell() {
     ),
     applications: () => <ApplicationsView />,
     companies: () => (
-      <BedrifterView
+      <CompaniesView
         selectedOrgnr={route.company}
         onOpenCompany={(orgnr) => navigate({ view: 'companies', company: orgnr })}
         onCloseCompany={() => navigate({ view: 'companies', company: null })}
         onOpenSettings={() => switchView('settings')}
       />
     ),
-    export: () => <EksportView />,
+    export: () => <ExportView />,
     settings: () => <SettingsView onSourcesChanged={bumpSources} />,
   }
 

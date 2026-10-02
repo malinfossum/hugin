@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { FYLKER } from '../fylker'
-import type { Region } from '../regions'
-import type { KommuneDto } from '../types'
+import { FYLKER } from '../lib/fylker'
+import type { Region } from '../lib/regions'
+import type { KommuneDto } from '../lib/types'
 import { AreaPickerDialog, searchKey } from './AreaPickerDialog'
 import { LiveRegionProvider } from './LiveRegion'
 

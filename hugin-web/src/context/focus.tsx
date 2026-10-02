@@ -6,8 +6,8 @@ import {
   useContext,
   useState,
 } from 'react'
-import { FYLKER } from './fylker'
-import { normalizeRegions, type Region, regionMatches } from './regions'
+import { FYLKER } from '../lib/fylker'
+import { normalizeRegions, type Region, regionMatches } from '../lib/regions'
 
 /** The render lens (spec v3.6 A1): several regions, each a fylke whole or narrowed to kommuner,
  * plus NAV categories. Per-browser, in localStorage; the server never sees it. */

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../../api'
 import { useAnnounce } from '../../components/LiveRegion'
-import { formatDateTime } from '../../dates'
+import { useReadOnly } from '../../context/readOnly'
 import { type T, useT } from '../../i18n'
-import { useReadOnly } from '../../readOnly'
-import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../types'
+import { ApiError, api } from '../../lib/api'
+import { formatDateTime } from '../../lib/dates'
+import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../lib/types'
 
 function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
   return source ? formatDateTime(source.lastSyncUtc) : t('sync.never')

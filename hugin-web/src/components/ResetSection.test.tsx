@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FocusProvider, saveFocus } from '../focus'
-import { ReadOnlyProvider } from '../readOnly'
-import type { StatusDto } from '../types'
+import { FocusProvider, saveFocus } from '../context/focus'
+import { ReadOnlyProvider } from '../context/readOnly'
+import type { StatusDto } from '../lib/types'
 import { LiveRegionProvider } from './LiveRegion'
 import { ResetSection } from './ResetSection'
 

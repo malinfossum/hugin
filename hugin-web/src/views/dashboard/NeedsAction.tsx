@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../../api'
-import { adMatchesFocus, useFocus } from '../../focus'
+import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
-import type { AdDto } from '../../types'
+import { api } from '../../lib/api'
+import type { AdDto } from '../../lib/types'
 
-function fristText(daysLeft: number, t: T): string {
-  if (daysLeft < 0) return t('trenger.deadlineExpired')
-  if (daysLeft === 0) return t('trenger.deadlineToday')
-  if (daysLeft === 1) return t('trenger.deadlineInOneDay')
-  return t('trenger.deadlineInDays', { n: daysLeft })
+function deadlineText(daysLeft: number, t: T): string {
+  if (daysLeft < 0) return t('needsAction.deadlineExpired')
+  if (daysLeft === 0) return t('needsAction.deadlineToday')
+  if (daysLeft === 1) return t('needsAction.deadlineInOneDay')
+  return t('needsAction.deadlineInDays', { n: daysLeft })
 }
 
-export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
+export function NeedsAction({ refreshKey }: { refreshKey: number }) {
   const [ads, setAds] = useState<AdDto[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const { focus } = useFocus()
@@ -22,7 +22,7 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
     return api
       .get<AdDto[]>('/api/ads')
       .then(setAds)
-      .catch(() => setLoadError(t('trenger.loadError')))
+      .catch(() => setLoadError(t('needsAction.loadError')))
   }, [t])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
@@ -30,7 +30,7 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
     load()
   }, [load, refreshKey])
 
-  const trenger = ads.filter(
+  const needsAction = ads.filter(
     (ad) =>
       adMatchesFocus(ad, focus) &&
       ad.pipelineStatus === 'active' &&
@@ -38,11 +38,11 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
       ad.daysLeft <= 7
   )
 
-  if (!loadError && trenger.length === 0) return null
+  if (!loadError && needsAction.length === 0) return null
 
   return (
-    <section aria-labelledby="trenger-heading" className="trenger-handling alert alert-warning">
-      <h2 id="trenger-heading">{t('trenger.heading')}</h2>
+    <section aria-labelledby="needs-action-heading" className="needs-action alert alert-warning">
+      <h2 id="needs-action-heading">{t('needsAction.heading')}</h2>
       {loadError && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {loadError}
@@ -52,12 +52,12 @@ export function TrengerHandling({ refreshKey }: { refreshKey: number }) {
         </p>
       )}
       <ul>
-        {trenger.map((ad) => (
+        {needsAction.map((ad) => (
           <li key={ad.feedId}>
-            {t('trenger.item', {
+            {t('needsAction.item', {
               title: ad.title,
-              status: t('trenger.notApplied'),
-              deadline: fristText(ad.daysLeft as number, t),
+              status: t('needsAction.notApplied'),
+              deadline: deadlineText(ad.daysLeft as number, t),
             })}
           </li>
         ))}

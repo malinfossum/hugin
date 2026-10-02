@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../api'
-import { displayCompanyName } from '../companyName'
 import { CompanyLink } from '../components/CompanyLink'
-import { formatDate } from '../dates'
 import { type T, useT } from '../i18n'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
+import { ApiError, api } from '../lib/api'
+import { displayCompanyName } from '../lib/companyName'
+import { formatDate } from '../lib/dates'
+import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
 
 function publishedText(published: string | null, t: T): string | null {
   return published ? t('companies.published', { date: formatDate(published) }) : null

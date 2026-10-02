@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FocusProvider } from '../../focus'
+import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
-import type { AdDto } from '../../types'
-import { TrengerHandling } from './TrengerHandling'
+import type { AdDto } from '../../lib/types'
+import { NeedsAction } from './NeedsAction'
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -37,22 +37,22 @@ function mockFetch(ads: AdDto[]) {
   return vi.fn(() => Promise.resolve(jsonResponse(ads)))
 }
 
-function renderTrenger(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+function renderNeedsAction(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LanguageProvider>
-      <TrengerHandling refreshKey={refreshKey} />
+      <NeedsAction refreshKey={refreshKey} />
     </LanguageProvider>
   )
 }
 
-/** Same as renderTrenger but wrapped in FocusProvider, for tests that seed a focus. */
-function renderTrengerWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+/** Same as renderNeedsAction but wrapped in FocusProvider, for tests that seed a focus. */
+function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LanguageProvider>
       <FocusProvider>
-        <TrengerHandling refreshKey={refreshKey} />
+        <NeedsAction refreshKey={refreshKey} />
       </FocusProvider>
     </LanguageProvider>
   )
@@ -63,7 +63,7 @@ afterEach(() => {
   window.localStorage.removeItem('hugin-focus')
 })
 
-describe('TrengerHandling', () => {
+describe('NeedsAction', () => {
   it('shows only active entries with a near frist', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Skal med', pipelineStatus: 'active', daysLeft: 3 }),
@@ -72,7 +72,7 @@ describe('TrengerHandling', () => {
       ad({ feedId: 'a4', title: 'Ingen frist', pipelineStatus: 'active', daysLeft: null }),
       ad({ feedId: 'a5', title: 'Frist i dag', pipelineStatus: 'active', daysLeft: 0 }),
     ]
-    renderTrenger(mockFetch(ads))
+    renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Skal med/)
     expect(item).toHaveTextContent('aktiv, ikke søkt — frist om 3 dager')
@@ -87,7 +87,7 @@ describe('TrengerHandling', () => {
 
   it('shows "frist utløpt" for an overdue (negative daysLeft) active entry', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'active', daysLeft: -1 })]
-    renderTrenger(mockFetch(ads))
+    renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
     expect(item).toHaveTextContent('aktiv, ikke søkt — frist utløpt')
@@ -99,7 +99,7 @@ describe('TrengerHandling', () => {
       ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),
     ]
     const fetchMock = mockFetch(ads)
-    const { container } = renderTrenger(fetchMock)
+    const { container } = renderNeedsAction(fetchMock)
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled()
@@ -113,7 +113,7 @@ describe('TrengerHandling', () => {
     vi.stubGlobal('fetch', failing)
     render(
       <LanguageProvider>
-        <TrengerHandling refreshKey={0} />
+        <NeedsAction refreshKey={0} />
       </LanguageProvider>
     )
 
@@ -139,7 +139,7 @@ describe('TrengerHandling', () => {
       )
     }
 
-    // TrengerHandling's own filter already requires pipelineStatus === 'active', so every ad it
+    // NeedsAction's own filter already requires pipelineStatus === 'active', so every ad it
     // shows is tracked — the adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
     // to protect pipeline deadlines) makes the focus lens a structural no-op here. This ad sits
     // outside the seeded focus region (Oslo, kommune '0301', vs. focus fylke '34') and would be
@@ -156,7 +156,7 @@ describe('TrengerHandling', () => {
           daysLeft: 3,
         }),
       ]
-      renderTrengerWithFocus(mockFetch(ads))
+      renderNeedsActionWithFocus(mockFetch(ads))
 
       expect(await screen.findByText(/Oslo-jobb, sporet/)).toBeInTheDocument()
     })

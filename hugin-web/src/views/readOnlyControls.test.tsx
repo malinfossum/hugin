@@ -1,12 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
-import { FocusProvider } from '../focus'
+import { FocusProvider } from '../context/focus'
+import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
-import { ReadOnlyProvider } from '../readOnly'
 import { ApplicationsView } from './ApplicationsView'
-import { FristerList } from './dashboard/FristerList'
-import { NyttSidenSist } from './dashboard/NyttSidenSist'
+import { DeadlineList } from './dashboard/DeadlineList'
+import { NewSinceLastVisit } from './dashboard/NewSinceLastVisit'
 import { SyncHeader } from './dashboard/SyncHeader'
 import { SettingsView } from './SettingsView'
 
@@ -116,16 +116,16 @@ describe('read-only mode hides write controls', () => {
     expect(screen.queryByRole('button', { name: 'Synk nå' })).not.toBeInTheDocument()
   })
 
-  it('NyttSidenSist has no «Merk som sett»', async () => {
+  it('NewSinceLastVisit has no «Merk som sett»', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<NyttSidenSist refreshKey={0} />)
+    wrap(<NewSinceLastVisit refreshKey={0} />)
     await screen.findByText('Utvikler')
     expect(screen.queryByRole('button', { name: 'Merk som sett' })).not.toBeInTheDocument()
   })
 
-  it('FristerList has no track, link or hide buttons', async () => {
+  it('DeadlineList has no track, link or hide buttons', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<FristerList refreshKey={0} />)
+    wrap(<DeadlineList refreshKey={0} />)
     await screen.findByText('Utvikler')
     for (const name of ['Følg opp', 'Koble til bedrift', 'Skjul']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()

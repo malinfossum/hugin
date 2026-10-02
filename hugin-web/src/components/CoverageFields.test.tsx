@@ -1,8 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { NO_OTHERS } from '../coverage'
-import { FYLKER } from '../fylker'
+import { NO_OTHERS } from '../lib/coverage'
+import { FYLKER } from '../lib/fylker'
 import { CoverageFields } from './CoverageFields'
 
 const kommuner = [

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { LanguageProvider } from '../i18n'
-import type { PipelineDto, TrackResponse } from '../types'
+import type { PipelineDto, TrackResponse } from '../lib/types'
 import { ApplicationsView } from './ApplicationsView'
 
 const SORT_STORAGE_KEY = 'hugin-soknader-sortering'

@@ -1,5 +1,5 @@
 import { useT } from '../i18n'
-import { googleSearchUrl } from '../links'
+import { googleSearchUrl } from '../lib/links'
 
 /** Every company row/detail always offers a working link (spec decision 6, amended v3.2):
  * the verified website when present, else a muted note plus a Google search fallback.

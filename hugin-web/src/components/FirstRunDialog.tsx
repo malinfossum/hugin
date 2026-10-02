@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, api } from '../api'
+import type { Focus } from '../context/focus'
+import { KNOWN_CATEGORIES } from '../context/focus'
+import { useT } from '../i18n'
+import { ApiError, api } from '../lib/api'
 import {
   type CoverageDraft,
   effectiveDraft,
@@ -7,11 +10,8 @@ import {
   NO_OTHERS,
   toDiscoveryRequest,
   toFocusSeed,
-} from '../coverage'
-import type { Focus } from '../focus'
-import { KNOWN_CATEGORIES } from '../focus'
-import { useT } from '../i18n'
-import type { DiscoveryConfigDto, KommuneDto } from '../types'
+} from '../lib/coverage'
+import type { DiscoveryConfigDto, KommuneDto } from '../lib/types'
 import { CoverageFields } from './CoverageFields'
 
 interface Props {

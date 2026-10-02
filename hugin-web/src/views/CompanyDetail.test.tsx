@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../i18n'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../types'
+import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
 import { CompanyDetail } from './CompanyDetail'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {

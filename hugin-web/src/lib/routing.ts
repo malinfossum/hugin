@@ -1,4 +1,4 @@
-import type { ViewName } from './App'
+import type { ViewName } from '../App'
 
 export type Route = { view: ViewName; company: string | null }
 

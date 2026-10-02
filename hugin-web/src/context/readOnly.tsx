@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
-import { api } from './api'
-import type { StatusDto } from './types'
+import { api } from '../lib/api'
+import type { StatusDto } from '../lib/types'
 
 interface ReadOnlyState {
   /** true only on the hosted demo (server `--public`). */

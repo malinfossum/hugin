@@ -1,11 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { LiveRegionProvider } from '../components/LiveRegion'
+import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
-import { ReadOnlyProvider } from '../readOnly'
-import type { FocusConfigDto, NacePreviewDto } from '../types'
+import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
 import { FocusSection } from './FocusSection'
+import { LiveRegionProvider } from './LiveRegion'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(body === undefined ? null : JSON.stringify(body), {

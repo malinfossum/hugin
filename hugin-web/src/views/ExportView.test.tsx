@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { LanguageProvider } from '../i18n'
-import { EksportView } from './EksportView'
+import { ExportView } from './ExportView'
 
 const BODY_WITH_SCRIPT = '# Rapport\n\n- Acme AS: <script>alert(1)</script>\n'
 
@@ -29,7 +29,7 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <EksportView />
+        <ExportView />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -39,7 +39,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('EksportView', () => {
+describe('ExportView', () => {
   it('renders fetched content verbatim as text inside a <pre>, never as markup', async () => {
     const { container } = renderView(fakeServer())
     const user = userEvent.setup()

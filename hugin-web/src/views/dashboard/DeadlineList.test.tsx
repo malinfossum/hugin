@@ -2,10 +2,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
-import { FocusProvider } from '../../focus'
+import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
-import type { AdDto } from '../../types'
-import { FristerList } from './FristerList'
+import type { AdDto } from '../../lib/types'
+import { DeadlineList } from './DeadlineList'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -91,7 +91,7 @@ function renderList(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
   return render(
     <LanguageProvider>
       <LiveRegionProvider>
-        <FristerList refreshKey={refreshKey} />
+        <DeadlineList refreshKey={refreshKey} />
       </LiveRegionProvider>
     </LanguageProvider>
   )
@@ -104,7 +104,7 @@ function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0
     <LanguageProvider>
       <LiveRegionProvider>
         <FocusProvider>
-          <FristerList refreshKey={refreshKey} />
+          <DeadlineList refreshKey={refreshKey} />
         </FocusProvider>
       </LiveRegionProvider>
     </LanguageProvider>
@@ -116,7 +116,7 @@ afterEach(() => {
   window.localStorage.removeItem('hugin-focus')
 })
 
-describe('FristerList', () => {
+describe('DeadlineList', () => {
   it('renders rows in API order and shows "ingen frist" for a null-expires row', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Første', daysLeft: 2, expires: '2026-08-21T00:00:00Z' }),

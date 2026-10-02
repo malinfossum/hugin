@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../api'
-import { KNOWN_CATEGORIES, useFocus } from '../focus'
+import { KNOWN_CATEGORIES, useFocus } from '../context/focus'
 import { useT } from '../i18n'
-import type { Region } from '../regions'
-import type { KommuneDto } from '../types'
+import { api } from '../lib/api'
+import type { Region } from '../lib/regions'
+import type { KommuneDto } from '../lib/types'
 import { AreaPickerDialog } from './AreaPickerDialog'
 import { useAnnounce } from './LiveRegion'
 import { RegionChips } from './RegionChips'
@@ -17,7 +17,7 @@ const NO_REGIONS: Region[] = []
  * This section owns the one /api/kommuner fetch and hands the result to both the chips (as a
  * name map) and the dialog, so closing the dialog mid-request cannot touch an unmounted
  * component. A failed fetch means numbers in the chips and fylke-only ticking in the dialog. */
-export function VisningsfilterSection() {
+export function DisplayFilterSection() {
   const t = useT()
   const announce = useAnnounce()
   const { focus, setFocus, resetFocus } = useFocus()

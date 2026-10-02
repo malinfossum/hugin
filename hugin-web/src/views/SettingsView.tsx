@@ -1,14 +1,14 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
-import { ApiError, api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageSection } from '../components/CoverageSection'
+import { DisplayFilterSection } from '../components/DisplayFilterSection'
 import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
 import { ResetSection } from '../components/ResetSection'
-import { VisningsfilterSection } from '../components/VisningsfilterSection'
+import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
-import { useReadOnly } from '../readOnly'
-import type { SourceDto } from '../types'
+import { ApiError, api } from '../lib/api'
+import type { SourceDto } from '../lib/types'
 
 interface Props {
   onSourcesChanged: () => void
@@ -23,7 +23,7 @@ const EMPTY_FORM: SourceFormState = { label: '', url: '' }
 
 /** Settings view (spec v3.2 item 8): sources CRUD + reorder. Language and theme are topbar
  * toggles only (v3.6.1) — they used to be duplicated as cards here. The Dekning section (v3.4)
- * lives in CoverageSection, and the Visningsfilter card (v3.6) lives in VisningsfilterSection.
+ * lives in CoverageSection, and the Visningsfilter card (v3.6) lives in DisplayFilterSection.
  * Brreg/NAV aren't editable here — they're fixed, i18n-sourced entries shown on the dashboard's
  * SourcesCard, not rows in this list. */
 export function SettingsView({ onSourcesChanged }: Props) {
@@ -292,7 +292,7 @@ export function SettingsView({ onSourcesChanged }: Props) {
 
       <FocusSection previewVersion={coverageVersion} />
 
-      <VisningsfilterSection />
+      <DisplayFilterSection />
 
       <ResetSection />
 
