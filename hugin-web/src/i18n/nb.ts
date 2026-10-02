@@ -69,7 +69,8 @@ export const nb = {
   'settings.focusResetDone': 'Oppstartsvalget vises ved neste start.',
 
   'needsAction.heading': 'Trenger handling',
-  'needsAction.description': 'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.',
+  'needsAction.description':
+    'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.',
   'needsAction.loadError': 'Kunne ikke laste annonser.',
   'needsAction.notApplied': 'følger med, ikke søkt',
   'needsAction.item': '{title} — {status} — {deadline}',

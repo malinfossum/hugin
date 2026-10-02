@@ -69,7 +69,8 @@ export const en = {
   'settings.focusResetDone': 'The first-run choice will show again.',
 
   'needsAction.heading': 'Needs action',
-  'needsAction.description': "Ads from companies you're watching that close within 7 days or have already closed.",
+  'needsAction.description':
+    "Ads from companies you're watching that close within 7 days or have already closed.",
   'needsAction.loadError': 'Could not load ads.',
   'needsAction.notApplied': 'watching, not applied',
   'needsAction.item': '{title} — {status} — {deadline}',
