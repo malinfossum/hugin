@@ -61,3 +61,23 @@ describe('detectLang (browser fallback, no stored preference)', () => {
     expect(detectLang()).toBe('en')
   })
 })
+
+describe('«aktiv» means an open ad, nothing else', () => {
+  // The pipeline status reads «Følger med» / "Watching". These are the keys that name that
+  // status. «aktive annonser» and «Aktive frister» elsewhere mean open ads and must stay, so the
+  // guard names keys instead of scanning the tables.
+  const watchingKeys = [
+    'status.active',
+    'needsAction.notApplied',
+    'applications.activeHint',
+    'export.entriesAll',
+  ] as const
+
+  it.each(watchingKeys)('nb %s does not say aktiv', (key) => {
+    expect(nb[key]).not.toMatch(/\baktiv/i)
+  })
+
+  it.each(watchingKeys)('en %s does not say active', (key) => {
+    expect(en[key]).not.toMatch(/\bactive/i)
+  })
+})

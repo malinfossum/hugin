@@ -22,7 +22,7 @@ export const en = {
   'common.all': 'All',
   'common.branchTag': '[branch]',
 
-  'status.active': 'Active',
+  'status.active': 'Watching',
   'status.applied': 'Applied',
   'status.answered': 'Answered',
   'status.expired': 'Expired',
@@ -43,6 +43,7 @@ export const en = {
   'sync.failedPartial': 'Sync partially failed: {error}',
 
   'sources.title': 'Sources',
+  'sources.description': 'The registers Hugin reads from, and job sites you check yourself.',
   'sources.loadError': 'Could not load sources.',
 
   'settings.sourcesHeading': 'Sources',
@@ -68,8 +69,9 @@ export const en = {
   'settings.focusResetDone': 'The first-run choice will show again.',
 
   'needsAction.heading': 'Needs action',
+  'needsAction.description': "Ads from companies you're watching that close within 7 days.",
   'needsAction.loadError': 'Could not load ads.',
-  'needsAction.notApplied': 'active, not applied',
+  'needsAction.notApplied': 'watching, not applied',
   'needsAction.item': '{title} — {status} — {deadline}',
   'needsAction.deadlineToday': 'due today',
   'needsAction.deadlineExpired': 'deadline expired',
@@ -77,6 +79,7 @@ export const en = {
   'needsAction.deadlineInOneDay': 'due in 1 day',
 
   'deadlines.heading': 'Deadlines',
+  'deadlines.description': 'Open ads in your area, closest deadline first.',
   'deadlines.showLabel': 'Show',
   'deadlines.showDefault': 'Active deadlines',
   'deadlines.showAll': 'Including hidden',
@@ -106,6 +109,7 @@ export const en = {
   'deadlines.unlinkError': 'Could not remove the link.',
 
   'newSince.heading': 'New since last visit',
+  'newSince.description': 'Companies and ads added since you last pressed "Mark as seen".',
   'newSince.loadError': 'Could not load new items.',
   'newSince.noSyncYet': 'No sync has run yet — press Sync now.',
   'newSince.newCompanies': 'New companies ({n})',
@@ -121,7 +125,7 @@ export const en = {
   'applications.sortStarred': 'Starred first',
   'applications.sortUpdated': 'Last updated',
   'applications.sortName': 'Name',
-  'applications.activeHint': 'Active entries are only exported when you opt in.',
+  'applications.activeHint': "Companies you're watching are only exported when you opt in.",
   'applications.expiredHint':
     'Every ad has expired. The entry moves back on its own when a new one appears.',
   'applications.missingWhy': '⚠ missing justification',
@@ -178,7 +182,7 @@ export const en = {
   'export.scopeChoose': 'Choose …',
   'export.entriesLabel': 'Entries',
   'export.entriesDefault': 'Applied and answered only',
-  'export.entriesAll': 'Include active',
+  'export.entriesAll': "Include companies you're watching",
   'export.enterCategoryHint': 'Enter a category to see a preview.',
   'export.loadError': 'Could not load export.',
   'export.copiedAnnounce': 'Copied to clipboard.',

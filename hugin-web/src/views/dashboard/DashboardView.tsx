@@ -20,10 +20,10 @@ export function DashboardView({ sourcesVersion, onRequestCoverage }: DashboardVi
         onSyncCompleted={() => setRefreshKey((k) => k + 1)}
         onRequestCoverage={onRequestCoverage}
       />
-      <SourcesCard refreshToken={sourcesVersion} />
       <NeedsAction refreshKey={refreshKey} />
       <DeadlineList refreshKey={refreshKey} />
       <NewSinceLastVisit refreshKey={refreshKey} />
+      <SourcesCard refreshToken={sourcesVersion} />
     </div>
   )
 }

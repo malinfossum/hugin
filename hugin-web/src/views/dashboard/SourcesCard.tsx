@@ -28,6 +28,7 @@ export function SourcesCard({ refreshToken }: { refreshToken: number }) {
   return (
     <section aria-labelledby="sources-heading" className="sources-card card stack stack-sm">
       <h2 id="sources-heading">{t('sources.title')}</h2>
+      <p className="text-muted">{t('sources.description')}</p>
       <ul className="cluster cluster-sm">
         <li>
           <a href="https://www.brreg.no" target="_blank" rel="noopener noreferrer">

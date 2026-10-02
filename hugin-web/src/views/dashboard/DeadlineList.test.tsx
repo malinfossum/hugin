@@ -117,6 +117,14 @@ afterEach(() => {
 })
 
 describe('DeadlineList', () => {
+  it('labels a watched ad «Følger med», never «Aktiv»', async () => {
+    renderList(fakeServer([ad({ feedId: 'a1', title: 'Fulgt annonse', pipelineStatus: 'active' })]))
+
+    const row = (await screen.findByText('Fulgt annonse')).closest('li') as HTMLElement
+    expect(within(row).getByText('Følger med')).toBeInTheDocument()
+    expect(within(row).queryByText('Aktiv')).not.toBeInTheDocument()
+  })
+
   it('renders rows in API order and shows "ingen frist" for a null-expires row', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Første', daysLeft: 2, expires: '2026-08-21T00:00:00Z' }),

@@ -43,6 +43,7 @@ export function NeedsAction({ refreshKey }: { refreshKey: number }) {
   return (
     <section aria-labelledby="needs-action-heading" className="needs-action alert alert-warning">
       <h2 id="needs-action-heading">{t('needsAction.heading')}</h2>
+      <p className="text-muted">{t('needsAction.description')}</p>
       {loadError && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {loadError}
