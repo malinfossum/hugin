@@ -202,6 +202,7 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
       <h2 id="deadlines-heading" ref={headingRef} tabIndex={-1}>
         {t('deadlines.heading')}
       </h2>
+      <p className="text-muted">{t('deadlines.description')}</p>
       <div className="field">
         <label className="label" htmlFor="deadlines-show">
           {t('deadlines.showLabel')}

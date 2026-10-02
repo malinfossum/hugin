@@ -43,6 +43,7 @@ export const en = {
   'sync.failedPartial': 'Sync partially failed: {error}',
 
   'sources.title': 'Sources',
+  'sources.description': 'The registers Hugin reads from, and job sites you check yourself.',
   'sources.loadError': 'Could not load sources.',
 
   'settings.sourcesHeading': 'Sources',
@@ -68,6 +69,7 @@ export const en = {
   'settings.focusResetDone': 'The first-run choice will show again.',
 
   'needsAction.heading': 'Needs action',
+  'needsAction.description': "Ads from companies you're watching that close within 7 days.",
   'needsAction.loadError': 'Could not load ads.',
   'needsAction.notApplied': 'active, not applied',
   'needsAction.item': '{title} — {status} — {deadline}',
@@ -77,6 +79,7 @@ export const en = {
   'needsAction.deadlineInOneDay': 'due in 1 day',
 
   'deadlines.heading': 'Deadlines',
+  'deadlines.description': 'Open ads in your area, closest deadline first.',
   'deadlines.showLabel': 'Show',
   'deadlines.showDefault': 'Active deadlines',
   'deadlines.showAll': 'Including hidden',
@@ -106,6 +109,7 @@ export const en = {
   'deadlines.unlinkError': 'Could not remove the link.',
 
   'newSince.heading': 'New since last visit',
+  'newSince.description': 'Companies and ads added since you last pressed "Mark as seen".',
   'newSince.loadError': 'Could not load new items.',
   'newSince.noSyncYet': 'No sync has run yet — press Sync now.',
   'newSince.newCompanies': 'New companies ({n})',

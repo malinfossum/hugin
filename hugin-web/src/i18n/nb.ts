@@ -43,6 +43,7 @@ export const nb = {
   'sync.failedPartial': 'Synk delvis feilet: {error}',
 
   'sources.title': 'Kilder',
+  'sources.description': 'Registrene Hugin henter fra, og stillingssider du sjekker selv.',
   'sources.loadError': 'Kunne ikke laste kilder.',
 
   'settings.sourcesHeading': 'Kilder',
@@ -68,6 +69,7 @@ export const nb = {
   'settings.focusResetDone': 'Oppstartsvalget vises ved neste start.',
 
   'needsAction.heading': 'Trenger handling',
+  'needsAction.description': 'Annonser fra bedrifter du følger med på, med frist innen 7 dager.',
   'needsAction.loadError': 'Kunne ikke laste annonser.',
   'needsAction.notApplied': 'aktiv, ikke søkt',
   'needsAction.item': '{title} — {status} — {deadline}',
@@ -77,6 +79,7 @@ export const nb = {
   'needsAction.deadlineInOneDay': 'frist om 1 dag',
 
   'deadlines.heading': 'Frister',
+  'deadlines.description': 'Åpne annonser i området ditt, nærmeste frist først.',
   'deadlines.showLabel': 'Vis',
   'deadlines.showDefault': 'Aktive frister',
   'deadlines.showAll': 'Også skjulte',
@@ -106,6 +109,8 @@ export const nb = {
   'deadlines.unlinkError': 'Kunne ikke fjerne koblingen.',
 
   'newSince.heading': 'Nytt siden sist',
+  'newSince.description':
+    'Bedrifter og annonser som har kommet til siden du sist trykket «Merk som sett».',
   'newSince.loadError': 'Kunne ikke laste nytt siden sist.',
   'newSince.noSyncYet': 'Ingen sync er kjørt ennå — trykk Synk nå.',
   'newSince.newCompanies': 'Nye bedrifter ({n})',
