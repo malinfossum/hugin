@@ -49,9 +49,10 @@
        the first `npm run build`) gets no manifest at all, the build warns (an error under
        -warnaserror) and ManifestEmbeddedFileProvider has nothing to read at runtime. The Link puts
        it under wwwroot/ so the provider's "wwwroot" root always exists. Its extension has no
-       content type, so UseStaticFiles never serves it. -->
+       content type, so UseStaticFiles never serves it. The forward slash is deliberate: on Linux a
+       backslash ends up inside the file name and the manifest gets no wwwroot directory. -->
   <ItemGroup>
-    <EmbeddedResource Include="EmbeddedManifestPlaceholder.txt" Link="wwwroot\.manifest-placeholder" />
+    <EmbeddedResource Include="EmbeddedManifestPlaceholder.txt" Link="wwwroot/.manifest-placeholder" />
   </ItemGroup>
 
 </Project>
