@@ -6,8 +6,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>hugin-api</AssemblyName>
     <!-- Lets ManifestEmbeddedFileProvider resolve embedded wwwroot files by their real relative
-         path (nested folders included) instead of the raw dotted resource-name scheme. Generated
-         even when no wwwroot files are embedded below (empty manifest), so it's safe unconditional. -->
+         path (nested folders included) instead of the raw dotted resource-name scheme. The SDK
+         skips the manifest (and warns) when nothing is embedded, so the placeholder further down
+         keeps it present on a clean checkout without wwwroot. -->
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
     <!-- No IIS hosting here (Kestrel self-hosted, started by double-click) — an unused web.config
          next to the exe is just noise. -->
@@ -42,6 +43,15 @@
        physical-folder branch in Program.cs, which 404s cleanly with no wwwroot at all. -->
   <ItemGroup Condition="Exists('wwwroot')">
     <EmbeddedResource Include="wwwroot\**" />
+  </ItemGroup>
+
+  <!-- Always embedded, so the manifest is never empty: without it a clean checkout (CI, or before
+       the first `npm run build`) gets no manifest at all, the build warns (an error under
+       -warnaserror) and ManifestEmbeddedFileProvider has nothing to read at runtime. The Link puts
+       it under wwwroot/ so the provider's "wwwroot" root always exists. Its extension has no
+       content type, so UseStaticFiles never serves it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedManifestPlaceholder.txt" Link="wwwroot\.manifest-placeholder" />
   </ItemGroup>
 
 </Project>
