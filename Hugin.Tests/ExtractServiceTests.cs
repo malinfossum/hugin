@@ -118,20 +118,20 @@ public class ExtractServiceTests
     }
 
     [Test]
-    public void Category_scope_without_category_throws()
+    public async Task Category_scope_without_category_throws()
     {
         var service = BuildService();
 
-        Assert.ThrowsAsync<MissingCategoryException>(async () =>
+        await Assert.ThrowsAsync<MissingCategoryException>(async () =>
             await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Md));
     }
 
     [Test]
-    public void Category_scope_with_blank_category_throws()
+    public async Task Category_scope_with_blank_category_throws()
     {
         var service = BuildService();
 
-        Assert.ThrowsAsync<MissingCategoryException>(async () =>
+        await Assert.ThrowsAsync<MissingCategoryException>(async () =>
             await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Md, category: "   "));
     }
 
