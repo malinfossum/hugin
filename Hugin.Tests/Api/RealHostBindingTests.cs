@@ -69,7 +69,7 @@ public sealed class RealHostBindingTests
                 .ToList();
 
             Assert.That(listeners, Is.Not.Empty, "no listener found for the host's port — cannot assert its bind address");
-            Assert.That(listeners, Has.All.Matches<IPEndPoint>(l => IPAddress.IsLoopback(l.Address)),
+            Assert.That(listeners, Has.All.Matches<IPEndPoint>(l => IPAddress.IsLoopback(l!.Address)),
                 $"expected loopback-only binding, found: {string.Join(", ", listeners.Select(l => l.Address))}");
         }
         finally

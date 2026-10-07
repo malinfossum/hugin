@@ -290,14 +290,14 @@ public class NavFeedClientTests
     }
 
     [Test]
-    public void Second_401_throws_NavAuthException()
+    public async Task Second_401_throws_NavAuthException()
     {
         var client = Client(request =>
             request.RequestUri!.ToString().Contains("publicToken", StringComparison.Ordinal)
                 ? Text(TokenBody)
                 : Unauthorized());
 
-        Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null, Config, ConfigScope));
+        await Assert.ThrowsAsync<NavAuthException>(async () => await client.GetPageAsync(null, Config, ConfigScope));
     }
 
     [Test]
