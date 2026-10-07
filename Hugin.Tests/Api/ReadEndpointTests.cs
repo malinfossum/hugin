@@ -271,12 +271,17 @@ public sealed class ReadEndpointTests
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "1", Status = PipelineStatus.Active, Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
+                Orgnr = "1",
+                Status = PipelineStatus.Active,
+                Created = DateTimeOffset.UtcNow,
+                Updated = DateTimeOffset.UtcNow,
             });
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "2", Status = PipelineStatus.Applied,
-                Created = DateTimeOffset.UtcNow, Updated = DateTimeOffset.UtcNow,
+                Orgnr = "2",
+                Status = PipelineStatus.Applied,
+                Created = DateTimeOffset.UtcNow,
+                Updated = DateTimeOffset.UtcNow,
             });
         }
 
@@ -346,7 +351,10 @@ public sealed class ReadEndpointTests
                     now, now.AddDays(5), "https://x", true, "IT"), now);
             await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
             {
-                Orgnr = "1", Status = PipelineStatus.Active, Created = now, Updated = now,
+                Orgnr = "1",
+                Status = PipelineStatus.Active,
+                Created = now,
+                Updated = now,
             });
         }
 

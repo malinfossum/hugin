@@ -11,38 +11,38 @@ public class ExtractServiceTests
 
     private static Company Company(string orgnr, string name, string? kommune = null,
         string? website = null, DateTimeOffset? firstSeen = null) => new()
-    {
-        Orgnr = orgnr,
-        Name = name,
-        MunicipalityNumber = kommune,
-        Website = website,
-        FirstSeen = firstSeen ?? Now,
-        LastSeenInRegister = firstSeen ?? Now,
-    };
+        {
+            Orgnr = orgnr,
+            Name = name,
+            MunicipalityNumber = kommune,
+            Website = website,
+            FirstSeen = firstSeen ?? Now,
+            LastSeenInRegister = firstSeen ?? Now,
+        };
 
     private static Ad Ad(string feedId, string title, string? category = null, bool isActive = true,
         DateTimeOffset? firstSeen = null, DateTimeOffset? expires = null, string? employerOrgnr = null) => new()
-    {
-        FeedId = feedId,
-        Title = title,
-        EmployerName = "Arbeidsgiver",
-        EmployerOrgnr = employerOrgnr,
-        Category = category,
-        IsActive = isActive,
-        FirstSeen = firstSeen ?? Now,
-        Expires = expires,
-    };
+        {
+            FeedId = feedId,
+            Title = title,
+            EmployerName = "Arbeidsgiver",
+            EmployerOrgnr = employerOrgnr,
+            Category = category,
+            IsActive = isActive,
+            FirstSeen = firstSeen ?? Now,
+            Expires = expires,
+        };
 
     private static PipelineEntry Entry(string orgnr, PipelineStatus status, string why = "fordi",
         string? svar = null, DateTimeOffset? updated = null) => new()
-    {
-        Orgnr = orgnr,
-        Status = status,
-        Why = why,
-        SvarText = svar,
-        Created = Now,
-        Updated = updated ?? Now,
-    };
+        {
+            Orgnr = orgnr,
+            Status = status,
+            Why = why,
+            SvarText = svar,
+            Created = Now,
+            Updated = updated ?? Now,
+        };
 
     private static ExtractService BuildService(
         FakeCompanyRepository? companies = null,

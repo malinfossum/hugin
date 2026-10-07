@@ -1,29 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Hugin.Infrastructure.Data.Migrations
+namespace Hugin.Infrastructure.Data.Migrations;
+
+/// <inheritdoc />
+public partial class AddAdHidden : Migration
 {
     /// <inheritdoc />
-    public partial class AddAdHidden : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "Hidden",
-                table: "Ads",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-        }
+        migrationBuilder.AddColumn<bool>(
+            name: "Hidden",
+            table: "Ads",
+            type: "INTEGER",
+            nullable: false,
+            defaultValue: false);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Hidden",
-                table: "Ads");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "Hidden",
+            table: "Ads");
     }
 }
