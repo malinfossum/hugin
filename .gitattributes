@@ -15,3 +15,6 @@
 *.gif binary
 *.ico binary
 *.pdf binary
+
+# .editorconfig asks for CRLF, so C# files check out as CRLF on every OS, Linux CI included
+*.cs text eol=crlf

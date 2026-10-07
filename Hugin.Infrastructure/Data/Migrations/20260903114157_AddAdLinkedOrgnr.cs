@@ -1,28 +1,27 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Hugin.Infrastructure.Data.Migrations
+namespace Hugin.Infrastructure.Data.Migrations;
+
+/// <inheritdoc />
+public partial class AddAdLinkedOrgnr : Migration
 {
     /// <inheritdoc />
-    public partial class AddAdLinkedOrgnr : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "LinkedOrgnr",
-                table: "Ads",
-                type: "TEXT",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "LinkedOrgnr",
+            table: "Ads",
+            type: "TEXT",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "LinkedOrgnr",
-                table: "Ads");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "LinkedOrgnr",
+            table: "Ads");
     }
 }

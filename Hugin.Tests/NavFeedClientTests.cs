@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text;
-using Hugin.Infrastructure.Http;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
+using Hugin.Infrastructure.Http;
 
 namespace Hugin.Tests;
 

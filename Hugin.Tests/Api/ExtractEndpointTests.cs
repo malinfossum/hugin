@@ -33,8 +33,11 @@ public sealed class ExtractEndpointTests
             .UpsertAsync(new RegisterCompany("1", "Eksport AS", null, null, null, false, null), now);
         await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
         {
-            Orgnr = "1", Status = PipelineStatus.Applied, Why = "fordi",
-            Created = now, Updated = now,
+            Orgnr = "1",
+            Status = PipelineStatus.Applied,
+            Why = "fordi",
+            Created = now,
+            Updated = now,
         });
     }
 
@@ -143,8 +146,11 @@ public sealed class ExtractEndpointTests
             .UpsertAsync(new RegisterCompany("2", "Aktiv AS", null, null, null, false, null), now);
         await scope.ServiceProvider.GetRequiredService<IPipelineRepository>().UpsertAsync(new PipelineEntry
         {
-            Orgnr = "2", Status = PipelineStatus.Active, Why = "fordi",
-            Created = now, Updated = now,
+            Orgnr = "2",
+            Status = PipelineStatus.Active,
+            Why = "fordi",
+            Created = now,
+            Updated = now,
         });
     }
 

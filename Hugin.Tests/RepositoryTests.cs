@@ -1,6 +1,6 @@
-using Hugin.Infrastructure.Data;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -380,11 +380,19 @@ public class RepositoryTests
         var repo = new EfPipelineRepository(_db);
         await repo.UpsertAsync(new()
         {
-            Orgnr = "1", Status = Core.Models.PipelineStatus.Active, Starred = false, Created = T1, Updated = T1,
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.Active,
+            Starred = false,
+            Created = T1,
+            Updated = T1,
         });
         await repo.UpsertAsync(new()
         {
-            Orgnr = "1", Status = Core.Models.PipelineStatus.Applied, Starred = true, Created = T1, Updated = T2,
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.Applied,
+            Starred = true,
+            Created = T1,
+            Updated = T2,
         });
 
         var stored = await repo.GetByOrgnrAsync("1");
@@ -430,10 +438,17 @@ public class RepositoryTests
     public async Task GetByEmployerAsync_returns_expired_too_newest_first()
     {
         var repo = new EfAdRepository(_db);
-        await repo.UpsertAsync(SomeFeedAd("old") with { EmployerOrgnr = "999888777",
-            Published = T1.AddDays(-30), IsActive = false }, T1);
-        await repo.UpsertAsync(SomeFeedAd("new") with { EmployerOrgnr = "999888777",
-            Published = T1 }, T1);
+        await repo.UpsertAsync(SomeFeedAd("old") with
+        {
+            EmployerOrgnr = "999888777",
+            Published = T1.AddDays(-30),
+            IsActive = false
+        }, T1);
+        await repo.UpsertAsync(SomeFeedAd("new") with
+        {
+            EmployerOrgnr = "999888777",
+            Published = T1
+        }, T1);
         await repo.UpsertAsync(SomeFeedAd("other") with { EmployerOrgnr = "111" }, T1);
 
         var ads = await repo.GetByEmployerAsync("999888777");
@@ -504,8 +519,12 @@ public class RepositoryTests
 
     private static PipelineEntry TrackedEntry(string orgnr) => new()
     {
-        Orgnr = orgnr, Status = PipelineStatus.Applied, Starred = true, Why = "grunn",
-        Created = T1, Updated = T2,
+        Orgnr = orgnr,
+        Status = PipelineStatus.Applied,
+        Starred = true,
+        Why = "grunn",
+        Created = T1,
+        Updated = T2,
     };
 
     private static FeedAd AdFrom(string feedId, string employerOrgnr) =>

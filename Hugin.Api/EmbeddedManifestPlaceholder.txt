@@ -1,0 +1,2 @@
+Placeholder so the embedded files manifest is never empty.
+The csproj embeds it as wwwroot/.manifest-placeholder, which the app never serves.
