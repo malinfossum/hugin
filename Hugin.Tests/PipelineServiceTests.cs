@@ -69,11 +69,11 @@ public class PipelineServiceTests
     }
 
     [Test]
-    public void Unknown_orgnr_not_in_brreg_throws_CompanyNotFound()
+    public async Task Unknown_orgnr_not_in_brreg_throws_CompanyNotFound()
     {
         var h = BuildAsync().Result;
 
-        var ex = Assert.ThrowsAsync<CompanyNotFoundException>(async () =>
+        var ex = await Assert.ThrowsAsync<CompanyNotFoundException>(async () =>
             await h.Service.TrackAsync("000000000", PipelineStatus.Active, null, null, null));
 
         Assert.That(ex!.Orgnr, Is.EqualTo("000000000"));
