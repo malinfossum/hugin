@@ -110,6 +110,24 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
         await db.SaveChangesAsync(ct);
         return true;
     }
+
+    public async Task PutSeededAsync(Company company, CancellationToken ct = default)
+    {
+        if (await db.Companies.FindAsync([company.Orgnr], ct) is { } existing)
+        {
+            existing.Name = company.Name;
+            existing.MunicipalityNumber = company.MunicipalityNumber;
+            existing.NaceCode = company.NaceCode;
+            existing.ParentOrgnr = company.ParentOrgnr;
+            existing.IsBranch = company.IsBranch;
+            existing.LastSeenInRegister = company.LastSeenInRegister;
+        }
+        else
+        {
+            db.Companies.Add(company);
+        }
+        await db.SaveChangesAsync(ct);
+    }
 }
 
 public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
@@ -204,6 +222,28 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
 
     public async Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>
         await db.Ads.ToListAsync(ct);
+
+    public async Task PutSeededAsync(Ad ad, CancellationToken ct = default)
+    {
+        if (await db.Ads.FindAsync([ad.FeedId], ct) is { } existing)
+        {
+            existing.Title = ad.Title;
+            existing.EmployerName = ad.EmployerName;
+            existing.EmployerOrgnr = ad.EmployerOrgnr;
+            existing.MunicipalityNumber = ad.MunicipalityNumber;
+            existing.Published = ad.Published;
+            existing.Expires = ad.Expires;
+            existing.SourceUrl = ad.SourceUrl;
+            existing.Category = ad.Category;
+            existing.FirstSeen = ad.FirstSeen;
+            existing.IsActive = ad.IsActive;
+        }
+        else
+        {
+            db.Ads.Add(ad);
+        }
+        await db.SaveChangesAsync(ct);
+    }
 }
 
 public sealed class EfPipelineRepository(HuginDbContext db) : IPipelineRepository

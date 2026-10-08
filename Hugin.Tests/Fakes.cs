@@ -224,12 +224,45 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
         company.WebsiteCheckedUtc = null;
         return Task.FromResult(true);
     }
+
+    public Task PutSeededAsync(Company company, CancellationToken ct = default)
+    {
+        if (Store.TryGetValue(company.Orgnr, out var existing))
+        {
+            existing.Name = company.Name;
+            existing.MunicipalityNumber = company.MunicipalityNumber;
+            existing.NaceCode = company.NaceCode;
+            existing.ParentOrgnr = company.ParentOrgnr;
+            existing.IsBranch = company.IsBranch;
+            existing.LastSeenInRegister = company.LastSeenInRegister;
+        }
+        else
+        {
+            Store[company.Orgnr] = company;
+        }
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class FakeAdRepository : IAdRepository
 {
     public Dictionary<string, Ad> Store { get; } = [];
     public bool ThrowOnUpsert { get; set; }
+    public string? ThrowOnPutSeededFor { get; set; }
+
+    public Task PutSeededAsync(Ad ad, CancellationToken ct = default)
+    {
+        if (ad.EmployerOrgnr is not null && ad.EmployerOrgnr == ThrowOnPutSeededFor)
+            throw new InvalidOperationException("disken er full");
+
+        if (Store.TryGetValue(ad.FeedId, out var existing))
+        {
+            ad.Hidden = existing.Hidden;
+            ad.LinkedOrgnr = existing.LinkedOrgnr;
+        }
+        Store[ad.FeedId] = ad;
+        return Task.CompletedTask;
+    }
 
     public Task<IReadOnlyList<Ad>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values.Where(a => a.FirstSeen > after).ToList());
