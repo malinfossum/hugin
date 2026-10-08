@@ -1,5 +1,24 @@
 [
-  { "orgnr": "989773518", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "915168175", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "965309926", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
+  {
+    "orgnr": "100000001",
+    "status": "active",
+    "why": "Demo: fiktivt firma, sporet for å vise pipelinen.",
+    "company": { "name": "Mjøskode AS", "kommune": "3403", "nace": "62.100" },
+    "ad": { "title": "Fullstackutvikler (.NET/React)", "publishedDaysAgo": 10, "expiresInDays": 3 }
+  },
+  {
+    "orgnr": "100000002",
+    "status": "applied",
+    "why": "Demo: fiktivt firma, sporet for å vise pipelinen.",
+    "company": { "name": "Tindebit AS", "kommune": "3405", "nace": "62.100" },
+    "ad": { "title": "Backendutvikler (C#)", "publishedDaysAgo": 2, "expiresInDays": 21 }
+  },
+  {
+    "orgnr": "100000003",
+    "status": "answered",
+    "why": "Demo: fiktivt firma, sporet for å vise pipelinen.",
+    "svar": "Takk for søknaden. Vi gikk videre med andre kandidater.",
+    "company": { "name": "Lysbekk Data AS", "kommune": "3407", "nace": "62.100" },
+    "ad": { "title": "Juniorutvikler", "publishedDaysAgo": 30, "expiresInDays": -5 }
+  }
 ]

@@ -264,7 +264,7 @@ export const en = {
 
   'demo.regionLabel': 'Demo',
   'demo.banner':
-    'Demo — read-only. Real job ads and companies from NAV and Brreg for Innlandet. The pipeline is sample data. No tracking, no cookies; your theme choice is stored only in your browser.',
+    'Read-only demo. Real job ads and companies from NAV and Brreg for Innlandet, plus three fictional companies with one fictional ad each. The pipeline shows only the fictional companies. No tracking, no cookies; your theme choice is stored only in your browser.',
   'demo.repoLink': 'Source code on GitHub',
 
   'dashboard.noCoverageMessage': 'No coverage chosen.',
