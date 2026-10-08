@@ -87,6 +87,34 @@ public sealed class DemoSeederTests
         Assert.That(problems, Has.Count.EqualTo(1));
     }
 
+    // \d matches any Unicode digit and $ allows a trailing newline; an orgnr is nine ASCII digits.
+    [TestCase("\\u0661\\u0662\\u0663\\u0664\\u0665\\u0666\\u0667\\u0668\\u0669")]
+    [TestCase("123456789\\n")]
+    public void Parse_rejects_an_orgnr_that_is_not_exactly_nine_ascii_digits(string orgnr)
+    {
+        var entries = DemoSeeder.Parse(
+            $$"""[{ "orgnr": "{{orgnr}}", "status": "active", "why": "Demo." }]""", out var problems);
+        Assert.That(entries, Is.Empty);
+        Assert.That(problems, Has.Count.EqualTo(1));
+    }
+
+    [TestCase("\"company\": \"X AS\"")]
+    [TestCase("\"svar\": 5")]
+    [TestCase("\"why\": [\"Demo.\"]")]
+    [TestCase("\"company\": { \"name\": \"X AS\", \"kommune\": \"3403\", \"nace\": \"62.100\" }, \"ad\": { \"title\": 5 }")]
+    public void Parse_of_a_wrongly_shaped_value_costs_that_entry_only(string field)
+    {
+        var entries = DemoSeeder.Parse($$"""
+            [
+              { "orgnr": "100000001", "status": "active", "why": "Demo.", {{field}} },
+              { "orgnr": "100000002", "status": "applied", "why": "Demo." }
+            ]
+            """, out var problems);
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "100000002" }));
+        Assert.That(problems, Has.Count.EqualTo(1));
+        Assert.That(problems[0], Does.Contain("100000001"));
+    }
+
     [Test]
     public void Parse_reads_svar_company_and_ad_blocks()
     {
@@ -132,6 +160,8 @@ public sealed class DemoSeederTests
 
     [TestCase("""{ "name": "", "kommune": "3403", "nace": "62.100" }""", null, "name")]
     [TestCase("""{ "name": "X AS", "kommune": "343", "nace": "62.100" }""", null, "kommune")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403\n", "nace": "62.100" }""", null, "kommune")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100\n" }""", null, "nace")]
     [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62" }""", null, "nace")]
     [TestCase(null, """{ "title": "Utvikler", "publishedDaysAgo": 1, "expiresInDays": 1 }""", "company")]
     [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
@@ -309,6 +339,8 @@ public sealed class DemoSeederTests
         Assert.That(c.MunicipalityNumber, Is.EqualTo("3411"));
         Assert.That((await _db.Ads.SingleAsync(a => a.FeedId == "demo-100000002")).EmployerName,
             Is.EqualTo("Tindebit Data AS"));
+        var row = await _db.Pipeline.SingleAsync(p => p.Orgnr == "100000002");
+        Assert.That(row.Status, Is.EqualTo(PipelineStatus.Applied));
     }
 
     [Test]

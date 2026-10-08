@@ -9,16 +9,16 @@
   "next_id": "1df27f1c-2a02-4077-9ef0-d5e45f4c77f1",
   "items": [
     {
-      "id": "aacf9c18-bcef-48c0-968e-238c5b88eff4",
-      "url": "/api/v1/feedentry/aacf9c18-bcef-48c0-968e-238c5b88eff4",
+      "id": "55555555-5555-5555-5555-555555555555",
+      "url": "/api/v1/feedentry/55555555-5555-5555-5555-555555555555",
       "title": "Sjåfør og Montør",
       "content_text": "Stillingsannonse",
       "date_modified": "2023-06-14T12:21:40.222423+02:00",
       "_feed_entry": {
-        "uuid": "aacf9c18-bcef-48c0-968e-238c5b88eff4",
+        "uuid": "55555555-5555-5555-5555-555555555555",
         "status": "INACTIVE",
         "title": "Sjåfør og Montør",
-        "businessName": "ARNESEN HVITEVARER AS",
+        "businessName": "EKSEMPEL HVITEVARER AS",
         "municipal": "BERGEN",
         "sistEndret": "2023-06-14T12:21:40.222423+02:00"
       }

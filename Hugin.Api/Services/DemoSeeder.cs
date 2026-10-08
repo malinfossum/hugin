@@ -40,23 +40,24 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
     // Numbers as JsonElement: a string or a decimal here must cost one entry, not the whole file.
     private sealed record RawAd(string? Title, JsonElement? PublishedDaysAgo, JsonElement? ExpiresInDays);
 
-    [GeneratedRegex(@"^\d{9}$")]
+    // [0-9] and \z, not \d and $: \d matches any Unicode digit and $ allows a trailing newline.
+    [GeneratedRegex(@"^[0-9]{9}\z")]
     private static partial Regex Orgnr();
 
-    [GeneratedRegex(@"^\d{4}$")]
+    [GeneratedRegex(@"^[0-9]{4}\z")]
     private static partial Regex Kommune();
 
-    [GeneratedRegex(@"^\d{2}\.\d{3}$")]
+    [GeneratedRegex(@"^[0-9]{2}\.[0-9]{3}\z")]
     private static partial Regex Nace();
 
     /// <summary>Pure parse + validate: every invalid entry becomes one problem line and is dropped, the rest survive.</summary>
     public static IReadOnlyList<DemoSeedEntry> Parse(string json, out List<string> problems)
     {
         problems = [];
-        RawEntry?[]? raw;
+        JsonElement[]? raw;
         try
         {
-            raw = JsonSerializer.Deserialize<RawEntry?[]>(json, Json);
+            raw = JsonSerializer.Deserialize<JsonElement[]>(json, Json);
         }
         catch (JsonException ex)
         {
@@ -66,8 +67,16 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
         if (raw is null) { problems.Add("demo-pipeline.json er tom."); return []; }
 
         var entries = new List<DemoSeedEntry>();
-        foreach (var entry in raw)
+        foreach (var element in raw)
         {
+            // Entry by entry, so a value of the wrong JSON type costs that entry, not the file.
+            RawEntry? entry;
+            try { entry = element.Deserialize<RawEntry>(Json); }
+            catch (JsonException)
+            {
+                problems.Add($"{OrgnrOf(element)}: en verdi har feil JSON-type (tekst, tall, liste eller objekt)");
+                continue;
+            }
             if (entry?.Orgnr is null || !Orgnr().IsMatch(entry.Orgnr))
             {
                 problems.Add($"ugyldig orgnr «{entry?.Orgnr}» — må være ni siffer");
@@ -117,6 +126,12 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
             ? (company, null)
             : (company, new DemoSeedAd(a.Title!.Trim(), Int(a.PublishedDaysAgo)!.Value, Int(a.ExpiresInDays)!.Value));
     }
+
+    private static string OrgnrOf(JsonElement element) =>
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty("orgnr", out var orgnr) && orgnr.ValueKind == JsonValueKind.String
+            ? orgnr.GetString()!
+            : "ukjent orgnr";
 
     private static int? Int(JsonElement? value) =>
         value is { ValueKind: JsonValueKind.Number } v && v.TryGetInt32(out var n) ? n : null;

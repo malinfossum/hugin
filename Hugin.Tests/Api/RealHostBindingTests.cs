@@ -75,6 +75,8 @@ public sealed class RealHostBindingTests
         finally
         {
             try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+            // Kill only signals: wait until the host has let go of hugin.db, or the delete below fails.
+            process.WaitForExit(TimeSpan.FromSeconds(10));
             process.Dispose();
             try { Directory.Delete(tempDir.FullName, recursive: true); } catch (IOException) { }
         }
