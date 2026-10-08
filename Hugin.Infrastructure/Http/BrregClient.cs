@@ -79,7 +79,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
     public async Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
     {
         // The NACE filter governs discovery, never tracking — a company fetched by orgnr is
-        // stored whatever its industry code (Norsk Tipping is 92, Statens vegvesen 84).
+        // stored whatever its industry code (a lottery operator is 92, a state agency 84).
         return await FetchOneAsync($"enheter/{orgnr}", isBranch: false, ct)
             ?? await FetchOneAsync($"underenheter/{orgnr}", isBranch: true, ct);
     }

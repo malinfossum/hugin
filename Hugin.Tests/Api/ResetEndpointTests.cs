@@ -24,16 +24,16 @@ public sealed class ResetEndpointTests
         {
             var now = DateTimeOffset.UtcNow;
             var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
-            await companies.UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+            await companies.UpsertAsync(new RegisterCompany("734161181", "Fjellkart AS", "3405", "62.100", null, false, null),
                 now);
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "934161181", Status = PipelineStatus.Active, Why = "fordi",
+                Orgnr = "734161181", Status = PipelineStatus.Active, Why = "fordi",
                 Created = now, Updated = now,
             });
             var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
-            await ads.UpsertAsync(new FeedAd("a1", "Utvikler", "Norkart AS", "934161181", "3405",
+            await ads.UpsertAsync(new FeedAd("a1", "Utvikler", "Fjellkart AS", "734161181", "3405",
                 now, now.AddDays(5), "https://x", true, "IT"), now);
             var reviewMark = scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>();
             await reviewMark.SetAsync(now);
@@ -69,12 +69,12 @@ public sealed class ResetEndpointTests
         {
             var now = DateTimeOffset.UtcNow;
             var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
-            await companies.UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+            await companies.UpsertAsync(new RegisterCompany("734161181", "Fjellkart AS", "3405", "62.100", null, false, null),
                 now);
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "934161181", Status = PipelineStatus.Active, Why = "fordi",
+                Orgnr = "734161181", Status = PipelineStatus.Active, Why = "fordi",
                 Created = now, Updated = now,
             });
         }
@@ -91,10 +91,10 @@ public sealed class ResetEndpointTests
             await using var snapshotDb = new HuginDbContext(options);
 
             var snapshotCompanies = await snapshotDb.Companies.Select(c => c.Orgnr).ToListAsync();
-            Assert.That(snapshotCompanies, Does.Contain("934161181"),
+            Assert.That(snapshotCompanies, Does.Contain("734161181"),
                 "the row wiped from the live db must survive in the snapshot taken just before the wipe");
             var snapshotPipeline = await snapshotDb.Pipeline.Select(p => p.Orgnr).ToListAsync();
-            Assert.That(snapshotPipeline, Does.Contain("934161181"),
+            Assert.That(snapshotPipeline, Does.Contain("734161181"),
                 "the pipeline entry is the one thing a reset can never recover if the backup is not real");
         }
         finally
@@ -112,7 +112,7 @@ public sealed class ResetEndpointTests
         using var factory = new ApiFactory();
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
-                .UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+                .UpsertAsync(new RegisterCompany("734161181", "Fjellkart AS", "3405", "62.100", null, false, null),
                     DateTimeOffset.UtcNow);
         using var client = factory.CreateApiClient();
 
@@ -188,7 +188,7 @@ public sealed class ResetEndpointTests
         Directory.CreateDirectory(factory.ConfigPath);
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
-                .UpsertAsync(new RegisterCompany("934161181", "Norkart AS", "3405", "62.100", null, false, null),
+                .UpsertAsync(new RegisterCompany("734161181", "Fjellkart AS", "3405", "62.100", null, false, null),
                     DateTimeOffset.UtcNow);
         using var client = factory.CreateApiClient();
 

@@ -27,21 +27,21 @@ public class BrregClientTests
     public async Task GetByOrgnr_falls_back_to_underenheter_on_404()
     {
         const string branch = """
-            {"organisasjonsnummer":"931895923","navn":"AGREED AS",
-             "naeringskode1":{"kode":"62.200"},"overordnetEnhet":"931759515",
+            {"organisasjonsnummer":"731895923","navn":"SJØKANTEN KONSULENT AS",
+             "naeringskode1":{"kode":"62.200"},"overordnetEnhet":"731759515",
              "beliggenhetsadresse":{"kommunenummer":"3403"}}
             """;
 
         var client = new BrregClient(HttpFixtures.Client(request =>
-            request.RequestUri!.ToString().Contains("underenheter/931895923", StringComparison.Ordinal)
+            request.RequestUri!.ToString().Contains("underenheter/731895923", StringComparison.Ordinal)
                 ? HttpFixtures.Json(branch)
                 : HttpFixtures.NotFound()));
 
-        var result = await client.GetByOrgnrAsync("931895923");
+        var result = await client.GetByOrgnrAsync("731895923");
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.IsBranch, Is.True);
-        Assert.That(result.ParentOrgnr, Is.EqualTo("931759515"));
+        Assert.That(result.ParentOrgnr, Is.EqualTo("731759515"));
         Assert.That(result.MunicipalityNumber, Is.EqualTo("3403"));
     }
 
@@ -50,19 +50,19 @@ public class BrregClientTests
     {
         // Brreg never stores a scheme, so guarding on http(s) alone dropped every website.
         const string enhet = """
-            {"organisasjonsnummer":"923591435","navn":"APROXIMA AS",
-             "naeringskode1":{"kode":"62.010"},"hjemmeside":"www.innit.no",
+            {"organisasjonsnummer":"723591435","navn":"LYNGTOPP AS",
+             "naeringskode1":{"kode":"62.010"},"hjemmeside":"www.smakode.example",
              "forretningsadresse":{"kommunenummer":"3403"}}
             """;
 
         var client = new BrregClient(HttpFixtures.Client(request =>
-            request.RequestUri!.ToString().Contains("enheter/923591435", StringComparison.Ordinal)
+            request.RequestUri!.ToString().Contains("enheter/723591435", StringComparison.Ordinal)
                 ? HttpFixtures.Json(enhet)
                 : HttpFixtures.NotFound()));
 
-        var result = await client.GetByOrgnrAsync("923591435");
+        var result = await client.GetByOrgnrAsync("723591435");
 
-        Assert.That(result!.Website, Is.EqualTo("https://www.innit.no"));
+        Assert.That(result!.Website, Is.EqualTo("https://www.smakode.example"));
     }
 
     [Test]

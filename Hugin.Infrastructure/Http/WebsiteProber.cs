@@ -38,8 +38,8 @@ public sealed partial class WebsiteProber(HttpClient http) : IWebsiteProber
     }
 
     /// <summary>Both variants are built from the bare host+path, not from swapping whatever
-    /// scheme (if any) the input already carried — a scheme-less "innit.no" and an explicit
-    /// "https://innit.no" probe identically.</summary>
+    /// scheme (if any) the input already carried — a scheme-less "smakode.example" and an explicit
+    /// "https://smakode.example" probe identically.</summary>
     private static (string Https, string Http) Variants(string url)
     {
         var withoutScheme = SchemePrefix().Replace(url.Trim(), "");

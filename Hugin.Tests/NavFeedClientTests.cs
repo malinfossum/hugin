@@ -63,12 +63,12 @@ public class NavFeedClientTests
         var active = page.Ads.Single(a => a.FeedId.StartsWith("1111", StringComparison.Ordinal));
         Assert.That(active.Title, Is.EqualTo("Backend-utvikler til teamet"), "ANSI escape must be stripped at ingest");
         Assert.That(active.MunicipalityNumber, Is.EqualTo("3403"), "NAV gives a municipality name; the config maps it to a number");
-        Assert.That(active.EmployerOrgnr, Is.EqualTo("931895923"));
+        Assert.That(active.EmployerOrgnr, Is.EqualTo("731895923"));
         Assert.That(active.SourceUrl, Is.EqualTo("https://arbeidsplassen.nav.no/stillinger/stilling/11111111-1111-1111-1111-111111111111"));
         Assert.That(active.Expires, Is.Not.Null);
         Assert.That(active.IsActive, Is.True);
         Assert.That(active.Category, Is.EqualTo("IT / Utvikling"));
-        Assert.That(active.EmployerHomepage, Is.EqualTo("https://agreed.no"));
+        Assert.That(active.EmployerHomepage, Is.EqualTo("https://sjokanten.example"));
 
         var gone = page.Ads.Single(a => a.FeedId.StartsWith("2222", StringComparison.Ordinal));
         Assert.That(gone.IsActive, Is.False, "the feed reporting INACTIVE must flip the ad");
@@ -85,7 +85,7 @@ public class NavFeedClientTests
         // it under Bygg og anlegg — the category gate is what keeps it out of the radar.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"66666666-6666-6666-6666-666666666666",
-             "status":"ACTIVE","title":"Prosjektutvikler massivtre","businessName":"Moelven Limtre AS",
+             "status":"ACTIVE","title":"Prosjektutvikler massivtre","businessName":"Mjøstre Limtre AS",
              "municipal":"RINGSAKER","sistEndret":"2026-08-18T09:00:00+02:00"}}],"next_id":null,"id":"side-y"}
             """;
         const string detail = """
@@ -93,7 +93,7 @@ public class NavFeedClientTests
              "sistEndret":"2026-08-18T09:00:00+02:00",
              "ad_content":{"uuid":"66666666-6666-6666-6666-666666666666",
               "title":"Prosjektutvikler massivtre","link":"https://arbeidsplassen.nav.no/stillinger/stilling/6",
-              "employer":{"name":"Moelven Limtre AS"},
+              "employer":{"name":"Mjøstre Limtre AS"},
               "workLocations":[{"municipal":"RINGSAKER"}],
               "occupationCategories":[{"level1":"Bygg og anlegg","level2":"Prosjektering"}]}}
             """;

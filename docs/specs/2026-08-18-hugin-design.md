@@ -96,7 +96,7 @@ Network failure on either source: warn, continue with cached data, exit code 0 (
 |---|---|
 | `hugin sync [--full]` | Pull Brreg (upsert companies) + NAV feed (upsert ads, flip `IsActive`). Prints a one-line summary per source. `--full` walks the NAV feed from its oldest page (resuming from the stored cursor if one exists) instead of the capped daily pull — the one-time backfill that loads every currently-open ad. *(Added post-v1: the daily sync alone only accumulates ads from its first run forward.)* |
 | `hugin new` | Everything first seen since `ReviewMark`: new companies grouped by municipality, new ads with deep-links, then the configured link-outs as a reminder. `--seen` advances the mark. |
-| `hugin track <orgnr> <status>` | Create/update the company's `PipelineEntry`. Options: `--why "..."`, `--note "..."`, `--svar "..."`. Warns when setting a status beyond `Funnet` with an empty `Why`. **Unknown orgnr:** fetched directly from Brreg (`/enheter/{orgnr}`, fallback `/underenheter/{orgnr}`) and stored regardless of NACE code — the NACE filter governs *discovery*, never *tracking* (Norsk Tipping is NACE 92, Statens vegvesen 84; both must be trackable). |
+| `hugin track <orgnr> <status>` | Create/update the company's `PipelineEntry`. Options: `--why "..."`, `--note "..."`, `--svar "..."`. Warns when setting a status beyond `Funnet` with an empty `Why`. **Unknown orgnr:** fetched directly from Brreg (`/enheter/{orgnr}`, fallback `/underenheter/{orgnr}`) and stored regardless of NACE code — the NACE filter governs *discovery*, never *tracking* (a lottery operator is NACE 92, a state agency 84; both must be trackable). |
 | `hugin list [--status <s>]` | Pipeline overview table. `--companies [--kommune <nr>]` browses the full synced company inventory instead — this is how the first-sync backlog is explored. `--ads [--kommune <nr>]` lists stored ads that are currently active. *(Added post-v1: stored ads were otherwise only visible through `new`.)* |
 | `hugin export [--since <date>]` | Markdown tables in Preparelogg shape (Dato · Bedrift · Annonse/Nettside · Grunn · Svar), split "Søkt selv" / "Bedt GET sjekke". Entries with empty `Why` are included but marked `⚠ mangler begrunnelse`. Defaults to the last 7 days. |
 
@@ -122,7 +122,7 @@ EF Core-backed repository tests use SQLite in-memory. The Stop-hook (`dotnet tes
 
 ## Future path (out of scope now, shapes nothing prematurely)
 
-1. **Phase 2 — web:** thin ASP.NET Core API over the same Core + database, React + TypeScript frontend (also prep for Norsk Tipping's stack). The CLI keeps working; Core is shared.
+1. **Phase 2 — web:** thin ASP.NET Core API over the same Core + database, React + TypeScript frontend (also prep for the stack employers here use). The CLI keeps working; Core is shared.
 2. Possible PostgreSQL swap if the web phase wants it.
 3. Open-source from the start: English README, `hugin.json.example`, no personal data committed (`hugin.json` + `hugin.db` gitignored — the pipeline contains my real outreach history).
 
@@ -138,7 +138,7 @@ EF Core-backed repository tests use SQLite in-memory. The Stop-hook (`dotnet tes
 Three defects found after the build, against the live APIs rather than in review:
 
 1. **NAV feed resume point.** At the feed tail `next_id` is null, and storing that as the cursor sent every later sync back to `?last=true` — the newest page — skipping every page that completed in between. Tail pages roll over within the hour, so a daily sync would have missed almost all ads. `FeedPage` now also carries the page `id`, and sync stores `next_id ?? id`; re-reading one page is harmless because upserts are idempotent.
-2. **Company websites.** Brreg stores `hjemmeside` as a bare hostname (`www.innit.no`) — of 200 companies sampled across the configured municipalities, 39 had one and none carried a scheme, so `UrlGuard.HttpOrHttps` discarded all of them and the export's Nettside column was always empty. `UrlGuard.Website` now assumes https for a scheme-less hostname, still refusing any value that declares a different scheme, and requires a dot so a typed note does not become a link.
+2. **Company websites.** Brreg stores `hjemmeside` as a bare hostname (`www.smakode.example`) — of 200 companies sampled across the configured municipalities, 39 had one and none carried a scheme, so `UrlGuard.HttpOrHttps` discarded all of them and the export's Nettside column was always empty. `UrlGuard.Website` now assumes https for a scheme-less hostname, still refusing any value that declares a different scheme, and requires a dot so a typed note does not become a link.
 3. **Category gate (added post-v1).** Broad keywords ("utvikler") also match compounds NAV files far from IT — prosjektutvikler massivtre (Bygg), fag- og kvalitetsutvikler (Helse). Config gained `categories` (default `["IT"]`), matched against `occupationCategories[].level1` after enrichment; uncategorized ads fail open. `Ad.Category` stores the display value ("IT / Utvikling") and `list --ads` groups by it.
 4. **Answered outreach attribution.** Because `Status` is linear and ends at `Svar`, an answer to an application I sent myself moved into the "Bedt GET om å sjekke" section. Hence the `Route` field above; export now splits on route rather than status.
 

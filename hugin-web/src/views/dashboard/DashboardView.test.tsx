@@ -17,7 +17,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     feedId: 'a1',
     title: 'Utvikler',
     employer: 'Acme AS',
-    employerOrgnr: '915787630',
+    employerOrgnr: '715787630',
     kommune: '0301',
     expires: '2026-08-25T00:00:00Z',
     daysLeft: 6,
