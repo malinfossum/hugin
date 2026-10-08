@@ -13,10 +13,10 @@ public class WebsiteProberTests
                 ? new HttpResponseMessage(HttpStatusCode.OK)
                 : throw new HttpRequestException("http skal ikke kalles")));
 
-        var result = await prober.ProbeAsync("https://norkart.no", CancellationToken.None);
+        var result = await prober.ProbeAsync("https://fjellkart.example", CancellationToken.None);
 
         Assert.That(result.Ok, Is.True);
-        Assert.That(result.ResolvedUrl, Is.EqualTo("https://norkart.no"));
+        Assert.That(result.ResolvedUrl, Is.EqualTo("https://fjellkart.example"));
     }
 
     [Test]

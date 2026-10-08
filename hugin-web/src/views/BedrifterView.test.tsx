@@ -53,7 +53,7 @@ function jsonResponse(body: unknown, init: { status?: number } = {}) {
 
 function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
   return {
-    orgnr: '915787630',
+    orgnr: '715787630',
     name: 'Acme AS',
     kommune: '0301',
     kommuneNavn: null,
@@ -70,7 +70,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     feedId: 'a1',
     title: 'Utvikler',
     employer: 'Acme AS',
-    employerOrgnr: '915787630',
+    employerOrgnr: '715787630',
     kommune: '0301',
     expires: '2026-08-25T00:00:00Z',
     daysLeft: null,
@@ -195,9 +195,9 @@ describe('BedrifterView', () => {
   })
 
   it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
-    const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
+    const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': {
+      '715787630': {
         company: companies[0],
         ads: [
           ad({
@@ -455,11 +455,11 @@ describe('BedrifterView', () => {
 
   it('Tilbake returns to the list and focus lands back on the opening row', async () => {
     const companies = [
-      company({ orgnr: '915787630', name: 'Acme AS' }),
+      company({ orgnr: '715787630', name: 'Acme AS' }),
       company({ orgnr: '999888777', name: 'Beta Software' }),
     ]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [], branches: [] },
+      '715787630': { company: companies[0], ads: [], branches: [] },
     }
     const user = userEvent.setup()
     renderView(fakeServer(companies, details))
@@ -478,9 +478,9 @@ describe('BedrifterView', () => {
   })
 
   it('deep-links straight into a detail when selectedOrgnr is set on mount (route-driven, no click)', async () => {
-    const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
+    const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [], branches: [] },
+      '715787630': { company: companies[0], ads: [], branches: [] },
     }
     vi.stubGlobal('fetch', fakeServer(companies, details))
 
@@ -488,7 +488,7 @@ describe('BedrifterView', () => {
       <LanguageProvider>
         <LiveRegionProvider>
           <BedrifterView
-            selectedOrgnr="915787630"
+            selectedOrgnr="715787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={vi.fn()}
             onOpenSettings={() => {}}
@@ -502,9 +502,9 @@ describe('BedrifterView', () => {
   })
 
   it('calls onCloseCompany (not internal state) when Tilbake is clicked', async () => {
-    const companies = [company({ orgnr: '915787630', name: 'Acme AS' })]
+    const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
-      '915787630': { company: companies[0], ads: [], branches: [] },
+      '715787630': { company: companies[0], ads: [], branches: [] },
     }
     vi.stubGlobal('fetch', fakeServer(companies, details))
     const onCloseCompany = vi.fn()
@@ -514,7 +514,7 @@ describe('BedrifterView', () => {
       <LanguageProvider>
         <LiveRegionProvider>
           <BedrifterView
-            selectedOrgnr="915787630"
+            selectedOrgnr="715787630"
             onOpenCompany={vi.fn()}
             onCloseCompany={onCloseCompany}
             onOpenSettings={() => {}}

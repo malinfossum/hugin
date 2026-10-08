@@ -13,7 +13,7 @@ public class PipelineServiceTests
     private const string NyfjellSpill = "777777777";
 
     private static RegisterCompany Known() =>
-        new("934161181", "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
+        new("734161181", "Fjellkart AS avd Lillehammer", "3405", "62.100", "734161000", true, null);
 
     private sealed record Harness(PipelineService Service, FakePipelineRepository Pipeline,
         FakeCompanyRepository Companies, FakeBrregClient Brreg, FakeClock Clock, FakeAdRepository Ads);
@@ -45,7 +45,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, "nær Lillehammer", null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Active, "nær Lillehammer", null, null);
 
         Assert.That(result.CompanyFetchedFromBrreg, Is.False);
         Assert.That(result.Warning, Is.Null);
@@ -84,7 +84,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Applied, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Applied, null, null, null);
 
         Assert.That(result.Warning, Does.Contain("begrunnelse"));
     }
@@ -94,7 +94,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Answered, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Answered, null, null, null);
 
         Assert.That(result.Warning, Does.Contain("begrunnelse"));
     }
@@ -104,7 +104,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Active, null, null, null);
 
         Assert.That(result.Warning, Is.Null);
     }
@@ -113,10 +113,10 @@ public class PipelineServiceTests
     public async Task Second_track_updates_same_entry_and_preserves_created()
     {
         var h = await BuildAsync();
-        await h.Service.TrackAsync("934161181", PipelineStatus.Active, "fordi", null, null);
+        await h.Service.TrackAsync("734161181", PipelineStatus.Active, "fordi", null, null);
 
         h.Clock.UtcNow = T2;
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Applied, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Applied, null, null, null);
 
         Assert.That(h.Pipeline.Store, Has.Count.EqualTo(1));
         Assert.That(result.Entry.Status, Is.EqualTo(PipelineStatus.Applied));
@@ -128,9 +128,9 @@ public class PipelineServiceTests
     public async Task Why_is_never_overwritten_with_null()
     {
         var h = await BuildAsync();
-        await h.Service.TrackAsync("934161181", PipelineStatus.Active, "den gode grunnen", "notat", "svaret");
+        await h.Service.TrackAsync("734161181", PipelineStatus.Active, "den gode grunnen", "notat", "svaret");
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Applied, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Applied, null, null, null);
 
         Assert.That(result.Entry.Why, Is.EqualTo("den gode grunnen"));
         Assert.That(result.Entry.Note, Is.EqualTo("notat"));
@@ -143,7 +143,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, "fordi", null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Active, "fordi", null, null);
 
         Assert.That(result.Entry.Starred, Is.False);
     }
@@ -153,7 +153,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync();
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, "fordi", null, null, starred: true);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Active, "fordi", null, null, starred: true);
 
         Assert.That(result.Entry.Starred, Is.True);
     }
@@ -162,12 +162,12 @@ public class PipelineServiceTests
     public async Task Starred_survives_a_status_only_edit()
     {
         var h = await BuildAsync();
-        await h.Service.TrackAsync("934161181", PipelineStatus.Active, "fordi", null, null, starred: true);
+        await h.Service.TrackAsync("734161181", PipelineStatus.Active, "fordi", null, null, starred: true);
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Applied, null, null, null);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Applied, null, null, null);
 
         Assert.That(result.Entry.Starred, Is.True, "a status-only edit must not clear the star");
-        Assert.That((await h.Pipeline.GetByOrgnrAsync("934161181"))!.Starred, Is.True,
+        Assert.That((await h.Pipeline.GetByOrgnrAsync("734161181"))!.Starred, Is.True,
             "the stored row must keep the star too, not just the returned entry");
     }
 
@@ -175,9 +175,9 @@ public class PipelineServiceTests
     public async Task Starred_can_be_cleared_explicitly()
     {
         var h = await BuildAsync();
-        await h.Service.TrackAsync("934161181", PipelineStatus.Active, "fordi", null, null, starred: true);
+        await h.Service.TrackAsync("734161181", PipelineStatus.Active, "fordi", null, null, starred: true);
 
-        var result = await h.Service.TrackAsync("934161181", PipelineStatus.Active, null, null, null, starred: false);
+        var result = await h.Service.TrackAsync("734161181", PipelineStatus.Active, null, null, null, starred: false);
 
         Assert.That(result.Entry.Starred, Is.False);
     }
@@ -250,7 +250,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync(withKnownCompany: false);
         await Register(h, "200000000", "NORDLYS KONSULENT AS");
-        await Register(h, "111111111", "BERGTATT AS AVD HAMAR", parent: "200000000");
+        await Register(h, "111111111", "BERGTIND AS AVD HAMAR", parent: "200000000");
         Tracked(h, "200000000", T1);
         h.Clock.UtcNow = T2;
 
@@ -268,7 +268,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync(withKnownCompany: false);
         await Register(h, "200000000", "NORDLYS KONSULENT AS");
-        await Register(h, "111111111", "BERGTATT AS AVD HAMAR", parent: "200000000");
+        await Register(h, "111111111", "BERGTIND AS AVD HAMAR", parent: "200000000");
         Tracked(h, "111111111", T1);
 
         var result = await h.Service.TrackAsync("200000000", PipelineStatus.Active, "grunn", null, null);
@@ -282,7 +282,7 @@ public class PipelineServiceTests
     {
         var h = await BuildAsync(withKnownCompany: false);
         await Register(h, "111111111", "NORDLYS AS AVD HAMAR", parent: "300000000");
-        await Register(h, "222222222", "BERGTATT AS AVD GJØVIK", parent: "300000000");
+        await Register(h, "222222222", "BERGTIND AS AVD GJØVIK", parent: "300000000");
         Tracked(h, "222222222", T1);
 
         var result = await h.Service.TrackAsync("111111111", PipelineStatus.Active, "grunn", null, null);

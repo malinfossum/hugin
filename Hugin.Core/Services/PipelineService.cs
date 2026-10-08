@@ -23,7 +23,7 @@ public sealed record UntrackResult(PipelineRemoval Removal, string? CompanyName)
 /// <summary>
 /// Moves a company through the outreach pipeline. Tracking is deliberately unconstrained by
 /// the NACE filter: that filter governs <em>discovery</em>, and the companies worth applying to
-/// are often outside it (Norsk Tipping is NACE 92, Statens vegvesen 84).
+/// are often outside it (a lottery operator is NACE 92, a state agency 84).
 /// </summary>
 public sealed class PipelineService(
     IPipelineRepository pipeline,

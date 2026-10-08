@@ -17,7 +17,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
   return {
     companies: [
       {
-        orgnr: '915787630',
+        orgnr: '715787630',
         name: 'Acme AS',
         kommune: '0301',
         kommuneNavn: null,
@@ -27,17 +27,17 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         parentOrgnr: null,
       },
       {
-        orgnr: '915787631',
+        orgnr: '715787631',
         name: 'Acme Avdeling',
         kommune: '0301',
         kommuneNavn: null,
         naceCode: '62.010',
         isBranch: true,
         website: null,
-        parentOrgnr: '915787630',
+        parentOrgnr: '715787630',
       },
       {
-        orgnr: '915787632',
+        orgnr: '715787632',
         name: 'Beta AS',
         kommune: '4601',
         kommuneNavn: null,
@@ -52,7 +52,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         feedId: 'a1',
         title: 'Utvikler',
         employer: 'Acme AS',
-        employerOrgnr: '915787630',
+        employerOrgnr: '715787630',
         kommune: '0301',
         expires: null,
         daysLeft: null,
@@ -134,7 +134,7 @@ describe('NyttSidenSist', () => {
     const dto = newDto({
       companies: [
         {
-          orgnr: '915787630',
+          orgnr: '715787630',
           name: 'NYFJELL SPILL AS',
           kommune: '0301',
           kommuneNavn: null,
@@ -149,7 +149,7 @@ describe('NyttSidenSist', () => {
           feedId: 'a1',
           title: 'Utvikler',
           employer: 'NYFJELL SPILL AS',
-          employerOrgnr: '915787630',
+          employerOrgnr: '715787630',
           kommune: '0301',
           expires: null,
           daysLeft: null,
@@ -291,7 +291,7 @@ describe('NyttSidenSist', () => {
           feedId: 'a2',
           title: 'Ny annonse fra runde to',
           employer: 'Beta AS',
-          employerOrgnr: '915787632',
+          employerOrgnr: '715787632',
           kommune: '4601',
           expires: null,
           daysLeft: null,

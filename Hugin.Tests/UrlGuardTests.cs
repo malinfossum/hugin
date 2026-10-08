@@ -31,7 +31,7 @@ public class UrlGuardWebsiteTests
     [Test]
     public void Adds_https_to_a_bare_hostname()
     {
-        Assert.That(UrlGuard.Website("www.innit.no"), Is.EqualTo("https://www.innit.no"));
+        Assert.That(UrlGuard.Website("www.smakode.example"), Is.EqualTo("https://www.smakode.example"));
         Assert.That(UrlGuard.Website("1lifeapp.no"), Is.EqualTo("https://1lifeapp.no"));
         Assert.That(UrlGuard.Website("thomassen.xyz"), Is.EqualTo("https://thomassen.xyz"));
         Assert.That(UrlGuard.Website("Zelus.no"), Is.EqualTo("https://Zelus.no"));

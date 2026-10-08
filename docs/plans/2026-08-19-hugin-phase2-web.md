@@ -1739,7 +1739,7 @@ Expected: `publish\hugin.exe`, `publish\hugin-api.exe`, `publish\wwwroot\index.h
 ./publish/hugin-api.exe --port 5111
 ```
 
-In a browser at `http://localhost:5111`: dashboard renders; auto-sync runs and the header announces completion; Frister shows the known ads (nødnett, Norsk Tipping) with sane daysLeft; pipeline view shows the real entries; eksport preview matches `hugin export` output run side by side. **Do not** click Merk som sett or Skjul against the real db in the smoke test. Then Ctrl+C, run `./publish/hugin.exe list` — CLI still works against the same db (WAL journal files beside it are normal).
+In a browser at `http://localhost:5111`: dashboard renders; auto-sync runs and the header announces completion; Frister shows the known ads (the two known IT ads) with sane daysLeft; pipeline view shows the real entries; eksport preview matches `hugin export` output run side by side. **Do not** click Merk som sett or Skjul against the real db in the smoke test. Then Ctrl+C, run `./publish/hugin.exe list` — CLI still works against the same db (WAL journal files beside it are normal).
 
 - [ ] **Step 4: Full suites one last time**
 

@@ -32,7 +32,7 @@ public sealed class HuginConfig
          "63",     // Databehandling, hosting, portaler
          "58.2",   // Programvareutgivelse — product companies
          "64.19",  // Bankvirksomhet — in-house dev teams
-         "92",     // Lotteri og gambling — Norsk Tipping
+         "92",     // Lotteri og gambling
          "61",     // Telekommunikasjon
          "26.2"];  // Produksjon av datamaskiner
 

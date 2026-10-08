@@ -9,8 +9,8 @@ public class SyncServiceTests
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 18, 8, 0, 0, TimeSpan.Zero);
 
-    private static RegisterCompany Company(string orgnr = "934161181") =>
-        new(orgnr, "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
+    private static RegisterCompany Company(string orgnr = "734161181") =>
+        new(orgnr, "Fjellkart AS avd Lillehammer", "3405", "62.100", "734161000", true, null);
 
     private static FeedAd Ad(string id, string title, string? kommune, DateTimeOffset? expires = null) =>
         new(id, title, "Firma AS", null, kommune, Now, expires, null, true);
@@ -88,8 +88,8 @@ public class SyncServiceTests
 
         Assert.That(summary.Brreg.Succeeded, Is.True);
         Assert.That(summary.Brreg.Fetched, Is.EqualTo(1));
-        Assert.That(h.Companies.Store["934161181"].FirstSeen, Is.EqualTo(Now));
-        Assert.That(h.Companies.Store["934161181"].LastSeenInRegister, Is.EqualTo(Now));
+        Assert.That(h.Companies.Store["734161181"].FirstSeen, Is.EqualTo(Now));
+        Assert.That(h.Companies.Store["734161181"].LastSeenInRegister, Is.EqualTo(Now));
     }
 
     [Test]
@@ -633,8 +633,8 @@ public class SyncServiceTests
     [Test]
     public async Task Known_ad_employer_is_not_looked_up_in_brreg()
     {
-        var h = Build(nav: new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "934161181")], null)));
-        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS" };
+        var h = Build(nav: new FakeNavFeedClient(new FeedPage([AdWithEmployer("a", "734161181")], null)));
+        h.Companies.Store["734161181"] = new Company { Orgnr = "734161181", Name = "Kjent AS" };
 
         await h.Service.SyncAsync();
 
@@ -644,37 +644,37 @@ public class SyncServiceTests
     [Test]
     public async Task Ad_with_employer_homepage_adopts_the_website_for_a_company_with_none()
     {
-        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var ad = AdWithEmployer("a", "734161181") with { EmployerHomepage = "https://fjellkart.example" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
-        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+        h.Companies.Store["734161181"] = new Company { Orgnr = "734161181", Name = "Kjent AS", Website = null };
 
         await h.Service.SyncAsync();
 
-        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://norkart.no"));
+        Assert.That(h.Companies.Store["734161181"].Website, Is.EqualTo("https://fjellkart.example"));
     }
 
     [Test]
     public async Task Ad_with_bare_host_homepage_adopts_it_as_an_https_url()
     {
-        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "www.nyfjell-spill.no" };
+        var ad = AdWithEmployer("a", "734161181") with { EmployerHomepage = "www.nyfjell-spill.no" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
-        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+        h.Companies.Store["734161181"] = new Company { Orgnr = "734161181", Name = "Kjent AS", Website = null };
 
         await h.Service.SyncAsync();
 
-        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://www.nyfjell-spill.no"));
+        Assert.That(h.Companies.Store["734161181"].Website, Is.EqualTo("https://www.nyfjell-spill.no"));
     }
 
     [Test]
     public async Task Ad_with_a_javascript_scheme_homepage_is_never_adopted()
     {
-        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "javascript:alert(1)" };
+        var ad = AdWithEmployer("a", "734161181") with { EmployerHomepage = "javascript:alert(1)" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
-        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+        h.Companies.Store["734161181"] = new Company { Orgnr = "734161181", Name = "Kjent AS", Website = null };
 
         await h.Service.SyncAsync();
 
-        Assert.That(h.Companies.Store["934161181"].Website, Is.Null);
+        Assert.That(h.Companies.Store["734161181"].Website, Is.Null);
     }
 
     [Test]
@@ -684,14 +684,14 @@ public class SyncServiceTests
         // that is currently null (or a confirmed-dead one) — so once the first ad in this page
         // has claimed the empty slot, the second ad's different homepage sees a filled slot and
         // backs off. This is a pin of today's upsert behavior, not a new rule.
-        var adA = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://forste.no" };
-        var adB = AdWithEmployer("b", "934161181") with { EmployerHomepage = "https://andre.no" };
+        var adA = AdWithEmployer("a", "734161181") with { EmployerHomepage = "https://forste.no" };
+        var adB = AdWithEmployer("b", "734161181") with { EmployerHomepage = "https://andre.no" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([adA, adB], null)));
-        h.Companies.Store["934161181"] = new Company { Orgnr = "934161181", Name = "Kjent AS", Website = null };
+        h.Companies.Store["734161181"] = new Company { Orgnr = "734161181", Name = "Kjent AS", Website = null };
 
         await h.Service.SyncAsync();
 
-        Assert.That(h.Companies.Store["934161181"].Website, Is.EqualTo("https://forste.no"),
+        Assert.That(h.Companies.Store["734161181"].Website, Is.EqualTo("https://forste.no"),
             "pinned: first ad in the page wins the empty website slot; the second ad's different " +
             "homepage is dropped because AdoptWebsiteAsync only adopts into a null/confirmed-dead website");
     }
@@ -699,7 +699,7 @@ public class SyncServiceTests
     [Test]
     public async Task Ad_website_adoption_never_fails_the_sync()
     {
-        var ad = AdWithEmployer("a", "934161181") with { EmployerHomepage = "https://norkart.no" };
+        var ad = AdWithEmployer("a", "734161181") with { EmployerHomepage = "https://fjellkart.example" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
         // No stored company for this orgnr — AdoptWebsiteAsync on the fake returns false rather
         // than throwing, but the wiring itself is wrapped in try/catch (same rule as employer
