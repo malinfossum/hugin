@@ -2014,13 +2014,11 @@ git commit -m "feat(web): hide every write control in read-only mode"
 
 ```json
 [
-  { "orgnr": "989773518", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "915168175", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." },
-  { "orgnr": "965309926", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
+  { "orgnr": "<real orgnr>", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
 ]
 ```
 
-(Digitaliseringsfabrikken AS, KulturIT AS, Vitec HK Data AS. This list was updated 2026-09-28 — see spec corrections 11 and 14.)
+(Firm names and orgnr removed 2026-10-08. The seed moved to fictional firms: see the spec's corrections 11 and 14 and `docs/specs/2026-10-08-hugin-v3.7.3-demo-fictional-seed.md`.)
 
 - [ ] **Step 3: Publish script.** Create `publish-demo.ps1`:
 

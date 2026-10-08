@@ -104,7 +104,7 @@ without also restoring an older snapshot: the working copy would carry a newer s
 
 ```json
 [
-  { "orgnr": "989773518", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
+  { "orgnr": "123456789", "status": "active", "why": "Demo: sporet for å vise pipeline og badges." }
 ]
 ```
 
@@ -115,7 +115,8 @@ without also restoring an older snapshot: the working copy would carry a newer s
    defaults to false. The file is validated on read: nine-digit orgnr, a known status slug, a
    non-empty why; an invalid entry is skipped with a warning naming it, an unreadable file logs
    once and seeds nothing. The why text is rendered by React like any pipeline why — escaped.
-2. **Content rules**: three to five real Innlandet IT employers that appear in the snapshot,
+2. **Content rules** (superseded 2026-10-08 by `2026-10-08-hugin-v3.7.3-demo-fictional-seed.md`:
+   the seed now holds fictional firms with all three statuses): three to five real Innlandet IT employers that appear in the snapshot,
    status `active` only, the same neutral why-line on all of them. No `applied`, no `answered`,
    no notes, no svar — nothing that could read as a real job hunt. Both demo files live in the
    repo under `demo/`: `demo/demo-pipeline.json` and `demo/hugin.demo.json` (the demo config,
@@ -314,7 +315,7 @@ matches UTC, snapshot copied back to `/home/data` after the boot sync. Deviation
     was ignored by the runtime on this image, `LC_ALL` is honoured. Nothing user-visible
     depended on it (every Norwegian comparison names `nb-NO` explicitly, dates go out as ISO),
     but the startup line is the verify-first evidence, so it now reads `nb-NO`.
-11. **The seed lists three firms, not four.** Norsk Tipping (925836613, NACE 92.000) can never
+11. **The seed lists three firms, not four.** The fourth firm was NACE 92 and can never
     enter `Companies` under the demo's `naeringskoder: ["62"]`, so the seeder warned at every
     boot and after every sync. Dropped from `demo/demo-pipeline.json` and from `/home/data`.
 12. **Kudu uploads use the Azure CLI bearer token**, not the publishing credentials:
@@ -331,9 +332,10 @@ matches UTC, snapshot copied back to `/home/data` after the boot sync. Deviation
 
 ## Seed swap 2026-09-28
 
-14. **The seed now holds three firms picked only for the demo**: Digitaliseringsfabrikken AS
-    (989773518, Hamar), KulturIT AS (915168175, Lillehammer) and Vitec HK Data AS (965309926,
-    Ringsaker), all NACE 62 and inside the demo scope. Because the seeder never updates or
+14. **The seed now holds three firms picked only for the demo**, all NACE 62 and inside the
+    demo scope. (Names removed 2026-10-08: real employers in the demo area are too close to
+    my own job search to show, so the seed moved to fictional firms. See
+    `2026-10-08-hugin-v3.7.3-demo-fictional-seed.md`.) Because the seeder never updates or
     removes rows, a new `demo-pipeline.json` alone leaves the old rows in the snapshot. The
     swap is: stop the app, download `/home/data/hugin.db`, `hugin untrack` each old orgnr
     against it with the demo config beside it, upload the db and the new seed, start the app.
