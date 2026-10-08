@@ -29,8 +29,11 @@ public sealed class ResetEndpointTests
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "734161181", Status = PipelineStatus.Active, Why = "fordi",
-                Created = now, Updated = now,
+                Orgnr = "734161181",
+                Status = PipelineStatus.Active,
+                Why = "fordi",
+                Created = now,
+                Updated = now,
             });
             var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
             await ads.UpsertAsync(new FeedAd("a1", "Utvikler", "Fjellkart AS", "734161181", "3405",
@@ -74,8 +77,11 @@ public sealed class ResetEndpointTests
             var pipeline = scope.ServiceProvider.GetRequiredService<IPipelineRepository>();
             await pipeline.UpsertAsync(new PipelineEntry
             {
-                Orgnr = "734161181", Status = PipelineStatus.Active, Why = "fordi",
-                Created = now, Updated = now,
+                Orgnr = "734161181",
+                Status = PipelineStatus.Active,
+                Why = "fordi",
+                Created = now,
+                Updated = now,
             });
         }
         using var client = factory.CreateApiClient();

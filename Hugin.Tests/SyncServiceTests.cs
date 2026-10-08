@@ -745,7 +745,11 @@ public class SyncServiceTests
 
     private static Company DueCompany(string orgnr, string website, DateTimeOffset? checkedUtc = null) => new()
     {
-        Orgnr = orgnr, Name = "Firma AS", Website = website, FirstSeen = Now, LastSeenInRegister = Now,
+        Orgnr = orgnr,
+        Name = "Firma AS",
+        Website = website,
+        FirstSeen = Now,
+        LastSeenInRegister = Now,
         WebsiteCheckedUtc = checkedUtc,
     };
 

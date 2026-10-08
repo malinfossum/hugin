@@ -7,8 +7,16 @@ namespace Hugin.Tests;
 public sealed class AdOverviewServiceTests
 {
     private static Ad MakeAd(string id, string? orgnr = null, DateTimeOffset? expires = null, bool hidden = false) =>
-        new() { FeedId = id, Title = "Utvikler", EmployerName = "Firma", EmployerOrgnr = orgnr,
-                Expires = expires, IsActive = true, Hidden = hidden };
+        new()
+        {
+            FeedId = id,
+            Title = "Utvikler",
+            EmployerName = "Firma",
+            EmployerOrgnr = orgnr,
+            Expires = expires,
+            IsActive = true,
+            Hidden = hidden
+        };
 
     // FakeAdRepository/FakePipelineRepository only expose a parameterless ctor + Store
     // collection to populate, unlike the brief's illustrative params ctors — these helpers
@@ -155,7 +163,7 @@ public sealed class AdOverviewServiceTests
         var now = DateTimeOffset.UtcNow;
         var ads = AdsWith(MakeAd("a", orgnr: "999888777"), MakeAd("b", orgnr: "111222333"));
         var pipeline = PipelineWith(new PipelineEntry
-            { Orgnr = "999888777", Status = PipelineStatus.Active, Created = now, Updated = now });
+        { Orgnr = "999888777", Status = PipelineStatus.Active, Created = now, Updated = now });
         var sut = new AdOverviewService(ads, pipeline, new FakeClock(now), new FakeCompanyRepository());
 
         var result = await sut.GetAsync();

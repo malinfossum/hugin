@@ -1,6 +1,6 @@
-using Hugin.Infrastructure.Data;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -380,11 +380,19 @@ public class RepositoryTests
         var repo = new EfPipelineRepository(_db);
         await repo.UpsertAsync(new()
         {
-            Orgnr = "1", Status = Core.Models.PipelineStatus.Active, Starred = false, Created = T1, Updated = T1,
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.Active,
+            Starred = false,
+            Created = T1,
+            Updated = T1,
         });
         await repo.UpsertAsync(new()
         {
-            Orgnr = "1", Status = Core.Models.PipelineStatus.Applied, Starred = true, Created = T1, Updated = T2,
+            Orgnr = "1",
+            Status = Core.Models.PipelineStatus.Applied,
+            Starred = true,
+            Created = T1,
+            Updated = T2,
         });
 
         var stored = await repo.GetByOrgnrAsync("1");
@@ -430,10 +438,17 @@ public class RepositoryTests
     public async Task GetByEmployerAsync_returns_expired_too_newest_first()
     {
         var repo = new EfAdRepository(_db);
-        await repo.UpsertAsync(SomeFeedAd("old") with { EmployerOrgnr = "999888777",
-            Published = T1.AddDays(-30), IsActive = false }, T1);
-        await repo.UpsertAsync(SomeFeedAd("new") with { EmployerOrgnr = "999888777",
-            Published = T1 }, T1);
+        await repo.UpsertAsync(SomeFeedAd("old") with
+        {
+            EmployerOrgnr = "999888777",
+            Published = T1.AddDays(-30),
+            IsActive = false
+        }, T1);
+        await repo.UpsertAsync(SomeFeedAd("new") with
+        {
+            EmployerOrgnr = "999888777",
+            Published = T1
+        }, T1);
         await repo.UpsertAsync(SomeFeedAd("other") with { EmployerOrgnr = "111" }, T1);
 
         var ads = await repo.GetByEmployerAsync("999888777");
@@ -504,8 +519,12 @@ public class RepositoryTests
 
     private static PipelineEntry TrackedEntry(string orgnr) => new()
     {
-        Orgnr = orgnr, Status = PipelineStatus.Applied, Starred = true, Why = "grunn",
-        Created = T1, Updated = T2,
+        Orgnr = orgnr,
+        Status = PipelineStatus.Applied,
+        Starred = true,
+        Why = "grunn",
+        Created = T1,
+        Updated = T2,
     };
 
     private static FeedAd AdFrom(string feedId, string employerOrgnr) =>
@@ -573,10 +592,24 @@ public class RepositoryTests
     public async Task PutSeeded_company_inserts_as_given_then_refreshes_but_keeps_FirstSeen()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.PutSeededAsync(new Company { Orgnr = "100000001", Name = "Mjøskode AS",
-            MunicipalityNumber = "3403", NaceCode = "62.100", FirstSeen = T1, LastSeenInRegister = T1 });
-        await repo.PutSeededAsync(new Company { Orgnr = "100000001", Name = "Mjøskode Data AS",
-            MunicipalityNumber = "3405", NaceCode = "62.200", FirstSeen = T2, LastSeenInRegister = T2 });
+        await repo.PutSeededAsync(new Company
+        {
+            Orgnr = "100000001",
+            Name = "Mjøskode AS",
+            MunicipalityNumber = "3403",
+            NaceCode = "62.100",
+            FirstSeen = T1,
+            LastSeenInRegister = T1
+        });
+        await repo.PutSeededAsync(new Company
+        {
+            Orgnr = "100000001",
+            Name = "Mjøskode Data AS",
+            MunicipalityNumber = "3405",
+            NaceCode = "62.200",
+            FirstSeen = T2,
+            LastSeenInRegister = T2
+        });
 
         var c = await repo.GetAsync("100000001");
         Assert.That(c!.Name, Is.EqualTo("Mjøskode Data AS"));
@@ -592,9 +625,16 @@ public class RepositoryTests
         var repo = new EfAdRepository(_db);
         Ad Seeded(DateTimeOffset at, bool active) => new()
         {
-            FeedId = "demo-100000001", Title = "Fullstackutvikler", EmployerName = "Mjøskode AS",
-            EmployerOrgnr = "100000001", MunicipalityNumber = "3403", Category = "IT / Utvikling",
-            Published = at, FirstSeen = at, Expires = at.AddDays(3), IsActive = active,
+            FeedId = "demo-100000001",
+            Title = "Fullstackutvikler",
+            EmployerName = "Mjøskode AS",
+            EmployerOrgnr = "100000001",
+            MunicipalityNumber = "3403",
+            Category = "IT / Utvikling",
+            Published = at,
+            FirstSeen = at,
+            Expires = at.AddDays(3),
+            IsActive = active,
         };
         await repo.PutSeededAsync(Seeded(T1, true));
         await repo.SetHiddenAsync("demo-100000001", true);
