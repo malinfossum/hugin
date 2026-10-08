@@ -67,6 +67,75 @@ public sealed class DemoSeederTests
     }
 
     [Test]
+    public void Parse_reads_svar_company_and_ad_blocks()
+    {
+        var entries = DemoSeeder.Parse("""
+            [{ "orgnr": "100000003", "status": "answered", "why": "Demo.",
+               "svar": "Takk for søknaden.",
+               "company": { "name": "Lysbekk Data AS", "kommune": "3407", "nace": "62.100" },
+               "ad": { "title": "Juniorutvikler", "publishedDaysAgo": 30, "expiresInDays": -5 } }]
+            """, out var problems);
+        Assert.That(problems, Is.Empty);
+        var e = entries.Single();
+        Assert.That(e.Svar, Is.EqualTo("Takk for søknaden."));
+        Assert.That(e.Company, Is.EqualTo(new DemoSeedCompany("Lysbekk Data AS", "3407", "62.100")));
+        Assert.That(e.Ad, Is.EqualTo(new DemoSeedAd("Juniorutvikler", 30, -5)));
+    }
+
+    [Test]
+    public void Parse_reads_a_utf8_name_from_disk()
+    {
+        WriteSeed("""
+            [{ "orgnr": "100000001", "status": "active", "why": "Demo.",
+               "company": { "name": "Mjøskode AS", "kommune": "3403", "nace": "62.100" } }]
+            """);
+        var entries = DemoSeeder.Parse(File.ReadAllText(_mode.SeedPath), out _);
+        Assert.That(entries.Single().Company!.Name, Is.EqualTo("Mjøskode AS"));
+    }
+
+    [Test]
+    public void Parse_rejects_a_company_block_on_a_real_orgnr()
+    {
+        var entries = DemoSeeder.Parse("""
+            [{ "orgnr": "912345678", "status": "active", "why": "Demo.",
+               "company": { "name": "Ekte AS", "kommune": "3403", "nace": "62.100" } },
+             { "orgnr": "812345678", "status": "active", "why": "Demo.",
+               "company": { "name": "Ekte AS", "kommune": "3403", "nace": "62.100" } },
+             { "orgnr": "912345679", "status": "active", "why": "Demo." }]
+            """, out var problems);
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "912345679" }),
+            "a real orgnr is fine on its own, just never with a company block");
+        Assert.That(problems, Has.Count.EqualTo(2));
+        Assert.That(problems[0], Does.Contain("912345678"));
+    }
+
+    [TestCase("""{ "name": "", "kommune": "3403", "nace": "62.100" }""", null, "name")]
+    [TestCase("""{ "name": "X AS", "kommune": "343", "nace": "62.100" }""", null, "kommune")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62" }""", null, "nace")]
+    [TestCase(null, """{ "title": "Utvikler", "publishedDaysAgo": 1, "expiresInDays": 1 }""", "company")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
+        """{ "title": " ", "publishedDaysAgo": 1, "expiresInDays": 1 }""", "title")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
+        """{ "title": "Utvikler", "publishedDaysAgo": -1, "expiresInDays": 1 }""", "publishedDaysAgo")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
+        """{ "title": "Utvikler", "publishedDaysAgo": "10", "expiresInDays": 1 }""", "publishedDaysAgo")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
+        """{ "title": "Utvikler", "publishedDaysAgo": 1, "expiresInDays": 2.5 }""", "expiresInDays")]
+    [TestCase("""{ "name": "X AS", "kommune": "3403", "nace": "62.100" }""",
+        """{ "title": "Utvikler", "publishedDaysAgo": 1 }""", "expiresInDays")]
+    public void Parse_skips_one_bad_block_and_keeps_the_rest(string? company, string? ad, string named)
+    {
+        var bad = "{ \"orgnr\": \"100000001\", \"status\": \"active\", \"why\": \"Demo.\""
+            + (company is null ? "" : $", \"company\": {company}")
+            + (ad is null ? "" : $", \"ad\": {ad}") + " }";
+        var entries = DemoSeeder.Parse(
+            $$"""[{{bad}}, { "orgnr": "100000002", "status": "applied", "why": "Demo." }]""", out var problems);
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "100000002" }));
+        Assert.That(problems, Has.Count.EqualTo(1));
+        Assert.That(problems[0], Does.Contain("100000001").And.Contain(named));
+    }
+
+    [Test]
     public async Task Apply_inserts_an_absent_entry_for_a_known_company()
     {
         WriteSeed("""[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
