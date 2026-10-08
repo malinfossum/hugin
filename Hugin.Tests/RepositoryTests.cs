@@ -568,4 +568,45 @@ public class RepositoryTests
         Assert.That(await pipeline.GetAllAsync(), Has.Count.EqualTo(1));
         Assert.That((await _db.Ads.AsNoTracking().SingleAsync()).LinkedOrgnr, Is.EqualTo("111111111"));
     }
+
+    [Test]
+    public async Task PutSeeded_company_inserts_as_given_then_refreshes_but_keeps_FirstSeen()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.PutSeededAsync(new Company { Orgnr = "100000001", Name = "Mjøskode AS",
+            MunicipalityNumber = "3403", NaceCode = "62.100", FirstSeen = T1, LastSeenInRegister = T1 });
+        await repo.PutSeededAsync(new Company { Orgnr = "100000001", Name = "Mjøskode Data AS",
+            MunicipalityNumber = "3405", NaceCode = "62.200", FirstSeen = T2, LastSeenInRegister = T2 });
+
+        var c = await repo.GetAsync("100000001");
+        Assert.That(c!.Name, Is.EqualTo("Mjøskode Data AS"));
+        Assert.That(c.MunicipalityNumber, Is.EqualTo("3405"));
+        Assert.That(c.NaceCode, Is.EqualTo("62.200"));
+        Assert.That(c.FirstSeen, Is.EqualTo(T1));
+        Assert.That(c.LastSeenInRegister, Is.EqualTo(T2));
+    }
+
+    [Test]
+    public async Task PutSeeded_ad_overwrites_every_dated_field_but_keeps_Hidden_and_LinkedOrgnr()
+    {
+        var repo = new EfAdRepository(_db);
+        Ad Seeded(DateTimeOffset at, bool active) => new()
+        {
+            FeedId = "demo-100000001", Title = "Fullstackutvikler", EmployerName = "Mjøskode AS",
+            EmployerOrgnr = "100000001", MunicipalityNumber = "3403", Category = "IT / Utvikling",
+            Published = at, FirstSeen = at, Expires = at.AddDays(3), IsActive = active,
+        };
+        await repo.PutSeededAsync(Seeded(T1, true));
+        await repo.SetHiddenAsync("demo-100000001", true);
+        await repo.SetLinkedOrgnrAsync("demo-100000001", "100000002");
+        await repo.PutSeededAsync(Seeded(T2, false));
+
+        var ad = (await repo.GetAllAsync()).Single();
+        Assert.That(ad.Published, Is.EqualTo(T2));
+        Assert.That(ad.FirstSeen, Is.EqualTo(T2), "the feed upsert keeps FirstSeen; the seeder must not");
+        Assert.That(ad.Expires, Is.EqualTo(T2.AddDays(3)));
+        Assert.That(ad.IsActive, Is.False);
+        Assert.That(ad.Hidden, Is.True);
+        Assert.That(ad.LinkedOrgnr, Is.EqualTo("100000002"));
+    }
 }
