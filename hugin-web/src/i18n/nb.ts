@@ -275,7 +275,7 @@ export const nb = {
 
   'demo.regionLabel': 'Demo',
   'demo.banner':
-    'Demo — skrivebeskyttet. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet. Pipelinen er eksempeldata. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
+    'Skrivebeskyttet demo. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet, pluss tre fiktive firmaer med én fiktiv annonse hver. Pipelinen viser bare de fiktive firmaene. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
   'demo.repoLink': 'Kildekode på GitHub',
 
   // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen — an

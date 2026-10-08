@@ -18,7 +18,7 @@ describe('displayCompanyName', () => {
   })
   it('passes mixed-case names through untouched', () => {
     expect(displayCompanyName('Nyfjell Spill AS')).toBe('Nyfjell Spill AS')
-    expect(displayCompanyName('innit AS')).toBe('innit AS')
+    expect(displayCompanyName('småkode AS')).toBe('småkode AS')
   })
   it('handles norwegian letters', () => {
     expect(displayCompanyName('GJØVIK VÆRKSTED ANS')).toBe('Gjøvik Værksted ANS')

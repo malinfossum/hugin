@@ -96,4 +96,23 @@ public sealed class PublicModeEndpointTests
 
         Assert.That(response.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Forbidden));
     }
+
+    [Test]
+    public async Task Public_ads_include_a_seeded_demo_ad_with_its_pipeline_status()
+    {
+        using var factory = new ApiFactory(publicMode: true);
+        Directory.CreateDirectory(factory.StateDir);
+        File.WriteAllText(Path.Combine(factory.StateDir, "demo-pipeline.json"), """
+            [{ "orgnr": "100000001", "status": "active", "why": "Demo.",
+               "company": { "name": "Mjøskode AS", "kommune": "3403", "nace": "62.100" },
+               "ad": { "title": "Fullstackutvikler", "publishedDaysAgo": 10, "expiresInDays": 3 } }]
+            """);
+        using var client = factory.CreateClient();
+
+        var ads = await client.GetFromJsonAsync<List<AdDtoProbe>>("/api/ads");
+        var demo = ads!.Single(a => a.FeedId == "demo-100000001");
+        Assert.That(demo.PipelineStatus, Is.EqualTo("active"),
+            "no Brreg parent chain: the registry root is the orgnr itself");
+        Assert.That(demo.DaysLeft, Is.EqualTo(3));
+    }
 }

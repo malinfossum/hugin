@@ -253,17 +253,17 @@ describe('App', () => {
       vi.fn((input: RequestInfo | URL) => {
         const url = typeof input === 'string' ? input : input.toString()
         if (url === '/api/companies') {
-          return Promise.resolve(jsonResponse([{ orgnr: '915787630', name: 'Acme AS' }]))
+          return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: 'Acme AS' }]))
         }
-        if (url === '/api/companies/915787630') {
+        if (url === '/api/companies/715787630') {
           return Promise.resolve(
-            jsonResponse({ company: { orgnr: '915787630', name: 'Acme AS' }, ads: [] })
+            jsonResponse({ company: { orgnr: '715787630', name: 'Acme AS' }, ads: [] })
           )
         }
         return Promise.reject(new Error(`unhandled request ${url}`))
       })
     )
-    window.history.replaceState(null, '', '/companies/915787630')
+    window.history.replaceState(null, '', '/companies/715787630')
 
     render(<App />)
 
@@ -272,7 +272,7 @@ describe('App', () => {
       'page'
     )
     expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/companies/915787630')
+    expect(window.location.pathname).toBe('/companies/715787630')
   })
 
   it('read-only: shows the demo banner and never opens the first-run dialog', async () => {
@@ -280,13 +280,24 @@ describe('App', () => {
     render(<App />)
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Demo' })).toHaveTextContent(
-        'Demo — skrivebeskyttet'
+        'Skrivebeskyttet demo. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet, pluss tre fiktive firmaer'
       )
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Kildekode på GitHub' })).toHaveAttribute(
       'href',
       'https://github.com/malinfossum/hugin'
+    )
+  })
+
+  it('read-only: the English banner names the fictional companies', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    vi.stubGlobal('fetch', fakeServer({ readOnly: true }))
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Demo' })).toHaveTextContent(
+        'Read-only demo. Real job ads and companies from NAV and Brreg for Innlandet, plus three fictional companies'
+      )
     )
   })
 

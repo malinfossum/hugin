@@ -25,8 +25,8 @@ public class CommandParserTests
 
     [Test]
     public void Track_full()
-        => Assert.That(CommandParser.Parse(["track", "915787630", "applied", "--why", "fordi", "--note", "n", "--svar", "s"]),
-            Is.EqualTo(new TrackCommand("915787630", PipelineStatus.Applied, "fordi", "n", "s")));
+        => Assert.That(CommandParser.Parse(["track", "715787630", "applied", "--why", "fordi", "--note", "n", "--svar", "s"]),
+            Is.EqualTo(new TrackCommand("715787630", PipelineStatus.Applied, "fordi", "n", "s")));
 
     [Test]
     public void Track_status_aliases()

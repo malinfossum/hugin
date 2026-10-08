@@ -19,9 +19,9 @@ public sealed record PipelineOverview(PipelineEntry Entry, bool AdsExpired);
 /// frist first. Ads without a frist sort last — a missing deadline is not an urgent one.
 /// </summary>
 /// <remarks>
-/// NAV sometimes reports a different registry unit than the one actually tracked (real case:
-/// an ad carried orgnr 972483672 while the company was tracked under 925836613, whose
-/// <see cref="Company.ParentOrgnr"/> chain leads to 972483672). Exact orgnr match is tried
+/// NAV sometimes reports a different registry unit than the one actually tracked (example:
+/// an ad carried orgnr 787878787 while the company was tracked under 777777777, whose
+/// <see cref="Company.ParentOrgnr"/> chain leads to 787878787). Exact orgnr match is tried
 /// first; when it misses, both the ad's orgnr and every pipeline entry's orgnr are resolved
 /// to their registry root (following ParentOrgnr, max 4 hops) and matched on that root instead.
 /// A manual link (<see cref="Ad.LinkedOrgnr"/>, set from the dashboard) wins over both when it

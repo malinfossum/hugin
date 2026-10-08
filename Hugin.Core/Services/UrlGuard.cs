@@ -13,7 +13,7 @@ public static partial class UrlGuard
             : null;
 
     /// <summary>
-    /// Register homepages are stored as bare hostnames ("www.innit.no"), which
+    /// Register homepages are stored as bare hostnames ("www.smakode.example"), which
     /// <see cref="HttpOrHttps"/> rejects outright. Assume https for those, but never invent a
     /// scheme for a value that already declares one — prefixing "javascript:alert(1)" would
     /// smuggle exactly what the guard exists to stop.

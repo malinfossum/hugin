@@ -37,6 +37,11 @@ public interface ICompanyRepository
     /// Resets the check trio so the weekly checker probes the adopted URL. Returns whether it
     /// adopted.</summary>
     public Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default);
+
+    /// <summary>Demo seeder only: inserts the row as given, or overwrites name, kommune, NACE,
+    /// parent, branch flag and LastSeenInRegister on an existing one. FirstSeen and the website
+    /// fields are kept. The seeder's 8-or-9 guard keeps this away from real companies.</summary>
+    public Task PutSeededAsync(Models.Company company, CancellationToken ct = default);
 }
 
 public interface IAdRepository
@@ -67,6 +72,12 @@ public interface IAdRepository
 
     /// <summary>Every stored ad — open, expired and hidden alike. No ordering promised.</summary>
     public Task<IReadOnlyList<Models.Ad>> GetAllAsync(CancellationToken ct = default);
+
+    /// <summary>Demo seeder only: inserts the ad as given, or overwrites every feed-shaped field
+    /// on an existing one, FirstSeen included, so seeded dates roll. Unlike
+    /// <see cref="UpsertAsync"/> nothing falls back to the old value. Hidden and LinkedOrgnr are
+    /// Hugin-owned and kept.</summary>
+    public Task PutSeededAsync(Models.Ad ad, CancellationToken ct = default);
 }
 
 public interface IPipelineRepository

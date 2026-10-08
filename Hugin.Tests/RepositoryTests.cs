@@ -29,8 +29,8 @@ public class RepositoryTests
         _conn.Dispose();
     }
 
-    private static RegisterCompany Norkart(string orgnr = "934161181") =>
-        new(orgnr, "Norkart AS avd Lillehammer", "3405", "62.100", "934161000", true, null);
+    private static RegisterCompany Fjellkart(string orgnr = "734161181") =>
+        new(orgnr, "Fjellkart AS avd Lillehammer", "3405", "62.100", "734161000", true, null);
 
     private static FeedAd SomeFeedAd(string id) =>
         new(id, "Utvikler", "Firma AS", "999888777", "3407",
@@ -41,9 +41,9 @@ public class RepositoryTests
     public async Task Upsert_sets_FirstSeen_once_and_LastSeen_always()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
-        await repo.UpsertAsync(Norkart(), T2);
-        var c = await repo.GetAsync("934161181");
+        await repo.UpsertAsync(Fjellkart(), T1);
+        await repo.UpsertAsync(Fjellkart(), T2);
+        var c = await repo.GetAsync("734161181");
         Assert.That(c!.FirstSeen, Is.EqualTo(T1));
         Assert.That(c.LastSeenInRegister, Is.EqualTo(T2));
     }
@@ -52,8 +52,8 @@ public class RepositoryTests
     public async Task GetFirstSeenAfter_filters()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart("1"), T1);
-        await repo.UpsertAsync(Norkart("2"), T2);
+        await repo.UpsertAsync(Fjellkart("1"), T1);
+        await repo.UpsertAsync(Fjellkart("2"), T2);
         var fresh = await repo.GetFirstSeenAfterAsync(T1);
         Assert.That(fresh.Select(c => c.Orgnr), Is.EqualTo(new[] { "2" }));
     }
@@ -62,15 +62,15 @@ public class RepositoryTests
     public async Task Upsert_preserves_website_check_fields_when_the_website_is_unchanged()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
-        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "http://norkart.no", T1);
+        await repo.UpsertAsync(Fjellkart(), T1);
+        await repo.SetWebsiteCheckAsync("734161181", ok: true, resolvedUrl: "http://fjellkart.example", T1);
 
         // Same website on the next sync — the check must survive, not be re-cleared to unchecked.
-        await repo.UpsertAsync(Norkart(), T2);
+        await repo.UpsertAsync(Fjellkart(), T2);
 
-        var c = await repo.GetAsync("934161181");
+        var c = await repo.GetAsync("734161181");
         Assert.That(c!.WebsiteOk, Is.True);
-        Assert.That(c.WebsiteResolved, Is.EqualTo("http://norkart.no"));
+        Assert.That(c.WebsiteResolved, Is.EqualTo("http://fjellkart.example"));
         Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
     }
 
@@ -78,12 +78,12 @@ public class RepositoryTests
     public async Task Upsert_clears_website_check_fields_when_the_website_changes()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
-        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "https://norkart.no", T1);
+        await repo.UpsertAsync(Fjellkart(), T1);
+        await repo.SetWebsiteCheckAsync("734161181", ok: true, resolvedUrl: "https://fjellkart.example", T1);
 
-        await repo.UpsertAsync(Norkart() with { Website = "https://newsite.no" }, T2);
+        await repo.UpsertAsync(Fjellkart() with { Website = "https://newsite.no" }, T2);
 
-        var c = await repo.GetAsync("934161181");
+        var c = await repo.GetAsync("734161181");
         Assert.That(c!.Website, Is.EqualTo("https://newsite.no"));
         Assert.That(c.WebsiteOk, Is.Null);
         Assert.That(c.WebsiteResolved, Is.Null);
@@ -100,13 +100,13 @@ public class RepositoryTests
         // Erasing it on every "no website this sync" would undo the adoption. A register that
         // reports a genuinely DIFFERENT website still wins outright (see the test above).
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
-        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T1);
+        await repo.UpsertAsync(Fjellkart() with { Website = "https://fjellkart.example" }, T1);
+        await repo.SetWebsiteCheckAsync("734161181", ok: false, resolvedUrl: null, T1);
 
-        await repo.UpsertAsync(Norkart() with { Website = null }, T2);
+        await repo.UpsertAsync(Fjellkart() with { Website = null }, T2);
 
-        var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "absence is not a correction");
+        var c = await repo.GetAsync("734161181");
+        Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"), "absence is not a correction");
         Assert.That(c.WebsiteOk, Is.False, "the prior check state survives too — nothing changed");
         Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
     }
@@ -115,9 +115,9 @@ public class RepositoryTests
     public async Task Insert_leaves_website_check_fields_null()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
+        await repo.UpsertAsync(Fjellkart(), T1);
 
-        var c = await repo.GetAsync("934161181");
+        var c = await repo.GetAsync("734161181");
         Assert.That(c!.WebsiteOk, Is.Null);
         Assert.That(c.WebsiteResolved, Is.Null);
         Assert.That(c.WebsiteCheckedUtc, Is.Null);
@@ -127,13 +127,13 @@ public class RepositoryTests
     public async Task AdoptWebsite_fills_a_gap_when_the_company_has_no_website()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
+        await repo.UpsertAsync(Fjellkart(), T1);
 
-        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://norkart.no");
+        var adopted = await repo.AdoptWebsiteAsync("734161181", "https://fjellkart.example");
 
         Assert.That(adopted, Is.True);
-        var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"));
+        var c = await repo.GetAsync("734161181");
+        Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"));
         Assert.That(c.WebsiteOk, Is.Null);
         Assert.That(c.WebsiteResolved, Is.Null);
         Assert.That(c.WebsiteCheckedUtc, Is.Null);
@@ -143,14 +143,14 @@ public class RepositoryTests
     public async Task AdoptWebsite_replaces_a_confirmed_dead_register_website()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart() with { Website = "https://dead.no" }, T1);
-        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T1);
+        await repo.UpsertAsync(Fjellkart() with { Website = "https://dead.no" }, T1);
+        await repo.SetWebsiteCheckAsync("734161181", ok: false, resolvedUrl: null, T1);
 
-        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://norkart.no");
+        var adopted = await repo.AdoptWebsiteAsync("734161181", "https://fjellkart.example");
 
         Assert.That(adopted, Is.True);
-        var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "the ad's website replaces the confirmed-dead one");
+        var c = await repo.GetAsync("734161181");
+        Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"), "the ad's website replaces the confirmed-dead one");
         Assert.That(c.WebsiteOk, Is.Null, "reset so the weekly checker probes the adopted URL");
         Assert.That(c.WebsiteResolved, Is.Null);
         Assert.That(c.WebsiteCheckedUtc, Is.Null);
@@ -160,14 +160,14 @@ public class RepositoryTests
     public async Task AdoptWebsite_does_nothing_when_the_company_already_has_a_healthy_website()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
-        await repo.SetWebsiteCheckAsync("934161181", ok: true, resolvedUrl: "https://norkart.no", T1);
+        await repo.UpsertAsync(Fjellkart() with { Website = "https://fjellkart.example" }, T1);
+        await repo.SetWebsiteCheckAsync("734161181", ok: true, resolvedUrl: "https://fjellkart.example", T1);
 
-        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://other.no");
+        var adopted = await repo.AdoptWebsiteAsync("734161181", "https://other.no");
 
         Assert.That(adopted, Is.False);
-        var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"), "a healthy register website always outranks an ad's claim");
+        var c = await repo.GetAsync("734161181");
+        Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"), "a healthy register website always outranks an ad's claim");
         Assert.That(c.WebsiteOk, Is.True);
         Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
     }
@@ -176,13 +176,13 @@ public class RepositoryTests
     public async Task AdoptWebsite_does_nothing_when_the_website_is_unchecked_but_non_null()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart() with { Website = "https://norkart.no" }, T1);
+        await repo.UpsertAsync(Fjellkart() with { Website = "https://fjellkart.example" }, T1);
 
-        var adopted = await repo.AdoptWebsiteAsync("934161181", "https://other.no");
+        var adopted = await repo.AdoptWebsiteAsync("734161181", "https://other.no");
 
         Assert.That(adopted, Is.False, "an unprobed register website is not treated as dead");
-        var c = await repo.GetAsync("934161181");
-        Assert.That(c!.Website, Is.EqualTo("https://norkart.no"));
+        var c = await repo.GetAsync("734161181");
+        Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"));
     }
 
     [Test]
@@ -197,10 +197,10 @@ public class RepositoryTests
     public async Task GetWebsitesDueForCheck_respects_never_checked_staleness_and_null_website()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart("never-checked") with { Website = "https://never.no" }, T1);
-        await repo.UpsertAsync(Norkart("stale") with { Website = "https://stale.no" }, T1);
-        await repo.UpsertAsync(Norkart("fresh") with { Website = "https://fresh.no" }, T1);
-        await repo.UpsertAsync(Norkart("no-website") with { Website = null }, T1);
+        await repo.UpsertAsync(Fjellkart("never-checked") with { Website = "https://never.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("stale") with { Website = "https://stale.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("fresh") with { Website = "https://fresh.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("no-website") with { Website = null }, T1);
 
         await repo.SetWebsiteCheckAsync("stale", ok: true, resolvedUrl: null, T1);
         await repo.SetWebsiteCheckAsync("fresh", ok: true, resolvedUrl: null, T2);
@@ -214,9 +214,9 @@ public class RepositoryTests
     public async Task GetWebsitesDueForCheck_is_oldest_first_and_capped()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart("a") with { Website = "https://a.no" }, T1);
-        await repo.UpsertAsync(Norkart("b") with { Website = "https://b.no" }, T1);
-        await repo.UpsertAsync(Norkart("c") with { Website = "https://c.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("a") with { Website = "https://a.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("b") with { Website = "https://b.no" }, T1);
+        await repo.UpsertAsync(Fjellkart("c") with { Website = "https://c.no" }, T1);
         await repo.SetWebsiteCheckAsync("a", ok: true, resolvedUrl: null, T1.AddHours(3));
         await repo.SetWebsiteCheckAsync("b", ok: true, resolvedUrl: null, T1.AddHours(1));
         await repo.SetWebsiteCheckAsync("c", ok: true, resolvedUrl: null, T1.AddHours(2));
@@ -230,11 +230,11 @@ public class RepositoryTests
     public async Task SetWebsiteCheckAsync_stores_result()
     {
         var repo = new EfCompanyRepository(_db);
-        await repo.UpsertAsync(Norkart(), T1);
+        await repo.UpsertAsync(Fjellkart(), T1);
 
-        await repo.SetWebsiteCheckAsync("934161181", ok: false, resolvedUrl: null, T2);
+        await repo.SetWebsiteCheckAsync("734161181", ok: false, resolvedUrl: null, T2);
 
-        var c = await repo.GetAsync("934161181");
+        var c = await repo.GetAsync("734161181");
         Assert.That(c!.WebsiteOk, Is.False);
         Assert.That(c.WebsiteResolved, Is.Null);
         Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T2));
@@ -586,5 +586,67 @@ public class RepositoryTests
         Assert.That(removed, Is.Null);
         Assert.That(await pipeline.GetAllAsync(), Has.Count.EqualTo(1));
         Assert.That((await _db.Ads.AsNoTracking().SingleAsync()).LinkedOrgnr, Is.EqualTo("111111111"));
+    }
+
+    [Test]
+    public async Task PutSeeded_company_inserts_as_given_then_refreshes_but_keeps_FirstSeen()
+    {
+        var repo = new EfCompanyRepository(_db);
+        await repo.PutSeededAsync(new Company
+        {
+            Orgnr = "100000001",
+            Name = "Mjøskode AS",
+            MunicipalityNumber = "3403",
+            NaceCode = "62.100",
+            FirstSeen = T1,
+            LastSeenInRegister = T1
+        });
+        await repo.PutSeededAsync(new Company
+        {
+            Orgnr = "100000001",
+            Name = "Mjøskode Data AS",
+            MunicipalityNumber = "3405",
+            NaceCode = "62.200",
+            FirstSeen = T2,
+            LastSeenInRegister = T2
+        });
+
+        var c = await repo.GetAsync("100000001");
+        Assert.That(c!.Name, Is.EqualTo("Mjøskode Data AS"));
+        Assert.That(c.MunicipalityNumber, Is.EqualTo("3405"));
+        Assert.That(c.NaceCode, Is.EqualTo("62.200"));
+        Assert.That(c.FirstSeen, Is.EqualTo(T1));
+        Assert.That(c.LastSeenInRegister, Is.EqualTo(T2));
+    }
+
+    [Test]
+    public async Task PutSeeded_ad_overwrites_every_dated_field_but_keeps_Hidden_and_LinkedOrgnr()
+    {
+        var repo = new EfAdRepository(_db);
+        Ad Seeded(DateTimeOffset at, bool active) => new()
+        {
+            FeedId = "demo-100000001",
+            Title = "Fullstackutvikler",
+            EmployerName = "Mjøskode AS",
+            EmployerOrgnr = "100000001",
+            MunicipalityNumber = "3403",
+            Category = "IT / Utvikling",
+            Published = at,
+            FirstSeen = at,
+            Expires = at.AddDays(3),
+            IsActive = active,
+        };
+        await repo.PutSeededAsync(Seeded(T1, true));
+        await repo.SetHiddenAsync("demo-100000001", true);
+        await repo.SetLinkedOrgnrAsync("demo-100000001", "100000002");
+        await repo.PutSeededAsync(Seeded(T2, false));
+
+        var ad = (await repo.GetAllAsync()).Single();
+        Assert.That(ad.Published, Is.EqualTo(T2));
+        Assert.That(ad.FirstSeen, Is.EqualTo(T2), "the feed upsert keeps FirstSeen; the seeder must not");
+        Assert.That(ad.Expires, Is.EqualTo(T2.AddDays(3)));
+        Assert.That(ad.IsActive, Is.False);
+        Assert.That(ad.Hidden, Is.True);
+        Assert.That(ad.LinkedOrgnr, Is.EqualTo("100000002"));
     }
 }
