@@ -280,13 +280,24 @@ describe('App', () => {
     render(<App />)
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Demo' })).toHaveTextContent(
-        'Demo — skrivebeskyttet'
+        'Skrivebeskyttet demo. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet, pluss tre fiktive firmaer'
       )
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Kildekode på GitHub' })).toHaveAttribute(
       'href',
       'https://github.com/malinfossum/hugin'
+    )
+  })
+
+  it('read-only: the English banner names the fictional companies', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    vi.stubGlobal('fetch', fakeServer({ readOnly: true }))
+    render(<App />)
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Demo' })).toHaveTextContent(
+        'Read-only demo. Real job ads and companies from NAV and Brreg for Innlandet, plus three fictional companies'
+      )
     )
   })
 

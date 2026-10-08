@@ -343,4 +343,13 @@ public sealed class DemoSeederTests
         _db.ChangeTracker.Clear();
         Assert.That((await _db.Ads.SingleAsync(a => a.FeedId == "demo-100000001")).Hidden, Is.True);
     }
+
+    [Test]
+    public void The_shipped_demo_seed_parses_cleanly_and_holds_only_fictional_firms()
+    {
+        var entries = DemoSeeder.Parse(HttpFixtures.ReadFixture("demo-pipeline.json"), out var problems);
+        Assert.That(problems, Is.Empty);
+        Assert.That(entries.Select(e => e.Orgnr), Is.EqualTo(new[] { "100000001", "100000002", "100000003" }));
+        Assert.That(entries.All(e => e.Company is not null && e.Ad is not null), Is.True);
+    }
 }

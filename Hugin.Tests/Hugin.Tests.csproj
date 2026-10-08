@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Update="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\demo\demo-pipeline.json" Link="Fixtures\demo-pipeline.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
