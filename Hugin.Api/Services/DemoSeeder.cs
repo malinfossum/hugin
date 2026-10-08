@@ -14,11 +14,17 @@ public sealed record DemoSeedEntry(string Orgnr, PipelineStatus Status, string W
 /// Seeds the demo pipeline from <c>&lt;state&gt;/demo-pipeline.json</c> (demo spec Part C):
 /// insert-if-absent, never update (the demo cannot drift), unknown companies skipped and retried
 /// after the next sync once Brreg has been walked. Runs at boot and after every sync, before the
-/// snapshot copy-back, and only in public mode.
+/// snapshot copy-back, and only in public mode. Entries with a <c>company</c> block also write a
+/// fictional company, and an <c>ad</c> block a fictional ad with dates relative to now, on every
+/// run (spec v3.7.3 Part 3).
 /// </summary>
 public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineRepository pipeline,
-    ICompanyRepository companies, IClock clock, ILogger<DemoSeeder> logger)
+    ICompanyRepository companies, IAdRepository ads, IClock clock, ILogger<DemoSeeder> logger)
 {
+    // Old enough that a fictional firm never shows up as newly discovered.
+    private static readonly TimeSpan SeededCompanyAge = TimeSpan.FromDays(60);
+    private const string DemoAdCategory = "IT / Utvikling";
+
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -135,23 +141,72 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
         var now = clock.UtcNow;
         foreach (var entry in entries)
         {
-            if (await pipeline.GetByOrgnrAsync(entry.Orgnr, ct) is not null) continue;
-            if (await companies.GetAsync(entry.Orgnr, ct) is null)
+            // Awaited at boot: one bad entry must not take the demo down. Every write is
+            // idempotent, so a half-written entry is completed by the next run.
+            try
             {
-                logger.LogWarning("Demo-seed: {Orgnr} finnes ikke i Companies ennå — prøver igjen etter neste synk.", entry.Orgnr);
-                continue;
+                if (await ApplyEntryAsync(entry, now, ct)) inserted++;
             }
-
-            await pipeline.UpsertAsync(new PipelineEntry
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Orgnr = entry.Orgnr,
-                Status = entry.Status,
-                Why = entry.Why,
-                Created = now,
-                Updated = now,
-            }, ct);
-            inserted++;
+                logger.LogWarning(ex, "Demo-seed: {Orgnr} feilet og hoppes over til neste kjøring.", entry.Orgnr);
+            }
         }
         return inserted;
+    }
+
+    private async Task<bool> ApplyEntryAsync(DemoSeedEntry entry, DateTimeOffset now, CancellationToken ct)
+    {
+        if (entry.Company is { } company)
+        {
+            await companies.PutSeededAsync(new Company
+            {
+                Orgnr = entry.Orgnr,
+                Name = company.Name,
+                MunicipalityNumber = company.Kommune,
+                NaceCode = company.Nace,
+                FirstSeen = now - SeededCompanyAge,
+                LastSeenInRegister = now,
+            }, ct);
+
+            if (entry.Ad is { } ad)
+            {
+                // DaysLeft counts whole UTC dates, so a UTC end of day gives the same count on
+                // the UTC container and on a machine in Europe/Oslo.
+                var deadline = now.UtcDateTime.Date.AddDays(ad.ExpiresInDays + 1).AddSeconds(-1);
+                var published = now.AddDays(-ad.PublishedDaysAgo);
+                await ads.PutSeededAsync(new Ad
+                {
+                    FeedId = $"demo-{entry.Orgnr}",
+                    Title = ad.Title,
+                    EmployerName = company.Name,
+                    EmployerOrgnr = entry.Orgnr,
+                    MunicipalityNumber = company.Kommune,
+                    Published = published,
+                    FirstSeen = published,
+                    Expires = new DateTimeOffset(deadline, TimeSpan.Zero),
+                    Category = DemoAdCategory,
+                    IsActive = ad.ExpiresInDays >= 0,
+                }, ct);
+            }
+        }
+
+        if (await pipeline.GetByOrgnrAsync(entry.Orgnr, ct) is not null) return false;
+        if (await companies.GetAsync(entry.Orgnr, ct) is null)
+        {
+            logger.LogWarning("Demo-seed: {Orgnr} finnes ikke i Companies ennå, prøver igjen etter neste synk.", entry.Orgnr);
+            return false;
+        }
+
+        await pipeline.UpsertAsync(new PipelineEntry
+        {
+            Orgnr = entry.Orgnr,
+            Status = entry.Status,
+            Why = entry.Why,
+            SvarText = entry.Svar,
+            Created = now,
+            Updated = now,
+        }, ct);
+        return true;
     }
 }
