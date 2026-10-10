@@ -24,17 +24,19 @@ public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<A
     DateTimeOffset Since, DateTimeOffset AsOf);
 
 public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, string? KommuneNavn,
-    string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr)
+    string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr, int OpenAds)
 {
     // Resolution order: the configured municipality list (Hugin's own tracked region) wins
     // first, then the full Brreg kommune register (covers every number, e.g. a parent or an
     // enriched ad employer sitting outside the tracked region), then the raw number as a
     // last resort — null only when the company itself has no kommune number.
-    public static CompanyDto From(Company c, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
+    // OpenAds comes from IAdRepository.CountOpenByEmployerAsync; a company missing from it has 0.
+    public static CompanyDto From(Company c, HuginConfig config, IReadOnlyDictionary<string, string> kommuner,
+        IReadOnlyDictionary<string, int> openAds) =>
         new(c.Orgnr, c.Name, c.MunicipalityNumber,
             config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name
                 ?? (c.MunicipalityNumber is { } number ? kommuner.GetValueOrDefault(number, number) : null),
-            c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr);
+            c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr, openAds.GetValueOrDefault(c.Orgnr));
 
     // A website confirmed dead (WebsiteOk == false) is never rendered as a link — better no
     // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this

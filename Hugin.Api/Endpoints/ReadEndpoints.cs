@@ -21,22 +21,25 @@ public static class ReadEndpoints
         // the moment it goes inactive at NAV. The hosted demo republishes, so its review lists never
         // carry a closed ad; the local app keeps its own history — nobody else can reach it.
         app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config,
-            IKommuneRepository kommuneRepo, PublicModeOptions mode) =>
+            IKommuneRepository kommuneRepo, IAdRepository ads, PublicModeOptions mode) =>
         {
             var asOf = clock.UtcNow; // captured before the query so it can't drift past what GetNewAsync actually saw
             if (await service.GetNewAsync() is not { } items) return Results.NoContent();
             var kommuner = await kommuneRepo.GetAllAsync();
+            var openAds = await ads.CountOpenByEmployerAsync(asOf);
             return Results.Ok(new NewDto(
-                items.Companies.Select(c => CompanyDto.From(c, config, kommuner)).ToList(),
+                items.Companies.Select(c => CompanyDto.From(c, config, kommuner, openAds)).ToList(),
                 items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf)).ToList(),
                 items.Since, asOf));
         });
 
-        app.MapGet("/api/companies", async (ICompanyRepository companies, HuginConfig config,
-            IKommuneRepository kommuneRepo, string? kommune) =>
+        app.MapGet("/api/companies", async (ICompanyRepository companies, IAdRepository ads, HuginConfig config,
+            IKommuneRepository kommuneRepo, IClock clock, string? kommune) =>
         {
             var kommuner = await kommuneRepo.GetAllAsync();
-            return Results.Ok((await companies.GetAllAsync(kommune)).Select(c => CompanyDto.From(c, config, kommuner)));
+            var openAds = await ads.CountOpenByEmployerAsync(clock.UtcNow);
+            return Results.Ok((await companies.GetAllAsync(kommune))
+                .Select(c => CompanyDto.From(c, config, kommuner, openAds)));
         });
 
         app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
@@ -46,17 +49,18 @@ public static class ReadEndpoints
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.");
 
             var kommuner = await kommuneRepo.GetAllAsync();
+            var now = clock.UtcNow;
+            var openAds = await ads.CountOpenByEmployerAsync(now);
 
             // A branch's own detail never lists branches — Brreg's register is two-tier, so a
             // branch has none of its own, and showing its parent's siblings here would just be
             // the same tab strip one level removed from where the user actually is.
             var branches = company.IsBranch
                 ? []
-                : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner)).ToList();
+                : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner, openAds)).ToList();
 
             // Same feed-terms rule as /api/new: the demo's company history holds open ads only.
-            var now = clock.UtcNow;
-            return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner),
+            return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner, openAds),
                 (await ads.GetByEmployerAsync(orgnr)).Where(a => !mode.Enabled || a.IsOpenAt(now))
                     .Select(a => AdDto.FromAd(a, now)).ToList(), branches));
         });

@@ -312,6 +312,13 @@ internal sealed class FakeAdRepository : IAdRepository
                 && (includeHidden || !a.Hidden))
             .ToList());
 
+    public Task<IReadOnlyDictionary<string, int>> CountOpenByEmployerAsync(DateTimeOffset now,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<string, int>>(Store.Values
+            .Where(a => a.EmployerOrgnr is not null && !a.Hidden && a.IsOpenAt(now))
+            .GroupBy(a => a.EmployerOrgnr!)
+            .ToDictionary(g => g.Key, g => g.Count()));
+
     public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default)
     {
         if (!Store.TryGetValue(feedId, out var ad)) return Task.FromResult(false);

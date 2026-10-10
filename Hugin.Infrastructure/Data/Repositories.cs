@@ -186,6 +186,16 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
             .OrderByDescending(a => a.Published)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyDictionary<string, int>> CountOpenByEmployerAsync(DateTimeOffset now,
+        CancellationToken ct = default) =>
+        await db.Ads
+            // SQL twin of Ad.IsOpenAt, like GetActiveAsync. EF cannot translate the method itself.
+            .Where(a => a.EmployerOrgnr != null && !a.Hidden
+                && a.IsActive && (a.Expires == null || a.Expires >= now))
+            .GroupBy(a => a.EmployerOrgnr!)
+            .Select(g => new { Orgnr = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Orgnr, x => x.Count, ct);
+
     public async Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default)
     {
         if (await db.Ads.FindAsync([feedId], ct) is not { } ad) return false;

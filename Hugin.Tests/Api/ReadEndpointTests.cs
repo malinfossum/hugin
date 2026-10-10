@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hugin.Tests.Api;
 
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
-public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
+public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website, int OpenAds);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads,
     List<CompanyDtoProbe> Branches);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred, bool AdsExpired);
@@ -391,5 +391,58 @@ public sealed class ReadEndpointTests
         var dto = await _client.GetFromJsonAsync<StatusVersionProbe>("/api/status");
 
         Assert.That(dto!.Version, Is.EqualTo("dev"));
+    }
+
+    private async Task SeedParentBranchAndQuietCompany(DateTimeOffset now)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+        await companies.UpsertAsync(new RegisterCompany("111111111", "Mor AS", "3407", "62.100", null, false, null), now);
+        await companies.UpsertAsync(new RegisterCompany("222222222", "Mor AS avd Hamar", "3403", "62.100",
+            "111111111", true, null), now);
+        await companies.UpsertAsync(new RegisterCompany("333333333", "Stille AS", "3407", "62.100", null, false, null), now);
+        var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+        await ads.UpsertAsync(new FeedAd("m1", "Utvikler", "Mor AS", "111111111", "3407", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("m2", "Tester", "Mor AS", "111111111", "3407", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("b1", "Utvikler", "Mor AS avd Hamar", "222222222", "3403", now, now.AddDays(10), null, true), now);
+    }
+
+    [Test]
+    public async Task Companies_list_carries_each_units_own_open_ad_count()
+    {
+        await SeedParentBranchAndQuietCompany(DateTimeOffset.UtcNow);
+
+        var companies = (await _client.GetFromJsonAsync<List<CompanyDtoProbe>>("/api/companies"))!;
+
+        Assert.That(companies.Single(c => c.Orgnr == "111111111").OpenAds, Is.EqualTo(2));
+        Assert.That(companies.Single(c => c.Orgnr == "222222222").OpenAds, Is.EqualTo(1), "a branch counts its own ads");
+        Assert.That(companies.Single(c => c.Orgnr == "333333333").OpenAds, Is.EqualTo(0), "no ads maps to 0");
+    }
+
+    [Test]
+    public async Task Company_detail_carries_open_ad_counts_on_the_company_and_its_branches()
+    {
+        await SeedParentBranchAndQuietCompany(DateTimeOffset.UtcNow);
+
+        var dto = (await _client.GetFromJsonAsync<CompanyDetailDtoProbe>("/api/companies/111111111"))!;
+
+        Assert.That(dto.Company.OpenAds, Is.EqualTo(2));
+        Assert.That(dto.Branches.Single().OpenAds, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task New_carries_open_ad_counts_on_new_companies()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>().SetAsync(now.AddDays(-1));
+        }
+        await SeedParentBranchAndQuietCompany(now);
+
+        var dto = (await _client.GetFromJsonAsync<NewDtoProbe>("/api/new"))!;
+
+        Assert.That(dto.Companies.Single(c => c.Orgnr == "111111111").OpenAds, Is.EqualTo(2));
+        Assert.That(dto.Companies.Single(c => c.Orgnr == "333333333").OpenAds, Is.EqualTo(0));
     }
 }

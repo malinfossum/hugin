@@ -61,6 +61,14 @@ public interface IAdRepository
     public Task<IReadOnlyList<Models.Ad>> GetActiveAsync(DateTimeOffset now, string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default);
 
+    /// <summary>Open, unhidden ads per employer orgnr, in one grouped query: the count behind
+    /// <c>CompanyDto.OpenAds</c>. Open means <see cref="Models.Ad.IsOpenAt"/>. Only
+    /// <see cref="Models.Ad.EmployerOrgnr"/> counts: a branch counts its own ads, and a hand-linked
+    /// ad (<see cref="Models.Ad.LinkedOrgnr"/>) counts for its employer only. Employers with no
+    /// such ad are absent.</summary>
+    public Task<IReadOnlyDictionary<string, int>> CountOpenByEmployerAsync(DateTimeOffset now,
+        CancellationToken ct = default);
+
     /// <summary>Dashboard dismiss flag. Returns false when the feedId is unknown.</summary>
     public Task<bool> SetHiddenAsync(string feedId, bool hidden, CancellationToken ct = default);
 
