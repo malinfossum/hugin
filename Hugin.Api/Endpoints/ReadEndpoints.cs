@@ -29,7 +29,7 @@ public static class ReadEndpoints
             var openAds = await ads.CountOpenByEmployerAsync(asOf);
             return Results.Ok(new NewDto(
                 items.Companies.Select(c => CompanyDto.From(c, config, kommuner, openAds)).ToList(),
-                items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf)).ToList(),
+                items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf, config, kommuner)).ToList(),
                 items.Since, asOf));
         });
 
@@ -62,7 +62,7 @@ public static class ReadEndpoints
             // Same feed-terms rule as /api/new: the demo's company history holds open ads only.
             return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner, openAds),
                 (await ads.GetByEmployerAsync(orgnr)).Where(a => !mode.Enabled || a.IsOpenAt(now))
-                    .Select(a => AdDto.FromAd(a, now)).ToList(), branches));
+                    .Select(a => AdDto.FromAd(a, now, config, kommuner)).ToList(), branches));
         });
 
         app.MapGet("/api/pipeline", async (AdOverviewService overview, ICompanyRepository companies, string? status) =>
