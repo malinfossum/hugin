@@ -1,3 +1,4 @@
+using System.Reflection;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
@@ -7,6 +8,13 @@ namespace Hugin.Api.Endpoints;
 
 public static class ReadEndpoints
 {
+    // The version the publish build stamped from the git tag (spec v3.8 B3). Read from the API's
+    // own assembly, not the entry assembly: under WebApplicationFactory the entry assembly is the
+    // test host, which would report its own version.
+    private static readonly string Version =
+        typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            is { Length: > 0 } version ? version : "dev";
+
     public static void MapReads(this IEndpointRouteBuilder app)
     {
         // The NAV feed terms (arbeidsplassen.nav.no/vilkar-api) say a republished ad must be removed
@@ -104,7 +112,8 @@ public static class ReadEndpoints
                 (await pipeline.GetAllAsync()).Count,
                 mode.Enabled,
                 configSource.Load() is { } cfg
-                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway)));
+                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway),
+                Version));
         });
     }
 

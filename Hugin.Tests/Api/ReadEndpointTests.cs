@@ -14,6 +14,7 @@ public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoPr
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred, bool AdsExpired);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
     int Companies, int PipelineEntries);
+public sealed record StatusVersionProbe(string? Version);
 
 [TestFixture]
 public sealed class ReadEndpointTests
@@ -380,5 +381,15 @@ public sealed class ReadEndpointTests
             """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
         var withScope = await chosen.CreateClient().GetFromJsonAsync<StatusDto>("/api/status");
         Assert.That(withScope!.ScopeConfigured, Is.True);
+    }
+
+    [Test]
+    public async Task Status_reports_dev_as_the_version_outside_a_tagged_publish()
+    {
+        // The test host builds Hugin.Api without -p:InformationalVersion, so it must read the
+        // csproj default, not the SDK's 1.0.0 and not the test host's own version.
+        var dto = await _client.GetFromJsonAsync<StatusVersionProbe>("/api/status");
+
+        Assert.That(dto!.Version, Is.EqualTo("dev"));
     }
 }
