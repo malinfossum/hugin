@@ -22,6 +22,7 @@ function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
     isBranch: false,
     website: null,
     parentOrgnr: null,
+    openAds: 0,
     ...overrides,
   }
 }

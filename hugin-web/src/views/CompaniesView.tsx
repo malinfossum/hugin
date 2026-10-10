@@ -46,6 +46,11 @@ function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
   )
 }
 
+/** The row stands for the whole group, so its count is the group total: main plus branches. */
+function groupOpenAds(group: CompanyGroup): number {
+  return group.branches.reduce((sum, branch) => sum + branch.openAds, group.main.openAds)
+}
+
 interface CompaniesViewProps {
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
@@ -67,6 +72,7 @@ export function CompaniesView({
   // reach this view without a remount.
   const [search, setSearch] = useState('')
   const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
+  const [adsFilter, setAdsFilter] = useState<'' | 'open'>('')
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
@@ -113,6 +119,7 @@ export function CompaniesView({
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
     if (websiteFilter === 'has' && !c.website) return false
     if (websiteFilter === 'none' && c.website) return false
+    if (adsFilter === 'open' && c.openAds === 0) return false
     return true
   })
 
@@ -133,25 +140,39 @@ export function CompaniesView({
   // Every row rendered here is a group main — either a real hovedenhet, or a branch standing in
   // for one because its own parent wasn't loaded (an "orphan" branch). The tag only makes sense
   // in that second case: a real hovedenhet is never itself a branch.
-  const renderRow = (c: CompanyDto) => (
-    <div className="companies-item">
-      <button
-        type="button"
-        className="panel panel-hover companies-row"
-        ref={(el) => {
-          if (el) rowRefs.current.set(c.orgnr, el)
-          else rowRefs.current.delete(c.orgnr)
-        }}
-        onClick={() => openDetail(c.orgnr)}
-      >
-        <span>
-          <strong>{displayCompanyName(c.name)}</strong>
-          {c.isBranch && ` ${t('common.branchTag')}`}
-        </span>
-        <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
-      </button>
-    </div>
-  )
+  const renderRow = (group: CompanyGroup) => {
+    const c = group.main
+    const openAds = groupOpenAds(group)
+    return (
+      <div className="companies-item">
+        <button
+          type="button"
+          className="panel panel-hover companies-row"
+          ref={(el) => {
+            if (el) rowRefs.current.set(c.orgnr, el)
+            else rowRefs.current.delete(c.orgnr)
+          }}
+          onClick={() => openDetail(c.orgnr)}
+        >
+          <span>
+            <strong>{displayCompanyName(c.name)}</strong>
+            {c.isBranch && ` ${t('common.branchTag')}`}
+            {openAds > 0 && (
+              <>
+                {' '}
+                <span className="text-muted">
+                  {openAds === 1
+                    ? t('companies.openAdsOne')
+                    : t('companies.openAds', { n: openAds })}
+                </span>
+              </>
+            )}
+          </span>
+          <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
+        </button>
+      </div>
+    )
+  }
 
   if (selectedOrgnr) {
     return <CompanyDetail orgnr={selectedOrgnr} onClose={onCloseCompany} />
@@ -206,9 +227,24 @@ export function CompaniesView({
             <option value="none">{t('companies.websiteNone')}</option>
           </select>
         </div>
+
+        <div className="field">
+          <label className="label" htmlFor="companies-ads-filter">
+            {t('companies.adsFilterLabel')}
+          </label>
+          <select
+            id="companies-ads-filter"
+            className="select"
+            value={adsFilter}
+            onChange={(event) => setAdsFilter(event.target.value as '' | 'open')}
+          >
+            <option value="">{t('common.all')}</option>
+            <option value="open">{t('companies.adsFilterOpen')}</option>
+          </select>
+        </div>
       </div>
 
-      <p className="text-muted">
+      <p role="status" className="text-muted">
         {visibleGroups.length === 1
           ? t('companies.countOne')
           : t('companies.count', { n: visibleGroups.length })}
@@ -216,7 +252,7 @@ export function CompaniesView({
 
       <ul className="stack stack-sm">
         {visibleGroups.map((g) => (
-          <li key={g.main.orgnr}>{renderRow(g.main)}</li>
+          <li key={g.main.orgnr}>{renderRow(g)}</li>
         ))}
       </ul>
     </div>

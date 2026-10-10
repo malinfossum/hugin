@@ -25,6 +25,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         isBranch: false,
         website: null,
         parentOrgnr: null,
+        openAds: 0,
       },
       {
         orgnr: '715787631',
@@ -35,6 +36,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         isBranch: true,
         website: null,
         parentOrgnr: '715787630',
+        openAds: 0,
       },
       {
         orgnr: '715787632',
@@ -45,6 +47,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         isBranch: false,
         website: null,
         parentOrgnr: null,
+        openAds: 0,
       },
     ],
     ads: [
@@ -142,6 +145,7 @@ describe('NewSinceLastVisit', () => {
           isBranch: false,
           website: null,
           parentOrgnr: null,
+          openAds: 0,
         },
       ],
       ads: [

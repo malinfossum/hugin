@@ -166,6 +166,10 @@ export const en = {
   'companies.websiteRow': 'Website',
   'companies.mainUnit': 'Main unit',
   'companies.unitTabs': 'Units',
+  'companies.adsFilterLabel': 'Ads',
+  'companies.adsFilterOpen': 'With an open ad',
+  'companies.openAds': '{n} open ads',
+  'companies.openAdsOne': '1 open ad',
 
   'export.scope': 'Scope',
   'export.scopeNew': 'New',

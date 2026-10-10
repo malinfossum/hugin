@@ -168,6 +168,10 @@ export const nb = {
   'companies.websiteRow': 'Nettside',
   'companies.mainUnit': 'Hovedenhet',
   'companies.unitTabs': 'Enheter',
+  'companies.adsFilterLabel': 'Annonser',
+  'companies.adsFilterOpen': 'Med åpen annonse',
+  'companies.openAds': '{n} åpne annonser',
+  'companies.openAdsOne': '1 åpen annonse',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

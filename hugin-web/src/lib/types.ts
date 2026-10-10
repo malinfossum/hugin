@@ -30,6 +30,9 @@ export interface CompanyDto {
   isBranch: boolean
   website: string | null
   parentOrgnr: string | null
+  /** Open, unhidden ads with this unit as employer (its own ads only; a branch counts its own).
+   * Counted server-side by the same rule as Frister. */
+  openAds: number
 }
 
 export interface CompanyDetailDto {
