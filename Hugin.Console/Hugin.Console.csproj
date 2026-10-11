@@ -15,6 +15,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Same stamp as Hugin.Api: build.ps1 overrides it from `git describe`, every other build
+         reads "dev", and the SDK must not append "+<commit sha>" to it. -->
+    <InformationalVersion>dev</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
 </Project>

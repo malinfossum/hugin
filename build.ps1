@@ -15,6 +15,13 @@ Pop-Location
 # wwwroot must exist before Hugin.Api is compiled for either publish below — its csproj embeds
 # wwwroot\** only when the folder is present at build time (Exists('wwwroot')), so the frontend
 # build above has to land first for the single-file publish to actually carry it.
+
+# dotnet publish copies wwwroot in but never deletes from it, so every old dashboard bundle
+# would pile up in publish\wwwroot\assets. Only wwwroot goes: publish\ also holds hugin.json
+# and hugin.db, which must survive a rebuild.
+$staleWebRoot = Join-Path publish "wwwroot"
+if (Test-Path $staleWebRoot) { Remove-Item $staleWebRoot -Recurse -Force }
+
 dotnet publish Hugin.Console -c Release -o publish "-p:InformationalVersion=$version"
 dotnet publish Hugin.Api -c Release -o publish "-p:InformationalVersion=$version"
 Write-Host "publish\hugin.exe og publish\hugin-api.exe deler hugin.json + hugin.db."
