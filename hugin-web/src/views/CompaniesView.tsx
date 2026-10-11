@@ -119,17 +119,19 @@ export function CompaniesView({
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
     if (websiteFilter === 'has' && !c.website) return false
     if (websiteFilter === 'none' && c.website) return false
-    if (adsFilter === 'open' && c.openAds === 0) return false
     return true
   })
 
   // Group over the full list (not `filtered`) so a group whose main doesn't match but whose
-  // branch does (or vice versa) still renders — matching is applied per-unit, then a group
-  // renders when the main or any branch matches. Non-matching branches inside a visible group
-  // still render, as context, when the group is expanded.
+  // branch does (or vice versa) still renders. Region, search and website are matched per unit,
+  // then a group renders when the main or any branch matches. The ads filter applies to the
+  // group: its open-ad total (the count the row shows) must be above 0. Non-matching branches
+  // inside a visible group still render, as context, when the group is expanded.
   const matchingOrgnrs = new Set(filtered.map((c) => c.orgnr))
   const visibleGroups = groupCompanies(companies).filter(
-    (g) => matchingOrgnrs.has(g.main.orgnr) || g.branches.some((b) => matchingOrgnrs.has(b.orgnr))
+    (g) =>
+      (matchingOrgnrs.has(g.main.orgnr) || g.branches.some((b) => matchingOrgnrs.has(b.orgnr))) &&
+      (adsFilter !== 'open' || groupOpenAds(g) > 0)
   )
 
   const openDetail = (orgnr: string) => {

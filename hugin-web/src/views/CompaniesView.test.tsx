@@ -239,6 +239,33 @@ describe('CompaniesView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
+  it('keeps a group under «Med åpen annonse» when its ads sit on a different unit than the one the website filter matches', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example', openAds: 0 }),
+      company({
+        orgnr: '2',
+        name: 'Acme AS avd Gjøvik',
+        parentOrgnr: '1',
+        isBranch: true,
+        website: null,
+        openAds: 1,
+      }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Nettside'), 'Har nettside')
+    expect(
+      within(screen.getByRole('button', { name: /Acme AS/ })).getByText('1 åpen annonse')
+    ).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
+
+    const row = screen.getByRole('button', { name: /Acme AS/ })
+    expect(within(row).getByText('1 åpen annonse')).toBeInTheDocument()
+  })
+
   it('combines the ads filter with search, and the result line announces the count left', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', openAds: 1 }),
