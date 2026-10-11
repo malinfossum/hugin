@@ -13,6 +13,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   hygiene:
     uses: malinfossum/ward/.github/workflows/repo-hygiene.yml@v1
