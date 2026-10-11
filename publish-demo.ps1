@@ -5,6 +5,13 @@
 $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 
+# The version comes from the git tag (spec v3.8 B3). Read it first, before anything below can
+# touch the tree, and fall back to "dev" when git is missing or this is not a checkout.
+$version = $null
+try { $version = git describe --tags --always --dirty 2>$null } catch { }
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($version)) { $version = "dev" }
+Write-Host "Version: $version"
+
 Push-Location hugin-web
 npm run build
 Pop-Location
@@ -12,7 +19,7 @@ Pop-Location
 # A stale publish-linux\ from an earlier run must never ride along into the new zip.
 if (Test-Path "publish-linux") { Remove-Item "publish-linux" -Recurse -Force }
 
-dotnet publish Hugin.Api -c Release -r linux-x64 --self-contained true -p:DebugType=None -o publish-linux
+dotnet publish Hugin.Api -c Release -r linux-x64 --self-contained true -p:DebugType=None "-p:InformationalVersion=$version" -o publish-linux
 
 $zip = "hugin-demo.zip"
 if (Test-Path $zip) { Remove-Item $zip }

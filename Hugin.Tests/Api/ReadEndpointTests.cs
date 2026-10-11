@@ -8,12 +8,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Hugin.Tests.Api;
 
 public sealed record NewDtoProbe(List<CompanyDtoProbe> Companies, List<object> Ads, DateTimeOffset Since, DateTimeOffset AsOf);
-public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website);
+public sealed record CompanyDtoProbe(string Orgnr, string Name, string? KommuneNavn, string? Website, int OpenAds);
 public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoProbe> Ads,
     List<CompanyDtoProbe> Branches);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred, bool AdsExpired);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
     int Companies, int PipelineEntries);
+public sealed record StatusVersionProbe(string? Version);
+public sealed record PlacedAdProbe(string FeedId, string? KommuneNavn);
+public sealed record NewPlacesProbe(List<CompanyDtoProbe> Companies, List<PlacedAdProbe> Ads);
+public sealed record PlacedCompanyDetailProbe(CompanyDtoProbe Company, List<PlacedAdProbe> Ads);
 
 [TestFixture]
 public sealed class ReadEndpointTests
@@ -380,5 +384,131 @@ public sealed class ReadEndpointTests
             """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
         var withScope = await chosen.CreateClient().GetFromJsonAsync<StatusDto>("/api/status");
         Assert.That(withScope!.ScopeConfigured, Is.True);
+    }
+
+    [Test]
+    public async Task Status_reports_dev_as_the_version_outside_a_tagged_publish()
+    {
+        // The test host builds Hugin.Api without -p:InformationalVersion, so it must read the
+        // csproj default, not the SDK's 1.0.0 and not the test host's own version.
+        var dto = await _client.GetFromJsonAsync<StatusVersionProbe>("/api/status");
+
+        Assert.That(dto!.Version, Is.EqualTo("dev"));
+    }
+
+    private async Task SeedParentBranchAndQuietCompany(DateTimeOffset now)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var companies = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+        await companies.UpsertAsync(new RegisterCompany("111111111", "Mor AS", "3407", "62.100", null, false, null), now);
+        await companies.UpsertAsync(new RegisterCompany("222222222", "Mor AS avd Hamar", "3403", "62.100",
+            "111111111", true, null), now);
+        await companies.UpsertAsync(new RegisterCompany("333333333", "Stille AS", "3407", "62.100", null, false, null), now);
+        var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+        await ads.UpsertAsync(new FeedAd("m1", "Utvikler", "Mor AS", "111111111", "3407", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("m2", "Tester", "Mor AS", "111111111", "3407", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("b1", "Utvikler", "Mor AS avd Hamar", "222222222", "3403", now, now.AddDays(10), null, true), now);
+    }
+
+    [Test]
+    public async Task Companies_list_carries_each_units_own_open_ad_count()
+    {
+        await SeedParentBranchAndQuietCompany(DateTimeOffset.UtcNow);
+
+        var companies = (await _client.GetFromJsonAsync<List<CompanyDtoProbe>>("/api/companies"))!;
+
+        Assert.That(companies.Single(c => c.Orgnr == "111111111").OpenAds, Is.EqualTo(2));
+        Assert.That(companies.Single(c => c.Orgnr == "222222222").OpenAds, Is.EqualTo(1), "a branch counts its own ads");
+        Assert.That(companies.Single(c => c.Orgnr == "333333333").OpenAds, Is.EqualTo(0), "no ads maps to 0");
+    }
+
+    [Test]
+    public async Task Company_detail_carries_open_ad_counts_on_the_company_and_its_branches()
+    {
+        await SeedParentBranchAndQuietCompany(DateTimeOffset.UtcNow);
+
+        var dto = (await _client.GetFromJsonAsync<CompanyDetailDtoProbe>("/api/companies/111111111"))!;
+
+        Assert.That(dto.Company.OpenAds, Is.EqualTo(2));
+        Assert.That(dto.Branches.Single().OpenAds, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task New_carries_open_ad_counts_on_new_companies()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>().SetAsync(now.AddDays(-1));
+        }
+        await SeedParentBranchAndQuietCompany(now);
+
+        var dto = (await _client.GetFromJsonAsync<NewDtoProbe>("/api/new"))!;
+
+        Assert.That(dto.Companies.Single(c => c.Orgnr == "111111111").OpenAds, Is.EqualTo(2));
+        Assert.That(dto.Companies.Single(c => c.Orgnr == "333333333").OpenAds, Is.EqualTo(0));
+    }
+
+    /// <summary>Four ads by one employer, one per place-name source: 3407 is configured
+    /// (ApiFactory sets Gjøvik) and also in the register under another name, 0301 is in the
+    /// register only, 9999 is nowhere, and one ad has no kommune at all.</summary>
+    private async Task SeedAdsInFourKindsOfPlace(DateTimeOffset now)
+    {
+        using var scope = _factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IKommuneRepository>().UpsertManyAsync([
+            new Kommune { Number = "3407", Name = "Gjøvik i registeret" },
+            new Kommune { Number = "0301", Name = "Oslo" },
+        ]);
+        await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
+            .UpsertAsync(new RegisterCompany("111111111", "Mor AS", "3407", "62.100", null, false, null), now);
+        var ads = scope.ServiceProvider.GetRequiredService<IAdRepository>();
+        await ads.UpsertAsync(new FeedAd("configured", "Utvikler", "Mor AS", "111111111", "3407", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("register", "Utvikler", "Mor AS", "111111111", "0301", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("unlisted", "Utvikler", "Mor AS", "111111111", "9999", now, now.AddDays(10), null, true), now);
+        await ads.UpsertAsync(new FeedAd("nowhere", "Utvikler", "Mor AS", "111111111", null, now, now.AddDays(10), null, true), now);
+    }
+
+    private static void AssertPlaceNames(IEnumerable<PlacedAdProbe> ads)
+    {
+        var byId = ads.ToDictionary(a => a.FeedId, a => a.KommuneNavn);
+        Assert.That(byId["configured"], Is.EqualTo("Gjøvik"), "the configured name wins over the register");
+        Assert.That(byId["register"], Is.EqualTo("Oslo"));
+        Assert.That(byId["unlisted"], Is.EqualTo("9999"), "the raw number is the last resort");
+        Assert.That(byId["nowhere"], Is.Null, "no kommune number, no place name");
+    }
+
+    [Test]
+    public async Task New_resolves_each_ads_place_name_like_a_companys()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IReviewMarkRepository>().SetAsync(now.AddDays(-1));
+        }
+        await SeedAdsInFourKindsOfPlace(now);
+
+        var dto = (await _client.GetFromJsonAsync<NewPlacesProbe>("/api/new"))!;
+
+        AssertPlaceNames(dto.Ads);
+    }
+
+    [Test]
+    public async Task Company_detail_resolves_each_ads_place_name()
+    {
+        await SeedAdsInFourKindsOfPlace(DateTimeOffset.UtcNow);
+
+        var dto = (await _client.GetFromJsonAsync<PlacedCompanyDetailProbe>("/api/companies/111111111"))!;
+
+        AssertPlaceNames(dto.Ads);
+    }
+
+    [Test]
+    public async Task Ads_list_resolves_each_ads_place_name_too()
+    {
+        await SeedAdsInFourKindsOfPlace(DateTimeOffset.UtcNow);
+
+        var ads = (await _client.GetFromJsonAsync<List<PlacedAdProbe>>("/api/ads"))!;
+
+        AssertPlaceNames(ads);
     }
 }

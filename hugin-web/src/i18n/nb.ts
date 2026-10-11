@@ -121,6 +121,11 @@ export const nb = {
   'newSince.confirmTitle': 'Merket flyttes — dette kan ikke angres.',
   'newSince.markError': 'Kunne ikke merke som sett.',
   'newSince.markedAnnounce': 'Merket som sett.',
+  'newSince.unknownPlace': 'Ukjent sted',
+  'newSince.placeCompanies': '{n} bedrifter',
+  'newSince.placeCompaniesOne': '1 bedrift',
+  'newSince.placeAds': '{n} annonser',
+  'newSince.placeAdsOne': '1 annonse',
 
   'applications.loadError': 'Kunne ikke laste søknader.',
   'applications.sortBy': 'Sorter etter',
@@ -168,6 +173,10 @@ export const nb = {
   'companies.websiteRow': 'Nettside',
   'companies.mainUnit': 'Hovedenhet',
   'companies.unitTabs': 'Enheter',
+  'companies.adsFilterLabel': 'Annonser',
+  'companies.adsFilterOpen': 'Med åpen annonse',
+  'companies.openAds': '{n} åpne annonser',
+  'companies.openAdsOne': '1 åpen annonse',
 
   'export.scope': 'Omfang',
   'export.scopeNew': 'Nytt',

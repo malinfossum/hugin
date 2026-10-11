@@ -120,6 +120,11 @@ export const en = {
   'newSince.confirmTitle': 'This mark will move — this cannot be undone.',
   'newSince.markError': 'Could not mark as seen.',
   'newSince.markedAnnounce': 'Marked as seen.',
+  'newSince.unknownPlace': 'Unknown place',
+  'newSince.placeCompanies': '{n} companies',
+  'newSince.placeCompaniesOne': '1 company',
+  'newSince.placeAds': '{n} ads',
+  'newSince.placeAdsOne': '1 ad',
 
   'applications.loadError': 'Could not load applications.',
   'applications.sortBy': 'Sort by',
@@ -166,6 +171,10 @@ export const en = {
   'companies.websiteRow': 'Website',
   'companies.mainUnit': 'Main unit',
   'companies.unitTabs': 'Units',
+  'companies.adsFilterLabel': 'Ads',
+  'companies.adsFilterOpen': 'With an open ad',
+  'companies.openAds': '{n} open ads',
+  'companies.openAdsOne': '1 open ad',
 
   'export.scope': 'Scope',
   'export.scopeNew': 'New',

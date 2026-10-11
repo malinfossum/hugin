@@ -1,3 +1,4 @@
+using System.Reflection;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
@@ -7,28 +8,38 @@ namespace Hugin.Api.Endpoints;
 
 public static class ReadEndpoints
 {
+    // The version the publish build stamped from the git tag (spec v3.8 B3). Read from the API's
+    // own assembly, not the entry assembly: under WebApplicationFactory the entry assembly is the
+    // test host, which would report its own version.
+    private static readonly string Version =
+        typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            is { Length: > 0 } version ? version : "dev";
+
     public static void MapReads(this IEndpointRouteBuilder app)
     {
         // The NAV feed terms (arbeidsplassen.nav.no/vilkar-api) say a republished ad must be removed
         // the moment it goes inactive at NAV. The hosted demo republishes, so its review lists never
         // carry a closed ad; the local app keeps its own history — nobody else can reach it.
         app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config,
-            IKommuneRepository kommuneRepo, PublicModeOptions mode) =>
+            IKommuneRepository kommuneRepo, IAdRepository ads, PublicModeOptions mode) =>
         {
             var asOf = clock.UtcNow; // captured before the query so it can't drift past what GetNewAsync actually saw
             if (await service.GetNewAsync() is not { } items) return Results.NoContent();
             var kommuner = await kommuneRepo.GetAllAsync();
+            var openAds = await ads.CountOpenByEmployerAsync(asOf);
             return Results.Ok(new NewDto(
-                items.Companies.Select(c => CompanyDto.From(c, config, kommuner)).ToList(),
-                items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf)).ToList(),
+                items.Companies.Select(c => CompanyDto.From(c, config, kommuner, openAds)).ToList(),
+                items.Ads.Where(a => !mode.Enabled || a.IsOpenAt(asOf)).Select(a => AdDto.FromAd(a, asOf, config, kommuner)).ToList(),
                 items.Since, asOf));
         });
 
-        app.MapGet("/api/companies", async (ICompanyRepository companies, HuginConfig config,
-            IKommuneRepository kommuneRepo, string? kommune) =>
+        app.MapGet("/api/companies", async (ICompanyRepository companies, IAdRepository ads, HuginConfig config,
+            IKommuneRepository kommuneRepo, IClock clock, string? kommune) =>
         {
             var kommuner = await kommuneRepo.GetAllAsync();
-            return Results.Ok((await companies.GetAllAsync(kommune)).Select(c => CompanyDto.From(c, config, kommuner)));
+            var openAds = await ads.CountOpenByEmployerAsync(clock.UtcNow);
+            return Results.Ok((await companies.GetAllAsync(kommune))
+                .Select(c => CompanyDto.From(c, config, kommuner, openAds)));
         });
 
         app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
@@ -38,19 +49,20 @@ public static class ReadEndpoints
                 return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}.");
 
             var kommuner = await kommuneRepo.GetAllAsync();
+            var now = clock.UtcNow;
+            var openAds = await ads.CountOpenByEmployerAsync(now);
 
             // A branch's own detail never lists branches — Brreg's register is two-tier, so a
             // branch has none of its own, and showing its parent's siblings here would just be
             // the same tab strip one level removed from where the user actually is.
             var branches = company.IsBranch
                 ? []
-                : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner)).ToList();
+                : (await companies.GetBranchesAsync(orgnr)).Select(b => CompanyDto.From(b, config, kommuner, openAds)).ToList();
 
             // Same feed-terms rule as /api/new: the demo's company history holds open ads only.
-            var now = clock.UtcNow;
-            return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner),
+            return Results.Ok(new CompanyDetailDto(CompanyDto.From(company, config, kommuner, openAds),
                 (await ads.GetByEmployerAsync(orgnr)).Where(a => !mode.Enabled || a.IsOpenAt(now))
-                    .Select(a => AdDto.FromAd(a, now)).ToList(), branches));
+                    .Select(a => AdDto.FromAd(a, now, config, kommuner)).ToList(), branches));
         });
 
         app.MapGet("/api/pipeline", async (AdOverviewService overview, ICompanyRepository companies, string? status) =>
@@ -104,7 +116,8 @@ public static class ReadEndpoints
                 (await pipeline.GetAllAsync()).Count,
                 mode.Enabled,
                 configSource.Load() is { } cfg
-                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway)));
+                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway),
+                Version));
         });
     }
 

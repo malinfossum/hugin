@@ -122,7 +122,7 @@ public sealed class ExtractService(
         return rows;
     }
 
-    // Resolution order matches CompanyDto.From in the API: configured municipality name first,
+    // Resolution order matches PlaceName.Resolve in the API: configured municipality name first,
     // then the full Brreg kommune register, then the raw number as a last resort. Website
     // resolution matches too — a confirmed-dead site (WebsiteOk == false) never appears.
     private ExtractCompanyRow ToCompanyRow(Company c, IReadOnlyDictionary<string, string> kommuner)

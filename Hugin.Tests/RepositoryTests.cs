@@ -435,6 +435,59 @@ public class RepositoryTests
     }
 
     [Test]
+    public async Task CountOpenByEmployer_counts_open_ads_including_one_on_its_deadline_day()
+    {
+        var repo = new EfAdRepository(_db);
+        var now = T1.AddDays(10);
+        await repo.UpsertAsync(new FeedAd("open", "Utvikler", "Mor AS", "111111111", "3403", T1, T1.AddDays(30), null, true), T1);
+        await repo.UpsertAsync(new FeedAd("no-deadline", "Utvikler", "Mor AS", "111111111", "3403", T1, null, null, true), T1);
+        // NAV's expires is end of day, so the deadline day itself still counts (Ad.IsOpenAt uses >=).
+        await repo.UpsertAsync(new FeedAd("deadline-today", "Utvikler", "Mor AS", "111111111", "3403", T1, now, null, true), T1);
+
+        var counts = await repo.CountOpenByEmployerAsync(now);
+
+        Assert.That(counts, Is.EquivalentTo(new Dictionary<string, int> { ["111111111"] = 3 }));
+    }
+
+    [Test]
+    public async Task CountOpenByEmployer_skips_expired_closed_and_hidden_ads()
+    {
+        var repo = new EfAdRepository(_db);
+        var now = T1.AddDays(10);
+        // Past its deadline but not yet swept: the live rule drops it anyway.
+        await repo.UpsertAsync(new FeedAd("expired", "Utvikler", "Mor AS", "111111111", "3403", T1, T1.AddDays(2), null, true), T1);
+        await repo.UpsertAsync(new FeedAd("closed", "Utvikler", "Mor AS", "111111111", "3403", T1, null, null, false), T1);
+        // An ad I hid as irrelevant must not make the company look like it is hiring.
+        await repo.UpsertAsync(new FeedAd("hidden", "Utvikler", "Mor AS", "111111111", "3403", T1, null, null, true), T1);
+        await repo.SetHiddenAsync("hidden", true);
+
+        var counts = await repo.CountOpenByEmployerAsync(now);
+
+        Assert.That(counts, Is.Empty, "a company with no countable ad is absent, and the endpoint maps that to 0");
+    }
+
+    [Test]
+    public async Task CountOpenByEmployer_counts_by_employer_orgnr_only()
+    {
+        var repo = new EfAdRepository(_db);
+        // A branch's ad counts for the branch, never for its parent.
+        await repo.UpsertAsync(new FeedAd("branch", "Utvikler", "Mor AS avd Gjøvik", "222222222", "3407", T1, null, null, true), T1);
+        // A hand-linked ad counts for its employer only, not the company it is linked to.
+        await repo.UpsertAsync(new FeedAd("linked", "Utvikler", "Søster AS", "333333333", "3403", T1, null, null, true), T1);
+        await repo.SetLinkedOrgnrAsync("linked", "111111111");
+        // An ad with no employer orgnr has nowhere to count and must not become a null key.
+        await repo.UpsertAsync(new FeedAd("no-orgnr", "Utvikler", "Ukjent AS", null, "3403", T1, null, null, true), T1);
+
+        var counts = await repo.CountOpenByEmployerAsync(T1);
+
+        Assert.That(counts, Is.EquivalentTo(new Dictionary<string, int>
+        {
+            ["222222222"] = 1,
+            ["333333333"] = 1,
+        }));
+    }
+
+    [Test]
     public async Task GetByEmployerAsync_returns_expired_too_newest_first()
     {
         var repo = new EfAdRepository(_db);

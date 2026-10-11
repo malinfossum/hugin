@@ -13,6 +13,11 @@
     <!-- No IIS hosting here (Kestrel self-hosted, started by double-click) — an unused web.config
          next to the exe is just noise. -->
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+    <!-- The version /api/status reports. build.ps1 and publish-demo.ps1 override it from
+         `git describe` (spec v3.8 B3); every other build (dotnet run, tests) reads "dev". The
+         second property keeps the SDK from appending "+<commit sha>" to it. -->
+    <InformationalVersion>dev</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <!-- The single-file publish (-p:PublishSingleFile=true, see build.ps1) embeds wwwroot into the

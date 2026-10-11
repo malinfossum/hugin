@@ -4,37 +4,52 @@ using Hugin.Core.Services;
 
 namespace Hugin.Api;
 
+/// <summary>One place-name rule for every DTO (spec v3.8 B5). The configured municipality list
+/// (Hugin's own tracked region) wins first, then the full Brreg kommune register (it covers every
+/// number, e.g. a parent or an ad employer outside the tracked region), then the raw number as a
+/// last resort. Null only when there is no kommune number at all.</summary>
+public static class PlaceName
+{
+    public static string? Resolve(string? number, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
+        number is null
+            ? null
+            : config.Municipalities.FirstOrDefault(m => m.Number == number)?.Name
+                ?? kommuner.GetValueOrDefault(number, number);
+}
+
 public sealed record AdDto(string FeedId, string Title, string? Employer, string? EmployerOrgnr,
-    string? Kommune, DateTimeOffset? Expires, int? DaysLeft, string? Category, string? SourceUrl,
-    string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published, string? LinkedOrgnr)
+    string? Kommune, string? KommuneNavn, DateTimeOffset? Expires, int? DaysLeft, string? Category,
+    string? SourceUrl, string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published,
+    string? LinkedOrgnr)
 {
     // AdOverview only ever holds active ads.
-    public static AdDto From(AdOverview a) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
-        a.MunicipalityNumber, a.Expires, a.DaysLeft, a.Category, a.SourceUrl,
-        a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden, IsActive: true, a.Published, a.LinkedOrgnr);
+    public static AdDto From(AdOverview a, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
+        new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
+            a.MunicipalityNumber, PlaceName.Resolve(a.MunicipalityNumber, config, kommuner), a.Expires, a.DaysLeft,
+            a.Category, a.SourceUrl, a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden,
+            IsActive: true, a.Published, a.LinkedOrgnr);
 
     // The new-list and company history are review lists, not the deadline view: no pipeline
     // join, no days-left countdown. IsActive is the live rule (Ad.IsOpenAt), not the stored flag.
-    public static AdDto FromAd(Ad a, DateTimeOffset now) => new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
-        a.MunicipalityNumber, a.Expires, DaysLeft: null, a.Category, a.SourceUrl,
-        PipelineStatus: null, a.Hidden, a.IsOpenAt(now), a.Published, a.LinkedOrgnr);
+    public static AdDto FromAd(Ad a, DateTimeOffset now, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
+        new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
+            a.MunicipalityNumber, PlaceName.Resolve(a.MunicipalityNumber, config, kommuner), a.Expires,
+            DaysLeft: null, a.Category, a.SourceUrl, PipelineStatus: null, a.Hidden, a.IsOpenAt(now),
+            a.Published, a.LinkedOrgnr);
 }
 
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,
     DateTimeOffset Since, DateTimeOffset AsOf);
 
 public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, string? KommuneNavn,
-    string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr)
+    string? NaceCode, bool IsBranch, string? Website, string? ParentOrgnr, int OpenAds)
 {
-    // Resolution order: the configured municipality list (Hugin's own tracked region) wins
-    // first, then the full Brreg kommune register (covers every number, e.g. a parent or an
-    // enriched ad employer sitting outside the tracked region), then the raw number as a
-    // last resort — null only when the company itself has no kommune number.
-    public static CompanyDto From(Company c, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
-        new(c.Orgnr, c.Name, c.MunicipalityNumber,
-            config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name
-                ?? (c.MunicipalityNumber is { } number ? kommuner.GetValueOrDefault(number, number) : null),
-            c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr);
+    // KommuneNavn follows PlaceName.Resolve. OpenAds comes from
+    // IAdRepository.CountOpenByEmployerAsync; a company missing from it has 0.
+    public static CompanyDto From(Company c, HuginConfig config, IReadOnlyDictionary<string, string> kommuner,
+        IReadOnlyDictionary<string, int> openAds) =>
+        new(c.Orgnr, c.Name, c.MunicipalityNumber, PlaceName.Resolve(c.MunicipalityNumber, config, kommuner),
+            c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr, openAds.GetValueOrDefault(c.Orgnr));
 
     // A website confirmed dead (WebsiteOk == false) is never rendered as a link — better no
     // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this
@@ -64,7 +79,7 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured);
+    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured, string Version);
 
 public sealed record SourceDto(int Id, string Label, string Url, int Position)
 {

@@ -61,6 +61,7 @@ function company(overrides: Partial<CompanyDto> = {}): CompanyDto {
     isBranch: false,
     website: 'https://acme.example',
     parentOrgnr: null,
+    openAds: 0,
     ...overrides,
   }
 }
@@ -72,6 +73,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employer: 'Acme AS',
     employerOrgnr: '715787630',
     kommune: '0301',
+    kommuneNavn: null,
     expires: '2026-08-25T00:00:00Z',
     daysLeft: null,
     category: 'IT',
@@ -192,6 +194,140 @@ describe('CompaniesView', () => {
 
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
+  })
+
+  it('shows the group total of open ads on the row, and «Med åpen annonse» keeps only groups that have one', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', openAds: 1 }),
+      company({
+        orgnr: '2',
+        name: 'Acme AS avd Gjøvik',
+        parentOrgnr: '1',
+        isBranch: true,
+        openAds: 1,
+      }),
+      company({ orgnr: '3', name: 'Beta Software', openAds: 0 }),
+      // The only open ad sits on the branch: the group still shows, counted on the main row.
+      company({ orgnr: '4', name: 'Gamma AS', openAds: 0 }),
+      company({
+        orgnr: '5',
+        name: 'Gamma AS avd Hamar',
+        parentOrgnr: '4',
+        isBranch: true,
+        openAds: 1,
+      }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const acme = screen.getByRole('button', { name: /Acme AS/ })
+    expect(within(acme).getByText('2 åpne annonser')).toHaveClass('text-muted')
+    expect(
+      within(screen.getByRole('button', { name: /Gamma AS/ })).getByText('1 åpen annonse')
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Beta Software/ })).not.toHaveTextContent(/annonse/)
+
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
+
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.getByText('Gamma AS')).toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Alle')
+
+    expect(screen.getByText('Beta Software')).toBeInTheDocument()
+  })
+
+  it('keeps a group under «Med åpen annonse» when its ads sit on a different unit than the one the website filter matches', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', website: 'https://acme.example', openAds: 0 }),
+      company({
+        orgnr: '2',
+        name: 'Acme AS avd Gjøvik',
+        parentOrgnr: '1',
+        isBranch: true,
+        website: null,
+        openAds: 1,
+      }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Nettside'), 'Har nettside')
+    expect(
+      within(screen.getByRole('button', { name: /Acme AS/ })).getByText('1 åpen annonse')
+    ).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
+
+    const row = screen.getByRole('button', { name: /Acme AS/ })
+    expect(within(row).getByText('1 åpen annonse')).toBeInTheDocument()
+  })
+
+  it('combines the ads filter with search, and the result line announces the count left', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', openAds: 1 }),
+      company({ orgnr: '2', name: 'Acme Labs', openAds: 0 }),
+      company({ orgnr: '3', name: 'Beta Software', openAds: 3 }),
+    ]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const result = screen.getByRole('status')
+    expect(result).toHaveTextContent(/^3 bedrifter$/)
+
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
+    // Same element, new text: the live region existed before the change, so it is announced.
+    expect(screen.getByRole('status')).toBe(result)
+    expect(result).toHaveTextContent(/^2 bedrifter$/)
+
+    await user.type(screen.getByRole('searchbox', { name: 'Søk' }), 'acme')
+
+    expect(result).toHaveTextContent(/^1 bedrift$/)
+    expect(screen.getByText('Acme AS')).toBeInTheDocument()
+    expect(screen.queryByText('Acme Labs')).not.toBeInTheDocument()
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
+  })
+
+  it('reads the ads filter and the row counts in English', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', openAds: 1 }),
+      company({ orgnr: '2', name: 'Beta Software', openAds: 2 }),
+    ]
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const select = screen.getByLabelText('Ads')
+    expect(within(select).getByRole('option', { name: 'All' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'With an open ad' })).toBeInTheDocument()
+    expect(screen.getByText('1 open ad')).toBeInTheDocument()
+    expect(screen.getByText('2 open ads')).toBeInTheDocument()
+  })
+
+  it('keeps the ads filter when a company is opened and closed again (regression guard)', async () => {
+    const companies = [
+      company({ orgnr: '1', name: 'Acme AS', openAds: 1 }),
+      company({ orgnr: '2', name: 'Beta Software', openAds: 0 }),
+    ]
+    const details: Record<string, CompanyDetailDto> = {
+      '1': { company: companies[0], ads: [], branches: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await screen.findByText('Acme AS')
+    await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
+    await user.click(screen.getByRole('button', { name: /Acme AS/ }))
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    const row = await screen.findByRole('button', { name: /Acme AS/ })
+    await waitFor(() => expect(document.activeElement).toBe(row))
+    expect(screen.getByLabelText('Annonser')).toHaveValue('open')
+    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
   })
 
   it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
