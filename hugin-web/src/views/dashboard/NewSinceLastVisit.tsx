@@ -7,16 +7,40 @@ import { api } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
 import type { CompanyDto, NewDto } from '../../lib/types'
 
-/** Groups companies by kommune, preserving first-seen order of both groups and members. */
-function groupByKommune(companies: CompanyDto[]): [string, CompanyDto[]][] {
-  const groups = new Map<string, CompanyDto[]>()
-  for (const company of companies) {
-    const key = company.kommuneNavn ?? company.kommune ?? 'ukjent'
+/** Groups items by place, preserving first-seen order of both groups and members. */
+function groupByPlace<T>(
+  items: T[],
+  placeOf: (item: T) => string | null,
+  unknownPlace: string
+): [string, T[]][] {
+  const groups = new Map<string, T[]>()
+  for (const item of items) {
+    const key = placeOf(item) ?? unknownPlace
     const group = groups.get(key)
-    if (group) group.push(company)
-    else groups.set(key, [company])
+    if (group) group.push(item)
+    else groups.set(key, [item])
   }
   return [...groups.entries()]
+}
+
+/** «Hamar · 3» on screen, «Hamar, 3 bedrifter» for a screen reader: the visible count is
+ * aria-hidden so the number is read once, with its noun. */
+function PlaceHeading({
+  place,
+  count,
+  spokenCount,
+}: {
+  place: string
+  count: number
+  spokenCount: string
+}) {
+  return (
+    <h4 className="text-muted">
+      {place}
+      <span aria-hidden="true"> · {count}</span>
+      <span className="visually-hidden">, {spokenCount}</span>
+    </h4>
+  )
 }
 
 export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
@@ -101,9 +125,21 @@ export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
         <div className="stack">
           <div className="panel stack stack-sm">
             <h3>{t('newSince.newCompanies', { n: data.companies.length })}</h3>
-            {groupByKommune(data.companies).map(([kommune, companies]) => (
-              <div key={kommune} className="stack stack-sm">
-                <h4 className="text-muted">{kommune}</h4>
+            {groupByPlace(
+              data.companies,
+              (company: CompanyDto) => company.kommuneNavn ?? company.kommune,
+              t('newSince.unknownPlace')
+            ).map(([place, companies]) => (
+              <div key={place} className="stack stack-sm">
+                <PlaceHeading
+                  place={place}
+                  count={companies.length}
+                  spokenCount={
+                    companies.length === 1
+                      ? t('newSince.placeCompaniesOne')
+                      : t('newSince.placeCompanies', { n: companies.length })
+                  }
+                />
                 <ul className="stack stack-sm">
                   {companies.map((company) => (
                     <li key={company.orgnr}>
@@ -118,22 +154,37 @@ export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
 
           <div className="panel stack stack-sm">
             <h3>{t('newSince.newAds', { n: data.ads.length })}</h3>
-            {data.ads.length > 0 && (
-              <ul className="stack stack-sm">
-                {data.ads.map((ad) => (
-                  <li key={ad.feedId}>
-                    {ad.sourceUrl ? (
-                      <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
-                        {ad.title}
-                      </a>
-                    ) : (
-                      <span>{ad.title}</span>
-                    )}{' '}
-                    — {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {groupByPlace(
+              data.ads,
+              (ad) => ad.kommuneNavn ?? ad.kommune,
+              t('newSince.unknownPlace')
+            ).map(([place, ads]) => (
+              <div key={place} className="stack stack-sm">
+                <PlaceHeading
+                  place={place}
+                  count={ads.length}
+                  spokenCount={
+                    ads.length === 1
+                      ? t('newSince.placeAdsOne')
+                      : t('newSince.placeAds', { n: ads.length })
+                  }
+                />
+                <ul className="stack stack-sm">
+                  {ads.map((ad) => (
+                    <li key={ad.feedId}>
+                      {ad.sourceUrl ? (
+                        <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
+                          {ad.title}
+                        </a>
+                      ) : (
+                        <span>{ad.title}</span>
+                      )}{' '}
+                      — {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
           {hasNew ? (

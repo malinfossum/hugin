@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
-import type { NewDto } from '../../lib/types'
+import type { AdDto, NewDto } from '../../lib/types'
 import { NewSinceLastVisit } from './NewSinceLastVisit'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -57,6 +57,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         employer: 'Acme AS',
         employerOrgnr: '715787630',
         kommune: '0301',
+        kommuneNavn: null,
         expires: null,
         daysLeft: null,
         category: 'IT',
@@ -73,6 +74,31 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
     ...overrides,
   }
 }
+
+function newAd(overrides: Partial<AdDto> = {}): AdDto {
+  return {
+    feedId: 'a1',
+    title: 'Utvikler',
+    employer: 'Acme AS',
+    employerOrgnr: '715787630',
+    kommune: '0301',
+    kommuneNavn: null,
+    expires: null,
+    daysLeft: null,
+    category: 'IT',
+    sourceUrl: 'https://nav.no/stillinger/a1',
+    pipelineStatus: null,
+    hidden: false,
+    isActive: true,
+    linkedOrgnr: null,
+    published: '2026-08-10T00:00:00Z',
+    ...overrides,
+  }
+}
+
+/** Place headings in DOM order, as their full text: visible count plus the screen-reader suffix. */
+const placeHeadingTexts = () =>
+  screen.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)
 
 /** Fake server: GET /api/new returns the given dto (or 204 when null); POST /api/seen always 204. */
 function fakeServer(dto: NewDto | null) {
@@ -120,17 +146,102 @@ describe('NewSinceLastVisit', () => {
     expect(await screen.findByRole('heading', { name: 'Nye bedrifter (3)' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Nye annonser (1)' })).toBeInTheDocument()
 
-    const oslo = screen.getByText('0301').closest('div') as HTMLElement
+    const oslo = screen
+      .getByRole('heading', { level: 4, name: '0301, 2 bedrifter' })
+      .closest('div') as HTMLElement
     expect(within(oslo).getByText('Acme AS')).toBeInTheDocument()
     expect(within(oslo).getByText(/Acme Avdeling.*\[avdeling\]/)).toBeInTheDocument()
 
-    const trondheim = screen.getByText('4601').closest('div') as HTMLElement
+    const trondheim = screen
+      .getByRole('heading', { level: 4, name: '4601, 1 bedrift' })
+      .closest('div') as HTMLElement
     expect(within(trondheim).getByText('Beta AS')).toBeInTheDocument()
 
     const link = screen.getByRole('link', { name: 'Utvikler' })
     expect(link).toHaveAttribute('href', 'https://nav.no/stillinger/a1')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('counts each place heading once for screen readers: the visible count is aria-hidden', async () => {
+    renderView(fakeServer(newDto()))
+
+    const oslo = await screen.findByRole('heading', { level: 4, name: '0301, 2 bedrifter' })
+    expect(within(oslo).getByText('· 2')).toHaveAttribute('aria-hidden', 'true')
+    expect(within(oslo).getByText(', 2 bedrifter')).toHaveClass('visually-hidden')
+    expect(screen.getByRole('heading', { level: 4, name: '4601, 1 bedrift' })).toBeInTheDocument()
+  })
+
+  it('groups new ads by place with counts, in first-seen order, and an ad without a place under «Ukjent sted»', async () => {
+    const dto = newDto({
+      companies: [],
+      ads: [
+        newAd({ feedId: 'g1', title: 'Utvikler Gjøvik', kommune: '3407', kommuneNavn: 'Gjøvik' }),
+        newAd({ feedId: 'h1', title: 'Utvikler Hamar', kommune: '3403', kommuneNavn: 'Hamar' }),
+        newAd({ feedId: 'g2', title: 'Tester Gjøvik', kommune: '3407', kommuneNavn: 'Gjøvik' }),
+        newAd({ feedId: 'u1', title: 'Utvikler uten sted', kommune: null, kommuneNavn: null }),
+      ],
+    })
+    renderView(fakeServer(dto))
+
+    const gjovik = await screen.findByRole('heading', { level: 4, name: 'Gjøvik, 2 annonser' })
+    expect(placeHeadingTexts()).toEqual([
+      'Gjøvik · 2, 2 annonser',
+      'Hamar · 1, 1 annonse',
+      'Ukjent sted · 1, 1 annonse',
+    ])
+    const group = gjovik.closest('div') as HTMLElement
+    expect(within(group).getByRole('link', { name: 'Utvikler Gjøvik' })).toHaveAttribute(
+      'href',
+      'https://nav.no/stillinger/a1'
+    )
+    expect(within(group).getByRole('link', { name: 'Tester Gjøvik' })).toBeInTheDocument()
+  })
+
+  it('puts a company without a kommune under «Ukjent sted» too', async () => {
+    const dto = newDto({
+      companies: [
+        {
+          orgnr: '715787633',
+          name: 'Stedløs AS',
+          kommune: null,
+          kommuneNavn: null,
+          naceCode: '62.010',
+          isBranch: false,
+          website: null,
+          parentOrgnr: null,
+          openAds: 0,
+        },
+      ],
+      ads: [],
+    })
+    renderView(fakeServer(dto))
+
+    const heading = await screen.findByRole('heading', { level: 4, name: 'Ukjent sted, 1 bedrift' })
+    expect(
+      within(heading.closest('div') as HTMLElement).getByText('Stedløs AS')
+    ).toBeInTheDocument()
+  })
+
+  it('reads the place counts in English', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    const dto = newDto({
+      ads: [
+        newAd({ feedId: 'o1', kommune: '0301', kommuneNavn: 'Oslo' }),
+        newAd({ feedId: 'o2', kommune: '0301', kommuneNavn: 'Oslo' }),
+        newAd({ feedId: 'u1', kommune: null, kommuneNavn: null }),
+      ],
+    })
+    renderView(fakeServer(dto))
+
+    expect(
+      await screen.findByRole('heading', { level: 4, name: '0301, 2 companies' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 4, name: '4601, 1 company' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 4, name: 'Oslo, 2 ads' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 4, name: 'Unknown place, 1 ad' })
+    ).toBeInTheDocument()
   })
 
   it('displays all-caps Brreg company and employer names in title case', async () => {
@@ -155,6 +266,7 @@ describe('NewSinceLastVisit', () => {
           employer: 'NYFJELL SPILL AS',
           employerOrgnr: '715787630',
           kommune: '0301',
+          kommuneNavn: null,
           expires: null,
           daysLeft: null,
           category: 'IT',
@@ -297,6 +409,7 @@ describe('NewSinceLastVisit', () => {
           employer: 'Beta AS',
           employerOrgnr: '715787632',
           kommune: '4601',
+          kommuneNavn: null,
           expires: null,
           daysLeft: null,
           category: 'IT',

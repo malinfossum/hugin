@@ -120,6 +120,11 @@ export const en = {
   'newSince.confirmTitle': 'This mark will move — this cannot be undone.',
   'newSince.markError': 'Could not mark as seen.',
   'newSince.markedAnnounce': 'Marked as seen.',
+  'newSince.unknownPlace': 'Unknown place',
+  'newSince.placeCompanies': '{n} companies',
+  'newSince.placeCompaniesOne': '1 company',
+  'newSince.placeAds': '{n} ads',
+  'newSince.placeAdsOne': '1 ad',
 
   'applications.loadError': 'Could not load applications.',
   'applications.sortBy': 'Sort by',

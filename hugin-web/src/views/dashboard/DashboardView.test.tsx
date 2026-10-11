@@ -19,6 +19,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employer: 'Acme AS',
     employerOrgnr: '715787630',
     kommune: '0301',
+    kommuneNavn: null,
     expires: '2026-08-25T00:00:00Z',
     daysLeft: 6,
     category: 'IT',

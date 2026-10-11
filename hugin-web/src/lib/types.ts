@@ -8,6 +8,9 @@ export interface AdDto {
   employer: string | null
   employerOrgnr: string | null
   kommune: string | null
+  /** Place name, resolved server-side by the same rule as CompanyDto.kommuneNavn (configured
+   * name, then the Brreg register, then the raw number). Null when the ad has no kommune. */
+  kommuneNavn: string | null
   expires: string | null
   daysLeft: number | null
   category: string | null

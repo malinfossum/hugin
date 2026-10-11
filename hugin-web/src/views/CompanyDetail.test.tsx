@@ -34,6 +34,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employer: 'Nyfjell Spill AS',
     employerOrgnr: '777777777',
     kommune: '3403',
+    kommuneNavn: null,
     expires: '2026-08-25T00:00:00Z',
     daysLeft: null,
     category: 'IT',
