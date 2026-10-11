@@ -2,7 +2,7 @@
 
 A summary of what Hugin is, how it works, how it is built and where it stands.
 
-**Last updated:** 23.09.2026 · **Version:** v3.6.1 · **Status:** finished and in daily use
+**Last updated:** 11.10.2026 · **Version:** v3.9.0 · **Status:** finished and in daily use
 
 ---
 
@@ -97,8 +97,8 @@ The first load after a period of inactivity takes a few seconds — it runs on t
 
 ## Status
 
-Hugin is finished at v3.6.1 and in daily use. Ten tagged releases, 278 commits between
-18 August and 21 September 2026, and 801 tests all passing: 414 on the backend, 387 on the
+Hugin is finished at v3.9.0 and in daily use. Seventeen tagged releases, 355 commits between
+18 August and 11 October 2026, and 915 tests all passing: 503 on the backend, 412 on the
 frontend. Every version has a specification written up front, under `docs/specs/`.
 
 The aim was never to build a product, but to avoid the manual morning round. It is still built
@@ -112,7 +112,7 @@ at.
 | Why not a framework like Next? | This is a local application, not a website. React plus two dependencies in total; everything else is the standard library. |
 | Why SQLite? | One user, one file, zero setup. The database sits beside the exe and backs itself up before every migration. |
 | Why both a CLI and a web dashboard? | The command line came first and is still the fastest morning check. The dashboard is an extra host over the same core and the same database, not a rewrite. |
-| How large is the codebase? | Around 7,000 lines of C# production code, 7,700 lines of test code and 14,000 lines of frontend. |
+| How large is the codebase? | Around 7,500 lines of C# production code, 8,700 lines of test code and 14,700 lines of frontend. |
 | Does it pull from finn.no? | No. Neither finn.no nor proff.no permits scraping, so they are listed as link-outs under Sources in the app and clicked by hand. |
 | Who can use it? | Anyone. MIT licence, pre-built exes under Releases, and it asks which part of Norway to cover the first time it starts. |
 
