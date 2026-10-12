@@ -23,6 +23,10 @@ jobs:
       dotnet: "Hugin.slnx"               # solution directory or file, e.g. "." or "App.slnx"
       dotnet-os: ubuntu-latest # windows-latest for WPF
       dotnet-ef-project: ""    # EF Core project path, e.g. "src/App.Data"
+      # Contributors are listed with their consent, by their GitHub noreply address.
+      allowed-emails: >-
+        malinfossum.dev@proton.me,
+        171961760+shift-primal@users.noreply.github.com
 
   automerge:
     if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
