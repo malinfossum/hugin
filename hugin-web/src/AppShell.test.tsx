@@ -295,3 +295,116 @@ describe('AppShell opening a company detail', () => {
     await waitFor(() => expect(heading).toHaveFocus())
   })
 })
+
+describe('AppShell closing a company detail', () => {
+  it('returns to the dashboard it was opened from, with focus on the remounted link', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    const link = await screen.findByRole('link', { name: 'Acme AS' })
+    await user.click(link)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    // Back, not a new entry: the dashboard's own entry is current again.
+    expect(router.history.location.state.__TSR_index).toBe(0)
+    const again = await screen.findByRole('link', { name: 'Acme AS' })
+    // The dashboard remounted, so this is a new element, found by identity.
+    expect(again).not.toBe(link)
+    await waitFor(() => expect(again).toHaveFocus())
+  })
+
+  it('the browser Back button restores the same focus', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    act(() => router.history.back())
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    const again = await screen.findByRole('link', { name: 'Acme AS' })
+    await waitFor(() => expect(again).toHaveFocus())
+  })
+
+  it('reaching the dashboard again through the nav is not a return: focus stays on the nav', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    const navDashboard = screen.getByRole('link', { name: 'Dashbord' })
+    await user.click(navDashboard)
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    await screen.findByRole('link', { name: 'Acme AS' })
+    expect(navDashboard).toHaveFocus()
+  })
+
+  it('opened from the list, close goes back to the list entry and refocuses the row', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/companies')
+
+    await user.click(await screen.findByRole('button', { name: /Acme AS/ }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies'))
+    expect(router.history.location.state.__TSR_index).toBe(0)
+    await waitFor(() => expect(screen.getByRole('button', { name: /Acme AS/ })).toHaveFocus())
+  })
+
+  it('regression guard: on a cold deep link, close lands on the company list, not outside the app', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/companies/715787630')
+
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies'))
+    expect(await screen.findByRole('button', { name: /Acme AS/ })).toBeInTheDocument()
+  })
+
+  it('a company gone from the fresh digest returns focus to the card heading, not the body', async () => {
+    const state: ServerState = { companyName: 'Acme AS', syncRunning: false }
+    vi.stubGlobal('fetch', fakeServer(state))
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    // Marked seen in another tab meanwhile: the cache still has the company, the server not.
+    state.newEmpty = true
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 2, name: 'Nytt siden sist' })).toHaveFocus()
+    )
+    expect(screen.queryByRole('link', { name: 'Acme AS' })).not.toBeInTheDocument()
+  })
+
+  it('a repeated close (Enter held down) goes back one step, not two', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/applications')
+
+    await user.click(await screen.findByRole('link', { name: 'Dashbord' }))
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    const back = await screen.findByRole('button', { name: 'Tilbake' })
+    // Both clicks land before the router has rendered the first Back.
+    act(() => {
+      back.click()
+      back.click()
+    })
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    expect(router.history.location.state.__TSR_index).toBe(1)
+  })
+})

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
 import { useReadOnly } from '../../context/readOnly'
+import { useReturnFocus } from '../../context/returnFocus'
 import { useT } from '../../i18n'
 import { displayCompanyName } from '../../lib/companyName'
 import { useMarkSeen } from '../../lib/mutations'
@@ -49,7 +50,7 @@ function PlaceHeading({
 export function NewSinceLastVisit() {
   const t = useT()
   const markSeen = useMarkSeen()
-  const { data: fetched, isError, isSuccess: loaded, refetch } = useQuery(newQuery())
+  const { data: fetched, isError, isFetching, isSuccess: loaded, refetch } = useQuery(newQuery())
   // null from the query means the server has not synced yet.
   const data = fetched ?? undefined
   const [actionError, setActionError] = useState<string | null>(null)
@@ -58,6 +59,8 @@ export function NewSinceLastVisit() {
   const announce = useAnnounce()
   const { readOnly } = useReadOnly()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+  const { remember, restore } = useReturnFocus()
   // Snapshot of the asOf the user was actually looking at when they opened the dialog.
   // A refetch (a sync completing) while the dialog is open must not change what gets posted —
   // that would mark items the user never reviewed as seen.
@@ -87,8 +90,20 @@ export function NewSinceLastVisit() {
 
   const hasNew = !!data && (data.companies.length > 0 || data.ads.length > 0)
 
+  // Back from a company opened here remounts this card and refetches its list. Once the fresh
+  // list has rendered, focus goes back to the link that opened the company, or to this card's
+  // heading when the company is no longer new (spec v3.8 B5). Waiting for the refetch keeps a
+  // link the fresh data removes from being focused for a moment and then lost.
+  useEffect(() => {
+    if (loaded && data && !isFetching) restore(sectionRef.current, headingRef.current)
+  }, [loaded, data, isFetching, restore])
+
   return (
-    <section aria-labelledby="new-since-heading" className="new-since-last-visit card stack">
+    <section
+      ref={sectionRef}
+      aria-labelledby="new-since-heading"
+      className="new-since-last-visit card stack"
+    >
       <h2 id="new-since-heading" ref={headingRef} tabIndex={-1}>
         {t('newSince.heading')}
       </h2>
@@ -140,6 +155,7 @@ export function NewSinceLastVisit() {
                         params={{ orgnr: company.orgnr }}
                         search={{}}
                         data-return-focus={`company:${company.orgnr}`}
+                        onClick={() => remember(`company:${company.orgnr}`)}
                       >
                         {displayCompanyName(company.name)}
                       </Link>
