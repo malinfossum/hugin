@@ -21,6 +21,8 @@ function jsonResponse(body: unknown) {
 interface ServerState {
   companyName: string
   syncRunning: boolean
+  /** The digest has no new companies, as after «Merk som sett» (Task 6). */
+  newEmpty?: boolean
 }
 
 function fakeServer(state: ServerState) {
@@ -40,6 +42,7 @@ function fakeServer(state: ServerState) {
             pipelineEntries: 0,
             readOnly: false,
             scopeConfigured: true,
+            version: 'v3.10.0',
           })
         )
       case '/api/sync/status':
@@ -62,6 +65,31 @@ function fakeServer(state: ServerState) {
             branches: [],
           })
         )
+      case '/api/new':
+        return Promise.resolve(
+          jsonResponse({
+            companies: state.newEmpty
+              ? []
+              : [
+                  {
+                    orgnr: '715787630',
+                    name: state.companyName,
+                    kommune: '3403',
+                    kommuneNavn: 'Hamar',
+                    naceCode: '62.010',
+                    isBranch: false,
+                    website: null,
+                    parentOrgnr: null,
+                    openAds: 0,
+                  },
+                ],
+            ads: [],
+            since: '2026-10-01T00:00:00Z',
+            asOf: '2026-10-14T08:00:00Z',
+          })
+        )
+      case '/api/ads':
+        return Promise.resolve(jsonResponse([]))
       case '/api/sources':
         return Promise.resolve(
           jsonResponse([{ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }])
@@ -197,5 +225,49 @@ describe('AppShell unsaved-changes guard', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
     expect(screen.queryByRole('dialog', { name: QUESTION })).not.toBeInTheDocument()
+  })
+})
+
+describe('AppShell logo', () => {
+  afterEach(() => {
+    window.localStorage.removeItem('hugin-lang')
+  })
+
+  it('is a link to the dashboard named after the visible word', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/applications')
+
+    const logo = await screen.findByRole('link', { name: 'Hugin, til dashbordet' })
+    expect(logo).toHaveAttribute('href', '/')
+    await user.click(logo)
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    // Like the nav: focus stays on the link that was activated.
+    expect(logo).toHaveFocus()
+  })
+
+  it('returns to the dashboard with its last ?show=, like the nav item', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/?show=all')
+
+    await user.click(await screen.findByRole('link', { name: 'Søknader' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
+    await user.click(screen.getByRole('link', { name: 'Hugin, til dashbordet' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    expect(router.state.location.search).toEqual({ show: 'all' })
+  })
+
+  it('has an English name too', async () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    renderApp('/applications')
+
+    expect(await screen.findByRole('link', { name: 'Hugin, to the dashboard' })).toHaveAttribute(
+      'href',
+      '/'
+    )
   })
 })

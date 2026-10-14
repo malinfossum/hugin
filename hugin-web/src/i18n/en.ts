@@ -8,6 +8,8 @@ export const en = {
   'nav.export': 'Export',
   'nav.settings': 'Settings',
 
+  'brand.homeLabel': 'Hugin, to the dashboard',
+
   'lang.switchToEn': 'Switch to English',
   'lang.switchToNb': 'Bytt til norsk',
 

@@ -68,6 +68,9 @@ export function AppShell() {
   useEffect(() => {
     if (routeId) lastSearch.current[routeId] = search
   }, [routeId, search])
+  // The search a link to `to` should carry: the current one when it points at this view, else the
+  // one that view was last left with. The nav items and the logo share it.
+  const searchFor = (to: string) => (to === routeId ? search : (lastSearch.current[to] ?? {}))
   // Never before /api/status has answered (a fresh visitor would see it flash, or worse, get it
   // for real and a Save that can only 403), and never on the read-only demo. `scopeConfigured
   // === false` catches a browser that already has a stored focus but the server has no scope
@@ -150,12 +153,20 @@ export function AppShell() {
           <div className="app-shell">
             <header className="topbar">
               <div className="container cluster-between">
-                <span className="brand">
+                {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
+                the dashboard's last search too. Its name starts with the visible word, so
+                speech input ("click Hugin") still finds it. */}
+                <Link
+                  to="/"
+                  search={searchFor('/')}
+                  className="brand"
+                  aria-label={t('brand.homeLabel')}
+                >
                   {/* Primary variant: the topbar mark renders at 2rem (32 px), the brand
-                  pack's minimum for the primary mark — below that, use micro. */}
+                  pack's minimum for the primary mark. Below that, use micro. */}
                   <HuginMark variant="primary" className="brand-mark" />
                   Hugin
-                </span>
+                </Link>
                 <div className="topbar-controls cluster cluster-sm">
                   <nav aria-label={t('nav.ariaLabel')}>
                     <ul className="nav-list">
@@ -164,9 +175,7 @@ export function AppShell() {
                           <Link
                             to={item.to}
                             params={'params' in item ? item.params : {}}
-                            search={
-                              item.to === routeId ? search : (lastSearch.current[item.to] ?? {})
-                            }
+                            search={searchFor(item.to)}
                             className="nav-link"
                             // Search params (the dashboard's ?show=all) don't change which page this is.
                             activeOptions={{ exact: item.exact, includeSearch: false }}
