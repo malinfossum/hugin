@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { useAnnounce } from '../../components/LiveRegion'
+import { UnsavedChangesGuard } from '../../components/UnsavedChangesGuard'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { useReadOnly } from '../../context/readOnly'
 import { type T, useT } from '../../i18n'
-import { ApiError, api } from '../../lib/api'
+import { ApiError } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
 import { formatDate } from '../../lib/dates'
+import { useSavePipelineEntry, useSetAdHidden, useSetAdLink } from '../../lib/mutations'
 import { pipelineLabel } from '../../lib/pipelineLabels'
+import { adsQuery, pipelineQuery } from '../../lib/queries'
 import type { AdDto, PipelineDto } from '../../lib/types'
 
 function urgencyClass(daysLeft: number | null): string | undefined {
@@ -42,57 +46,57 @@ function formatExpires(expires: string | null): string | null {
   return expires ? formatDate(expires) : null
 }
 
-type Show = 'active' | 'all'
+export type Show = 'active' | 'all'
 
-export function DeadlineList({ refreshKey }: { refreshKey: number }) {
-  const [ads, setAds] = useState<AdDto[]>([])
-  const [show, setShow] = useState<Show>('active')
-  const [error, setError] = useState<string | null>(null)
+interface DeadlineListProps {
+  show: Show
+  onShowChange: (show: Show) => void
+}
+
+export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
+  const queryClient = useQueryClient()
+  const t = useT()
+  // Switching the filter keeps the previous rows on screen until the new list arrives.
+  const {
+    data: ads = [],
+    isError: loadFailed,
+    refetch,
+  } = useQuery({ ...adsQuery(show === 'all'), placeholderData: keepPreviousData })
+  // Every row action refetches the ads lists on success (this one and the dashboard's
+  // NeedsAction share the cache).
+  const setHidden = useSetAdHidden()
+  const setLink = useSetAdLink()
+  const trackCompany = useSavePipelineEntry()
+  const [actionError, setActionError] = useState<string | null>(null)
+  const error = actionError ?? (loadFailed ? t('deadlines.loadError') : null)
   // The manual link form: which row has it open, the chosen orgnr, and the tracked companies
   // it offers (fetched afresh on every open, so a company tracked since is offered too; null
   // while loading, which keeps the form off-screen until the list is there).
   const [linking, setLinking] = useState<string | null>(null)
   const [linkTarget, setLinkTarget] = useState('')
   const [tracked, setTracked] = useState<PipelineDto[] | null>(null)
+  // Opening the form picks nothing; only a chosen company is something to lose.
+  const linkDirty = linking !== null && linkTarget !== ''
   const announce = useAnnounce()
   const { focus } = useFocus()
-  const t = useT()
   const { readOnly } = useReadOnly()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const skjulRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  // undefined: no pending focus move. null: focus the heading. string: focus that row's Skjul button.
-  const pendingFocus = useRef<string | null | undefined>(undefined)
   // The link form replaces the button that opens it, so focus is moved by hand: into the select
   // when the form appears, back to that row's «Koble til bedrift» when it closes without a
-  // request (returnFocusTo names the row). A completed link or unlink goes through pendingFocus
+  // request (returnFocusTo names the row). A completed link or unlink goes through moveFocus
   // instead, since the button that had focus is gone after the reload.
   const linkRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const linkSelectRef = useRef<HTMLSelectElement>(null)
   const returnFocusTo = useRef<string | null>(null)
 
-  const load = useCallback(() => {
-    setError(null)
-    const path = show === 'all' ? '/api/ads?hidden=true' : '/api/ads'
-    return api
-      .get<AdDto[]>(path)
-      .then(setAds)
-      .catch(() => setError(t('deadlines.loadError')))
-  }, [show, t])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
-  useEffect(() => {
-    load()
-  }, [load, refreshKey])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ads is the refetch-completed signal that applies the pending focus move
-  useEffect(() => {
-    if (pendingFocus.current === undefined) return
-    const target = pendingFocus.current
-    pendingFocus.current = undefined
+  // Moved once the action has succeeded — the mutation resolves only after its refetch has landed.
+  // null focuses the heading; a feedId focuses that row's Skjul button (which every action keeps).
+  const moveFocus = (target: string | null) => {
     const button = target ? skjulRefs.current.get(target) : undefined
     if (button) button.focus()
     else headingRef.current?.focus()
-  }, [ads])
+  }
 
   useEffect(() => {
     if (linking !== null) {
@@ -111,37 +115,37 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
     const index = visibleAds.findIndex((a) => a.feedId === feedId)
     const nextFeedId = visibleAds[index + 1]?.feedId ?? null
     try {
-      await api.post(`/api/ads/${feedId}/hide`)
+      await setHidden.mutateAsync({ feedId, hidden: true })
     } catch {
-      setError(t('deadlines.hideError'))
+      setActionError(t('deadlines.hideError'))
       return
     }
-    pendingFocus.current = nextFeedId
-    await load()
+    setActionError(null)
+    moveFocus(nextFeedId)
     announce(t('deadlines.hiddenAnnounce'))
   }
 
   const handleTrack = async (ad: AdDto) => {
     if (!ad.employerOrgnr) return
     try {
-      await api.put(`/api/pipeline/${ad.employerOrgnr}`, { status: 'active' })
+      await trackCompany.mutateAsync({ orgnr: ad.employerOrgnr, status: 'active' })
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('deadlines.trackError'))
+      setActionError(err instanceof ApiError ? err.message : t('deadlines.trackError'))
       return
     }
-    await load()
+    setActionError(null)
     const displayName = ad.employer ? displayCompanyName(ad.employer) : ad.employerOrgnr
     announce(t('deadlines.trackedAnnounce', { name: displayName }))
   }
 
   const handleAngreSkjul = async (feedId: string) => {
     try {
-      await api.del(`/api/ads/${feedId}/hide`)
+      await setHidden.mutateAsync({ feedId, hidden: false })
     } catch {
-      setError(t('deadlines.unhideError'))
+      setActionError(t('deadlines.unhideError'))
       return
     }
-    await load()
+    setActionError(null)
     announce(t('deadlines.unhiddenAnnounce'))
   }
 
@@ -150,14 +154,15 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
     setLinkTarget('')
     setTracked(null)
     try {
-      const entries = await api.get<PipelineDto[]>('/api/pipeline')
+      // Fetched afresh on every open (the default staleTime is 0), so a company tracked since is offered.
+      const entries = await queryClient.fetchQuery(pipelineQuery())
       setTracked(
         [...entries].sort((a, b) =>
           displayCompanyName(a.companyName).localeCompare(displayCompanyName(b.companyName), 'nb')
         )
       )
     } catch {
-      setError(t('deadlines.linkError'))
+      setActionError(t('deadlines.linkError'))
       returnFocusTo.current = feedId
       setLinking(null)
     }
@@ -173,27 +178,27 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
     const target = tracked?.find((c) => c.orgnr === linkTarget)
     if (!target) return
     try {
-      await api.put(`/api/ads/${feedId}/link`, { orgnr: target.orgnr })
+      await setLink.mutateAsync({ feedId, orgnr: target.orgnr })
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('deadlines.linkError'))
+      setActionError(err instanceof ApiError ? err.message : t('deadlines.linkError'))
       return
     }
+    setActionError(null)
     setLinking(null)
     setLinkTarget('')
-    pendingFocus.current = feedId
-    await load()
+    moveFocus(feedId)
     announce(t('deadlines.linkedAnnounce', { name: displayCompanyName(target.companyName) }))
   }
 
   const handleUnlink = async (feedId: string) => {
     try {
-      await api.del(`/api/ads/${feedId}/link`)
+      await setLink.mutateAsync({ feedId, orgnr: null })
     } catch {
-      setError(t('deadlines.unlinkError'))
+      setActionError(t('deadlines.unlinkError'))
       return
     }
-    pendingFocus.current = feedId
-    await load()
+    setActionError(null)
+    moveFocus(feedId)
     announce(t('deadlines.unlinkedAnnounce'))
   }
 
@@ -211,7 +216,10 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
           id="deadlines-show"
           className="select"
           value={show}
-          onChange={(event) => setShow(event.target.value as Show)}
+          onChange={(event) => {
+            setActionError(null)
+            onShowChange(event.target.value as Show)
+          }}
         >
           <option value="active">{t('deadlines.showDefault')}</option>
           <option value="all">{t('deadlines.showAll')}</option>
@@ -220,7 +228,14 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
-          <button type="button" className="btn btn-ghost" onClick={load}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setActionError(null)
+              refetch()
+            }}
+          >
             {t('common.retry')}
           </button>
         </p>
@@ -342,6 +357,8 @@ export function DeadlineList({ refreshKey }: { refreshKey: number }) {
           </li>
         ))}
       </ul>
+
+      <UnsavedChangesGuard dirty={linkDirty} />
     </section>
   )
 }

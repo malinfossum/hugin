@@ -22,6 +22,10 @@ export const nb = {
   'common.all': 'Alle',
   'common.branchTag': '[avdeling]',
 
+  'unsaved.title': 'Forlate siden uten å lagre?',
+  'unsaved.body': 'Endringene du har gjort her er ikke lagret. Går du videre, blir de borte.',
+  'unsaved.leave': 'Forlat uten å lagre',
+
   'status.active': 'Følger med',
   'status.applied': 'Søkt',
   'status.answered': 'Svar',

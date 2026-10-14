@@ -1,96 +1,43 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useAnnounce } from '../../components/LiveRegion'
+import { useSyncWatcher } from '../../components/SyncWatcher'
 import { useReadOnly } from '../../context/readOnly'
 import { type T, useT } from '../../i18n'
-import { ApiError, api } from '../../lib/api'
+import { ApiError } from '../../lib/api'
 import { formatDateTime } from '../../lib/dates'
-import type { SourceResultDto, SourceStateDto, StatusDto, SyncRunStatus } from '../../lib/types'
+import { useStartSync } from '../../lib/mutations'
+import { statusQuery, syncStatusQuery } from '../../lib/queries'
+import { getFailureMessage, isNoCoverageFailure } from '../../lib/syncResult'
+import type { SourceStateDto } from '../../lib/types'
 
 function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
   return source ? formatDateTime(source.lastSyncUtc) : t('sync.never')
 }
 
-/** null when no source failed; otherwise the message shared by the announce and the banner. */
-function getFailureMessage(sync: SyncRunStatus, t: T): string | null {
-  const failed = [sync.brreg, sync.nav].filter((r): r is SourceResultDto => !!r && !r.succeeded)
-  if (failed.length === 0) return null
-  if (failed.length === 2) return t('sync.failedFull', { error: failed[0]?.error ?? '' })
-  return t('sync.failedPartial', { error: failed[0]?.error ?? '' })
-}
-
-// Exact prefix `SyncBrregAsync` returns when no municipalities, fylker or allOfNorway are
-// configured (v3.5 Part A2) — an empty result, not an error, so it gets its own prompt instead
-// of the generic failure banner (Part A4).
-const NO_COVERAGE_PREFIX = 'Ingen dekning valgt'
-
-function isNoCoverageFailure(sync: SyncRunStatus): boolean {
-  return (
-    !!sync.brreg && !sync.brreg.succeeded && (sync.brreg.error ?? '').startsWith(NO_COVERAGE_PREFIX)
-  )
-}
-
 interface SyncHeaderProps {
-  onSyncCompleted: () => void
   /** Reopens the first-run dialog — the empty-coverage prompt's own button (v3.5 Part A4). */
   onRequestCoverage: () => void
 }
 
-export function SyncHeader({ onSyncCompleted, onRequestCoverage }: SyncHeaderProps) {
-  const [status, setStatus] = useState<StatusDto | null>(null)
-  const [sync, setSync] = useState<SyncRunStatus | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+/** Last-sync times, counts and the "Synk nå" button. The completion cycle (announce, refresh)
+ * lives in the shell's SyncWatcherProvider, so it runs whichever view is showing. */
+export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
+  const { data: status, isError: statusFailed, refetch: loadStatus } = useQuery(statusQuery())
+  const { data: sync = null } = useQuery(syncStatusQuery())
   const announce = useAnnounce()
   const t = useT()
   const { readOnly } = useReadOnly()
-  const wasRunning = useRef(false)
-
-  const loadStatus = useCallback(() => {
-    setLoadError(null)
-    return api
-      .get<StatusDto>('/api/status')
-      .then(setStatus)
-      .catch(() => setLoadError(t('sync.statusError')))
-  }, [t])
-
-  useEffect(() => {
-    loadStatus()
-  }, [loadStatus])
-
-  // INVARIANT: polling must survive/resume after a completed sync regardless of parent
-  // memoization of onSyncCompleted. The interval is never stopped on completion — only on
-  // unmount — so a later "Synk nå" click is always picked up by the next 2s tick without
-  // depending on the parent handing us a new callback identity to re-trigger this effect.
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | undefined
-    const poll = async () => {
-      const s = await api.get<SyncRunStatus>('/api/sync/status').catch(() => null)
-      if (!s) return
-      setSync(s)
-      if (wasRunning.current && !s.running) {
-        wasRunning.current = false
-        announce(
-          isNoCoverageFailure(s)
-            ? t('dashboard.noCoverageAnnounce')
-            : (getFailureMessage(s, t) ?? t('sync.done'))
-        )
-        loadStatus()
-        onSyncCompleted()
-      }
-      if (s.running) wasRunning.current = true
-    }
-    poll()
-    timer = setInterval(poll, 2000)
-    return () => clearInterval(timer)
-  }, [announce, loadStatus, onSyncCompleted, t])
+  const { markSyncStarted } = useSyncWatcher()
+  const startSyncMutation = useStartSync()
 
   const startSync = async () => {
     try {
-      await api.post('/api/sync')
-      wasRunning.current = true
+      await startSyncMutation.mutateAsync({})
+      markSyncStarted()
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         announce(t('sync.alreadyRunning'))
-        wasRunning.current = true
+        markSyncStarted()
       } else {
         announce(t('sync.startFailed'))
       }
@@ -120,10 +67,10 @@ export function SyncHeader({ onSyncCompleted, onRequestCoverage }: SyncHeaderPro
           pipelineEntries: status?.pipelineEntries ?? 0,
         })}
       </p>
-      {loadError && (
+      {statusFailed && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
-          {loadError}
-          <button type="button" className="btn btn-ghost" onClick={loadStatus}>
+          {t('sync.statusError')}
+          <button type="button" className="btn btn-ghost" onClick={() => loadStatus()}>
             {t('common.retry')}
           </button>
         </p>

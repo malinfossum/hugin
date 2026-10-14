@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
-import { api } from '../../lib/api'
-import type { AdDto } from '../../lib/types'
+import { adsQuery } from '../../lib/queries'
 
 function deadlineText(daysLeft: number, t: T): string {
   if (daysLeft < 0) return t('needsAction.deadlineExpired')
@@ -11,24 +10,12 @@ function deadlineText(daysLeft: number, t: T): string {
   return t('needsAction.deadlineInDays', { n: daysLeft })
 }
 
-export function NeedsAction({ refreshKey }: { refreshKey: number }) {
-  const [ads, setAds] = useState<AdDto[]>([])
-  const [loadError, setLoadError] = useState<string | null>(null)
+export function NeedsAction() {
+  // Same query as DeadlineList's default view, so the two share one request and one cache entry.
+  const { data: ads = [], isError, refetch } = useQuery(adsQuery())
   const { focus } = useFocus()
   const t = useT()
-
-  const load = useCallback(() => {
-    setLoadError(null)
-    return api
-      .get<AdDto[]>('/api/ads')
-      .then(setAds)
-      .catch(() => setLoadError(t('needsAction.loadError')))
-  }, [t])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
-  useEffect(() => {
-    load()
-  }, [load, refreshKey])
+  const loadError = isError ? t('needsAction.loadError') : null
 
   const needsAction = ads.filter(
     (ad) =>
@@ -47,7 +34,7 @@ export function NeedsAction({ refreshKey }: { refreshKey: number }) {
       {loadError && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {loadError}
-          <button type="button" className="btn btn-ghost" onClick={load}>
+          <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
             {t('common.retry')}
           </button>
         </p>

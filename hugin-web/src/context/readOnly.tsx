@@ -1,5 +1,6 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
-import { api } from '../lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { createContext, type ReactNode, useContext, useState } from 'react'
+import { statusQuery } from '../lib/queries'
 import type { StatusDto } from '../lib/types'
 
 interface ReadOnlyState {
@@ -37,35 +38,17 @@ const ReadOnlyContext = createContext<ReadOnlyState>({
  * unresolved: views still render (each has its own error state), but nothing that could write
  * on the user's behalf — the first-run dialog above all — opens on a guess. A reload retries. */
 export function ReadOnlyProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Omit<ReadOnlyState, 'markScopeConfigured'>>({
-    readOnly: false,
-    resolved: false,
-    scopeConfigured: null,
-  })
+  // The same `status` query SyncHeader reads, so boot is one request and a status refresh after
+  // a sync reaches both. A failed fetch leaves `data` undefined: unresolved.
+  const { data: status } = useQuery(statusQuery())
+  const [scopeMarked, setScopeMarked] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    api
-      .get<StatusDto>('/api/status')
-      .then((status) => {
-        if (!cancelled) {
-          setState({
-            readOnly: status.readOnly,
-            resolved: true,
-            scopeConfigured: status.scopeConfigured,
-          })
-        }
-      })
-      .catch(() => {
-        /* stays unresolved */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const markScopeConfigured = () => setScopeMarked(true)
 
-  const markScopeConfigured = () => {
-    setState((prev) => (prev.scopeConfigured === true ? prev : { ...prev, scopeConfigured: true }))
+  const state = {
+    readOnly: status?.readOnly ?? false,
+    resolved: status !== undefined,
+    scopeConfigured: scopeMarked ? true : status ? status.scopeConfigured : null,
   }
 
   return (

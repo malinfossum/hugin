@@ -4,6 +4,7 @@ import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider } from '../context/focus'
 import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
+import { TestQueryProvider } from '../test-utils'
 import { ApplicationsView } from './ApplicationsView'
 import { DeadlineList } from './dashboard/DeadlineList'
 import { NewSinceLastVisit } from './dashboard/NewSinceLastVisit'
@@ -96,13 +97,15 @@ function demoServer() {
 
 function wrap(ui: React.ReactElement) {
   return render(
-    <LanguageProvider>
-      <ReadOnlyProvider>
-        <FocusProvider>
-          <LiveRegionProvider>{ui}</LiveRegionProvider>
-        </FocusProvider>
-      </ReadOnlyProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <ReadOnlyProvider>
+          <FocusProvider>
+            <LiveRegionProvider>{ui}</LiveRegionProvider>
+          </FocusProvider>
+        </ReadOnlyProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -111,21 +114,24 @@ afterEach(() => vi.unstubAllGlobals())
 describe('read-only mode hides write controls', () => {
   it('SyncHeader has no «Synk nå»', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<SyncHeader onSyncCompleted={() => {}} onRequestCoverage={() => {}} />)
+    wrap(<SyncHeader onRequestCoverage={() => {}} />)
     await waitFor(() => expect(screen.getByText(/Synkronisering/)).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: 'Synk nå' })).not.toBeInTheDocument()
+    // The button renders until /api/status has said this is the demo, so wait for it to go.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Synk nå' })).not.toBeInTheDocument()
+    )
   })
 
   it('NewSinceLastVisit has no «Merk som sett»', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<NewSinceLastVisit refreshKey={0} />)
+    wrap(<NewSinceLastVisit />)
     await screen.findByText('Utvikler')
     expect(screen.queryByRole('button', { name: 'Merk som sett' })).not.toBeInTheDocument()
   })
 
   it('DeadlineList has no track, link or hide buttons', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<DeadlineList refreshKey={0} />)
+    wrap(<DeadlineList show="active" onShowChange={() => {}} />)
     await screen.findByText('Utvikler')
     for (const name of ['Følg med', 'Koble til bedrift', 'Skjul']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
@@ -143,7 +149,7 @@ describe('read-only mode hides write controls', () => {
 
   it('SettingsView shows sources and coverage without any editing', async () => {
     vi.stubGlobal('fetch', demoServer())
-    wrap(<SettingsView onSourcesChanged={() => {}} />)
+    wrap(<SettingsView />)
     await screen.findByText('FINN')
     expect(screen.queryByRole('button', { name: 'Legg til lenke' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rediger' })).not.toBeInTheDocument()

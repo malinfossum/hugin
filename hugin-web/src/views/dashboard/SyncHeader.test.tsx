@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { SyncWatcherProvider } from '../../components/SyncWatcher'
 import { LanguageProvider } from '../../i18n'
 import type { StatusDto, SyncRunStatus } from '../../lib/types'
+import { TestQueryProvider } from '../../test-utils'
 import { SyncHeader } from './SyncHeader'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -65,11 +67,15 @@ function renderHeader(
 ) {
   vi.stubGlobal('fetch', fetchMock)
   render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <SyncHeader onSyncCompleted={onSyncCompleted} onRequestCoverage={onRequestCoverage} />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
+            <SyncHeader onRequestCoverage={onRequestCoverage} />
+          </SyncWatcherProvider>
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
   return onSyncCompleted
 }
@@ -130,7 +136,7 @@ describe('SyncHeader', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2050)
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     expect(onSyncCompleted).toHaveBeenCalledTimes(1)
@@ -179,8 +185,9 @@ describe('SyncHeader', () => {
       await vi.advanceTimersByTimeAsync(2000)
     })
     await act(async () => {
-      // +50ms covers the LiveRegionProvider's announce debounce (see LiveRegion.tsx).
-      await vi.advanceTimersByTimeAsync(2050)
+      // +100ms covers the LiveRegionProvider's announce debounce (see LiveRegion.tsx, 50ms) plus
+      // react-query handing the poll result to React on the next tick.
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     expect(onSyncCompleted).toHaveBeenCalledTimes(1)
@@ -197,7 +204,7 @@ describe('SyncHeader', () => {
     expect(screen.getByRole('button', { name: /synker/ })).toBeDisabled()
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2050)
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     expect(onSyncCompleted).toHaveBeenCalledTimes(2)
@@ -223,7 +230,7 @@ describe('SyncHeader', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2050)
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     const banner = screen.getByRole('status')
@@ -336,7 +343,7 @@ describe('SyncHeader', () => {
       await vi.advanceTimersByTimeAsync(0)
     })
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2050)
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     // The raw "Synk delvis feilet: ..." banner never renders for this specific failure.

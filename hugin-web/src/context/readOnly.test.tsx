@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { TestQueryProvider } from '../test-utils'
 import { ReadOnlyProvider, useReadOnly } from './readOnly'
 
 function Probe() {
@@ -32,9 +33,11 @@ describe('ReadOnlyProvider', () => {
   it('starts unresolved and writable, then reflects the server flag', async () => {
     vi.stubGlobal('fetch', statusServer({ readOnly: true }))
     render(
-      <ReadOnlyProvider>
-        <Probe />
-      </ReadOnlyProvider>
+      <TestQueryProvider>
+        <ReadOnlyProvider>
+          <Probe />
+        </ReadOnlyProvider>
+      </TestQueryProvider>
     )
     expect(
       screen.getByText('resolved=false readOnly=false scopeConfigured=null')
@@ -49,9 +52,11 @@ describe('ReadOnlyProvider', () => {
   it('stays unresolved when /api/status fails', async () => {
     vi.stubGlobal('fetch', statusServer({ title: 'boom' }, false))
     render(
-      <ReadOnlyProvider>
-        <Probe />
-      </ReadOnlyProvider>
+      <TestQueryProvider>
+        <ReadOnlyProvider>
+          <Probe />
+        </ReadOnlyProvider>
+      </TestQueryProvider>
     )
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled())
     expect(
@@ -62,9 +67,11 @@ describe('ReadOnlyProvider', () => {
   it('carries scopeConfigured through from /api/status once resolved', async () => {
     vi.stubGlobal('fetch', statusServer({ readOnly: false, scopeConfigured: false }))
     render(
-      <ReadOnlyProvider>
-        <Probe />
-      </ReadOnlyProvider>
+      <TestQueryProvider>
+        <ReadOnlyProvider>
+          <Probe />
+        </ReadOnlyProvider>
+      </TestQueryProvider>
     )
     await waitFor(() =>
       expect(
@@ -78,9 +85,11 @@ describe('ReadOnlyProvider', () => {
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
     render(
-      <ReadOnlyProvider>
-        <Probe />
-      </ReadOnlyProvider>
+      <TestQueryProvider>
+        <ReadOnlyProvider>
+          <Probe />
+        </ReadOnlyProvider>
+      </TestQueryProvider>
     )
     await waitFor(() =>
       expect(

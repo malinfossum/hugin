@@ -1,18 +1,18 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { type FormEvent, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageSection } from '../components/CoverageSection'
 import { DisplayFilterSection } from '../components/DisplayFilterSection'
 import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
 import { ResetSection } from '../components/ResetSection'
+import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
 import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
-import { ApiError, api } from '../lib/api'
+import { ApiError } from '../lib/api'
+import { useAddSource, useRemoveSource, useReorderSources, useUpdateSource } from '../lib/mutations'
+import { sourcesQuery } from '../lib/queries'
 import type { SourceDto } from '../lib/types'
-
-interface Props {
-  onSourcesChanged: () => void
-}
 
 interface SourceFormState {
   label: string
@@ -21,20 +21,26 @@ interface SourceFormState {
 
 const EMPTY_FORM: SourceFormState = { label: '', url: '' }
 
+const errorText = (err: unknown) => (err instanceof ApiError ? err.message : String(err))
+
 /** Settings view (spec v3.2 item 8): sources CRUD + reorder. Language and theme are topbar
  * toggles only (v3.6.1) — they used to be duplicated as cards here. The Dekning section (v3.4)
  * lives in CoverageSection, and the Visningsfilter card (v3.6) lives in DisplayFilterSection.
  * Brreg/NAV aren't editable here — they're fixed, i18n-sourced entries shown on the dashboard's
  * SourcesCard, not rows in this list. */
-export function SettingsView({ onSourcesChanged }: Props) {
-  const [sources, setSources] = useState<SourceDto[]>([])
+export function SettingsView() {
+  const { data: sources = [], isError: sourcesLoadFailed, refetch } = useQuery(sourcesQuery())
+  // Each mutation refetches the sources list on success; the dashboard's SourcesCard shares that
+  // query key, so it refreshes too without the two views being coupled.
+  const addSource = useAddSource()
+  const updateSource = useUpdateSource()
+  const removeSource = useRemoveSource()
+  const reorderSources = useReorderSources()
   const [addForm, setAddForm] = useState<SourceFormState>(EMPTY_FORM)
-  const [addError, setAddError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<SourceFormState>(EMPTY_FORM)
-  const [editError, setEditError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<SourceDto | null>(null)
-  const [listError, setListError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   // Bumped when CoverageSection's Save succeeds; passed to FocusSection as `previewVersion` and
   // folded into its preview cache key, so a code previewed under the old coverage fetches fresh
   // instead of serving a stale count (v3.5 Task 11 ruling 2). Deliberately NOT a remount key
@@ -45,57 +51,56 @@ export function SettingsView({ onSourcesChanged }: Props) {
   const announce = useAnnounce()
   const { readOnly, markScopeConfigured } = useReadOnly()
 
-  const load = useCallback(() => {
-    setListError(null)
-    return api
-      .get<SourceDto[]>('/api/sources')
-      .then(setSources)
-      .catch(() => setListError(t('sources.loadError')))
-  }, [t])
+  // Either sources form holds something not saved yet: text typed into the add form, or an open
+  // edit that no longer matches its source. An edit opened and left as it was is no change.
+  const editedSource = sources.find((s) => s.id === editingId)
+  const sourcesDirty =
+    addForm.label !== '' ||
+    addForm.url !== '' ||
+    (editedSource !== undefined &&
+      (editForm.label !== editedSource.label || editForm.url !== editedSource.url))
 
-  useEffect(() => {
-    load()
-  }, [load])
+  const listError = actionError ?? (sourcesLoadFailed ? t('sources.loadError') : null)
+  const addError = addSource.error ? errorText(addSource.error) : null
+  const editError = updateSource.error ? errorText(updateSource.error) : null
 
   const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setAddError(null)
+    if (addSource.isPending) return
     try {
-      await api.post('/api/sources', { label: addForm.label, url: addForm.url })
-    } catch (err) {
-      setAddError(err instanceof ApiError ? err.message : String(err))
-      return
+      await addSource.mutateAsync({ label: addForm.label, url: addForm.url })
+    } catch {
+      return // shown from addSource.error
     }
     setAddForm(EMPTY_FORM)
-    await load()
-    onSourcesChanged()
+    // A successful mutation also clears any earlier action error, so a stale failure banner
+    // doesn't outlive the fix.
+    setActionError(null)
     announce(t('settings.sourceAdded'))
   }
 
   const startEdit = (source: SourceDto) => {
     setEditingId(source.id)
     setEditForm({ label: source.label, url: source.url })
-    setEditError(null)
+    updateSource.reset()
   }
 
   const cancelEdit = () => {
     setEditingId(null)
     setEditForm(EMPTY_FORM)
-    setEditError(null)
+    updateSource.reset()
   }
 
   const handleEditSubmit = async (id: number, event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setEditError(null)
+    if (updateSource.isPending) return
     try {
-      await api.put(`/api/sources/${id}`, { label: editForm.label, url: editForm.url })
-    } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : String(err))
-      return
+      await updateSource.mutateAsync({ id, label: editForm.label, url: editForm.url })
+    } catch {
+      return // shown from updateSource.error
     }
     cancelEdit()
-    await load()
-    onSourcesChanged()
+    setActionError(null)
     announce(t('settings.sourceSaved'))
   }
 
@@ -103,31 +108,31 @@ export function SettingsView({ onSourcesChanged }: Props) {
     const target = removing
     if (!target) return
     setRemoving(null)
+    setActionError(null)
     try {
-      await api.del(`/api/sources/${target.id}`)
+      await removeSource.mutateAsync(target.id)
     } catch (err) {
-      setListError(err instanceof ApiError ? err.message : String(err))
+      setActionError(errorText(err))
       return
     }
-    await load()
-    onSourcesChanged()
     announce(t('settings.sourceRemoved'))
   }
 
   const move = async (index: number, direction: -1 | 1) => {
+    // The new order is built from the list on screen, so a second move before the first one's
+    // refetch lands would undo it.
+    if (reorderSources.isPending) return
     const swapIndex = index + direction
     if (swapIndex < 0 || swapIndex >= sources.length) return
     const next = [...sources]
     ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-    setListError(null)
+    setActionError(null)
     try {
-      await api.post('/api/sources/reorder', { ids: next.map((s) => s.id) })
+      await reorderSources.mutateAsync(next.map((s) => s.id))
     } catch (err) {
-      setListError(err instanceof ApiError ? err.message : String(err))
+      setActionError(errorText(err))
       return
     }
-    await load()
-    onSourcesChanged()
     announce(t('settings.sourceMoved'))
   }
 
@@ -140,7 +145,14 @@ export function SettingsView({ onSourcesChanged }: Props) {
         {listError && (
           <p role="status" className="alert alert-danger cluster cluster-sm">
             {listError}
-            <button type="button" className="btn btn-ghost" onClick={load}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setActionError(null)
+                refetch()
+              }}
+            >
               {t('common.retry')}
             </button>
           </p>
@@ -303,6 +315,8 @@ export function SettingsView({ onSourcesChanged }: Props) {
         onConfirm={handleRemoveConfirm}
         onCancel={() => setRemoving(null)}
       />
+
+      <UnsavedChangesGuard dirty={sourcesDirty} />
     </div>
   )
 }

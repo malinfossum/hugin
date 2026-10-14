@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import type { Focus } from '../context/focus'
 import { KNOWN_CATEGORIES } from '../context/focus'
@@ -11,7 +12,8 @@ import {
   toDiscoveryRequest,
   toFocusSeed,
 } from '../lib/coverage'
-import type { DiscoveryConfigDto, KommuneDto } from '../lib/types'
+import { discoveryQuery, kommunerQuery, queryKeys } from '../lib/queries'
+import type { KommuneDto } from '../lib/types'
 import { CoverageFields } from './CoverageFields'
 
 interface Props {
@@ -35,6 +37,7 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const t = useT()
+  const queryClient = useQueryClient()
   const openRef = useRef(open)
   const [draft, setDraft] = useState<CoverageDraft>(DEFAULT_DRAFT)
   // undefined = still loading (Start disabled), null = unreachable (fylke-only).
@@ -64,8 +67,9 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
     let cancelled = false
     setScopeLoaded(false)
     setKommuner(undefined)
-    api
-      .get<DiscoveryConfigDto>('/api/config/discovery')
+    // staleTime 0: the dialog wants the scope as it is right now, not a cached copy.
+    queryClient
+      .fetchQuery({ ...discoveryQuery(), staleTime: 0 })
       .then((config) => {
         if (!cancelled) setDraft(fromDiscoveryConfig(config))
       })
@@ -73,8 +77,8 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
       .finally(() => {
         if (!cancelled) setScopeLoaded(true)
       })
-    api
-      .get<KommuneDto[]>('/api/kommuner')
+    queryClient
+      .fetchQuery(kommunerQuery())
       .then((list) => {
         if (!cancelled) setKommuner(list)
       })
@@ -84,7 +88,7 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, queryClient])
 
   const handleClose = () => {
     if (openRef.current) onDismiss()
@@ -106,6 +110,7 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
     const focus = toFocusSeed(chosen, categories)
     try {
       await api.put('/api/config/discovery', toDiscoveryRequest(chosen))
+      queryClient.invalidateQueries({ queryKey: queryKeys.discovery })
     } catch (err) {
       // The lens still works without the server scope — for this session only, so the dialog
       // comes back next launch; show the error, keep Start as retry.

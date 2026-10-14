@@ -1,9 +1,11 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useFocus } from '../context/focus'
 import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
 import { ApiError, api } from '../lib/api'
-import type { ResetResultDto, StatusDto } from '../lib/types'
+import { queryKeys, statusQuery } from '../lib/queries'
+import type { ResetResultDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
 
@@ -19,7 +21,10 @@ const CONFIRM_WORD = 'NULLSTILL'
  * path (D2) and waits for the person to press its own reload button, rather than reloading out
  * from under the message the moment it appears. */
 export function ResetSection() {
-  const [status, setStatus] = useState<StatusDto | null>(null)
+  // Best-effort — only used to show the counts in the hard-reset dialog. Missing counts just
+  // means that paragraph doesn't render; it never blocks either button.
+  const { data: status } = useQuery(statusQuery())
+  const queryClient = useQueryClient()
   const [scopeOpen, setScopeOpen] = useState(false)
   const [hardOpen, setHardOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -34,21 +39,6 @@ export function ResetSection() {
   const { readOnly } = useReadOnly()
   const { resetFocus } = useFocus()
   const reloadButtonRef = useRef<HTMLButtonElement>(null)
-
-  // Best-effort — only used to show the counts in the hard-reset dialog. Missing counts just
-  // means that paragraph doesn't render; it never blocks either button.
-  useEffect(() => {
-    let cancelled = false
-    api
-      .get<StatusDto>('/api/status')
-      .then((s) => {
-        if (!cancelled) setStatus(s)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   // Move focus to the reload button once the success message appears. On success, both trigger
   // buttons stay disabled (since `saving` stays true), so focus must move somewhere meaningful.
@@ -73,6 +63,8 @@ export function ResetSection() {
       return
     }
     resetFocus()
+    queryClient.invalidateQueries({ queryKey: queryKeys.discovery })
+    queryClient.invalidateQueries({ queryKey: queryKeys.status })
     setSaving(false)
     announce(t('reset.scopeDone'))
   }

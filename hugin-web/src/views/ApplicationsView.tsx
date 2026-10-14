@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useAnnounce } from '../components/LiveRegion'
+import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
 import { useReadOnly } from '../context/readOnly'
 import { localeFor, type T, type TranslationKey, useLang, useT } from '../i18n'
-import { ApiError, api } from '../lib/api'
+import { ApiError } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
 import { formatDate } from '../lib/dates'
+import { useSavePipelineEntry } from '../lib/mutations'
 import { pipelineLabel } from '../lib/pipelineLabels'
+import { pipelineQuery } from '../lib/queries'
 import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../lib/types'
 
 /** The statuses you can pick. */
@@ -80,42 +84,44 @@ function toFormState(entry: PipelineDto): FormState {
 }
 
 export function ApplicationsView() {
-  const [entries, setEntries] = useState<PipelineDto[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const { data: entries = [], isError, refetch } = useQuery(pipelineQuery())
+  // Two separate mutations, so a star toggle's pending state never blocks or clears the form's.
+  const saveEntry = useSavePipelineEntry()
+  const saveStar = useSavePipelineEntry()
   const [editingOrgnr, setEditingOrgnr] = useState<string | null>(null)
   const [form, setForm] = useState<FormState | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
   const [warning, setWarning] = useState<{ orgnr: string; message: string } | null>(null)
   const [sortMode, setSortMode] = useState<SortMode>(loadSortMode)
-  const [starPending, setStarPending] = useState<string | null>(null)
   const announce = useAnnounce()
   const t = useT()
   const { readOnly } = useReadOnly()
   const [lang] = useLang()
   const locale = localeFor(lang)
 
-  const load = useCallback(() => {
-    setError(null)
-    return api
-      .get<PipelineDto[]>('/api/pipeline')
-      .then(setEntries)
-      .catch(() => setError(t('applications.loadError')))
-  }, [t])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const error = isError ? t('applications.loadError') : null
+  const formError = saveEntry.error
+    ? saveEntry.error instanceof ApiError
+      ? saveEntry.error.message
+      : t('applications.saveError')
+    : null
+  // The open edit form holds a change once it no longer matches its entry; just opening it doesn't.
+  const editedEntry = entries.find((e) => e.orgnr === editingOrgnr)
+  const formDirty =
+    form !== null &&
+    editedEntry !== undefined &&
+    JSON.stringify(form) !== JSON.stringify(toFormState(editedEntry))
+  const starPending = saveStar.isPending ? saveStar.variables.orgnr : null
 
   const startEdit = (entry: PipelineDto) => {
     setEditingOrgnr(entry.orgnr)
     setForm(toFormState(entry))
-    setFormError(null)
+    saveEntry.reset()
   }
 
   const cancelEdit = () => {
     setEditingOrgnr(null)
     setForm(null)
-    setFormError(null)
+    saveEntry.reset()
   }
 
   const handleSortChange = (mode: SortMode) => {
@@ -125,57 +131,50 @@ export function ApplicationsView() {
 
   const handleSubmit = async (orgnr: string, event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!form) return
-    setFormError(null)
+    if (!form || saveEntry.isPending) return
     let response: TrackResponse
     try {
-      response = await api.put<TrackResponse>(`/api/pipeline/${orgnr}`, {
+      response = await saveEntry.mutateAsync({
+        orgnr,
         status: form.status,
         why: form.why,
         note: form.note,
         svar: form.svar,
       })
-    } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t('applications.saveError'))
-      return
+    } catch {
+      return // shown from saveEntry.error
     }
     setWarning(response.warning ? { orgnr, message: response.warning } : null)
-    await load()
     setEditingOrgnr(null)
     setForm(null)
     announce(t('applications.saved'))
   }
 
   const toggleStar = async (entry: PipelineDto) => {
-    if (starPending) return
-    setStarPending(entry.orgnr)
+    if (saveStar.isPending) return
+    let response: TrackResponse
     try {
-      let response: TrackResponse
-      try {
-        response = await api.put<TrackResponse>(`/api/pipeline/${entry.orgnr}`, {
-          status: entry.status,
-          why: entry.why,
-          note: entry.note,
-          svar: entry.svar,
-          starred: !entry.starred,
-        })
-      } catch (err) {
-        announce(err instanceof ApiError ? err.message : t('applications.starError'))
-        return
-      }
-      setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
-      await load()
-      announce(entry.starred ? t('applications.starRemoved') : t('applications.starSet'))
-    } finally {
-      setStarPending(null)
+      response = await saveStar.mutateAsync({
+        orgnr: entry.orgnr,
+        status: entry.status,
+        why: entry.why,
+        note: entry.note,
+        svar: entry.svar,
+        starred: !entry.starred,
+      })
+    } catch (err) {
+      announce(err instanceof ApiError ? err.message : t('applications.starError'))
+      return
     }
+    setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
+    announce(entry.starred ? t('applications.starRemoved') : t('applications.starSet'))
   }
 
   if (error) {
     return (
       <p role="status" className="alert alert-danger cluster cluster-sm">
         {error}
-        <button type="button" className="btn btn-ghost" onClick={load}>
+        <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
           {t('common.retry')}
         </button>
       </p>
@@ -358,6 +357,8 @@ export function ApplicationsView() {
           </section>
         )
       })}
+
+      <UnsavedChangesGuard dirty={formDirty} />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
 import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
+import { TestQueryProvider } from '../test-utils'
 import { FocusSection } from './FocusSection'
 import { LiveRegionProvider } from './LiveRegion'
 
@@ -107,23 +108,27 @@ function fakeServer(opts: ServerOptions = {}) {
 
 function renderSection(props: { previewVersion?: number } = {}) {
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <FocusSection {...props} />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusSection {...props} />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
 function renderReadOnly() {
   return render(
-    <LanguageProvider>
-      <ReadOnlyProvider>
-        <LiveRegionProvider>
-          <FocusSection />
-        </LiveRegionProvider>
-      </ReadOnlyProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <ReadOnlyProvider>
+          <LiveRegionProvider>
+            <FocusSection />
+          </LiveRegionProvider>
+        </ReadOnlyProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -353,11 +358,13 @@ describe('FocusSection', () => {
     await screen.findByText(/45 bedrifter/)
 
     rerender(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <FocusSection previewVersion={1} />
-        </LiveRegionProvider>
-      </LanguageProvider>
+      <TestQueryProvider>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <FocusSection previewVersion={1} />
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     // Same instance, not a remount — the typed code is still sitting in the field.

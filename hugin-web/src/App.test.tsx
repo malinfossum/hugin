@@ -106,18 +106,18 @@ afterEach(() => {
 })
 
 describe('App', () => {
-  it('renders five nav buttons with Dashbord active by default', () => {
+  it('renders five nav links with Dashbord active by default', async () => {
     vi.stubGlobal('fetch', fakeServer())
     render(<App />)
 
-    const nav = screen.getByRole('navigation', { name: 'Hovedmeny' })
-    const buttons = screen.getAllByRole('button', {
+    const nav = await screen.findByRole('navigation', { name: 'Hovedmeny' })
+    const buttons = screen.getAllByRole('link', {
       name: /Dashbord|Søknader|Bedrifter|Eksport|Innstillinger/,
     })
     expect(buttons).toHaveLength(5)
     expect(nav).toBeInTheDocument()
 
-    const dashbord = screen.getByRole('button', { name: 'Dashbord' })
+    const dashbord = screen.getByRole('link', { name: 'Dashbord' })
     expect(dashbord).toHaveAttribute('aria-current', 'page')
   })
 
@@ -126,10 +126,10 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Søknader' }))
+    await user.click(await screen.findByRole('link', { name: 'Søknader' }))
 
-    expect(screen.getByRole('button', { name: 'Søknader' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'Dashbord' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('link', { name: 'Søknader' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Dashbord' })).not.toHaveAttribute('aria-current')
   })
 
   it('switches to English from the topbar: labels change, <html lang> and localStorage update', async () => {
@@ -139,15 +139,15 @@ describe('App', () => {
 
     // The language toggle sits in the topbar beside the theme toggle as a globe icon; its
     // name (and tooltip) says the language it switches TO.
-    const enButton = screen.getByRole('button', { name: 'Switch to English' })
+    const enButton = await screen.findByRole('button', { name: 'Switch to English' })
     expect(enButton).toHaveAttribute('title', 'Switch to English')
     expect(enButton.querySelector('svg.toggle-icon')).not.toBeNull()
 
     await user.click(enButton)
 
-    expect(screen.getByRole('button', { name: 'Dashboard' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Dashbord' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Applications' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Dashbord' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Applications' })).toBeInTheDocument()
     // Once in English the same button offers the way back.
     expect(screen.getByRole('button', { name: 'Bytt til norsk' })).toHaveAttribute(
       'title',
@@ -162,7 +162,7 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const themeButton = screen.getByRole('button', { name: 'Bytt til lyst tema' })
+    const themeButton = await screen.findByRole('button', { name: 'Bytt til lyst tema' })
     expect(document.documentElement.dataset.theme).not.toBe('light')
 
     await user.click(themeButton)
@@ -177,29 +177,44 @@ describe('App', () => {
     expect(window.localStorage.getItem('theme')).toBe('dark')
   })
 
-  it('keeps a view mounted (hidden, not unmounted) when switching away and back', async () => {
+  it('keeps the Bedrifter filters in the URL, so Back brings them back after leaving the view', async () => {
     vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
-    const search = await screen.findByLabelText('Søk')
-    await user.type(search, 'Acme')
-    expect(search).toHaveValue('Acme')
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
+    await user.type(await screen.findByLabelText('Søk'), 'Acme')
+    await waitFor(() => expect(window.location.search).toBe('?q=Acme'))
 
-    await user.click(screen.getByRole('button', { name: 'Eksport' }))
-    expect(screen.getByLabelText('Søk')).not.toBeVisible()
+    await user.click(screen.getByRole('link', { name: 'Eksport' }))
+    expect(screen.queryByLabelText('Søk')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
-    expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
+    act(() => window.history.back())
+    expect(await screen.findByLabelText('Søk')).toHaveValue('Acme')
   })
 
-  it('keeps the typed search filter after toggling the language (keep-mounted state survives re-render)', async () => {
+  it('returns to Bedrifter through the nav with its filters still set', async () => {
     vi.stubGlobal('fetch', fakeServer())
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
+    await user.type(await screen.findByLabelText('Søk'), 'Acme')
+    await waitFor(() => expect(window.location.search).toBe('?q=Acme'))
+
+    await user.click(screen.getByRole('link', { name: 'Eksport' }))
+    await user.click(screen.getByRole('link', { name: 'Bedrifter' }))
+
+    expect(await screen.findByLabelText('Søk')).toHaveValue('Acme')
+    expect(window.location.search).toBe('?q=Acme')
+  })
+
+  it('keeps the typed search filter after toggling the language (the filter lives in the URL)', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
     const search = await screen.findByLabelText('Søk')
     await user.type(search, 'Acme')
     expect(search).toHaveValue('Acme')
@@ -219,32 +234,43 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
 
     expect(window.location.pathname).toBe('/companies')
   })
 
-  it('Back (popstate) returns to the previous view and keeps the other mounted-hidden', async () => {
+  it('Back and Forward move between views and the URL follows', async () => {
     vi.stubGlobal('fetch', fakeServer())
     window.history.replaceState(null, '', '/')
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
-    const search = await screen.findByLabelText('Søk')
-    await user.type(search, 'Acme')
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
+    await screen.findByLabelText('Søk')
     expect(window.location.pathname).toBe('/companies')
 
-    // Simulate Back deterministically instead of relying on jsdom's async history traversal:
-    // set the URL directly, then fire the same popstate event the real browser would dispatch.
-    window.history.replaceState(null, '', '/')
-    act(() => {
-      window.dispatchEvent(new PopStateEvent('popstate'))
-    })
+    act(() => window.history.back())
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Dashbord' })).toHaveAttribute('aria-current', 'page')
+    )
+    expect(window.location.pathname).toBe('/')
+    expect(screen.queryByLabelText('Søk')).not.toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: 'Dashbord' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByLabelText('Søk')).not.toBeVisible()
-    expect(screen.getByLabelText('Søk')).toHaveValue('Acme')
+    act(() => window.history.forward())
+    expect(await screen.findByLabelText('Søk')).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/companies')
+  })
+
+  it('sends an unknown path to the dashboard', async () => {
+    vi.stubGlobal('fetch', fakeServer())
+    window.history.replaceState(null, '', '/no/such/page')
+    render(<App />)
+
+    await waitFor(() => expect(window.location.pathname).toBe('/'))
+    expect(await screen.findByRole('link', { name: 'Dashbord' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
   })
 
   it('deep-loads straight into a company detail from /companies/<orgnr>', async () => {
@@ -267,12 +293,40 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('button', { name: 'Bedrifter' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Bedrifter' })).toHaveAttribute(
       'aria-current',
       'page'
     )
     expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/companies/715787630')
+  })
+
+  it('the Bedrifter nav link leads from a company detail back to the list, filters kept', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString()
+        if (url === '/api/companies') {
+          return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: 'Acme AS' }]))
+        }
+        if (url === '/api/companies/715787630') {
+          return Promise.resolve(
+            jsonResponse({ company: { orgnr: '715787630', name: 'Acme AS' }, ads: [] })
+          )
+        }
+        return Promise.reject(new Error(`unhandled request ${url}`))
+      })
+    )
+    window.history.replaceState(null, '', '/companies/715787630?q=Acme')
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Bedrifter' }))
+
+    await waitFor(() => expect(window.location.pathname).toBe('/companies'))
+    expect(window.location.search).toBe('?q=Acme')
+    expect(screen.queryByRole('heading', { name: 'Acme AS' })).not.toBeInTheDocument()
   })
 
   it('read-only: shows the demo banner and never opens the first-run dialog', async () => {
@@ -319,7 +373,7 @@ describe('App', () => {
     // the app's Focus context by reading it back from a view that filters by it: Bedrifter shows
     // only companies in the seeded fylke ('34' = Innlandet, from the fake server's discovery
     // config), not the unset default (which would show both).
-    await user.click(screen.getByRole('button', { name: 'Bedrifter' }))
+    await user.click(screen.getByRole('link', { name: 'Bedrifter' }))
     await screen.findByText('Innlandet AS')
     expect(screen.queryByText('Oslo AS')).not.toBeInTheDocument()
   })
@@ -413,13 +467,15 @@ describe('App first-run focus dialog', () => {
     // Dismissing is session-only — nothing gets persisted, so a fresh mount (next launch)
     // would show the prompt again. Confirmed indirectly: no 'hugin-focus' key was written.
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
-    // Also releases a held boot sync on a fresh install.
-    expect(
-      fetchMock.mock.calls.some(
-        ([u, i]) =>
-          u === '/api/first-run-dismissed' && (i as RequestInit | undefined)?.method === 'POST'
-      )
-    ).toBe(true)
+    // Also releases a held boot sync on a fresh install (a mutation, so it goes out a tick later).
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([u, i]) =>
+            u === '/api/first-run-dismissed' && (i as RequestInit | undefined)?.method === 'POST'
+        )
+      ).toBe(true)
+    )
   })
 
   it('saving a focus choice closes the dialog and persists it', async () => {

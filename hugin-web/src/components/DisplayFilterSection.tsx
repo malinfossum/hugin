@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useRef, useState } from 'react'
 import { KNOWN_CATEGORIES, useFocus } from '../context/focus'
 import { useT } from '../i18n'
-import { api } from '../lib/api'
+import { kommunerQuery } from '../lib/queries'
 import type { Region } from '../lib/regions'
-import type { KommuneDto } from '../lib/types'
 import { AreaPickerDialog } from './AreaPickerDialog'
 import { useAnnounce } from './LiveRegion'
 import { RegionChips } from './RegionChips'
@@ -14,33 +14,18 @@ const NO_REGIONS: Region[] = []
 
 /** The Visningsfilter card (spec v3.6 B3): the per-browser render lens. The chips summarise it,
  * ✕ applies at once, «Velg områder …» opens the picker, which works on a draft (Bruk/Avbryt).
- * This section owns the one /api/kommuner fetch and hands the result to both the chips (as a
- * name map) and the dialog, so closing the dialog mid-request cannot touch an unmounted
- * component. A failed fetch means numbers in the chips and fylke-only ticking in the dialog. */
+ * This section reads the (shared, cached) kommune list and hands it to both the chips (as a name
+ * map) and the dialog. A failed fetch means numbers in the chips and fylke-only ticking in the dialog. */
 export function DisplayFilterSection() {
   const t = useT()
   const announce = useAnnounce()
   const { focus, setFocus, resetFocus } = useFocus()
-  const [kommuner, setKommuner] = useState<KommuneDto[] | null | undefined>(undefined)
+  const { data: kommunerList, isError: kommunerFailed } = useQuery(kommunerQuery())
+  const kommuner = kommunerFailed ? null : kommunerList
   const [pickerOpen, setPickerOpen] = useState(false)
   const chooseRef = useRef<HTMLButtonElement>(null)
   const regions = focus?.regions ?? NO_REGIONS
   const categories = focus?.categories ?? []
-
-  useEffect(() => {
-    let cancelled = false
-    api
-      .get<KommuneDto[]>('/api/kommuner')
-      .then((list) => {
-        if (!cancelled) setKommuner(list)
-      })
-      .catch(() => {
-        if (!cancelled) setKommuner(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const kommuneNames = useMemo(
     () => new Map((kommuner ?? []).map((k) => [k.number, k.name] as const)),

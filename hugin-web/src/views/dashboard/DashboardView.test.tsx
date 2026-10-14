@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
+import { TestQueryProvider } from '../../test-utils'
 import { DashboardView } from './DashboardView'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -84,11 +85,13 @@ function fakeServer(ads: AdDto[], options: { newFails?: boolean } = {}) {
 function renderDashboard(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <DashboardView sourcesVersion={0} onRequestCoverage={vi.fn()} />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <DashboardView show="active" onShowChange={vi.fn()} onRequestCoverage={vi.fn()} />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 

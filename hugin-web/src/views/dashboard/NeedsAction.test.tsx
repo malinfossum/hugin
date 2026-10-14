@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
+import { TestQueryProvider } from '../../test-utils'
 import { NeedsAction } from './NeedsAction'
 
 function jsonResponse(body: unknown) {
@@ -38,24 +39,28 @@ function mockFetch(ads: AdDto[]) {
   return vi.fn(() => Promise.resolve(jsonResponse(ads)))
 }
 
-function renderNeedsAction(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+function renderNeedsAction(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <NeedsAction refreshKey={refreshKey} />
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <NeedsAction />
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
 /** Same as renderNeedsAction but wrapped in FocusProvider, for tests that seed a focus. */
-function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <FocusProvider>
-        <NeedsAction refreshKey={refreshKey} />
-      </FocusProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <FocusProvider>
+          <NeedsAction />
+        </FocusProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -113,9 +118,11 @@ describe('NeedsAction', () => {
     const failing = vi.fn(() => Promise.reject(new Error('network down')))
     vi.stubGlobal('fetch', failing)
     render(
-      <LanguageProvider>
-        <NeedsAction refreshKey={0} />
-      </LanguageProvider>
+      <TestQueryProvider>
+        <LanguageProvider>
+          <NeedsAction />
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     expect(await screen.findByText('Kunne ikke laste annonser.')).toBeInTheDocument()
