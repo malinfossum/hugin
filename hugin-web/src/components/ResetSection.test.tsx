@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider, saveFocus } from '../context/focus'
 import { ReadOnlyProvider } from '../context/readOnly'
 import type { StatusDto } from '../lib/types'
+import { TestQueryProvider } from '../test-utils'
 import { LiveRegionProvider } from './LiveRegion'
 import { ResetSection } from './ResetSection'
 
@@ -74,13 +75,15 @@ function fakeServer(
 function renderSection(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <ReadOnlyProvider>
-      <FocusProvider>
-        <LiveRegionProvider>
-          <ResetSection />
-        </LiveRegionProvider>
-      </FocusProvider>
-    </ReadOnlyProvider>
+    <TestQueryProvider>
+      <ReadOnlyProvider>
+        <FocusProvider>
+          <LiveRegionProvider>
+            <ResetSection />
+          </LiveRegionProvider>
+        </FocusProvider>
+      </ReadOnlyProvider>
+    </TestQueryProvider>
   )
 }
 

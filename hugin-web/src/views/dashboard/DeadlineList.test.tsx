@@ -1,11 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { DeadlineList } from './DeadlineList'
+import { TestQueryProvider } from '../../test-utils'
+import { DeadlineList, type Show } from './DeadlineList'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -87,28 +89,38 @@ function fakeServer(seed: AdDto[]) {
   return fetchMock
 }
 
-function renderList(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+/** Stands in for the dashboard route, which keeps the show filter in the URL. */
+function StatefulDeadlineList() {
+  const [show, setShow] = useState<Show>('active')
+  return <DeadlineList show={show} onShowChange={setShow} />
+}
+
+function renderList(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <DeadlineList refreshKey={refreshKey} />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <StatefulDeadlineList />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
 /** Same as renderList but wrapped in FocusProvider, for tests that seed a focus. */
-function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <FocusProvider>
-          <DeadlineList refreshKey={refreshKey} />
-        </FocusProvider>
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusProvider>
+            <StatefulDeadlineList />
+          </FocusProvider>
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 

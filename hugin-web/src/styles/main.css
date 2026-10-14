@@ -49,6 +49,13 @@ button {
   min-height: 44px;
 }
 
+/* The nav entries are links (router), and the base `a:hover` underline would show on them; they
+   signal state with the aria-current background instead, as they did when they were buttons. */
+a.nav-link:hover,
+a.nav-link:focus-visible {
+  text-decoration: none;
+}
+
 /* Topbar on phones: the brand and the two quick toggles share the first row, the nav takes a
    full row under them — otherwise the toggles wrap onto a third row where they read as two
    more nav entries. The controls wrapper dissolves (display: contents) so flex order can seat

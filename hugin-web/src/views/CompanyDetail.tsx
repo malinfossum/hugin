@@ -1,10 +1,12 @@
+import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, useRef, useState } from 'react'
 import { CompanyLink } from '../components/CompanyLink'
 import { type T, useT } from '../i18n'
-import { ApiError, api } from '../lib/api'
+import { ApiError } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
 import { formatDate } from '../lib/dates'
+import { companyQuery } from '../lib/queries'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
 
 function publishedText(published: string | null, t: T): string | null {
@@ -104,52 +106,27 @@ function TabPanel({ selectedOrgnr, children }: { selectedOrgnr: string; children
 }
 
 export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {
-  const [selectedOrgnr, setSelectedOrgnr] = useState(orgnr)
-  const [rootDetail, setRootDetail] = useState<CompanyDetailDto | null>(null)
-  const [detail, setDetail] = useState<CompanyDetailDto | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const cacheRef = useRef(new Map<string, CompanyDetailDto>())
-  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  // The tab selection is remembered together with the root it belongs to, so opening a different
+  // company falls back to that company's own unit without an effect (and without one render
+  // fetching the previous company's tab). The selection is also reset during render when the
+  // root changes, so A → C → back to A (while mounted) lands on A's own unit, not its old tab.
   const t = useT()
+  const [selection, setSelection] = useState({ root: orgnr, unit: orgnr })
+  if (selection.root !== orgnr) setSelection({ root: orgnr, unit: orgnr })
+  const selectedOrgnr = selection.root === orgnr ? selection.unit : orgnr
+  // Both queries share a cache key while the main unit is selected, so that is one request.
+  const rootQuery = useQuery(companyQuery(orgnr))
+  const unitQuery = useQuery(companyQuery(selectedOrgnr))
+  const rootDetail = rootQuery.data ?? null
+  const detail = unitQuery.data ?? null
+  const error = unitQuery.isError
+    ? unitQuery.error instanceof ApiError
+      ? unitQuery.error.message
+      : t('companies.detailLoadError')
+    : null
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
-  // Lazy per-unit fetch with a cache: a unit already visited (root or any branch tab) is never
-  // refetched. The cache only ever holds successful responses, so a failed fetch is retried
-  // for real rather than replaying a stale error.
-  const loadUnit = useCallback(
-    (unitOrgnr: string) => {
-      setError(null)
-      setDetail(null)
-      const cached = cacheRef.current.get(unitOrgnr)
-      const request = cached
-        ? Promise.resolve(cached)
-        : api.get<CompanyDetailDto>(`/api/companies/${unitOrgnr}`).then((d) => {
-            cacheRef.current.set(unitOrgnr, d)
-            return d
-          })
-      return request
-        .then((d) => {
-          setDetail(d)
-          if (unitOrgnr === orgnr) setRootDetail(d)
-        })
-        .catch((err) =>
-          setError(err instanceof ApiError ? err.message : t('companies.detailLoadError'))
-        )
-    },
-    [orgnr, t]
-  )
-
-  // A new root company was opened (not a tab switch) — reset to it from scratch.
-  useEffect(() => {
-    cacheRef.current = new Map()
-    setSelectedOrgnr(orgnr)
-    setRootDetail(null)
-    loadUnit(orgnr)
-  }, [orgnr, loadUnit])
-
-  const selectUnit = (unitOrgnr: string) => {
-    setSelectedOrgnr(unitOrgnr)
-    loadUnit(unitOrgnr)
-  }
+  const selectUnit = (unitOrgnr: string) => setSelection({ root: orgnr, unit: unitOrgnr })
 
   const branches = rootDetail?.branches ?? []
   const tabs: UnitTab[] =
@@ -213,7 +190,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
-          <button type="button" className="btn btn-ghost" onClick={() => loadUnit(selectedOrgnr)}>
+          <button type="button" className="btn btn-ghost" onClick={() => unitQuery.refetch()}>
             {t('common.retry')}
           </button>
         </p>

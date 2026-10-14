@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
 import { LanguageProvider } from '../i18n'
 import type { PipelineDto, TrackResponse } from '../lib/types'
+import { TestQueryProvider } from '../test-utils'
 import { ApplicationsView } from './ApplicationsView'
 
 const SORT_STORAGE_KEY = 'hugin-soknader-sortering'
@@ -61,11 +62,13 @@ function fakeServer(seed: PipelineDto[], warning: string | null = null) {
 function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <ApplicationsView />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <ApplicationsView />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../../i18n'
 import type { SourceDto } from '../../lib/types'
+import { TestQueryProvider } from '../../test-utils'
 import { SourcesCard } from './SourcesCard'
 
 function sourceDto(overrides: Partial<SourceDto> = {}): SourceDto {
@@ -33,12 +34,14 @@ function fakeServer(sources: SourceDto[] | null) {
   })
 }
 
-function renderCard(fetchMock: ReturnType<typeof vi.fn>, refreshToken = 0) {
+function renderCard(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <SourcesCard refreshToken={refreshToken} />
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <SourcesCard />
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 

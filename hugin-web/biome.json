@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!dist", "!node_modules", "!**/*.min.js", "!design-system", "!public"]
+    "includes": [
+      "**",
+      "!dist",
+      "!node_modules",
+      "!**/*.min.js",
+      "!design-system",
+      "!public",
+      "!src/routeTree.gen.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

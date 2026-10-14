@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FYLKER } from '../lib/fylker'
+import { TestQueryProvider } from '../test-utils'
 import { FirstRunDialog } from './FirstRunDialog'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -69,7 +70,11 @@ afterEach(() => vi.unstubAllGlobals())
 describe('FirstRunDialog v2', () => {
   it('prefills the cascade from the server scope and lists the fylke’s kommuner', async () => {
     fakeServer()
-    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
 
     expect(await screen.findByRole('group', { name: 'Kommuner i Innlandet' })).toBeInTheDocument()
     expect(screen.getByLabelText('Fylke')).toHaveValue('34')
@@ -85,7 +90,11 @@ describe('FirstRunDialog v2', () => {
     const user = userEvent.setup()
     const onSaveFocus = vi.fn()
     const onDone = vi.fn()
-    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
     await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
 
     await user.click(screen.getByRole('checkbox', { name: 'Hamar' })) // leaves only Lillehammer
@@ -107,7 +116,11 @@ describe('FirstRunDialog v2', () => {
     const user = userEvent.setup()
     const onSaveFocus = vi.fn()
     const onDone = vi.fn()
-    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
     await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
 
     await user.click(screen.getByRole('button', { name: 'Start' }))
@@ -124,7 +137,11 @@ describe('FirstRunDialog v2', () => {
     const user = userEvent.setup()
     const onSaveFocus = vi.fn()
     const onDone = vi.fn()
-    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
     await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
 
     await user.click(screen.getByRole('button', { name: 'Start' }))
@@ -143,7 +160,11 @@ describe('FirstRunDialog v2', () => {
 
   it('degrades to fylke-only when /api/kommuner is unreachable', async () => {
     fakeServer({ kommunerDown: true })
-    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
 
     expect(await screen.findByText(/Kommunelisten er ikke tilgjengelig/)).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /Kommuner i/ })).not.toBeInTheDocument()
@@ -158,7 +179,11 @@ describe('FirstRunDialog v2', () => {
     const user = userEvent.setup()
     const onSaveFocus = vi.fn()
     const onDone = vi.fn()
-    render(<FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={onDone} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
     await screen.findByText(/Kommunelisten er ikke tilgjengelig/)
 
     await user.click(screen.getByRole('button', { name: 'Start' }))
@@ -179,7 +204,11 @@ describe('FirstRunDialog v2', () => {
     // Before the list settles the cascade cannot tell "no list" from "not yet" — and Start in
     // that window would have saved the fylke alone, silently dropping the prefilled kommuner.
     fakeServer({ kommunerPending: true })
-    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
 
     await waitFor(() => expect(screen.getByLabelText('Fylke')).toHaveValue('34'))
 
@@ -191,7 +220,11 @@ describe('FirstRunDialog v2', () => {
     // The draft defaults to all of Norway until the scope arrives; Start before that would
     // write a nationwide scope the user never chose.
     fakeServer({ scopePending: true })
-    render(<FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />)
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
 
     await screen.findByLabelText('Fylke')
 
@@ -203,7 +236,9 @@ describe('FirstRunDialog v2', () => {
     const onDismiss = vi.fn()
     const onSaveFocus = vi.fn()
     render(
-      <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={() => {}} onDismiss={onDismiss} />
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={onSaveFocus} onDone={() => {}} onDismiss={onDismiss} />
+      </TestQueryProvider>
     )
     await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
 

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { RegionChips } from '../components/RegionChips'
 import { useFocus } from '../context/focus'
 import { useT } from '../i18n'
-import { api } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
+import { companiesQuery } from '../lib/queries'
 import { regionMatches } from '../lib/regions'
 import type { CompanyDto } from '../lib/types'
 import { CompanyDetail } from './CompanyDetail'
@@ -51,7 +52,17 @@ function groupOpenAds(group: CompanyGroup): number {
   return group.branches.reduce((sum, branch) => sum + branch.openAds, group.main.openAds)
 }
 
+/** The list's filters, kept in the URL (`?q=&website=&ads=`) so they survive navigating away and
+ * back, a reload, and a shared link. Absent means unfiltered. */
+export interface CompaniesFilters {
+  q?: string
+  website?: 'has' | 'none'
+  ads?: 'open'
+}
+
 interface CompaniesViewProps {
+  filters: CompaniesFilters
+  onFiltersChange: (patch: CompaniesFilters) => void
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
   onCloseCompany: () => void
@@ -60,34 +71,34 @@ interface CompaniesViewProps {
 }
 
 export function CompaniesView({
+  filters,
+  onFiltersChange,
   selectedOrgnr,
   onOpenCompany,
   onCloseCompany,
   onOpenSettings,
 }: CompaniesViewProps) {
-  const [companies, setCompanies] = useState<CompanyDto[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const { data: companies = [], isError, refetch } = useQuery(companiesQuery())
   const { focus } = useFocus()
-  // Read from context every render — App keeps views mounted, so a lens change in Settings must
-  // reach this view without a remount.
-  const [search, setSearch] = useState('')
-  const [websiteFilter, setWebsiteFilter] = useState<'' | 'has' | 'none'>('')
-  const [adsFilter, setAdsFilter] = useState<'' | 'open'>('')
+  // Read from context every render, so a lens change in Settings reaches this view live.
+  const search = filters.q ?? ''
+  // The box keeps its own text: bound straight to the URL, each keystroke would wait on the
+  // router's async navigation, and React would put the old value back meanwhile (caret jumps to
+  // the end, fast typing drops characters). The URL follows the box, and the box follows the URL
+  // only when it changes from elsewhere (back/forward, a shared link).
+  const [searchInput, setSearchInput] = useState(search)
+  const lastPushedSearch = useRef(search)
+  if (search !== lastPushedSearch.current) {
+    lastPushedSearch.current = search
+    setSearchInput(search)
+  }
+  const websiteFilter = filters.website ?? ''
+  const adsFilter = filters.ads ?? ''
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
 
-  const load = useCallback(() => {
-    setError(null)
-    return api
-      .get<CompanyDto[]>('/api/companies')
-      .then(setCompanies)
-      .catch(() => setError(t('companies.loadError')))
-  }, [t])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const error = isError ? t('companies.loadError') : null
 
   useEffect(() => {
     if (selectedOrgnr !== null) return
@@ -184,7 +195,7 @@ export function CompaniesView({
     return (
       <p role="status" className="alert alert-danger cluster cluster-sm">
         {error}
-        <button type="button" className="btn btn-ghost" onClick={load}>
+        <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
           {t('common.retry')}
         </button>
       </p>
@@ -209,8 +220,13 @@ export function CompaniesView({
             id="companies-search"
             className="input"
             type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchInput}
+            onChange={(event) => {
+              const next = event.target.value
+              setSearchInput(next)
+              lastPushedSearch.current = next
+              onFiltersChange({ q: next || undefined })
+            }}
           />
         </div>
 
@@ -222,7 +238,11 @@ export function CompaniesView({
             id="companies-website-filter"
             className="select"
             value={websiteFilter}
-            onChange={(event) => setWebsiteFilter(event.target.value as '' | 'has' | 'none')}
+            onChange={(event) =>
+              onFiltersChange({
+                website: (event.target.value || undefined) as CompaniesFilters['website'],
+              })
+            }
           >
             <option value="">{t('common.all')}</option>
             <option value="has">{t('companies.websiteHas')}</option>
@@ -238,7 +258,9 @@ export function CompaniesView({
             id="companies-ads-filter"
             className="select"
             value={adsFilter}
-            onChange={(event) => setAdsFilter(event.target.value as '' | 'open')}
+            onChange={(event) =>
+              onFiltersChange({ ads: (event.target.value || undefined) as CompaniesFilters['ads'] })
+            }
           >
             <option value="">{t('common.all')}</option>
             <option value="open">{t('companies.adsFilterOpen')}</option>

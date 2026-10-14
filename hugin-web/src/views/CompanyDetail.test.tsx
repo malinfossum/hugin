@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../i18n'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
+import { TestQueryProvider } from '../test-utils'
 import { CompanyDetail } from './CompanyDetail'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -70,9 +71,11 @@ function fakeServer(details: Record<string, CompanyDetailDto>) {
 function renderDetail(fetchMock: ReturnType<typeof vi.fn>, orgnr = '777777777') {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <CompanyDetail orgnr={orgnr} onClose={vi.fn()} />
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <CompanyDetail orgnr={orgnr} onClose={vi.fn()} />
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -204,6 +207,41 @@ describe('CompanyDetail', () => {
     await screen.findByText('Hovedannonse')
     expect(calls['777777777']).toBe(1)
     expect(calls['787878787']).toBe(1)
+  })
+
+  it('reopening a company while mounted lands on its own unit, not the branch tab picked before', async () => {
+    const oslo = company({
+      orgnr: '787878787',
+      name: 'NYFJELL SPILL AS AVDELING OSLO',
+      isBranch: true,
+      parentOrgnr: '777777777',
+      kommuneNavn: 'Oslo',
+    })
+    const other = company({ orgnr: '999888777', name: 'Annet Firma AS' })
+    const { fetchMock } = fakeServer({
+      '777777777': { company: company(), ads: [], branches: [oslo] },
+      '787878787': { company: oslo, ads: [], branches: [] },
+      '999888777': { company: other, ads: [], branches: [] },
+    })
+    const user = userEvent.setup()
+    const tree = (orgnr: string) => (
+      <TestQueryProvider>
+        <LanguageProvider>
+          <CompanyDetail orgnr={orgnr} onClose={vi.fn()} />
+        </LanguageProvider>
+      </TestQueryProvider>
+    )
+    const { rerender } = renderDetail(fetchMock)
+
+    await user.click(await screen.findByRole('tab', { name: 'Oslo' }))
+    await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
+
+    rerender(tree('999888777'))
+    await screen.findByRole('heading', { name: 'Annet Firma AS' })
+
+    rerender(tree('777777777'))
+    expect(await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Hovedenhet' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft — roving tabindex', async () => {

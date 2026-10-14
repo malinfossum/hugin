@@ -7,15 +7,19 @@ import { FocusProvider, saveFocus, useFocus } from '../context/focus'
 import { LanguageProvider } from '../i18n'
 import { formatDate } from '../lib/dates'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
-import { CompaniesView } from './CompaniesView'
+import { TestQueryProvider } from '../test-utils'
+import { type CompaniesFilters, CompaniesView } from './CompaniesView'
 
-/** CompaniesView no longer owns selection state (App/routing does) — this harness stands in
+/** CompaniesView no longer owns selection or filter state (the router does) — this harness stands in
  * for that, so the existing click-through tests can drive open/close the same way a user
  * would, without each test wiring its own useState. */
 function CompaniesViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: () => void }) {
   const [selectedOrgnr, setSelectedOrgnr] = useState<string | null>(null)
+  const [filters, setFilters] = useState<CompaniesFilters>({})
   return (
     <CompaniesView
+      filters={filters}
+      onFiltersChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
       selectedOrgnr={selectedOrgnr}
       onOpenCompany={setSelectedOrgnr}
       onCloseCompany={() => setSelectedOrgnr(null)}
@@ -112,13 +116,15 @@ function fakeServer(companies: CompanyDto[], details: Record<string, CompanyDeta
 function renderView(fetchMock: ReturnType<typeof vi.fn>, onOpenSettings?: () => void) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <FocusProvider>
-          <CompaniesViewHarness onOpenSettings={onOpenSettings} />
-        </FocusProvider>
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusProvider>
+            <CompaniesViewHarness onOpenSettings={onOpenSettings} />
+          </FocusProvider>
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -621,16 +627,20 @@ describe('CompaniesView', () => {
     vi.stubGlobal('fetch', fakeServer(companies, details))
 
     render(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <CompaniesView
-            selectedOrgnr="715787630"
-            onOpenCompany={vi.fn()}
-            onCloseCompany={vi.fn()}
-            onOpenSettings={() => {}}
-          />
-        </LiveRegionProvider>
-      </LanguageProvider>
+      <TestQueryProvider>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <CompaniesView
+              filters={{}}
+              onFiltersChange={vi.fn()}
+              selectedOrgnr="715787630"
+              onOpenCompany={vi.fn()}
+              onCloseCompany={vi.fn()}
+              onOpenSettings={() => {}}
+            />
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
@@ -647,16 +657,20 @@ describe('CompaniesView', () => {
     const user = userEvent.setup()
 
     render(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <CompaniesView
-            selectedOrgnr="715787630"
-            onOpenCompany={vi.fn()}
-            onCloseCompany={onCloseCompany}
-            onOpenSettings={() => {}}
-          />
-        </LiveRegionProvider>
-      </LanguageProvider>
+      <TestQueryProvider>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <CompaniesView
+              filters={{}}
+              onFiltersChange={vi.fn()}
+              selectedOrgnr="715787630"
+              onOpenCompany={vi.fn()}
+              onCloseCompany={onCloseCompany}
+              onOpenSettings={() => {}}
+            />
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     const back = await screen.findByRole('button', { name: 'Tilbake' })
@@ -707,14 +721,16 @@ describe('CompaniesView', () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', fakeServer(companies, {}))
     render(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <FocusProvider>
-            <ExternalFocusSetter />
-            <CompaniesViewHarness />
-          </FocusProvider>
-        </LiveRegionProvider>
-      </LanguageProvider>
+      <TestQueryProvider>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <FocusProvider>
+              <ExternalFocusSetter />
+              <CompaniesViewHarness />
+            </FocusProvider>
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     await screen.findByText('Acme AS')

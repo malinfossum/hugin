@@ -1,9 +1,12 @@
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // The router plugin must come before the React one. It generates src/routeTree.gen.ts from
+  // src/routes (committed, so `tsc` and CI typecheck work without running Vite first).
+  plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: false }), react()],
   server: { proxy: { '/api': 'http://127.0.0.1:5111' } },
   build: { outDir: '../Hugin.Api/wwwroot', emptyOutDir: true },
   test: {

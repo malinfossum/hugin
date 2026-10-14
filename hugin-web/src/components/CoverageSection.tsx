@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
 import { ApiError, api } from '../lib/api'
@@ -8,9 +9,11 @@ import {
   fromDiscoveryConfig,
   toDiscoveryRequest,
 } from '../lib/coverage'
-import type { DiscoveryConfigDto, KommuneDto } from '../lib/types'
+import { discoveryQuery, kommunerQuery, queryKeys } from '../lib/queries'
+import type { DiscoveryConfigDto } from '../lib/types'
 import { CoverageFields } from './CoverageFields'
 import { useAnnounce } from './LiveRegion'
+import { UnsavedChangesGuard } from './UnsavedChangesGuard'
 
 interface CoverageSectionProps {
   /** Fires once the PUT succeeds — before the follow-up sync is even attempted, since the scope
@@ -28,10 +31,22 @@ interface CoverageSectionProps {
  * and the kommune list once on mount; Save PUTs the scope and starts a sync, announcing
  * honestly when that sync is busy or could not start. */
 export function CoverageSection({ onSaved }: CoverageSectionProps) {
-  const [coverage, setCoverage] = useState<CoverageDraft | null>(null)
+  const queryClient = useQueryClient()
+  const { data: config, isError, refetch } = useQuery(discoveryQuery())
+  // Only a load that never produced a scope counts: a failed background refetch keeps showing
+  // the scope it has.
+  const loadFailed = isError && config === undefined
+  // What the person has changed since the scope loaded. The shown draft is the server's scope
+  // until then, and their edits after — a refetch never overwrites an unsaved draft.
+  const [edited, setEdited] = useState<CoverageDraft | null>(null)
+  const coverage = edited ?? (config ? fromDiscoveryConfig(config) : null)
+  // An edit undone by hand (a kommune ticked and unticked again) leaves nothing to lose.
+  const dirty =
+    edited !== null &&
+    (!config || JSON.stringify(edited) !== JSON.stringify(fromDiscoveryConfig(config)))
+  const { data: kommunerList, isError: kommunerFailed } = useQuery(kommunerQuery())
   // undefined = still loading (Save disabled), null = unreachable (fylke-only cascade).
-  const [kommuner, setKommuner] = useState<KommuneDto[] | null | undefined>(undefined)
-  const [loadFailed, setLoadFailed] = useState(false)
+  const kommuner = kommunerFailed ? null : kommunerList
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const t = useT()
@@ -39,32 +54,21 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
   const { readOnly } = useReadOnly()
 
   // The kommune list is best-effort (null → fylke-only cascade) and Save waits for it to
-  // settle, since a save without the list degrades to the fylke alone. loadCoverage stays out
-  // of [t]: useT() hands back a new `t` identity on every language switch, and re-running this
-  // on a switch would re-GET the scope and overwrite an unsaved draft (the flag is translated
-  // at render instead, so it still follows the current language).
-  const loadCoverage = useCallback(() => {
-    setLoadFailed(false)
-    return api
-      .get<DiscoveryConfigDto>('/api/config/discovery')
-      .then((config) => setCoverage(fromDiscoveryConfig(config)))
-      .catch(() => setLoadFailed(true))
-  }, [])
-
-  useEffect(() => {
-    loadCoverage()
-    api
-      .get<KommuneDto[]>('/api/kommuner')
-      .then(setKommuner)
-      .catch(() => setKommuner(null))
-  }, [loadCoverage])
+  // settle, since a save without the list degrades to the fylke alone.
 
   const handleSave = async () => {
     if (!coverage || kommuner === undefined) return
     setSaving(true)
     setSaveError(null)
     try {
-      await api.put('/api/config/discovery', toDiscoveryRequest(effectiveDraft(coverage, kommuner)))
+      // The PUT answers with the scope as written, so the cache takes it straight away and the
+      // draft is done: the section shows the server's scope again, as FocusSection does.
+      const written = await api.put<DiscoveryConfigDto>(
+        '/api/config/discovery',
+        toDiscoveryRequest(effectiveDraft(coverage, kommuner))
+      )
+      queryClient.setQueryData(queryKeys.discovery, written)
+      setEdited(null)
     } catch (err) {
       setSaveError(
         t('coverage.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })
@@ -102,7 +106,7 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
         <p role="alert" className="alert alert-danger cluster cluster-sm">
           {loadFailed ? t('coverage.loadError') : saveError}
           {!coverage && (
-            <button type="button" className="btn btn-ghost" onClick={loadCoverage}>
+            <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
               {t('common.retry')}
             </button>
           )}
@@ -115,7 +119,7 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
             <CoverageFields
               idPrefix="settings-coverage"
               draft={coverage}
-              onChange={setCoverage}
+              onChange={setEdited}
               kommuner={kommuner}
             />
           </fieldset>
@@ -131,6 +135,8 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
           )}
         </>
       )}
+
+      <UnsavedChangesGuard dirty={dirty} />
     </section>
   )
 }

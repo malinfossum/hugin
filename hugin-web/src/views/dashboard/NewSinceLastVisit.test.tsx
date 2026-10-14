@@ -1,9 +1,12 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
+import { queryKeys } from '../../lib/queries'
+import { makeQueryClient } from '../../lib/queryClient'
 import type { AdDto, NewDto } from '../../lib/types'
+import { TestQueryProvider } from '../../test-utils'
 import { NewSinceLastVisit } from './NewSinceLastVisit'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -118,14 +121,16 @@ function fakeServer(dto: NewDto | null) {
   return fetchMock
 }
 
-function renderView(fetchMock: ReturnType<typeof vi.fn>, refreshKey = 0) {
+function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <NewSinceLastVisit refreshKey={refreshKey} />
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <NewSinceLastVisit />
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
 }
 
@@ -385,20 +390,23 @@ describe('NewSinceLastVisit', () => {
     })
 
     vi.stubGlobal('fetch', fetchMock)
-    const { rerender } = render(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <NewSinceLastVisit refreshKey={0} />
-        </LiveRegionProvider>
-      </LanguageProvider>
+    const client = makeQueryClient()
+    render(
+      <TestQueryProvider client={client}>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <NewSinceLastVisit />
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
     )
 
     await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
     await screen.findByRole('dialog')
 
     // A sync completes while the dialog is still open: /api/new now has a newer asOf
-    // (and different content — one more ad), and DashboardView would bump refreshKey to
-    // trigger this refetch.
+    // (and different content — one more ad), and DashboardView would invalidate the
+    // `new` query to trigger this refetch.
     currentDto = newDto({
       asOf: '2026-08-19T10:15:00Z',
       ads: [
@@ -422,13 +430,7 @@ describe('NewSinceLastVisit', () => {
         },
       ],
     })
-    rerender(
-      <LanguageProvider>
-        <LiveRegionProvider>
-          <NewSinceLastVisit refreshKey={1} />
-        </LiveRegionProvider>
-      </LanguageProvider>
-    )
+    await act(() => client.invalidateQueries({ queryKey: queryKeys.new }))
 
     // Wait for content that only exists in response B — proves the refetch actually
     // applied, rather than relying on userEvent timing or a fetch-call count.

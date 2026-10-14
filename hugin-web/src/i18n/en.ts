@@ -22,6 +22,10 @@ export const en = {
   'common.all': 'All',
   'common.branchTag': '[branch]',
 
+  'unsaved.title': 'Leave without saving?',
+  'unsaved.body': 'The changes you made here are not saved. If you leave, they are lost.',
+  'unsaved.leave': 'Leave without saving',
+
   'status.active': 'Watching',
   'status.applied': 'Applied',
   'status.answered': 'Answered',

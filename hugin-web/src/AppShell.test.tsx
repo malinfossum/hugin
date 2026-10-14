@@ -1,0 +1,201 @@
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { FocusProvider } from './context/focus'
+import { ReadOnlyProvider } from './context/readOnly'
+import { LanguageProvider } from './i18n'
+import { queryKeys } from './lib/queries'
+import { makeQueryClient } from './lib/queryClient'
+import { createAppRouter } from './router'
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+/** The fake server's state, changed by a test between steps. */
+interface ServerState {
+  companyName: string
+  syncRunning: boolean
+}
+
+function fakeServer(state: ServerState) {
+  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString()
+    const method = init?.method ?? 'GET'
+    if (method !== 'GET') return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+    switch (url) {
+      case '/api/status':
+        return Promise.resolve(
+          jsonResponse({
+            brreg: null,
+            nav: null,
+            reviewMark: null,
+            activeAds: 0,
+            companies: 1,
+            pipelineEntries: 0,
+            readOnly: false,
+            scopeConfigured: true,
+          })
+        )
+      case '/api/sync/status':
+        return Promise.resolve(
+          jsonResponse({
+            running: state.syncRunning,
+            startedUtc: '2026-10-12T08:00:00Z',
+            finishedUtc: state.syncRunning ? null : '2026-10-12T08:01:00Z',
+            brreg: null,
+            nav: null,
+          })
+        )
+      case '/api/companies':
+        return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: state.companyName }]))
+      case '/api/companies/715787630':
+        return Promise.resolve(
+          jsonResponse({
+            company: { orgnr: '715787630', name: state.companyName },
+            ads: [],
+            branches: [],
+          })
+        )
+      case '/api/sources':
+        return Promise.resolve(
+          jsonResponse([{ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 }])
+        )
+      case '/api/pipeline':
+      case '/api/kommuner':
+        return Promise.resolve(jsonResponse([]))
+      case '/api/config/discovery':
+        return Promise.resolve(jsonResponse({ municipalities: [], fylker: [], allOfNorway: true }))
+      case '/api/config/focus':
+        return Promise.resolve(jsonResponse({ naeringskoder: ['62'], keywords: [] }))
+      default:
+        return Promise.reject(new Error(`unhandled request ${url}`))
+    }
+  })
+}
+
+/** App's provider tree, but with the test holding the QueryClient (to read the cache) and the
+ * router (on a memory history, so no browser URL leaks between tests). */
+function renderApp(url: string, client: QueryClient = makeQueryClient()) {
+  const router = createAppRouter({ history: createMemoryHistory({ initialEntries: [url] }) })
+  render(
+    <QueryClientProvider client={client}>
+      <LanguageProvider>
+        <ReadOnlyProvider>
+          <FocusProvider>
+            <RouterProvider router={router} />
+          </FocusProvider>
+        </ReadOnlyProvider>
+      </LanguageProvider>
+    </QueryClientProvider>
+  )
+  return { client, router }
+}
+
+beforeEach(() => {
+  // A stored focus keeps the first-run dialog shut, so the views are what's on screen.
+  window.localStorage.setItem(
+    'hugin-focus',
+    JSON.stringify({ v: 1, fylke: null, kommune: null, categories: [] })
+  )
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  window.localStorage.removeItem('hugin-focus')
+})
+
+describe('AppShell sync completion', () => {
+  it('a sync that finishes while another view is open refreshes the ads, the digest, the company list and every company detail', async () => {
+    const state: ServerState = { companyName: 'Acme AS', syncRunning: false }
+    vi.stubGlobal('fetch', fakeServer(state))
+    const user = userEvent.setup()
+    const { client, router } = renderApp('/companies/715787630')
+
+    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
+    // The dashboard's lists, as a visit there would have left them in the cache.
+    client.setQueryData(queryKeys.adsList(false), [])
+    client.setQueryData(queryKeys.new, null)
+
+    await user.click(screen.getByRole('link', { name: 'Søknader' }))
+    expect(router.state.location.pathname).toBe('/applications')
+
+    // The poll sees the sync running, then finished with the new data on the server. The watcher
+    // handles a poll once its result has rendered and tells polls apart by their update time, so
+    // the first one gets a moment to render before the second lands.
+    state.syncRunning = true
+    await act(() => client.refetchQueries({ queryKey: queryKeys.syncStatus }))
+    await act(() => new Promise((resolve) => setTimeout(resolve, 5)))
+    state.companyName = 'Acme Ny AS'
+    state.syncRunning = false
+    await act(() => client.refetchQueries({ queryKey: queryKeys.syncStatus }))
+
+    // None of these is on screen, so each stays marked stale until a view needs it again.
+    await waitFor(() => expect(client.getQueryState(queryKeys.companies)?.isInvalidated).toBe(true))
+    for (const key of [
+      queryKeys.adsList(false),
+      queryKeys.new,
+      queryKeys.companies,
+      queryKeys.company('715787630'),
+    ]) {
+      expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
+    }
+
+    // Back on the detail, within the minute it would otherwise have stayed fresh.
+    act(() => router.history.back())
+    expect(await screen.findByRole('heading', { name: 'Acme Ny AS' })).toBeInTheDocument()
+  })
+})
+
+describe('AppShell unsaved-changes guard', () => {
+  const QUESTION = 'Forlate siden uten å lagre?'
+
+  it('asks before the nav leaves a form with unsaved text; staying keeps the draft', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/settings')
+
+    await user.type(await screen.findByLabelText('Etikett'), 'Ny kilde')
+    await user.click(screen.getByRole('link', { name: 'Søknader' }))
+
+    const dialog = await screen.findByRole('dialog', { name: QUESTION })
+    await user.click(within(dialog).getByRole('button', { name: 'Avbryt' }))
+
+    expect(screen.queryByRole('dialog', { name: QUESTION })).not.toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/settings')
+    expect(screen.getByLabelText('Etikett')).toHaveValue('Ny kilde')
+  })
+
+  it('leaves once the person confirms', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/settings')
+
+    await user.type(await screen.findByLabelText('Etikett'), 'Ny kilde')
+    await user.click(screen.getByRole('link', { name: 'Søknader' }))
+    const dialog = await screen.findByRole('dialog', { name: QUESTION })
+    await user.click(within(dialog).getByRole('button', { name: 'Forlat uten å lagre' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
+    expect(screen.queryByLabelText('Etikett')).not.toBeInTheDocument()
+  })
+
+  it('a form opened but left as it loaded navigates without asking', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    const { router } = renderApp('/settings')
+
+    // The edit form opens filled with the source as it is: nothing changed yet.
+    await user.click(await screen.findByRole('button', { name: 'Rediger' }))
+    expect(screen.getByDisplayValue('https://finn.no')).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Søknader' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
+    expect(screen.queryByRole('dialog', { name: QUESTION })).not.toBeInTheDocument()
+  })
+})

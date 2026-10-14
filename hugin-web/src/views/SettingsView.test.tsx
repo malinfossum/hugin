@@ -5,6 +5,8 @@ import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider, loadFocus, saveFocus } from '../context/focus'
 import { LanguageProvider, useLang } from '../i18n'
 import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../lib/types'
+import { TestQueryProvider } from '../test-utils'
+import { SourcesCard } from './dashboard/SourcesCard'
 import { SettingsView } from './SettingsView'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -174,27 +176,36 @@ function LangSwitch() {
 
 function renderView(
   fetchMock: ReturnType<typeof vi.fn>,
-  props: Partial<{ onSourcesChanged: () => void; withLangSwitch: boolean }> = {}
+  props: Partial<{ withLangSwitch: boolean }> = {}
 ) {
   vi.stubGlobal('fetch', fetchMock)
-  const onSourcesChanged = props.onSourcesChanged ?? vi.fn()
   const utils = render(
-    <LanguageProvider>
-      <LiveRegionProvider>
-        <FocusProvider>
-          {props.withLangSwitch && <LangSwitch />}
-          <SettingsView onSourcesChanged={onSourcesChanged} />
-        </FocusProvider>
-      </LiveRegionProvider>
-    </LanguageProvider>
+    <TestQueryProvider>
+      <LanguageProvider>
+        <LiveRegionProvider>
+          <FocusProvider>
+            {props.withLangSwitch && <LangSwitch />}
+            <SettingsView />
+          </FocusProvider>
+        </LiveRegionProvider>
+      </LanguageProvider>
+    </TestQueryProvider>
   )
-  return { ...utils, onSourcesChanged }
+  return utils
 }
 
 afterEach(() => {
   vi.unstubAllGlobals()
   window.localStorage.removeItem('hugin-focus')
 })
+
+/** The Dekning card, once its scope has loaded — the heading is there from the first render, the
+ * fields only after the scope arrives. */
+async function readyCoverageSection() {
+  const section = await screen.findByRole('region', { name: 'Dekning' })
+  await within(section).findByLabelText('Fylke')
+  return section
+}
 
 describe('SettingsView', () => {
   it('lists fetched sources in order', async () => {
@@ -209,10 +220,35 @@ describe('SettingsView', () => {
     expect(links.map((l) => l.textContent)).toEqual(['FINN', 'LinkedIn'])
   })
 
-  it('add form POSTs {label, url} and calls onSourcesChanged', async () => {
+  it('a source added here also appears in the dashboard card, via the shared query cache', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', fakeServer([]).fetchMock)
+    const { container } = render(
+      <TestQueryProvider>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <FocusProvider>
+              <SourcesCard />
+              <SettingsView />
+            </FocusProvider>
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
+    )
+    const card = container.querySelector('.sources-card') as HTMLElement
+
+    await screen.findByRole('button', { name: 'Legg til lenke' })
+    await user.type(screen.getByLabelText('Etikett'), 'Vitae')
+    await user.type(screen.getByLabelText('URL'), 'https://vitae.no')
+    await user.click(screen.getByRole('button', { name: 'Legg til lenke' }))
+
+    expect(await within(card).findByRole('link', { name: 'Vitae' })).toBeInTheDocument()
+  })
+
+  it('add form POSTs {label, url}', async () => {
     const user = userEvent.setup()
     const { fetchMock } = fakeServer([])
-    const { onSourcesChanged } = renderView(fetchMock)
+    renderView(fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     await user.type(screen.getByLabelText('Etikett'), 'Vitae')
@@ -228,7 +264,6 @@ describe('SettingsView', () => {
         })
       )
     })
-    await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
     // Outcome, not just the request: the refetched list must actually show the new row.
     expect(await screen.findByText('Vitae')).toBeInTheDocument()
   })
@@ -237,7 +272,7 @@ describe('SettingsView', () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
     const { fetchMock } = fakeServer(entries)
-    const { onSourcesChanged } = renderView(fetchMock)
+    renderView(fetchMock)
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Rediger' }))
@@ -259,7 +294,6 @@ describe('SettingsView', () => {
         })
       )
     })
-    await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
     // Outcome, not just the request: the row reverts to view mode showing the new label,
     // and the stale label is gone.
     expect(await screen.findByText('FINN.no')).toBeInTheDocument()
@@ -270,7 +304,7 @@ describe('SettingsView', () => {
     const user = userEvent.setup()
     const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
     const { fetchMock } = fakeServer(entries)
-    const { onSourcesChanged } = renderView(fetchMock)
+    renderView(fetchMock)
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Fjern' }))
@@ -286,9 +320,36 @@ describe('SettingsView', () => {
         expect.objectContaining({ method: 'DELETE' })
       )
     })
-    await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
     // Outcome, not just the request: the removed row is actually gone after the refetch.
     await waitFor(() => expect(screen.queryByText('FINN')).not.toBeInTheDocument())
+  })
+
+  it('a failed remove’s error clears once a later add succeeds', async () => {
+    const user = userEvent.setup()
+    const entries = [source({ id: 1, label: 'FINN', url: 'https://finn.no', position: 0 })]
+    const { fetchMock: server } = fakeServer(entries)
+    let failNextDelete = true
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'DELETE' && failNextDelete) {
+        failNextDelete = false
+        return Promise.resolve(jsonResponse({ title: 'Kunne ikke fjerne' }, { status: 500 }))
+      }
+      return server(input, init)
+    })
+    renderView(fetchMock)
+
+    await screen.findByText('FINN')
+    await user.click(screen.getByRole('button', { name: 'Fjern' }))
+    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
+    expect(await screen.findByText('Kunne ikke fjerne')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Etikett'), 'Vitae')
+    await user.type(screen.getByLabelText('URL'), 'https://vitae.no')
+    await user.click(screen.getByRole('button', { name: 'Legg til lenke' }))
+
+    expect(await screen.findByText('Vitae')).toBeInTheDocument()
+    expect(screen.queryByText('Kunne ikke fjerne')).not.toBeInTheDocument()
   })
 
   it('move-down on the first row POSTs /api/sources/reorder with the swapped id order', async () => {
@@ -298,7 +359,7 @@ describe('SettingsView', () => {
       source({ id: 2, label: 'LinkedIn', url: 'https://linkedin.com', position: 1 }),
     ]
     const { fetchMock } = fakeServer(entries)
-    const { onSourcesChanged } = renderView(fetchMock)
+    renderView(fetchMock)
 
     await screen.findByText('FINN')
     const moveDownButtons = screen.getAllByRole('button', { name: 'Flytt ned' })
@@ -313,7 +374,6 @@ describe('SettingsView', () => {
         })
       )
     })
-    await waitFor(() => expect(onSourcesChanged).toHaveBeenCalled())
     // Outcome, not just the request: the refetched list must actually render in the new order.
     await waitFor(() => {
       const links = screen.getAllByRole('link', { name: /FINN|LinkedIn/ })
@@ -571,7 +631,7 @@ describe('SettingsView', () => {
     const { fetchMock } = fakeServer([])
     renderView(fetchMock)
     const section = await screen.findByRole('region', { name: 'Visningsfilter' })
-    await screen.findByRole('region', { name: 'Dekning' })
+    await readyCoverageSection()
     const kommunerCalls = () =>
       fetchMock.mock.calls.filter(([input]) => String(input) === '/api/kommuner').length
     await waitFor(() => expect(kommunerCalls()).toBeGreaterThan(0))
@@ -608,7 +668,7 @@ describe('Dekning (coverage)', () => {
   it('shows the current server scope with the fylke’s kommuner checked', async () => {
     renderView(fakeServer([]).fetchMock)
 
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
     expect(within(section).getByLabelText('Fylke')).toHaveValue('34')
     expect(within(section).getByRole('checkbox', { name: 'Hamar' })).toBeChecked()
     expect(within(section).getByRole('checkbox', { name: 'Lillehammer' })).not.toBeChecked()
@@ -618,7 +678,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([])
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
@@ -639,7 +699,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([], { putStatus: 500 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
@@ -657,7 +717,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([], { syncStatus: 409 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
@@ -672,7 +732,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([], { kommunerDown: true })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
     await within(section).findByText(/Kommunelisten er ikke tilgjengelig/)
 
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
@@ -700,7 +760,7 @@ describe('Dekning (coverage)', () => {
     })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     expect(
       within(section).getByRole('list', { name: 'Dekkes også, utenfor Innlandet' })
@@ -722,7 +782,7 @@ describe('Dekning (coverage)', () => {
     // widened the scope to the fylke alone.
     const server = fakeServer([], { kommunerPending: true })
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
     await within(section).findByLabelText('Fylke')
 
     expect(within(section).getByRole('button', { name: 'Lagre dekning' })).toBeDisabled()
@@ -735,7 +795,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([], { syncStatus: 500 })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
@@ -747,7 +807,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([], { focusPreviewUnits: [10, 20] })
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const coverageSection = await readyCoverageSection()
     const focusSection = await screen.findByRole('region', { name: 'Fokus' })
 
     await user.type(within(focusSection).getByLabelText('Legg til bransje'), '62')
@@ -785,7 +845,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([])
     const user = userEvent.setup()
     renderView(server.fetchMock)
-    const coverageSection = await screen.findByRole('region', { name: 'Dekning' })
+    const coverageSection = await readyCoverageSection()
     const focusSection = await screen.findByRole('region', { name: 'Fokus' })
 
     await user.type(within(focusSection).getByLabelText('Legg til bransje'), '47.911')
@@ -811,7 +871,7 @@ describe('Dekning (coverage)', () => {
     const server = fakeServer([])
     const user = userEvent.setup()
     renderView(server.fetchMock, { withLangSwitch: true })
-    const section = await screen.findByRole('region', { name: 'Dekning' })
+    const section = await readyCoverageSection()
 
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(screen.getByRole('button', { name: 'Switch to English' }))

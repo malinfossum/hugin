@@ -1,10 +1,14 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { type FormEvent, useCallback, useRef, useState } from 'react'
 import { useReadOnly } from '../context/readOnly'
 import { type T, useT } from '../i18n'
 import { ApiError, api } from '../lib/api'
+import { useStartSync } from '../lib/mutations'
+import { focusConfigQuery, queryKeys, recommendedCodesQuery } from '../lib/queries'
 import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
+import { UnsavedChangesGuard } from './UnsavedChangesGuard'
 
 // Same shape the API validates with — kept in sync deliberately, so the field can reject a typo
 // without a round-trip.
@@ -40,17 +44,26 @@ interface Props {
  * button — SyncHeader's polling must stay identity-independent (v3.2 trap), so it can't live
  * there. */
 export function FocusSection({ previewVersion = 0 }: Props) {
-  const [loaded, setLoaded] = useState<FocusConfigDto | null>(null)
-  const [draft, setDraft] = useState<FocusConfigDto | null>(null)
-  const [loadFailed, setLoadFailed] = useState(false)
+  const { data: loadedData, isError, refetch } = useQuery(focusConfigQuery())
+  const loaded = loadedData ?? null
+  // Only a load that never produced a config counts, as in CoverageSection.
+  const loadFailed = isError && loadedData === undefined
+  // What the person has changed since the config loaded: the draft is the server's config until
+  // then, and their edits after — a refetch never overwrites an unsaved draft.
+  const [edited, setEdited] = useState<FocusConfigDto | null>(null)
+  const draft = edited ?? loaded
+  // An edit undone by hand (a code added and removed again) leaves nothing to lose. A code or
+  // keyword typed but not yet added to its list doesn't count either: it isn't part of the draft.
+  const dirty = edited !== null && JSON.stringify(edited) !== JSON.stringify(loaded)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [previewText, setPreviewText] = useState<string | null>(null)
   const [keywordInput, setKeywordInput] = useState('')
-  const [recommended, setRecommended] = useState<string[] | null>(null)
   const [backfillOpen, setBackfillOpen] = useState(false)
+  const startSync = useStartSync()
   const t = useT()
+  const queryClient = useQueryClient()
   const announce = useAnnounce()
   const { readOnly } = useReadOnly()
   const addCodeRef = useRef<HTMLInputElement>(null)
@@ -60,21 +73,6 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   // old kommuner is a wrong number, not a stale one, but the fix is a version-qualified key
   // (Task 11 finding 2), not throwing away the whole component (and the unsaved draft with it).
   const previewCache = useRef(new Map<string, NacePreviewDto>())
-
-  const load = useCallback(() => {
-    setLoadFailed(false)
-    return api
-      .get<FocusConfigDto>('/api/config/focus')
-      .then((config) => {
-        setLoaded(config)
-        setDraft(config)
-      })
-      .catch(() => setLoadFailed(true))
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   // Shared by the single-code preview button and the "Legg til anbefalte" total below — both
   // want the same cache (keyed on `previewVersion`, so a coverage save invalidates every count
@@ -137,7 +135,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       return
     }
     if (draft.naeringskoder.includes(code)) return
-    setDraft({ ...draft, naeringskoder: [...draft.naeringskoder, code] })
+    setEdited({ ...draft, naeringskoder: [...draft.naeringskoder, code] })
     setCodeInput('')
     setPreviewText(null)
   }
@@ -148,7 +146,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   const removeCode = (code: string) => {
     if (!draft) return
     const wasLast = draft.naeringskoder.length === 1
-    setDraft({ ...draft, naeringskoder: draft.naeringskoder.filter((c) => c !== code) })
+    setEdited({ ...draft, naeringskoder: draft.naeringskoder.filter((c) => c !== code) })
     if (wasLast) addCodeRef.current?.focus()
   }
 
@@ -156,22 +154,19 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   // — the half that was never built — previews the total those additions bring in before the
   // user saves. Reuses `resolvePreview`'s cache and guarded fetch rather than a new endpoint.
   const handleAddRecommended = async () => {
-    let codes = recommended
-    if (!codes) {
-      try {
-        codes = await api.get<string[]>('/api/config/focus/recommended')
-        setRecommended(codes)
-      } catch {
-        // A dead-looking button is the defect this closes: a failed fetch used to return with
-        // nothing shown at all.
-        setPreviewText(t('focus.recommendedFailed'))
-        return
-      }
+    let codes: string[]
+    try {
+      codes = await queryClient.fetchQuery(recommendedCodesQuery())
+    } catch {
+      // A dead-looking button is the defect this closes: a failed fetch used to return with
+      // nothing shown at all.
+      setPreviewText(t('focus.recommendedFailed'))
+      return
     }
     if (!draft) return
     const missing = codes.filter((c) => !draft.naeringskoder.includes(c))
     if (missing.length === 0) return
-    setDraft({ ...draft, naeringskoder: [...draft.naeringskoder, ...missing] })
+    setEdited({ ...draft, naeringskoder: [...draft.naeringskoder, ...missing] })
 
     const results = await Promise.all(missing.map((code) => resolvePreview(code)))
     const known = results.filter((r): r is NacePreviewDto => r !== null)
@@ -196,7 +191,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     if (!draft) return
     const keyword = keywordInput.trim()
     if (!keyword || draft.keywords.includes(keyword)) return
-    setDraft({ ...draft, keywords: [...draft.keywords, keyword] })
+    setEdited({ ...draft, keywords: [...draft.keywords, keyword] })
     setKeywordInput('')
   }
 
@@ -207,7 +202,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   const removeKeyword = (keyword: string) => {
     if (!draft) return
     const wasLast = draft.keywords.length === 1
-    setDraft({ ...draft, keywords: draft.keywords.filter((k) => k !== keyword) })
+    setEdited({ ...draft, keywords: draft.keywords.filter((k) => k !== keyword) })
     if (wasLast) addKeywordRef.current?.focus()
   }
 
@@ -221,8 +216,8 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       JSON.stringify(draft.naeringskoder) !== JSON.stringify(loaded.naeringskoder)
     try {
       const written = await api.put<FocusConfigDto>('/api/config/focus', draft)
-      setLoaded(written)
-      setDraft(written)
+      queryClient.setQueryData(queryKeys.focusConfig, written)
+      setEdited(null)
     } catch (err) {
       setSaveError(
         t('focus.saveFailed', { error: err instanceof ApiError ? err.message : String(err) })
@@ -258,7 +253,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   const handleBackfillConfirm = async () => {
     setBackfillOpen(false)
     try {
-      await api.post('/api/sync?full=1')
+      await startSync.mutateAsync({ full: true })
       announce(t('focus.backfillStarted'))
     } catch (err) {
       announce(
@@ -283,7 +278,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {loadFailed ? t('focus.loadError') : saveError}
           {!draft && (
-            <button type="button" className="btn btn-ghost" onClick={load}>
+            <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
               {t('common.retry')}
             </button>
           )}
@@ -423,6 +418,8 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       >
         <p>{t('focus.backfillConfirmBody')}</p>
       </ConfirmDialog>
+
+      <UnsavedChangesGuard dirty={dirty} />
     </section>
   )
 }

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
 import { useReadOnly } from '../../context/readOnly'
 import { useT } from '../../i18n'
-import { api } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
-import type { CompanyDto, NewDto } from '../../lib/types'
+import { useMarkSeen } from '../../lib/mutations'
+import { newQuery } from '../../lib/queries'
+import type { CompanyDto } from '../../lib/types'
 
 /** Groups items by place, preserving first-seen order of both groups and members. */
 function groupByPlace<T>(
@@ -43,57 +45,37 @@ function PlaceHeading({
   )
 }
 
-export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
-  const [data, setData] = useState<NewDto | undefined>(undefined)
-  const [loaded, setLoaded] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function NewSinceLastVisit() {
+  const t = useT()
+  const markSeen = useMarkSeen()
+  const { data: fetched, isError, isSuccess: loaded, refetch } = useQuery(newQuery())
+  // null from the query means the server has not synced yet.
+  const data = fetched ?? undefined
+  const [actionError, setActionError] = useState<string | null>(null)
+  const error = actionError ?? (isError ? t('newSince.loadError') : null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const announce = useAnnounce()
-  const t = useT()
   const { readOnly } = useReadOnly()
   const headingRef = useRef<HTMLHeadingElement>(null)
-  const pendingFocus = useRef(false)
   // Snapshot of the asOf the user was actually looking at when they opened the dialog.
-  // A refetch (refreshKey bump) while the dialog is open must not change what gets posted —
+  // A refetch (a sync completing) while the dialog is open must not change what gets posted —
   // that would mark items the user never reviewed as seen.
   const reviewedAsOf = useRef<string | null>(null)
-
-  const load = useCallback(() => {
-    setError(null)
-    return api
-      .get<NewDto | undefined>('/api/new')
-      .then((result) => {
-        setData(result)
-        setLoaded(true)
-      })
-      .catch(() => setError(t('newSince.loadError')))
-  }, [t])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is a refetch trigger, not read in the body
-  useEffect(() => {
-    load()
-  }, [load, refreshKey])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: data is the refetch-completed signal that applies the pending focus move
-  useEffect(() => {
-    if (!pendingFocus.current) return
-    pendingFocus.current = false
-    headingRef.current?.focus()
-  }, [data])
 
   const handleConfirm = async () => {
     const asOf = reviewedAsOf.current
     if (!asOf) return
     setConfirmOpen(false)
     try {
-      await api.post('/api/seen', { asOf })
+      await markSeen.mutateAsync(asOf)
     } catch {
-      setError(t('newSince.markError'))
+      setActionError(t('newSince.markError'))
       return
     }
     reviewedAsOf.current = null
-    pendingFocus.current = true
-    await load()
+    setActionError(null)
+    // The mutation resolves only once the refetch has landed.
+    headingRef.current?.focus()
     announce(t('newSince.markedAnnounce'))
   }
 
@@ -113,7 +95,14 @@ export function NewSinceLastVisit({ refreshKey }: { refreshKey: number }) {
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}
-          <button type="button" className="btn btn-ghost" onClick={load}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setActionError(null)
+              refetch()
+            }}
+          >
             {t('common.retry')}
           </button>
         </p>
