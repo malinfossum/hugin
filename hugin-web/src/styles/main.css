@@ -83,11 +83,11 @@ a.nav-link:focus-visible {
   }
 }
 
-/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent
-   through `color` (the SVG uses fill="currentColor" — var() in a fill attribute
-   would silently not resolve). The wordmark matches the banner lockup: Space Grotesk 700. */
-/* The brand is the home link (spec v3.8 B1): it keeps the look of a wordmark, no link colour or
-   underline, and gets the full 44 px hit box. The focus ring is the design system's. */
+/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent through
+   `color` (the SVG uses fill="currentColor". A var() in a fill attribute would silently not
+   resolve). The wordmark matches the banner lockup: Space Grotesk 700. The brand is also the home
+   link (spec v3.8 B1): it keeps the look of a wordmark, with no link colour or underline, and gets
+   the full 44 px hit box. The focus ring is the design system's. */
 .brand {
   display: inline-flex;
   align-items: center;
@@ -98,7 +98,11 @@ a.nav-link:focus-visible {
   color: inherit;
   text-decoration: none;
 }
-.brand:hover {
+/* The base `a:hover, a:focus-visible` rule (0,1,1) would underline and recolour the logo on
+   keyboard focus; this (0,2,1) rule wins on both states, the same as `a.nav-link` above. The
+   outline is not touched, so the focus ring stays. */
+a.brand:hover,
+a.brand:focus-visible {
   color: inherit;
   text-decoration: none;
 }
