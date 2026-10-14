@@ -82,4 +82,17 @@ describe('ReturnFocusProvider', () => {
 
     expect(screen.getByRole('heading', { name: 'Card' })).toHaveFocus()
   })
+
+  it('does nothing when the page is reached again by a new entry, not by going back', async () => {
+    await renderProbe()
+    returnFocus.remember('company:1')
+    await act(() => router.navigate({ to: '/companies/{-$orgnr}', params: { orgnr: '1' } }))
+    // A push back to the same page, as the nav does: a new entry with a different index.
+    await act(() => router.navigate({ to: '/' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+
+    act(() => returnFocus.restore(screen.getByTestId('page')))
+
+    expect(document.body).toHaveFocus()
+  })
 })

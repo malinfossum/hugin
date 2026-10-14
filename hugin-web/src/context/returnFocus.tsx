@@ -29,7 +29,8 @@ interface Pending {
   /** The history entry the link was followed from. */
   index: number
   /** Set once a navigation away from that entry has resolved. A Ctrl-click that opened a new
-   * tab, or a navigation the unsaved-changes guard blocked, never sets it. */
+   * tab, or a navigation the unsaved-changes guard blocked, does not set it by itself; a later
+   * real navigation away does. */
   left: boolean
 }
 

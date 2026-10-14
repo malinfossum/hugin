@@ -1,6 +1,6 @@
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from './context/focus'
@@ -330,19 +330,23 @@ describe('AppShell closing a company detail', () => {
     await waitFor(() => expect(again).toHaveFocus())
   })
 
-  it('reaching the dashboard again through the nav is not a return: focus stays on the nav', async () => {
+  it('reaching the dashboard again through the nav is not a return: focus is not pulled onto the old link', async () => {
     vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
     const user = userEvent.setup()
-    const { router } = renderApp('/')
+    const { client, router } = renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
-    const navDashboard = screen.getByRole('link', { name: 'Dashbord' })
-    await user.click(navDashboard)
+    // fireEvent, not user.click: a click that does not move focus (as in Safari), so the
+    // entry-index rule is what keeps restore from focusing the old link, not "focus has moved".
+    fireEvent.click(screen.getByRole('link', { name: 'Dashbord' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
-    await screen.findByRole('link', { name: 'Acme AS' })
-    expect(navDashboard).toHaveFocus()
+    const link = await screen.findByRole('link', { name: 'Acme AS' })
+    // The card's refetch has settled, so restore has had its chance to run.
+    await waitFor(() => expect(client.isFetching()).toBe(0))
+    expect(document.body).toHaveFocus()
+    expect(link).not.toHaveFocus()
   })
 
   it('opened from the list, close goes back to the list entry and refocuses the row', async () => {
