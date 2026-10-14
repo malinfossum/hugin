@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { TestQueryProvider } from '../../test-utils'
+import { TestQueryProvider, TestRouter } from '../../test-utils'
 import { DashboardView } from './DashboardView'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -88,7 +88,9 @@ function renderDashboard(fetchMock: ReturnType<typeof vi.fn>) {
     <TestQueryProvider>
       <LanguageProvider>
         <LiveRegionProvider>
-          <DashboardView show="active" onShowChange={vi.fn()} onRequestCoverage={vi.fn()} />
+          <TestRouter>
+            <DashboardView show="active" onShowChange={vi.fn()} onRequestCoverage={vi.fn()} />
+          </TestRouter>
         </LiveRegionProvider>
       </LanguageProvider>
     </TestQueryProvider>

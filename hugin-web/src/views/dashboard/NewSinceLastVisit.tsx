@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useAnnounce } from '../../components/LiveRegion'
@@ -132,7 +133,16 @@ export function NewSinceLastVisit() {
                 <ul className="stack stack-sm">
                   {companies.map((company) => (
                     <li key={company.orgnr}>
-                      {displayCompanyName(company.name)}
+                      {/* Opens the company's detail (spec v3.8 B5). data-return-focus lets the
+                      card focus this link again when Back returns here. */}
+                      <Link
+                        to="/companies/{-$orgnr}"
+                        params={{ orgnr: company.orgnr }}
+                        search={{}}
+                        data-return-focus={`company:${company.orgnr}`}
+                      >
+                        {displayCompanyName(company.name)}
+                      </Link>
                       {company.isBranch ? ` ${t('common.branchTag')}` : ''}
                     </li>
                   ))}
