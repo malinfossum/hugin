@@ -271,3 +271,27 @@ describe('AppShell logo', () => {
     )
   })
 })
+
+describe('AppShell opening a company detail', () => {
+  it('from «Nytt siden sist», focus moves to the company heading', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Acme AS' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('from the company list, focus moves to the company heading', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    renderApp('/companies')
+
+    await user.click(await screen.findByRole('button', { name: /Acme AS/ }))
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Acme AS' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+})

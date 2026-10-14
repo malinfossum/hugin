@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { type KeyboardEvent, useRef, useState } from 'react'
+import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 'react'
 import { CompanyLink } from '../components/CompanyLink'
 import { type T, useT } from '../i18n'
 import { ApiError } from '../lib/api'
@@ -53,10 +53,18 @@ function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
   )
 }
 
-function UnitBody({ detail, t }: { detail: CompanyDetailDto; t: T }) {
+function UnitBody({
+  detail,
+  t,
+  headingRef,
+}: {
+  detail: CompanyDetailDto
+  t: T
+  headingRef: RefObject<HTMLHeadingElement | null>
+}) {
   return (
     <>
-      <h2>
+      <h2 ref={headingRef} tabIndex={-1}>
         {displayCompanyName(detail.company.name)}
         {detail.company.isBranch && ` ${t('common.branchTag')}`}
       </h2>
@@ -125,6 +133,17 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       : t('companies.detailLoadError')
     : null
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const focusedFor = useRef<string | null>(null)
+  // Opening a company replaces the page under the focused row or link, so focus would fall to
+  // <body>. Move it to the company heading once per opened company, when its data has rendered.
+  // Switching branch tabs keeps focus on the tab, so this runs only when `orgnr` changes. The
+  // router restores the page's scroll position; focusing must not move it.
+  useEffect(() => {
+    if (!detail || focusedFor.current === orgnr) return
+    focusedFor.current = orgnr
+    headingRef.current?.focus({ preventScroll: true })
+  }, [orgnr, detail])
 
   const selectUnit = (unitOrgnr: string) => setSelection({ root: orgnr, unit: unitOrgnr })
 
@@ -200,11 +219,11 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
         detail &&
         (tabs.length > 0 ? (
           <TabPanel selectedOrgnr={selectedOrgnr}>
-            <UnitBody detail={detail} t={t} />
+            <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </TabPanel>
         ) : (
           <div className="stack">
-            <UnitBody detail={detail} t={t} />
+            <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </div>
         ))}
     </div>
