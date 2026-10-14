@@ -486,11 +486,15 @@ a.brand:focus-visible {
 }
 
 /* Demo banner (read-only showcase): a static region right after the header. */
-/* The design-system .app-shell is a two-row grid (header, main). The demo banner is a third
-   child, so without this it takes the stretching 1fr row and pushes main to the bottom of the
-   viewport whenever the view is shorter than the screen. */
+/* The design-system .app-shell is a two-row grid (header, main). Hugin adds the footer as a last
+   row, and the demo banner as a row under the header. Main keeps the one stretching 1fr row in
+   both layouts, so on a short view the footer sits at the bottom of the screen instead of
+   taking the stretch, and the banner never pushes main down. */
+.app-shell {
+  grid-template-rows: auto 1fr auto;
+}
 .app-shell:has(.demo-banner) {
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto 1fr auto;
 }
 .demo-banner {
   background: var(--surface-1);
@@ -500,4 +504,21 @@ a.brand:focus-visible {
 }
 .demo-banner p {
   margin: 0;
+}
+
+/* Footer (spec v3.8 B2): muted, small and centred. Small text does not mean small targets: each
+   link's hit box is 44 px tall, centred on the line. */
+.app-footer {
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.app-footer .cluster {
+  justify-content: center;
+  text-align: center;
+}
+.app-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
 }

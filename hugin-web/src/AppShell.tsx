@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { AppFooter } from './components/AppFooter'
 import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
@@ -9,6 +10,7 @@ import { KNOWN_CATEGORIES, useFocus } from './context/focus'
 import { useReadOnly } from './context/readOnly'
 import { type TranslationKey, useLang, useT } from './i18n'
 import { fromDiscoveryConfig, toFocusSeed } from './lib/coverage'
+import { REPO_URL } from './lib/links'
 import { useDismissFirstRun } from './lib/mutations'
 import { discoveryQuery, queryKeys } from './lib/queries'
 import './styles/main.css'
@@ -234,11 +236,7 @@ export function AppShell() {
                 <div className="container">
                   <p>
                     {t('demo.banner')}{' '}
-                    <a
-                      href="https://github.com/malinfossum/hugin"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                       {t('demo.repoLink')}
                     </a>
                   </p>
@@ -251,6 +249,7 @@ export function AppShell() {
               </h1>
               <Outlet />
             </main>
+            <AppFooter />
           </div>
           <FirstRunDialog
             open={focusDialogOpen}

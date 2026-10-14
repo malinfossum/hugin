@@ -287,6 +287,9 @@ export const en = {
     'Read-only demo. Real job ads and companies from NAV and Brreg for Innlandet, plus three fictional companies with one fictional ad each. The pipeline shows only the fictional companies. No tracking, no cookies; your theme choice is stored only in your browser.',
   'demo.repoLink': 'Source code on GitHub',
 
+  'footer.adsCredit': 'Ads from NAV',
+  'footer.companyCredit': 'Company data from the Brønnøysund Register Centre',
+
   'dashboard.noCoverageMessage': 'No coverage chosen.',
   'dashboard.noCoverageButton': 'Choose coverage',
   'dashboard.noCoverageAnnounce':
