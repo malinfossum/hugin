@@ -30,7 +30,7 @@ interface ServerOptions {
   full?: 'ok' | 'busy' | 'failed'
 }
 
-/** Fake server for FocusSection's five endpoints — mirrors the fetch-mocking setup used
+/** Fake server for FocusSection's five endpoints. Mirrors the fetch-mocking setup used
  * elsewhere in this codebase (e.g. FirstRunDialog.test.tsx): a single vi.fn matching on
  * url+method, recording every call so a test can assert what was actually sent. */
 function fakeServer(opts: ServerOptions = {}) {
@@ -146,7 +146,7 @@ describe('FocusSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
 
     expect(await screen.findByText(/45 bedrifter/)).toBeInTheDocument()
-    // The rendered role="status" node proves nothing about the actual announcement — assert the
+    // The rendered role="status" node proves nothing about the actual announcement. Assert the
     // live region useAnnounce feeds, the way every other announced state change in this suite
     // does (spec B5: "A resolved preview is announced").
     const liveRegion = document.querySelector('[aria-live="polite"]')
@@ -311,9 +311,9 @@ describe('FocusSection', () => {
 
     expect(await screen.findByText('72')).toBeInTheDocument()
     expect(screen.getByText('63')).toBeInTheDocument()
-    // '62' was already there — still exactly one chip for it, not a duplicate.
+    // '62' was already there. Still exactly one chip for it, not a duplicate.
     expect(screen.getAllByText('62')).toHaveLength(1)
-    // The offer itself is exactly the codes not already configured (spec B4) — proven here by
+    // The offer itself is exactly the codes not already configured (spec B4). This is proven by
     // what actually gets a preview request, not just by the resulting chip list: '62' must never
     // be re-queried since it was never "added".
     await waitFor(() => {
@@ -367,7 +367,7 @@ describe('FocusSection', () => {
       </TestQueryProvider>
     )
 
-    // Same instance, not a remount — the typed code is still sitting in the field.
+    // Same instance, not a remount. The typed code is still sitting in the field.
     expect(screen.getByLabelText('Legg til bransje')).toHaveValue('63')
 
     await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))

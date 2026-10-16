@@ -18,7 +18,7 @@ export interface Focus {
 }
 
 /** NAV level-2 categories Hugin's sync gates ads to. ad.category strings look like
- * "IT / Utvikling; IT / Drift, vedlikehold" — matching against these is String.includes. */
+ * "IT / Utvikling; IT / Drift, vedlikehold", so matching against these is String.includes. */
 export const KNOWN_CATEGORIES: readonly string[] = ['Utvikling', 'Drift, vedlikehold']
 
 const STORAGE_KEY = 'hugin-focus'
@@ -72,7 +72,7 @@ function normalizeFocus(focus: Focus): Focus {
 
 /** Validated read of the persisted focus preference. Returns null for: missing key, unreadable
  * storage, invalid JSON, a schema version other than 1 or 2, or malformed fields. A v1 record is
- * migrated and written back as v2 (best-effort). null means "unanswered" — never treat it as an
+ * migrated and written back as v2 (best-effort). null means "unanswered". Never treat it as an
  * empty focus. */
 export function loadFocus(): Focus | null {
   let raw: string | null
@@ -109,7 +109,7 @@ export function saveFocus(focus: Focus): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 2, ...normalizeFocus(focus) }))
   } catch {
-    /* localStorage unavailable (private mode etc.) — choice just won't persist */
+    /* localStorage unavailable (private mode etc.), so the choice just won't persist */
   }
 }
 
@@ -117,11 +117,11 @@ export function clearFocus(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY)
   } catch {
-    /* localStorage unavailable — nothing to clear */
+    /* localStorage unavailable, so there is nothing to clear */
   }
 }
 
-/** Tracked ads bypass focus entirely (hard spec rule — a pipeline deadline must never be hidden
+/** Tracked ads bypass focus entirely (hard spec rule: a pipeline deadline must never be hidden
  * by a filter). Otherwise region and category each fail open on missing data. */
 export function adMatchesFocus(
   ad: { kommune: string | null; category: string | null; pipelineStatus: string | null },
@@ -143,7 +143,7 @@ export function adMatchesFocus(
 
 interface FocusContextValue {
   focus: Focus | null
-  /** `persist: false` keeps the lens for this session only — the first-run dialog uses it on
+  /** `persist: false` keeps the lens for this session only. The first-run dialog uses it on
    * a failed scope save, so the dialog comes back on the next launch. */
   setFocus: (focus: Focus, options?: { persist?: boolean }) => void
   resetFocus: () => void

@@ -127,7 +127,7 @@ describe('loadFocus validation (v2)', () => {
     expect(loadFocus()).toBeNull()
   })
 
-  it('does not check kommuner against the register — an unknown number is kept', () => {
+  it('does not check kommuner against the register, so an unknown number is kept', () => {
     store({ v: 2, regions: [{ fylke: '34', kommuner: ['3499'] }], categories: [] })
     expect(loadFocus()).toEqual({ regions: [{ fylke: '34', kommuner: ['3499'] }], categories: [] })
   })

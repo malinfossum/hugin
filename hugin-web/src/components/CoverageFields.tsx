@@ -23,7 +23,7 @@ const FYLKE_OPTIONS = [...FYLKER.entries()]
 /** The fylke → kommune cascade for the SERVER scope (coverage), shared by the first-run dialog
  * and Settings. Fieldset + legend name the group after the fylke; each checkbox row is a ≥44 px
  * target (see .coverage-kommune in main.css). Coverage outside the rendered fylke is listed
- * below the cascade with a remove button each — switching fylke moves the current selection
+ * below the cascade with a remove button each. Switching fylke moves the current selection
  * there rather than dropping it, so the cascade can build a multi-fylke scope one fylke at a
  * time and a save never narrows what it did not show. */
 export function CoverageFields({ idPrefix, draft, onChange, kommuner }: Props) {

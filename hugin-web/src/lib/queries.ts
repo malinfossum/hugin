@@ -18,7 +18,7 @@ export const queryKeys = {
   sources: ['sources'] as const,
   status: ['status'] as const,
   syncStatus: ['sync-status'] as const,
-  /** Prefix of every ads list (visible and hidden-included) — invalidate this one. */
+  /** Prefix of every ads list (visible and hidden-included). Invalidate this one. */
   ads: ['ads'] as const,
   adsList: (includeHidden: boolean) => ['ads', { includeHidden }] as const,
   new: ['new'] as const,
@@ -78,7 +78,7 @@ export const recommendedCodesQuery = () =>
 
 /** The running sync's progress, polled every 2s. Polling never stops (not even in a background
  * tab or after a sync completes): a later "Synk nå" is picked up by the next tick, and a running
- * sync must finish its announce/refresh cycle whichever view is showing — which is why its observer
+ * sync must finish its announce/refresh cycle whichever view is showing. That is why its observer
  * (SyncWatcherProvider) lives in the shell, not the dashboard. A failed poll keeps the
  * previous data and the next tick tries again. */
 export const syncStatusQuery = () =>

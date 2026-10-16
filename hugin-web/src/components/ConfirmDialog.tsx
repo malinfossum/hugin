@@ -6,13 +6,13 @@ interface Props {
   title: string
   children?: ReactNode
   confirmLabel: string
-  /** Keeps the confirm button disabled — the typed-confirmation gate on a destructive action
+  /** Keeps the confirm button disabled: the typed-confirmation gate on a destructive action
    * (ResetSection's hard reset). Defaults to enabled, so every existing caller is unaffected. */
   confirmDisabled?: boolean
   /** 'danger' styles the confirm button as destructive (ResetSection) instead of the default
    * recommended-action styling. Defaults to 'primary', so every existing caller is unaffected. */
   variant?: 'primary' | 'danger'
-  /** Id of an element in `children` that explains why the confirm button is disabled — set as
+  /** Id of an element in `children` that explains why the confirm button is disabled. Set as
    * the button's `aria-describedby` (ResetSection's hard reset points this at its "Skriv
    * NULLSTILL for å bekrefte" label). Omitted by every other caller, so the attribute is simply
    * absent for them. */
@@ -34,16 +34,16 @@ export function ConfirmDialog({
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   // Now that a dialog can hold a form field (ResetSection's hard reset), showModal()'s default
-  // focus would land on the first focusable descendant — that field, or worse, the Eksport link
-  // ahead of it — instead of announcing the dialog itself. Mirrors FirstRunDialog's own
+  // focus would land on the first focusable descendant (that field, or worse, the Eksport link
+  // ahead of it) instead of announcing the dialog itself. Mirrors FirstRunDialog's own
   // tabIndex={-1} heading-ref pattern (Task 11 finding 4).
   const headingRef = useRef<HTMLHeadingElement>(null)
   const t = useT()
   // Latest `open` prop, so the native close handler can tell a user-initiated close
-  // (Escape — fires while `open` is still true from the parent's point of view) apart
+  // (Escape, which fires while `open` is still true from the parent's point of view) apart
   // from the close our own effect triggers after the parent already flipped `open` to
   // false in response to onConfirm/onCancel. Without this, dialog.close() below fires
-  // a native 'close' event that would call onCancel a second time — even after confirm.
+  // a native 'close' event that would call onCancel a second time, even after confirm.
   const openRef = useRef(open)
 
   useEffect(() => {

@@ -24,9 +24,9 @@ const EMPTY_FORM: SourceFormState = { label: '', url: '' }
 const errorText = (err: unknown) => (err instanceof ApiError ? err.message : String(err))
 
 /** Settings view (spec v3.2 item 8): sources CRUD + reorder. Language and theme are topbar
- * toggles only (v3.6.1) — they used to be duplicated as cards here. The Dekning section (v3.4)
+ * toggles only (v3.6.1). They used to be duplicated as cards here. The Dekning section (v3.4)
  * lives in CoverageSection, and the Visningsfilter card (v3.6) lives in DisplayFilterSection.
- * Brreg/NAV aren't editable here — they're fixed, i18n-sourced entries shown on the dashboard's
+ * Brreg/NAV aren't editable here. They're fixed, i18n-sourced entries shown on the dashboard's
  * SourcesCard, not rows in this list. */
 export function SettingsView() {
   const { data: sources = [], isError: sourcesLoadFailed, refetch } = useQuery(sourcesQuery())
@@ -296,7 +296,7 @@ export function SettingsView() {
       <CoverageSection
         onSaved={() => {
           setCoverageVersion((v) => v + 1)
-          // A scope was just written — the same live-value fix as first-run's onDone (Task 11
+          // A scope was just written: the same live-value fix as first-run's onDone (Task 11
           // finding 1), for the path that never goes through FirstRunDialog at all.
           markScopeConfigured()
         }}

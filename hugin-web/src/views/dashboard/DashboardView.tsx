@@ -5,10 +5,10 @@ import { SourcesCard } from './SourcesCard'
 import { SyncHeader } from './SyncHeader'
 
 interface DashboardViewProps {
-  /** Which ads the deadline list shows — lives in the URL (`?show=all`) so a reload keeps it. */
+  /** Which ads the deadline list shows. It lives in the URL (`?show=all`) so a reload keeps it. */
   show: 'active' | 'all'
   onShowChange: (show: 'active' | 'all') => void
-  /** Reopens the first-run dialog — wired from App.tsx (SyncHeader's empty-coverage prompt). */
+  /** Reopens the first-run dialog: wired from App.tsx (SyncHeader's empty-coverage prompt). */
   onRequestCoverage: () => void
 }
 

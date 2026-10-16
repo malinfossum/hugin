@@ -148,10 +148,10 @@ describe('NeedsAction', () => {
     }
 
     // NeedsAction's own filter already requires pipelineStatus === 'active', so every ad it
-    // shows is tracked — the adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
+    // shows is tracked. The adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
     // to protect pipeline deadlines) makes the focus lens a structural no-op here. This ad sits
     // outside the seeded focus region (Oslo, kommune '0301', vs. focus fylke '34') and would be
-    // filtered by region if the bypass didn't apply — it must still render.
+    // filtered by region if the bypass didn't apply. It must still render.
     it('still shows a tracked, near-deadline ad outside the focus region (bypass makes the lens a no-op here)', async () => {
       seedFocus()
       const ads = [

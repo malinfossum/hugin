@@ -12,8 +12,8 @@ function jsonResponse(body: unknown) {
 
 /** Fake server covering what the Companies and Settings views need on mount, plus
  * FirstRunDialog's four calls (every test that renders <App /> hits it, since focus starts
- * unstored) — a bare, no-scope-chosen response set so the dialog's own suite (FirstRunDialog.test.tsx)
- * carries the interesting scope/kommune scenarios. */
+ * unstored). It is a bare, no-scope-chosen response set so the dialog's own suite
+ * (FirstRunDialog.test.tsx) carries the interesting scope/kommune scenarios. */
 function fakeServer(
   options: {
     putFails?: boolean
@@ -55,7 +55,7 @@ function fakeServer(
       return Promise.resolve(jsonResponse([]))
     }
     if (url === '/api/config/discovery' && method === 'GET') {
-      // Read-only mode seeds Focus from this response (App.tsx's seed effect) — give it a
+      // Read-only mode seeds Focus from this response (App.tsx's seed effect). Give it a
       // concrete scope so the seed's effect on rendered state is observable, not just the fetch.
       return Promise.resolve(
         jsonResponse(
@@ -98,7 +98,7 @@ afterEach(() => {
   // boot into whichever view the previous test navigated to.
   window.history.replaceState(null, '', '/')
   // App now reads FocusProvider's stored focus (localStorage 'hugin-focus') to decide whether
-  // to render FirstRunDialog — clear it so a later test's App doesn't inherit a prior test's
+  // to render FirstRunDialog. Clear it so a later test's App doesn't inherit a prior test's
   // saved (or absent) choice. Existing tests above run with no stored focus, so the dialog
   // renders behind them; that's expected (see the App-level tests below) and doesn't disturb
   // these assertions since jsdom's <dialog> polyfill has no real modal focus trap.
@@ -369,7 +369,7 @@ describe('App', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/config/discovery', undefined))
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
 
-    // The seed is session-only state, not a side effect on its own — prove it actually reached
+    // The seed is session-only state, not a side effect on its own. Prove it actually reached
     // the app's Focus context by reading it back from a view that filters by it: Bedrifter shows
     // only companies in the seeded fylke ('34' = Innlandet, from the fake server's discovery
     // config), not the unset default (which would show both).
@@ -428,7 +428,7 @@ describe('App first-run focus dialog', () => {
     expect(await screen.findByRole('dialog', { name: 'Hva vil du følge?' })).toBeInTheDocument()
   })
 
-  it('completing that same dialog actually closes it — scopeConfigured is a live value, not the boot-time snapshot (Task 11 finding 1)', async () => {
+  it('completing that same dialog actually closes it: scopeConfigured is a live value, not the boot-time snapshot (Task 11 finding 1)', async () => {
     const fetchMock = fakeServer({ scopeConfigured: false })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
@@ -440,11 +440,11 @@ describe('App first-run focus dialog', () => {
 
     // Without the fix, `scopeConfigured === false` never stops being true (it's the frozen
     // boot-time fetch, and this fake server always answers false), so the dialog reopens right
-    // after Start closes it — the fresh-install path this whole feature exists for.
+    // after Start closes it. That is the fresh-install path this whole feature exists for.
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
     )
-    // Nor did the user dismiss it via Escape — Start is what closed it.
+    // Nor did the user dismiss it via Escape. Start is what closed it.
     expect(
       fetchMock.mock.calls.some(
         ([u, i]) =>
@@ -464,7 +464,7 @@ describe('App first-run focus dialog', () => {
     })
 
     expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
-    // Dismissing is session-only — nothing gets persisted, so a fresh mount (next launch)
+    // Dismissing is session-only. Nothing gets persisted, so a fresh mount (next launch)
     // would show the prompt again. Confirmed indirectly: no 'hugin-focus' key was written.
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
     // Also releases a held boot sync on a fresh install (a mutation, so it goes out a tick later).

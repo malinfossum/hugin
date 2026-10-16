@@ -434,7 +434,7 @@ describe('NewSinceLastVisit', () => {
     await screen.findByRole('dialog')
 
     // A sync completes while the dialog is still open: /api/new now has a newer asOf
-    // (and different content — one more ad), and DashboardView would invalidate the
+    // (and different content: one more ad), and DashboardView would invalidate the
     // `new` query to trigger this refetch.
     currentDto = newDto({
       asOf: '2026-08-19T10:15:00Z',
@@ -461,7 +461,7 @@ describe('NewSinceLastVisit', () => {
     })
     await act(() => client.invalidateQueries({ queryKey: queryKeys.new }))
 
-    // Wait for content that only exists in response B — proves the refetch actually
+    // Wait for content that only exists in response B. This proves the refetch actually
     // applied, rather than relying on userEvent timing or a fetch-call count.
     await screen.findByText('Ny annonse fra runde to')
 

@@ -3,7 +3,7 @@ import { googleSearchUrl } from '../lib/links'
 
 /** Every company row/detail always offers a working link (spec decision 6, amended v3.2):
  * the verified website when present, else a muted note plus a Google search fallback.
- * Proff dropped from the fallback in v3.2 — it lives on only as a seeded header source. */
+ * Proff dropped from the fallback in v3.2. It lives on only as a seeded header source. */
 export function CompanyLink({
   name,
   kommuneNavn,

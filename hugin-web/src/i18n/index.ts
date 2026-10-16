@@ -23,7 +23,7 @@ export function localeFor(lang: Lang): string {
 }
 
 /** localStorage `hugin-lang` wins; otherwise nb/nn/no browsers get nb (bokmål is the only
- * Norwegian table we ship — Nynorsk users still get Norwegian, not English), everyone else
+ * Norwegian table we ship, so Nynorsk users still get Norwegian, not English), everyone else
  * gets en. Exported (not just used internally) so detection can be unit-tested directly
  * instead of only indirectly through LanguageProvider's initial state. */
 export function detectLang(): Lang {
@@ -31,7 +31,7 @@ export function detectLang(): Lang {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (stored === 'nb' || stored === 'en') return stored
   } catch {
-    /* localStorage unavailable (private mode etc.) — fall through to browser detection */
+    /* localStorage unavailable (private mode etc.), so fall through to browser detection */
   }
   const browserLang = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : ''
   const isNorwegian =
@@ -45,7 +45,7 @@ interface LanguageContextValue {
 }
 
 // Default (no Provider in the tree) mirrors LiveRegion's AnnounceContext convention: a working,
-// non-throwing fallback rather than an error — 'nb' matches the test default set in
+// non-throwing fallback rather than an error. 'nb' matches the test default set in
 // test-setup.ts. The real app always wraps the tree in LanguageProvider (see App.tsx).
 const LanguageContext = createContext<LanguageContextValue>({ lang: 'nb', setLang: () => {} })
 
@@ -61,7 +61,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, next)
     } catch {
-      /* localStorage unavailable — choice just won't persist */
+      /* localStorage unavailable, so the choice just won't persist */
     }
   }, [])
 

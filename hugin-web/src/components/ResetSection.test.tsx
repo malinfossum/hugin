@@ -88,7 +88,7 @@ function renderSection(fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 /** jsdom's own Location.reload throws "Not implemented", and `location.reload` itself is a
- * non-configurable own property jsdom refuses to redefine — so replace the whole `location`
+ * non-configurable own property jsdom refuses to redefine, so replace the whole `location`
  * global instead, the way `vi.stubGlobal` is meant to be used. `vi.unstubAllGlobals()` in
  * afterEach restores the real one. */
 function stubReload() {
@@ -197,7 +197,7 @@ describe('ResetSection', () => {
       )
     ).toBeInTheDocument()
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
-    // No reload until the person acts on it — both trigger buttons stay disabled meanwhile,
+    // No reload until the person acts on it. Both trigger buttons stay disabled meanwhile,
     // since the database this screen reflects is already gone.
     expect(reload).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Nullstill dekning' })).toBeDisabled()

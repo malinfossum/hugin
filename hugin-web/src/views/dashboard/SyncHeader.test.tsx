@@ -170,7 +170,7 @@ describe('SyncHeader', () => {
         })
       },
     })
-    // A fresh callback each render mimics an un-memoized parent — the fix must not rely on it.
+    // A fresh callback each render mimics an un-memoized parent. The fix must not rely on it.
     const onSyncCompleted = renderHeader(fetchMock)
 
     await act(async () => {
