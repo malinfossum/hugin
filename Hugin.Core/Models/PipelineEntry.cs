@@ -34,16 +34,16 @@ public sealed class PipelineEntry
     /// <summary>First sighting of a company in the pipeline.</summary>
     public static PipelineEntry Track(string orgnr, PipelineStatus status, string? why,
         string? note, string? svar, bool? starred, DateTimeOffset now) => new()
-    {
-        Orgnr = orgnr,
-        Status = status,
-        Starred = starred ?? false,
-        Why = why ?? "",
-        Note = note,
-        SvarText = svar,
-        Created = now,
-        Updated = now,
-    };
+        {
+            Orgnr = orgnr,
+            Status = status,
+            Starred = starred ?? false,
+            Why = why ?? "",
+            Note = note,
+            SvarText = svar,
+            Created = now,
+            Updated = now,
+        };
 
     /// <summary>Moves an existing entry. Options that were not passed leave the stored values
     /// alone: moving the status must never wipe the begrunnelse written last week, or the star.
