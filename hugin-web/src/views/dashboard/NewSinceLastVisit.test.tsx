@@ -121,13 +121,13 @@ function fakeServer(dto: NewDto | null) {
   return fetchMock
 }
 
-function renderView(fetchMock: ReturnType<typeof vi.fn>) {
+function renderView(fetchMock: ReturnType<typeof vi.fn>, initialPath?: string) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <TestQueryProvider>
       <LanguageProvider>
         <LiveRegionProvider>
-          <TestRouter>
+          <TestRouter initialPath={initialPath}>
             <NewSinceLastVisit />
           </TestRouter>
         </LiveRegionProvider>
@@ -184,9 +184,12 @@ describe('NewSinceLastVisit', () => {
     const branch = screen.getByRole('link', { name: 'Acme Avdeling' })
     expect(branch).toHaveAttribute('href', '/companies/715787631')
     expect(branch.closest('li')).toHaveTextContent('Acme Avdeling [avdeling]')
+  })
 
-    // The dashboard's ?show= is not carried into the company list's search.
-    expect(screen.getByRole('link', { name: 'Beta AS' })).toHaveAttribute(
+  it("does not carry the dashboard's ?show= into a company link", async () => {
+    renderView(fakeServer(newDto()), '/?show=all')
+
+    expect(await screen.findByRole('link', { name: 'Beta AS' })).toHaveAttribute(
       'href',
       '/companies/715787632'
     )

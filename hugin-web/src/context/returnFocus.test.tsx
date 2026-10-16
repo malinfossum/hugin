@@ -33,8 +33,8 @@ async function renderProbe() {
 }
 
 /** Follows a link away and comes back with Back, as Tilbake or the browser would. */
-async function leaveAndReturn() {
-  await act(() => router.navigate({ to: '/companies/{-$orgnr}', params: { orgnr: '1' } }))
+async function leaveAndReturn(orgnr = '1') {
+  await act(() => router.navigate({ to: '/companies/{-$orgnr}', params: { orgnr } }))
   await act(async () => router.history.back())
   await waitFor(() => expect(router.state.location.pathname).toBe('/'))
 }
@@ -42,7 +42,7 @@ async function leaveAndReturn() {
 describe('ReturnFocusProvider', () => {
   it('focuses the remembered link once its entry is current again', async () => {
     await renderProbe()
-    returnFocus.remember('company:1')
+    returnFocus.remember('company:1', '/companies/1')
     await leaveAndReturn()
 
     act(() => returnFocus.restore(screen.getByTestId('page')))
@@ -52,7 +52,21 @@ describe('ReturnFocusProvider', () => {
 
   it('does nothing when the page was never left (a Ctrl-click opened a new tab instead)', async () => {
     await renderProbe()
-    returnFocus.remember('company:1')
+    returnFocus.remember('company:1', '/companies/1')
+
+    act(() => returnFocus.restore(screen.getByTestId('page')))
+
+    expect(document.body).toHaveFocus()
+  })
+
+  it('forgets a link that was never followed once the page is left another way', async () => {
+    await renderProbe()
+    // Remembered, but the person stayed (a new tab, or the unsaved-changes guard), then left
+    // through the nav instead.
+    returnFocus.remember('company:1', '/companies/1')
+    await act(() => router.navigate({ to: '/companies/{-$orgnr}', params: {} }))
+    await act(async () => router.history.back())
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
 
     act(() => returnFocus.restore(screen.getByTestId('page')))
 
@@ -61,7 +75,7 @@ describe('ReturnFocusProvider', () => {
 
   it('leaves focus alone when the person has already moved it', async () => {
     await renderProbe()
-    returnFocus.remember('company:1')
+    returnFocus.remember('company:1', '/companies/1')
     await leaveAndReturn()
     const elsewhere = screen.getByRole('button', { name: 'Elsewhere' })
     act(() => elsewhere.focus())
@@ -73,8 +87,8 @@ describe('ReturnFocusProvider', () => {
 
   it('focuses the fallback when the link is gone, never leaving focus on the body', async () => {
     await renderProbe()
-    returnFocus.remember('company:2')
-    await leaveAndReturn()
+    returnFocus.remember('company:2', '/companies/2')
+    await leaveAndReturn('2')
 
     act(() =>
       returnFocus.restore(screen.getByTestId('page'), screen.getByRole('heading', { name: 'Card' }))
@@ -85,7 +99,7 @@ describe('ReturnFocusProvider', () => {
 
   it('does nothing when the page is reached again by a new entry, not by going back', async () => {
     await renderProbe()
-    returnFocus.remember('company:1')
+    returnFocus.remember('company:1', '/companies/1')
     await act(() => router.navigate({ to: '/companies/{-$orgnr}', params: { orgnr: '1' } }))
     // A push back to the same page, as the nav does: a new entry with a different index.
     await act(() => router.navigate({ to: '/' }))

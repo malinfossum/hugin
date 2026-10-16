@@ -156,7 +156,9 @@ export function NewSinceLastVisit() {
                         params={{ orgnr: company.orgnr }}
                         search={{}}
                         data-return-focus={`company:${company.orgnr}`}
-                        onClick={() => remember(`company:${company.orgnr}`)}
+                        onClick={() =>
+                          remember(`company:${company.orgnr}`, `/companies/${company.orgnr}`)
+                        }
                       >
                         {displayCompanyName(company.name)}
                       </Link>

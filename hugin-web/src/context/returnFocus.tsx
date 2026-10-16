@@ -11,8 +11,8 @@ import {
 
 interface ReturnFocus {
   /** Call as a link that leaves the page is followed. Remembers the link by its
-   * `data-return-focus` value and the history entry it was followed from. */
-  remember: (key: string) => void
+   * `data-return-focus` value, the path it leads to and the history entry it was followed from. */
+  remember: (key: string, to: string) => void
   /** Call once the page has rendered fresh data. If the page was left and its entry is current
    * again (Back, or a detail's close), focuses the remembered link inside `container`, or
    * `fallback` when the link is gone, and forgets it. Never moves focus the person has already
@@ -26,11 +26,13 @@ const ReturnFocusContext = createContext<ReturnFocus>({ remember: noop, restore:
 
 interface Pending {
   key: string
+  /** The path the link leads to. */
+  to: string
   /** The history entry the link was followed from. */
   index: number
-  /** Set once a navigation away from that entry has resolved. A Ctrl-click that opened a new
-   * tab, or a navigation the unsaved-changes guard blocked, does not set it by itself; a later
-   * real navigation away does. */
+  /** Set once the link's own navigation has resolved. If the first navigation away goes
+   * somewhere else (a Ctrl-click opened a new tab, or the unsaved-changes guard kept the person
+   * here, and they later left through the nav), the link was never followed and is forgotten. */
   left: boolean
 }
 
@@ -46,14 +48,16 @@ export function ReturnFocusProvider({ children }: { children: ReactNode }) {
     () =>
       router.subscribe('onResolved', ({ toLocation }) => {
         const target = pending.current
-        if (target && toLocation.state.__TSR_index !== target.index) target.left = true
+        if (!target || target.left || toLocation.state.__TSR_index === target.index) return
+        if (toLocation.pathname === target.to) target.left = true
+        else pending.current = null
       }),
     [router]
   )
 
   const remember = useCallback(
-    (key: string) => {
-      pending.current = { key, index: router.history.location.state.__TSR_index, left: false }
+    (key: string, to: string) => {
+      pending.current = { key, to, index: router.history.location.state.__TSR_index, left: false }
     },
     [router]
   )

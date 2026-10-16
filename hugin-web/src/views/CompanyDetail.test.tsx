@@ -228,6 +228,8 @@ describe('CompanyDetail', () => {
     expect(
       await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
     ).toBeInTheDocument()
+    // The heading takes focus once per opened company: a branch tab keeps it.
+    expect(screen.getByRole('tab', { name: 'Oslo' })).toHaveFocus()
     expect(screen.getByText('Oslo-annonse')).toBeInTheDocument()
     expect(screen.queryByText('Hovedannonse')).not.toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'https://oslo.example' })
