@@ -88,7 +88,7 @@ public sealed class DemoSnapshotTests
     /// <summary>Important 2 fix: PRAGMA wal_checkpoint(TRUNCATE)'s (busy, log, checkpointed) row
     /// is now actually read instead of discarded by ExecuteSqlRawAsync. A second connection with
     /// an open read transaction on the working db holds a read mark the checkpoint cannot fold
-    /// past — the same signal a concurrent reader produces on the real host — so the copy must
+    /// past (the same signal a concurrent reader produces on the real host), so the copy must
     /// be skipped rather than risk a stale snapshot with an empty log.</summary>
     [Test]
     public async Task Copy_back_skips_a_busy_checkpoint_instead_of_writing_a_stale_snapshot()
@@ -108,7 +108,7 @@ public sealed class DemoSnapshotTests
         }
         await using (var hold = reader.CreateCommand())
         {
-            // The first read inside the transaction is what actually takes the WAL read mark —
+            // The first read inside the transaction is what actually takes the WAL read mark.
             // BEGIN alone (DEFERRED) does not.
             hold.CommandText = "SELECT COUNT(*) FROM Sources;";
             await hold.ExecuteScalarAsync();

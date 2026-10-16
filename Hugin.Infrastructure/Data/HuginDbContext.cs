@@ -16,7 +16,7 @@ public sealed class HuginDbContext(DbContextOptions<HuginDbContext> options) : D
     // SQLite has no DateTimeOffset type; without a converter to a comparable column, EF
     // cannot translate comparisons or ordering at all ("could not be translated"). The
     // stock DateTimeOffsetToBinaryConverter is NOT the answer: it encodes local wall-clock
-    // ticks first, so SQL ordering across different offsets follows the local clock — an ad
+    // ticks first, so SQL ordering across different offsets follows the local clock. An ad
     // expiring 23:59+02:00 sorted after a UTC "now" of 22:30Z despite being 31 minutes past.
     // Storing UtcTicks makes every SQL comparison an instant comparison. The original offset
     // is not kept; values read back as UTC, which is how Hugin treats time everywhere.

@@ -46,7 +46,7 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
         }
         else
         {
-            // FirstSeen is never touched again — it is what "new" is measured against.
+            // FirstSeen is never touched again. It is what "new" is measured against.
             existing.Name = company.Name;
             existing.MunicipalityNumber = company.MunicipalityNumber;
             existing.NaceCode = company.NaceCode;
@@ -54,10 +54,10 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
             existing.IsBranch = company.IsBranch;
 
             // The register offering no website must not erase one adopted from an ad
-            // (v3.1 item 24) — absence is not a correction, a different value is.
+            // (v3.1 item 24). Absence is not a correction, a different value is.
             if (company.Website is not null)
             {
-                // A website check is only meaningful for the URL it was run against — a
+                // A website check is only meaningful for the URL it was run against. A
                 // changed website invalidates it, so it must be re-checked on the next sync.
                 if (existing.Website != company.Website)
                 {
@@ -99,7 +99,7 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
     public async Task<bool> AdoptWebsiteAsync(string orgnr, string website, CancellationToken ct = default)
     {
         if (await db.Companies.FindAsync([orgnr], ct) is not { } company) return false;
-        // Only fill a gap or replace a confirmed-dead register link — a healthy register
+        // Only fill a gap or replace a confirmed-dead register link. A healthy register
         // website always outranks what an ad happens to claim.
         if (company.Website is not null && company.WebsiteOk != false) return false;
 
@@ -159,7 +159,7 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
         else
         {
             // Feed-owned fields. The enrichment-only ones (orgnr, dates, link, category) are
-            // null in the stub NAV sends once an ad is closed — keep what an earlier enrichment
+            // null in the stub NAV sends once an ad is closed. Keep what an earlier enrichment
             // stored, or the ad loses its employer link and vanishes from company history and
             // the Expired section. Hugin-owned fields (Hidden) are never touched here.
             existing.Title = ad.Title;
@@ -179,7 +179,7 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
     public async Task<IReadOnlyList<Ad>> GetActiveAsync(DateTimeOffset now, string? municipalityNumber = null,
         bool includeHidden = false, CancellationToken ct = default) =>
         await db.Ads
-            // SQL twin of Ad.IsOpenAt — EF cannot translate the method itself.
+            // SQL twin of Ad.IsOpenAt. EF cannot translate the method itself.
             .Where(a => a.IsActive && (a.Expires == null || a.Expires >= now)
                 && (municipalityNumber == null || a.MunicipalityNumber == municipalityNumber)
                 && (includeHidden || !a.Hidden))
@@ -385,7 +385,7 @@ public sealed class EfSourceRepository(HuginDbContext db) : ISourceRepository
         db.Sources.Remove(source);
 
         // ISourceRepository documents Position as 1-based and dense after every write that
-        // changes the set — a delete must close the gap it would otherwise leave, not just
+        // changes the set. A delete must close the gap it would otherwise leave, not just
         // shrink the set, or a downstream consumer inferring position from list index would
         // silently desync from the stored value.
         var remaining = await db.Sources.Where(s => s.Id != id).OrderBy(s => s.Position).ToListAsync(ct);
@@ -400,7 +400,7 @@ public sealed class EfSourceRepository(HuginDbContext db) : ISourceRepository
     {
         var sources = await db.Sources.ToListAsync(ct);
 
-        // Every existing id must appear exactly once — a mismatch (missing or extra) leaves
+        // Every existing id must appear exactly once. A mismatch (missing or extra) leaves
         // positions untouched rather than silently dropping or orphaning a source.
         if (sources.Count != orderedIds.Count || !sources.Select(s => s.Id).ToHashSet().SetEquals(orderedIds))
             return false;

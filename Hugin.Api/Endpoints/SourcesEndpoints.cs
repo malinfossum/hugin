@@ -49,7 +49,7 @@ public static class SourcesEndpoints
     }
 
     // Label: trimmed, required, capped at MaxLabelLength. Url: normalized through the same
-    // UrlGuard.Website gate as seeding — null means rejected.
+    // UrlGuard.Website gate as seeding. Null means rejected.
     private static (string Label, string Url)? Validate(SourceWriteRequest request)
     {
         var label = request.Label?.Trim() ?? "";

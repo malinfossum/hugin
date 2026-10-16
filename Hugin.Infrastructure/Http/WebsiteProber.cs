@@ -9,7 +9,7 @@ namespace Hugin.Infrastructure.Http;
 /// checks reuses connections instead of exhausting sockets; tests pass their own client.
 ///
 /// Norway's register carries `hjemmeside` values that were https-prefixed at ingest whether or
-/// not the site actually answers there (see <see cref="Services.UrlGuard.Website"/>) — so both
+/// not the site actually answers there (see <see cref="Services.UrlGuard.Website"/>), so both
 /// variants are always tried, https first, regardless of what scheme the input happens to carry.
 /// </summary>
 public sealed partial class WebsiteProber(HttpClient http) : IWebsiteProber
@@ -32,13 +32,13 @@ public sealed partial class WebsiteProber(HttpClient http) : IWebsiteProber
         }
         catch (Exception)
         {
-            // Timeout, DNS failure, TLS failure, connection refused — all read as "not ok".
+            // Timeout, DNS failure, TLS failure, connection refused: all read as "not ok".
             return false;
         }
     }
 
     /// <summary>Both variants are built from the bare host+path, not from swapping whatever
-    /// scheme (if any) the input already carried — a scheme-less "smakode.example" and an explicit
+    /// scheme (if any) the input already carried. A scheme-less "smakode.example" and an explicit
     /// "https://smakode.example" probe identically.</summary>
     private static (string Https, string Http) Variants(string url)
     {
@@ -46,7 +46,7 @@ public sealed partial class WebsiteProber(HttpClient http) : IWebsiteProber
         return ($"https://{withoutScheme}", $"http://{withoutScheme}");
     }
 
-    /// <summary>6s timeout — a best-effort background check must never let one slow host stall
+    /// <summary>6s timeout: a best-effort background check must never let one slow host stall
     /// the whole sync; a browser-ish user agent, since some sites block anything else; redirects
     /// followed so a real www→apex (or https-upgrade) hop still counts as reachable.</summary>
     public static HttpClient CreateHttpClient()

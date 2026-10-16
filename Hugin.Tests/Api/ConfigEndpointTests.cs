@@ -94,8 +94,8 @@ public sealed class ConfigEndpointTests
     }
 
     [TestCase("1234", "Ukjent kommunenummer «1234».")]
-    [TestCase("34", "Ugyldig kommunenummer «34» — må være 4 sifre.")]
-    [TestCase("abcd", "Ugyldig kommunenummer «abcd» — må være 4 sifre.")]
+    [TestCase("34", "Ugyldig kommunenummer «34». Det må være 4 sifre.")]
+    [TestCase("abcd", "Ugyldig kommunenummer «abcd». Det må være 4 sifre.")]
     public async Task Put_discovery_rejects_bad_numbers_and_writes_nothing(string number, string title)
     {
         using var factory = new ApiFactory();
@@ -111,7 +111,7 @@ public sealed class ConfigEndpointTests
     }
 
     [TestCase("99", "Ukjent fylkesnummer «99».")]
-    [TestCase("3", "Ugyldig fylkesnummer «3» — må være 2 sifre.")]
+    [TestCase("3", "Ugyldig fylkesnummer «3». Det må være 2 sifre.")]
     public async Task Put_discovery_rejects_bad_fylker(string fylke, string title)
     {
         using var factory = new ApiFactory();
@@ -128,7 +128,7 @@ public sealed class ConfigEndpointTests
     public async Task Put_discovery_rejects_an_empty_scope_and_writes_nothing()
     {
         // Nothing selected at all would be written as an empty allow-set, which the sync can
-        // only read as "no scope" — and an empty kommunenummer filter is exactly what makes
+        // only read as "no scope". And an empty kommunenummer filter is exactly what makes
         // Brreg answer with the whole country. Refuse it at the door instead.
         using var factory = new ApiFactory();
         factory.Brreg.Kommuner.AddRange(Register);
@@ -138,7 +138,7 @@ public sealed class ConfigEndpointTests
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That((await response.Content.ReadFromJsonAsync<ProblemDetailsProbe>())!.Title,
-            Is.EqualTo("Tom dekning — velg minst én kommune, ett fylke eller hele Norge."));
+            Is.EqualTo("Tom dekning. Velg minst én kommune, ett fylke eller hele Norge."));
         Assert.That(File.Exists(factory.ConfigPath), Is.False, "nothing written");
     }
 
@@ -154,7 +154,7 @@ public sealed class ConfigEndpointTests
         Assert.That(File.Exists(factory.ConfigPath), Is.False);
 
         var fylke = await client.PutAsJsonAsync("/api/config/discovery", new DiscoveryWriteRequest([], ["34"], false));
-        Assert.That(fylke.StatusCode, Is.EqualTo(HttpStatusCode.OK), "the dialog degrades to fylke granularity — that save must still work");
+        Assert.That(fylke.StatusCode, Is.EqualTo(HttpStatusCode.OK), "the dialog degrades to fylke granularity, so that save must still work");
     }
 
     [Test]
@@ -393,7 +393,7 @@ public sealed class ConfigEndpointTests
     public async Task Preview_degrades_to_a_service_unavailable_problem_when_brreg_is_down()
     {
         // The dashboard card must still render with the count simply unknown, rather than the
-        // request blowing up — a caught Brreg failure becomes a 503 Problem, not an unhandled 500.
+        // request blowing up. A caught Brreg failure becomes a 503 Problem, not an unhandled 500.
         using var factory = new ApiFactory();
         factory.Brreg.Throws = true;
         using var client = factory.CreateApiClient();

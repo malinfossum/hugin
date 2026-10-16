@@ -19,7 +19,7 @@ public static class ReadEndpoints
     {
         // The NAV feed terms (arbeidsplassen.nav.no/vilkar-api) say a republished ad must be removed
         // the moment it goes inactive at NAV. The hosted demo republishes, so its review lists never
-        // carry a closed ad; the local app keeps its own history — nobody else can reach it.
+        // carry a closed ad; the local app keeps its own history. Nobody else can reach it.
         app.MapGet("/api/new", async (NewItemsService service, IClock clock, HuginConfig config,
             IKommuneRepository kommuneRepo, IAdRepository ads, PublicModeOptions mode) =>
         {
@@ -52,7 +52,7 @@ public static class ReadEndpoints
             var now = clock.UtcNow;
             var openAds = await ads.CountOpenByEmployerAsync(now);
 
-            // A branch's own detail never lists branches — Brreg's register is two-tier, so a
+            // A branch's own detail never lists branches. Brreg's register is two-tier, so a
             // branch has none of its own, and showing its parent's siblings here would just be
             // the same tab strip one level removed from where the user actually is.
             var branches = company.IsBranch
@@ -82,15 +82,15 @@ public static class ReadEndpoints
             bool includeActive = false) =>
         {
             if (ParseExtractScope(scope) is not { } parsedScope)
-                return Results.Problem(statusCode: 400, title: $"Ukjent scope «{scope}» — bruk new | category | all.");
+                return Results.Problem(statusCode: 400, title: $"Ukjent scope «{scope}». Bruk new | category | all.");
 
             if (ParseExtractFormat(format) is not { } parsedFormat)
-                return Results.Problem(statusCode: 400, title: $"Ukjent format «{format}» — bruk md | txt | json.");
+                return Results.Problem(statusCode: 400, title: $"Ukjent format «{format}». Bruk md | txt | json.");
 
             try
             {
                 var result = await extract.ExtractAsync(parsedScope, parsedFormat, category, includeActive);
-                // Results.File sets Content-Disposition: attachment; filename=... for us — the
+                // Results.File sets Content-Disposition: attachment; filename=... for us. The
                 // filename is server-chosen (scope/date, no user input reaches it).
                 var bytes = System.Text.Encoding.UTF8.GetBytes(result.Content);
                 return Results.File(bytes, result.ContentType, result.FileName);

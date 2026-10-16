@@ -30,14 +30,14 @@ public class MunicipalityScopeTests
     [Test]
     public void ResolveName_resolves_any_known_name_regardless_of_the_gate()
     {
-        var config = new HuginConfig(); // no default geography — resolution here comes from Register
+        var config = new HuginConfig(); // no default geography. Resolution here comes from Register
         var scope = MunicipalityScope.Build(config, Register);
 
         // Register name, case-insensitive.
         Assert.That(scope.ResolveName("HAMAR"), Is.EqualTo("3403"));
         Assert.That(scope.ResolveName("hamar"), Is.EqualTo("3403"));
 
-        // Register-only name (config-absent) still resolves — resolution and gating are separate.
+        // Register-only name (config-absent) still resolves. Resolution and gating are separate.
         Assert.That(scope.ResolveName("LARVIK"), Is.EqualTo("3909"));
         Assert.That(scope.ResolveName("larvik"), Is.EqualTo("3909"));
 
@@ -55,7 +55,7 @@ public class MunicipalityScopeTests
         var larvikNumber = scope.ResolveName("LARVIK");
         Assert.That(larvikNumber, Is.EqualTo("3909"), "resolves even though Larvik is not in scope");
         Assert.That(scope.AllOfNorway || scope.AllowedNumbers.Contains(larvikNumber!), Is.False,
-            "the gate excludes it — resolution and gating are separate concerns");
+            "the gate excludes it. Resolution and gating are separate concerns");
 
         var hamarNumber = scope.ResolveName("HAMAR");
         Assert.That(scope.AllOfNorway || scope.AllowedNumbers.Contains(hamarNumber!), Is.True);

@@ -10,7 +10,7 @@
          skips the manifest (and warns) when nothing is embedded, so the placeholder further down
          keeps it present on a clean checkout without wwwroot. -->
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
-    <!-- No IIS hosting here (Kestrel self-hosted, started by double-click) — an unused web.config
+    <!-- No IIS hosting here (Kestrel self-hosted, started by double-click). An unused web.config
          next to the exe is just noise. -->
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
     <!-- The version /api/status reports. build.ps1 and publish-demo.ps1 override it from
@@ -21,11 +21,11 @@
   </PropertyGroup>
 
   <!-- The single-file publish (-p:PublishSingleFile=true, see build.ps1) embeds wwwroot into the
-       exe already — the Web SDK's default publish behavior of ALSO copying a physical wwwroot/
+       exe already. The Web SDK's default publish behavior of ALSO copying a physical wwwroot/
        folder (plus its Static Web Assets endpoint manifest) next to the exe would silently defeat
        that: Program.cs's physical-folder branch takes priority whenever wwwroot exists beside the
        exe, so the embedded copy would never actually get served. Suppressed for that one publish
-       only — the normal dual-exe `publish\` output still gets its physical wwwroot as before. -->
+       only. The normal dual-exe `publish\` output still gets its physical wwwroot as before. -->
   <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>

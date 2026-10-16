@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Hugin.Tests;
 
-/// <summary>In-memory stand-ins for every Task 5 interface — no network, no database.</summary>
+/// <summary>In-memory stand-ins for every Task 5 interface: no network, no database.</summary>
 internal sealed class FakeClock(DateTimeOffset now) : IClock
 {
     public DateTimeOffset UtcNow { get; set; } = now;
@@ -19,15 +19,15 @@ public sealed class FakeBrregClient : IBrregClient
     public List<Kommune> Kommuner { get; init; } = [];
     public bool Throws { get; set; }
 
-    /// <summary>Makes only GetByOrgnrAsync fail, leaving GetCompaniesAsync (discovery) alone —
-    /// for tests isolating employer-enrichment failure from discovery failure.</summary>
+    /// <summary>Makes only GetByOrgnrAsync fail, leaving GetCompaniesAsync (discovery) alone.
+    /// For tests isolating employer-enrichment failure from discovery failure.</summary>
     public bool ThrowsOnGetByOrgnr { get; set; }
 
-    /// <summary>Makes only GetKommunerAsync fail — for tests isolating the kommune-register
+    /// <summary>Makes only GetKommunerAsync fail. For tests isolating the kommune-register
     /// fetch from discovery failure.</summary>
     public bool ThrowsOnGetKommuner { get; set; }
 
-    /// <summary>1-based call number at which GetCompaniesAsync should throw — earlier calls
+    /// <summary>1-based call number at which GetCompaniesAsync should throw. Earlier calls
     /// succeed normally. For tests isolating a mid-chunk failure from a first-call failure.</summary>
     public int? ThrowOnCompaniesCallNumber { get; set; }
 
@@ -35,16 +35,16 @@ public sealed class FakeBrregClient : IBrregClient
     public List<string> ByOrgnrRequests { get; } = [];
 
     /// <summary>Every municipality-number set GetCompaniesAsync was actually called with, in
-    /// call order — one entry per chunk when discovery is scaled to fylker/all-Norway.</summary>
+    /// call order: one entry per chunk when discovery is scaled to fylker/all-Norway.</summary>
     public List<IReadOnlyList<string>> CompaniesRequests { get; } = [];
 
-    /// <summary>Awaited before every call returns — lets a test hold a request open.</summary>
+    /// <summary>Awaited before every call returns. Lets a test hold a request open.</summary>
     public Func<Task>? OnCall { get; set; }
 
     /// <summary>Canned counts per nace code for preview tests.</summary>
     public Dictionary<string, (int Units, string? Name)> Counts { get; init; } = [];
 
-    /// <summary>Every code CountAsync was actually called with — a rejected code must not appear.</summary>
+    /// <summary>Every code CountAsync was actually called with. A rejected code must not appear.</summary>
     public List<string> CountRequests { get; } = [];
 
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
@@ -92,10 +92,10 @@ public sealed class FakeNavFeedClient(params FeedPage[] pages) : INavFeedClient
     public bool Throws { get; set; }
 
     /// <summary>Every scope GetPageAsync/GetFirstPageAsync was actually called with, in call
-    /// order — lets a test assert the sync-built scope reached the client.</summary>
+    /// order. Lets a test assert the sync-built scope reached the client.</summary>
     public List<MunicipalityScope> RequestedScopes { get; } = [];
 
-    /// <summary>Awaited before every call returns — lets a test hold a sync open.</summary>
+    /// <summary>Awaited before every call returns. Lets a test hold a sync open.</summary>
     public Func<Task>? OnCall { get; set; }
 
     public Task<FeedPage> GetPageAsync(string? cursor, HuginConfig config, MunicipalityScope scope, CancellationToken ct = default)
@@ -441,7 +441,7 @@ public sealed class FakeWebsiteProber : IWebsiteProber
     private int _current;
     private readonly object _gate = new();
 
-    /// <summary>Awaited before every call returns — lets a test hold several probes open at
+    /// <summary>Awaited before every call returns. Lets a test hold several probes open at
     /// once, to observe how many run concurrently.</summary>
     public Func<Task>? OnCall { get; set; }
 
@@ -466,7 +466,7 @@ internal sealed class FakeSourceRepository : ISourceRepository
 {
     public List<Source> Store { get; } = [];
 
-    /// <summary>When set, UpdateAsync succeeds but removes the row before returning — simulates
+    /// <summary>When set, UpdateAsync succeeds but removes the row before returning. Simulates
     /// a concurrent delete landing between the endpoint's UpdateAsync and its re-fetch.</summary>
     public bool RemoveAfterUpdate { get; set; }
 

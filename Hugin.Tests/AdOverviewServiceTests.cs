@@ -19,7 +19,7 @@ public sealed class AdOverviewServiceTests
         };
 
     // FakeAdRepository/FakePipelineRepository only expose a parameterless ctor + Store
-    // collection to populate, unlike the brief's illustrative params ctors — these helpers
+    // collection to populate, unlike the brief's illustrative params ctors. These helpers
     // bridge that gap while keeping every assertion below identical to the brief.
     private static FakeAdRepository AdsWith(params Ad[] ads)
     {
@@ -233,7 +233,7 @@ public sealed class AdOverviewServiceTests
     public async Task Exact_match_preferred_over_root_match_when_both_exist()
     {
         var now = DateTimeOffset.UtcNow;
-        // Ad's own orgnr has a pipeline entry directly (exact match, Svar) — but its root
+        // Ad's own orgnr has a pipeline entry directly (exact match, Svar), but its root
         // (via ParentOrgnr) also happens to carry a pipeline entry (Funnet). Exact wins.
         var ads = AdsWith(MakeAd("a", orgnr: "111111111"));
         var pipeline = PipelineWith(

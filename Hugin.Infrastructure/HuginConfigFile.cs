@@ -9,9 +9,9 @@ namespace Hugin.Infrastructure;
 /// <summary>
 /// hugin.json as a live file. Load() re-reads it every call (per-run sync config).
 /// WriteDiscovery and WriteFocus each replace only their own keys inside the raw JSON document,
-/// so every other key — navToken, linkouts, categories and any hand-added field, plus whichever
-/// of discovery/focus the call in question doesn't own — round-trips with its value and relative
-/// order intact (formatting is normalized — JsonNode does not keep whitespace or comments).
+/// so every other key (navToken, linkouts, categories and any hand-added field, plus whichever
+/// of discovery/focus the call in question doesn't own) round-trips with its value and relative
+/// order intact (formatting is normalized: JsonNode does not keep whitespace or comments).
 /// Writes back up first (hugin.json.bak) and are atomic (temp file + replace): a failed write
 /// never leaves a half-written config behind.
 /// </summary>
@@ -20,7 +20,7 @@ public sealed class HuginConfigFile(string configPath) : IConfigSource
     private static readonly string[] DiscoveryKeys = ["municipalities", "fylker", "allOfNorway"];
     private static readonly string[] FocusKeys = ["naeringskoder", "keywords"];
 
-    // UnsafeRelaxedJsonEscaping keeps "Gjøvik" readable instead of "Gjøvik" — the file is
+    // UnsafeRelaxedJsonEscaping keeps "Gjøvik" readable instead of "Gj\u00F8vik". The file is
     // hand-edited by its owner, so it must stay human-readable.
     private static readonly JsonSerializerOptions WriteOptions = new()
     {

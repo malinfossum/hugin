@@ -3,10 +3,10 @@ using Hugin.Core.Abstractions;
 namespace Hugin.Api.Services;
 
 /// <summary>
-/// Boot sync. Normal mode: every start (a held gate means a fresh install waiting for first-run —
+/// Boot sync. Normal mode: every start (a held gate means a fresh install waiting for first-run:
 /// the dialog, or its Esc, starts the sync). Public mode: F1 sleeps after ~20 min idle and every
 /// wake is a cold start, so the boot sync only runs when the last NAV sync is missing or older
-/// than <see cref="PublicMinimumInterval"/> — otherwise repeat visitors would spend the daily
+/// than <see cref="PublicMinimumInterval"/>. Otherwise repeat visitors would spend the daily
 /// CPU quota on syncs that fetch nothing (demo spec A6).
 /// </summary>
 public sealed class StartupSync(SyncRunner runner, BootSyncGate gate, IConfiguration configuration,

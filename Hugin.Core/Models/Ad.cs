@@ -21,7 +21,7 @@ public sealed class Ad
     public DateTimeOffset FirstSeen { get; set; }
     public bool IsActive { get; set; }
 
-    // Dashboard dismiss flag ("Skjul") — Hugin's own field, never touched by sync upserts.
+    // Dashboard dismiss flag ("Skjul"). Hugin's own field, never touched by sync upserts.
     public bool Hidden { get; set; }
 
     // Manual link to the pipeline entry this ad belongs to, for ads posted by a sister unit the

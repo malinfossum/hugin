@@ -47,7 +47,7 @@ public sealed class SourceRepositoryTests
         await repo.AddAsync("LinkedIn", "https://linkedin.com", CancellationToken.None);
 
         var all = await repo.GetAllAsync(CancellationToken.None);
-        // Insertion order and position order diverge after this reorder — GetAll must follow Position.
+        // Insertion order and position order diverge after this reorder. GetAll must follow Position.
         await repo.ReorderAsync([all[2].Id, all[0].Id, all[1].Id], CancellationToken.None);
 
         var reordered = await repo.GetAllAsync(CancellationToken.None);
@@ -89,7 +89,7 @@ public sealed class SourceRepositoryTests
     public async Task DeleteAsync_renumbers_remaining_sources_to_stay_dense()
     {
         // ISourceRepository documents Position as 1-based and dense after every write that
-        // changes the set — deleting the middle of {1,2,3} must leave {1,2}, not {1,3}.
+        // changes the set. Deleting the middle of {1,2,3} must leave {1,2}, not {1,3}.
         var repo = new EfSourceRepository(_db);
         var a = await repo.AddAsync("A", "https://a.no", CancellationToken.None);
         var b = await repo.AddAsync("B", "https://b.no", CancellationToken.None);

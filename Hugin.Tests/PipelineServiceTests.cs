@@ -9,7 +9,7 @@ public class PipelineServiceTests
     private static readonly DateTimeOffset T1 = new(2026, 8, 18, 8, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset T2 = T1.AddDays(1);
 
-    // NACE 92 — the discovery filter would never surface it, but tracking must still work.
+    // NACE 92. The discovery filter would never surface it, but tracking must still work.
     private const string NyfjellSpill = "777777777";
 
     private static RegisterCompany Known() =>
@@ -295,7 +295,7 @@ public class PipelineServiceTests
     public async Task A_branch_sharing_a_brand_with_a_standalone_tracked_company_is_brand()
     {
         // The shape that triggered v3.7: the new branch's parent is not tracked, and the tracked
-        // company is a separate company with no parent — only the brand word links them.
+        // company is a separate company with no parent. Only the brand word links them.
         var h = await BuildAsync(withKnownCompany: false);
         await Register(h, "222222222", "AKME IT SOLUTIONS AS");
         await Register(h, "111111111", "AKME PROFESSIONALS AS AVD HEDMARK", parent: "333333333");

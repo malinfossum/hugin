@@ -50,7 +50,7 @@ public sealed class PipelineService(
 
         var existing = await pipeline.GetByOrgnrAsync(orgnr, ct);
 
-        // Options that were not passed leave the stored values alone — re-tracking a company
+        // Options that were not passed leave the stored values alone. Re-tracking a company
         // to move its status must never wipe the begrunnelse written last week, or the star.
         var entry = new PipelineEntry
         {
@@ -68,7 +68,7 @@ public sealed class PipelineService(
         await pipeline.UpsertAsync(entry, ct);
 
         var warning = status != PipelineStatus.Active && string.IsNullOrWhiteSpace(entry.Why)
-            ? $"mangler begrunnelse — legg til hvorfor {orgnr} er interessant (--why \"...\")"
+            ? $"mangler begrunnelse. Legg til hvorfor {orgnr} er interessant (--why \"...\")"
             : null;
 
         // Only a new row warns: re-tracking an entry means the relationship was accepted once.

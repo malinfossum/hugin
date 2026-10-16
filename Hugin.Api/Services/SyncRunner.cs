@@ -47,7 +47,7 @@ public sealed class SyncRunner(IServiceScopeFactory scopes, IClock clock, ILogge
         }
 
         // Demo spec B3: seeder → checkpoint → copy-back, in that order, so the persisted snapshot
-        // carries the seeded pipeline — run in its own try so a throw above (or in here) never
+        // carries the seeded pipeline. It runs in its own try so a throw above (or in here) never
         // costs the demo its persisted snapshot, and a seed/copy failure is never mislabelled as
         // a Brreg/Nav result. Both are no-ops outside public mode.
         try

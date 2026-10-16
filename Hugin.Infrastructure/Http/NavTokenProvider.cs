@@ -6,7 +6,7 @@ namespace Hugin.Infrastructure.Http;
 /// Supplies the bearer token for the NAV feed. A token configured in hugin.json wins and is
 /// never sent anywhere; otherwise the rotating public token is fetched and cached in memory.
 ///
-/// /api/publicToken does not return a bare token — the body is a human-readable line followed
+/// /api/publicToken does not return a bare token. The body is a human-readable line followed
 /// by the JWT (verified against the live endpoint 2026-08-18), so the JWT is extracted, not
 /// used verbatim. Sending the whole body as a header value yields 400, not 401.
 /// </summary>

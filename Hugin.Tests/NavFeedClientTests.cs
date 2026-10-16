@@ -10,7 +10,7 @@ public class NavFeedClientTests
 {
     private const string NavBase = "https://pam-stilling-feed.nav.no/";
 
-    // No default geography any more (spec v3.5 Part A) — every fixture below resolves via
+    // No default geography any more (spec v3.5 Part A). Every fixture below resolves via
     // HAMAR or RINGSAKER, so those two are configured explicitly to keep this byte-identical
     // to the old config-only resolution.
     private static readonly HuginConfig Config =
@@ -82,7 +82,7 @@ public class NavFeedClientTests
     public async Task Keyword_hit_outside_configured_categories_is_dropped()
     {
         // "Prosjektutvikler massivtre" survives the keyword net ("utvikler"), but NAV files
-        // it under Bygg og anlegg — the category gate is what keeps it out of the radar.
+        // it under Bygg og anlegg. The category gate is what keeps it out of the radar.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"66666666-6666-6666-6666-666666666666",
              "status":"ACTIVE","title":"Prosjektutvikler massivtre","businessName":"Mjøstre Limtre AS",
@@ -112,7 +112,7 @@ public class NavFeedClientTests
     [Test]
     public async Task Municipality_resolves_via_the_kommune_register_when_allowed()
     {
-        // LARVIK is not one of the configured Innlandet municipalities — only the register
+        // LARVIK is not one of the configured Innlandet municipalities. Only the register
         // (via a fylke prefix) knows it. Before H18 NAV ads could never reach names like this.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
@@ -147,8 +147,8 @@ public class NavFeedClientTests
     [Test]
     public async Task Municipality_unresolved_under_a_config_only_scope_is_filtered_out()
     {
-        // Same LARVIK ad, but the scope only knows the plain Innlandet config — no fylke, no
-        // register entry for Larvik — so the name resolves to nothing and the ad is dropped.
+        // Same LARVIK ad, but the scope only knows the plain Innlandet config (no fylke, no
+        // register entry for Larvik), so the name resolves to nothing and the ad is dropped.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
              "status":"ACTIVE","title":"Utvikler","businessName":"Larvik Software AS",
@@ -168,8 +168,8 @@ public class NavFeedClientTests
     [Test]
     public async Task Employer_without_homepage_maps_to_null()
     {
-        // Nyfjell Spill-shaped fixture: employer object present, but with no homepage field —
-        // this must not throw and must not fall back to some other URL.
+        // Nyfjell Spill-shaped fixture: employer object present, but with no homepage field.
+        // This must not throw and must not fall back to some other URL.
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"77777777-7777-7777-7777-777777777777",
              "status":"ACTIVE","title":"Utvikler","businessName":"Nyfjell Spill AS",
@@ -200,7 +200,7 @@ public class NavFeedClientTests
     public async Task Detail_status_wins_over_a_stale_active_summary()
     {
         // A backfill reads historical entries: the summary said ACTIVE when it was written,
-        // but the ad may be gone by the time we enrich it — NAV then returns the stub with
+        // but the ad may be gone by the time we enrich it. NAV then returns the stub with
         // its CURRENT status. That status is the truth about "now".
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"55555555-5555-5555-5555-555555555555",
@@ -265,7 +265,7 @@ public class NavFeedClientTests
 
         var feedRequest = requested.First(u => u.Contains("api/v1/feed", StringComparison.Ordinal));
         Assert.That(feedRequest, Does.EndWith("api/v1/feed"),
-            "the oldest page lives at the bare feed URL — no page id, no last=true");
+            "the oldest page lives at the bare feed URL: no page id, no last=true");
     }
 
     [Test]

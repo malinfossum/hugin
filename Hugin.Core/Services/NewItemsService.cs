@@ -17,7 +17,7 @@ public sealed class NewItemsService(
     IReviewMarkRepository reviewMark,
     IClock clock)
 {
-    /// <summary>Returns null when no sync has ever completed — there is no baseline to diff against.</summary>
+    /// <summary>Returns null when no sync has ever completed. There is no baseline to diff against.</summary>
     public async Task<NewItems?> GetNewAsync(CancellationToken ct = default)
     {
         if (await reviewMark.GetAsync(ct) is not { } since) return null;
