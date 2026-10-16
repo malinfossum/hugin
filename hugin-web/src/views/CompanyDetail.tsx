@@ -140,10 +140,13 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
   // Switching branch tabs keeps focus on the tab, so this runs only when `orgnr` changes. The
   // router restores the page's scroll position; focusing must not move it.
   useEffect(() => {
-    if (!detail || focusedFor.current === orgnr) return
+    if (!detail || error || focusedFor.current === orgnr) return
+    // An error hides the body, so the heading is missing; keep the one-shot for a successful
+    // retry (`error` is a dependency so the retry runs this again).
+    if (!headingRef.current) return
     focusedFor.current = orgnr
-    headingRef.current?.focus({ preventScroll: true })
-  }, [orgnr, detail])
+    headingRef.current.focus({ preventScroll: true })
+  }, [orgnr, detail, error])
 
   const selectUnit = (unitOrgnr: string) => setSelection({ root: orgnr, unit: unitOrgnr })
 

@@ -23,6 +23,8 @@ interface ServerState {
   syncRunning: boolean
   /** The digest has no new companies, as after «Merk som sett» (Task 6). */
   newEmpty?: boolean
+  /** The digest request fails, as on a server hiccup. */
+  newFails?: boolean
 }
 
 function fakeServer(state: ServerState) {
@@ -66,6 +68,7 @@ function fakeServer(state: ServerState) {
           })
         )
       case '/api/new':
+        if (state.newFails) return Promise.resolve(new Response('boom', { status: 500 }))
         return Promise.resolve(
           jsonResponse({
             companies: state.newEmpty
@@ -384,6 +387,25 @@ describe('AppShell closing a company detail', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
     // Marked seen in another tab meanwhile: the cache still has the company, the server not.
     state.newEmpty = true
+    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 2, name: 'Nytt siden sist' })).toHaveFocus()
+    )
+    expect(screen.queryByRole('link', { name: 'Acme AS' })).not.toBeInTheDocument()
+  })
+
+  it('a Back whose digest refetch fails returns focus to the card heading, not the body', async () => {
+    const state: ServerState = { companyName: 'Acme AS', syncRunning: false }
+    vi.stubGlobal('fetch', fakeServer(state))
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
+    // The cache still has the digest, so the card remounts with data and the refetch then fails.
+    state.newFails = true
     await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))

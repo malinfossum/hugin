@@ -93,10 +93,11 @@ export function NewSinceLastVisit() {
   // Back from a company opened here remounts this card and refetches its list. Once the fresh
   // list has rendered, focus goes back to the link that opened the company, or to this card's
   // heading when the company is no longer new (spec v3.8 B5). Waiting for the refetch keeps a
-  // link the fresh data removes from being focused for a moment and then lost.
+  // link the fresh data removes from being focused for a moment and then lost. A failed refetch
+  // also restores (to the heading), so focus never stays on <body>.
   useEffect(() => {
-    if (loaded && data && !isFetching) restore(sectionRef.current, headingRef.current)
-  }, [loaded, data, isFetching, restore])
+    if (!isFetching && (data || isError)) restore(sectionRef.current, headingRef.current)
+  }, [data, isError, isFetching, restore])
 
   return (
     <section
