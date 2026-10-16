@@ -37,7 +37,7 @@ const NAV = [
 }[]
 
 interface ShellActions {
-  /** Reopens the first-run dialog — the dashboard's empty-coverage prompt (SyncHeader). */
+  /** Reopens the first-run dialog. Used by the dashboard's empty-coverage prompt (SyncHeader). */
   requestCoverage: () => void
 }
 
@@ -55,7 +55,7 @@ export function AppShell() {
   const { focus, setFocus } = useFocus()
   const { readOnly, resolved, scopeConfigured, markScopeConfigured } = useReadOnly()
   const [focusPromptDismissed, setFocusPromptDismissed] = useState(false)
-  // Whether first-run has been completed (scope written) — a returning user with a stored focus
+  // Whether first-run has been completed (scope written). A returning user with a stored focus
   // has; a fresh one hasn't even after the focus is seeded on a failed PUT, so the dialog stays
   // up for the retry. A Settings reset (focus → null) reopens it either way.
   const [firstRunDone, setFirstRunDone] = useState(() => focus !== null)
@@ -77,7 +77,7 @@ export function AppShell() {
   // Never before /api/status has answered (a fresh visitor would see it flash, or worse, get it
   // for real and a Save that can only 403), and never on the read-only demo. `scopeConfigured
   // === false` catches a browser that already has a stored focus but the server has no scope
-  // (v3.5 Part A3/D1) — a stale localStorage focus alone can no longer hide that. Reuses the
+  // (v3.5 Part A3/D1). A stale localStorage focus alone can no longer hide that. Reuses the
   // status ReadOnlyProvider already fetched at boot; no second poll. `scopeConfigured` is a live
   // value (readOnly.tsx's `markScopeConfigured`), not a frozen snapshot: onDone below flips it
   // the moment first-run writes a scope, so this condition actually clears instead of reopening
@@ -118,7 +118,7 @@ export function AppShell() {
   }
 
   // Read-only demo: the first-run dialog never opens, so seed the render lens from the server's
-  // own scope (a GET, allowed) — the dashboard then opens straight onto Innlandet. Session-only:
+  // own scope (a GET, allowed). The dashboard then opens straight onto Innlandet. Session-only:
   // nothing is written to the visitor's storage that a Settings reset would have to undo.
   useEffect(() => {
     if (!readOnly || focus !== null) return
@@ -139,7 +139,7 @@ export function AppShell() {
     }
   }, [readOnly, focus, setFocus, queryClient])
 
-  // FirstRunDialog is a native <dialog> — while it's open+modal, everything outside it is
+  // FirstRunDialog is a native <dialog>. While it's open+modal, everything outside it is
   // inert, so focusing the h1 from onSave/onDismiss while the dialog is still open is a no-op.
   // Instead watch the dialog-open boolean's true->false transition: child effects run before
   // parent effects, so FirstRunDialog has already called dialog.close() by the time this fires,

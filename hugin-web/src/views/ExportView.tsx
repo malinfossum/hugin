@@ -22,7 +22,7 @@ const FORMAT_KEYS: { value: Format; labelKey: TranslationKey }[] = [
 function buildUrl(scope: Scope, format: Format, category: string, includeActive: boolean): string {
   const params = new URLSearchParams({ scope, format })
   if (scope === 'category') params.set('category', category)
-  // The include-Active checkbox only exists (and only applies) for the All scope — the
+  // The include-Active checkbox only exists (and only applies) for the All scope. The
   // Søkt/tracker section it controls isn't part of the new/category exports.
   if (scope === 'all' && includeActive) params.set('includeActive', 'true')
   return `/api/extract?${params.toString()}`

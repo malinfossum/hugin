@@ -57,7 +57,7 @@ describe('RegionChips', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('Innlandet: 3499')
   })
 
-  it('reads «Hele Norge» for empty regions — no list, no ✕', () => {
+  it('reads «Hele Norge» for empty regions: no list, no ✕', () => {
     render(<RegionChips regions={[]} onRemove={() => {}} />)
     expect(screen.getByText('Hele Norge')).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()

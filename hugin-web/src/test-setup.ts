@@ -3,7 +3,7 @@ import { beforeEach } from 'vitest'
 
 // Node 22+ defines its own global `localStorage` getter (returns undefined unless the process
 // was started with --localstorage-file). vitest's jsdom environment only copies a window
-// property onto globalThis when the key isn't already present there — so this Node global wins
+// property onto globalThis when the key isn't already present there. So this Node global wins
 // and jsdom's real, working localStorage never gets attached. Replace it with a minimal
 // in-memory Storage-compatible polyfill so localStorage-using code behaves the same in tests as
 // it does in a real browser.
@@ -35,7 +35,7 @@ if (typeof globalThis.localStorage === 'undefined') {
 // jsdom does not implement the <dialog> element's modal behavior.
 // Polyfill showModal/close so ConfirmDialog can be tested without a real browser.
 // close() mirrors the native no-op-when-already-closed rule and dispatches a real
-// 'close' event when it does close — so tests exercise ConfirmDialog's actual
+// 'close' event when it does close. That way tests exercise ConfirmDialog's actual
 // close-event handling instead of a handler that silently never fires.
 HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
   this.setAttribute('open', '')
@@ -46,11 +46,11 @@ HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
   this.dispatchEvent(new Event('close'))
 }
 
-// jsdom doesn't implement window.scrollTo — it logs a "Not implemented" console error instead
+// jsdom doesn't implement window.scrollTo. It logs a "Not implemented" console error instead
 // of the no-op real browsers give it in a headless context. App.tsx's view-switcher calls it to
 // restore per-view scroll position, so give it a minimal polyfill that actually tracks scrollY
 // (assignable in jsdom, matching the spec's [Replaceable] scrollY) rather than just swallowing
-// the call — that way a test can assert on scroll restoration if it ever needs to.
+// the call. That way a test can assert on scroll restoration if it ever needs to.
 window.scrollTo = ((x?: number | ScrollToOptions, y?: number) => {
   const top = typeof x === 'object' ? (x.top ?? window.scrollY) : (y ?? window.scrollY)
   window.scrollY = top

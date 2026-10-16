@@ -4,7 +4,7 @@ import { sourceLabel } from '../../lib/links'
 import { sourcesQuery } from '../../lib/queries'
 
 /** The db-backed sources row from the old SyncHeader linkouts, now its own card (spec v3.2
- * item 6). Brreg and NAV are always first and come from i18n, not the fetched list — a fetch
+ * item 6). Brreg and NAV are always first and come from i18n, not the fetched list. A fetch
  * failure still leaves those two usable. */
 export function SourcesCard() {
   const { data: sources = [], isError, refetch } = useQuery(sourcesQuery())

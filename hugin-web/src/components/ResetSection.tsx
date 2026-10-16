@@ -9,19 +9,19 @@ import type { ResetResultDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
 
-/** The exact word the hard reset's confirm field must match — spec-locked, and deliberately not
+/** The exact word the hard reset's confirm field must match. Spec-locked, and deliberately not
  * translated: a typed-confirmation phrase names the destructive action, not the UI language. */
 const CONFIRM_WORD = 'NULLSTILL'
 
 /** Settings → Nullstilling (spec v3.5 Part D): the last section, danger-styled, hidden entirely
- * in read-only mode. Two levels behind POST /api/reset — "scope" just clears the discovery
+ * in read-only mode. Two levels behind POST /api/reset. "scope" just clears the discovery
  * config (so the first-run dialog can ask again), "all" also wipes the database after a
  * VACUUM INTO snapshot. Both are refused with 409 while a sync runs; that must surface as a
  * failure, never as if the reset happened. The hard reset's success message names the snapshot
  * path (D2) and waits for the person to press its own reload button, rather than reloading out
  * from under the message the moment it appears. */
 export function ResetSection() {
-  // Best-effort — only used to show the counts in the hard-reset dialog. Missing counts just
+  // Best-effort. Only used to show the counts in the hard-reset dialog. Missing counts just
   // means that paragraph doesn't render; it never blocks either button.
   const { data: status } = useQuery(statusQuery())
   const queryClient = useQueryClient()
@@ -82,7 +82,7 @@ export function ResetSection() {
         text: t('reset.hardDone', { path: result.snapshotPath ?? '' }),
       })
       // Everything on screen assumed a database that no longer exists, so a reload is still the
-      // honest way to reflect that — but firing it here, before this render commits, is exactly
+      // honest way to reflect that. But firing it here, before this render commits, is exactly
       // why the snapshot path was never seen: `window.location.reload()` cuts the page away
       // before React paints the message above. Leave `saving` true (both trigger buttons stay
       // disabled) and wait for the person to read the path and press the reload button below
@@ -90,7 +90,7 @@ export function ResetSection() {
       // useEffect watching `hardMessage`.
     } catch (err) {
       setSaving(false)
-      // Re-typing the confirm word per attempt is the whole point of the gate — a failed
+      // Re-typing the confirm word per attempt is the whole point of the gate. A failed
       // attempt must not leave it armed for a silent retry on the next open (Task 11 finding 3).
       setConfirmText('')
       setHardMessage({

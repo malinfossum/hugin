@@ -24,7 +24,7 @@ import { useAnnounce } from './LiveRegion'
 interface Props {
   open: boolean
   value: Region[]
-  /** undefined = /api/kommuner has not answered yet, null = unreachable, list = ready — the
+  /** undefined = /api/kommuner has not answered yet, null = unreachable, list = ready. This is the
    * CoverageFields contract. The dialog never fetches; the view owns the one request. */
   kommuner: KommuneDto[] | null | undefined
   onApply: (regions: Region[]) => void

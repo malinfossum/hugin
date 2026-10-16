@@ -10,7 +10,7 @@ interface Props {
   kommuneNames?: ReadonlyMap<string, string>
   /** With it, every chip carries a ✕. Without it the chips are read-only (Bedrifter). */
   onRemove?: (fylke: string) => void
-  /** Where focus goes after the last chip's ✕ — the caller's «Velg områder …» button. */
+  /** Where focus goes after the last chip's ✕: the caller's «Velg områder …» button. */
   fallbackFocusRef?: RefObject<HTMLElement | null>
 }
 

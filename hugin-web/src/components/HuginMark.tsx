@@ -1,6 +1,6 @@
-// Hugin brand mark (Brand Pack v1.0.0 — two-mark system). `primary` (1B Corvid) is for
+// Hugin brand mark (Brand Pack v1.0.0, two-mark system). `primary` (1B Corvid) is for
 // 32 px and up; `micro` (1H Hybrid) keeps its silhouette legible at 16–24 px. Colored via
-// currentColor — var() never resolves in an SVG presentation attribute, so no hardcoded fill.
+// currentColor: var() never resolves in an SVG presentation attribute, so no hardcoded fill.
 interface Props {
   variant?: 'primary' | 'micro'
   title?: string

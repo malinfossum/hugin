@@ -25,7 +25,7 @@ describe('detectLang (browser fallback, no stored preference)', () => {
   const originalLanguage = navigator.language
 
   beforeEach(() => {
-    // test-setup.ts pins every test to nb via localStorage — clear it here so these tests
+    // test-setup.ts pins every test to nb via localStorage. Clear it here so these tests
     // actually exercise the navigator.language branch instead of short-circuiting on it.
     window.localStorage.removeItem('hugin-lang')
   })
@@ -41,7 +41,7 @@ describe('detectLang (browser fallback, no stored preference)', () => {
     Object.defineProperty(navigator, 'language', { value, configurable: true })
   }
 
-  it('nn-NO (Nynorsk) resolves to nb — Norwegian users never fall through to English', () => {
+  it('nn-NO (Nynorsk) resolves to nb, so Norwegian users never fall through to English', () => {
     mockNavigatorLanguage('nn-NO')
     expect(detectLang()).toBe('nb')
   })

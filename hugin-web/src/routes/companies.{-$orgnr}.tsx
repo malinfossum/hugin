@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import { type CompaniesFilters, CompaniesView } from '../views/CompaniesView'
 
 /** One route for the list (`/companies`) and a company's detail (`/companies/<orgnr>`), so the
- * view keeps its identity — and with it the list's focus restoration — when a company opens. */
+ * view keeps its identity (and with it the list's focus restoration) when a company opens. */
 export const Route = createFileRoute('/companies/{-$orgnr}')({
   validateSearch: (search: Record<string, unknown>): CompaniesFilters => ({
     // The URL parser turns "123" into a number; the filter is always text.

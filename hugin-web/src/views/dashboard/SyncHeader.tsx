@@ -15,7 +15,7 @@ function formatLastSync(source: SourceStateDto | null | undefined, t: T): string
 }
 
 interface SyncHeaderProps {
-  /** Reopens the first-run dialog — the empty-coverage prompt's own button (v3.5 Part A4). */
+  /** Reopens the first-run dialog: the empty-coverage prompt's own button (v3.5 Part A4). */
   onRequestCoverage: () => void
 }
 

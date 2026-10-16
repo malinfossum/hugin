@@ -18,7 +18,7 @@ export interface CoverageOthers {
 
 /** What the coverage cascade edits: one rendered fylke ('' = all of Norway), the kommuner
  * checked under it (none = the whole fylke), plus everything outside it. This is the SERVER
- * scope — what sync fetches — as opposed to Focus, the render-side lens. */
+ * scope (what sync fetches), as opposed to Focus, the render-side lens. */
 export interface CoverageDraft {
   fylke: string
   kommuner: string[]
@@ -39,17 +39,17 @@ export function toDiscoveryRequest(draft: CoverageDraft): DiscoveryWriteRequest 
 
 /** What to actually save, given what the cascade could render. With no kommune list
  * (`kommuner === null`) the checkboxes are not drawn at all, so any prefilled numbers are
- * invisible and un-clearable — and the API refuses numbers it cannot verify against the
+ * invisible and un-clearable. The API also refuses numbers it cannot verify against the
  * register. Degrade to the fylke alone: that is what the user sees, so that is what is saved.
- * The others stay in the request: they are listed by name, so nothing invisible is dropped —
- * and when they hold kommuner, the API refuses the save (503) rather than writing numbers it
+ * The others stay in the request. They are listed by name, so nothing invisible is dropped.
+ * When they hold kommuner, the API refuses the save (503) rather than writing numbers it
  * cannot verify, so the user sees an error instead of a silently narrowed scope. */
 export function effectiveDraft(draft: CoverageDraft, kommuner: KommuneDto[] | null): CoverageDraft {
   return kommuner === null ? { ...draft, kommuner: [] } : draft
 }
 
-/** The cascade renders one fylke at a time — the first whole fylke, else the fylke of the first
- * kommune — and everything else lands in `others`. */
+/** The cascade renders one fylke at a time (the first whole fylke, else the fylke of the first
+ * kommune). Everything else lands in `others`. */
 export function fromDiscoveryConfig(config: DiscoveryConfigDto): CoverageDraft {
   if (config.allOfNorway) return { fylke: '', kommuner: [], others: NO_OTHERS }
   const fylke = config.fylker[0] ?? fylkeOf(config.municipalities[0]?.number) ?? ''
@@ -116,8 +116,8 @@ export function removeOtherFylke(draft: CoverageDraft, fylke: string): CoverageD
 }
 
 /** Seeds the render lens from the chosen scope without loss (spec v3.6 A5): the rendered fylke
- * with its ticked kommuner, every other whole fylke, and the other kommuner grouped by fylke —
- * merged into an existing narrowed region, absorbed by an existing whole one. */
+ * with its ticked kommuner, every other whole fylke, and the other kommuner grouped by fylke.
+ * Each is merged into an existing narrowed region, or absorbed by an existing whole one. */
 export function toFocusSeed(draft: CoverageDraft, categories: string[]): Focus {
   if (!draft.fylke) return { regions: [], categories }
   const byFylke = new Map<string, Region>()

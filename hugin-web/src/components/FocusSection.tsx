@@ -10,7 +10,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
 import { UnsavedChangesGuard } from './UnsavedChangesGuard'
 
-// Same shape the API validates with — kept in sync deliberately, so the field can reject a typo
+// Same shape the API validates with, kept in sync deliberately, so the field can reject a typo
 // without a round-trip.
 const NACE_PATTERN = /^\d{2}(\.\d{1,3})?$/
 
@@ -22,7 +22,7 @@ function relatedCode(code: string, existing: string[]): string | undefined {
 }
 
 /** Builds the "already covered" message, always naming the narrower code first regardless of
- * which of the two the user actually typed — a prefix relationship between valid NACE codes
+ * which of the two the user actually typed. A prefix relationship between valid NACE codes
  * always has the shorter (fewer digits) one as the broader industry. */
 function coveredMessage(code: string, other: string, t: T): string {
   const narrower = other.length > code.length ? other : code
@@ -32,8 +32,8 @@ function coveredMessage(code: string, other: string, t: T): string {
 
 interface Props {
   /** Bumped by SettingsView whenever a coverage save succeeds. Folded into the preview cache
-   * key below (not used as a remount key — a coverage save must not discard an unsaved
-   * bransje/keyword draft, Task 11 finding 2): a code already previewed under the old coverage
+   * key below (not used as a remount key: a coverage save must not discard an unsaved
+   * bransje/keyword draft, Task 11 finding 2). A code already previewed under the old coverage
    * still fetches fresh, since the cache key it lived under no longer matches. */
   previewVersion?: number
 }
@@ -41,7 +41,7 @@ interface Props {
 /** Settings → Fokus (spec v3.5 Part B): edits the server's discovery bransjer/keywords through
  * hugin.json, mirroring CoverageSection's shape (load once, keep a draft, one Save) and its
  * conventions for read-only mode, saving and errors. Also carries the Part C full-backfill
- * button — SyncHeader's polling must stay identity-independent (v3.2 trap), so it can't live
+ * button. SyncHeader's polling must stay identity-independent (v3.2 trap), so it can't live
  * there. */
 export function FocusSection({ previewVersion = 0 }: Props) {
   const { data: loadedData, isError, refetch } = useQuery(focusConfigQuery())
@@ -49,7 +49,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   // Only a load that never produced a config counts, as in CoverageSection.
   const loadFailed = isError && loadedData === undefined
   // What the person has changed since the config loaded: the draft is the server's config until
-  // then, and their edits after — a refetch never overwrites an unsaved draft.
+  // then, and their edits after. A refetch never overwrites an unsaved draft.
   const [edited, setEdited] = useState<FocusConfigDto | null>(null)
   const draft = edited ?? loaded
   // An edit undone by hand (a code added and removed again) leaves nothing to lose. A code or
@@ -69,15 +69,15 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   const addCodeRef = useRef<HTMLInputElement>(null)
   const addKeywordRef = useRef<HTMLInputElement>(null)
   // Cached per code, keyed together with `previewVersion` so a coverage save (which bumps that
-  // prop) invalidates every cached count without needing a remount — a count fetched under the
+  // prop) invalidates every cached count without needing a remount. A count fetched under the
   // old kommuner is a wrong number, not a stale one, but the fix is a version-qualified key
   // (Task 11 finding 2), not throwing away the whole component (and the unsaved draft with it).
   const previewCache = useRef(new Map<string, NacePreviewDto>())
 
-  // Shared by the single-code preview button and the "Legg til anbefalte" total below — both
+  // Shared by the single-code preview button and the "Legg til anbefalte" total below. Both
   // want the same cache (keyed on `previewVersion`, so a coverage save invalidates every count
   // at once) and the same guarded fetch, and neither should re-request a code the other already
-  // resolved. Returns null on any failure (bad response, network, Brreg down) — callers decide
+  // resolved. Returns null on any failure (bad response, network, Brreg down). Callers decide
   // how to talk about a null, since a single failed code means something different in a sum
   // than it does on its own.
   const resolvePreview = useCallback(
@@ -95,7 +95,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   )
 
   const preview = async (code: string) => {
-    // A format failure is not a Brreg failure — claiming one (as this used to, via the same
+    // A format failure is not a Brreg failure. Claiming one (as this used to, via the same
     // "kunne ikke hente antall" text as a real lookup failure) reports a lookup that never ran.
     if (!NACE_PATTERN.test(code)) {
       setPreviewText(t('focus.invalidCode'))
@@ -106,7 +106,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       setPreviewText(t('focus.previewFailed'))
       return
     }
-    // Ruling 3: only a genuine zero count says "0 bedrifter" — a resolved, nonzero count with no
+    // Ruling 3: only a genuine zero count says "0 bedrifter". A resolved, nonzero count with no
     // name shows the count honestly, with the code standing in for the missing name.
     const text =
       result.units === 0
@@ -119,7 +119,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
             })
           : t('focus.previewNoName', { code: result.code, units: String(result.units) })
     setPreviewText(text)
-    // Spec B5: "A resolved preview is announced" — an async count that only ever exists
+    // Spec B5: "A resolved preview is announced". An async count that only ever exists
     // visually is invisible to a screen reader, since nothing else signals it arrived.
     announce(text)
   }
@@ -129,7 +129,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     if (!draft) return
     const code = codeInput.trim()
     if (!NACE_PATTERN.test(code)) {
-      // Same format failure as the preview button, and the same honest message — pressing Add
+      // Same format failure as the preview button, and the same honest message. Pressing Add
       // on an invalid code used to no-op silently, which reads as a dead button.
       setPreviewText(t('focus.invalidCode'))
       return
@@ -151,7 +151,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   }
 
   // Spec B4: offers exactly the codes not already configured (the `missing` filter below), and
-  // — the half that was never built — previews the total those additions bring in before the
+  // and previews (the half that was never built) the total those additions bring in before the
   // user saves. Reuses `resolvePreview`'s cache and guarded fetch rather than a new endpoint.
   const handleAddRecommended = async () => {
     let codes: string[]
@@ -172,7 +172,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     const known = results.filter((r): r is NacePreviewDto => r !== null)
     const total = known.reduce((sum, r) => sum + r.units, 0)
     // A total that is partly unknown must say so rather than under-report (ruling 3's honesty,
-    // extended from a single code to a sum of them) — Brreg being unreachable for some of the
+    // extended from a single code to a sum of them). Brreg being unreachable for some of the
     // newly added codes must not silently read as "the rest add zero".
     const text =
       known.length === missing.length
@@ -195,7 +195,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     setKeywordInput('')
   }
 
-  // Removing the last keyword must not let focus fall to <body> — land it on the add field
+  // Removing the last keyword must not let focus fall to <body>. Land it on the add field
   // instead. The input never unmounts across this update, so focusing it synchronously here
   // (rather than through a pending-focus ref + effect, the pattern other lists use when their
   // removal round-trips through the server) is safe: no re-render can steal this node away.
@@ -230,9 +230,10 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       announce(t('focus.savedNoSync'))
       return
     }
-    // Mirrors CoverageSection's three-way split (started / already busy / failed to start) —
-    // a sync that never starts must never be announced as if it did. Reuses coverage's i18n
-    // keys since that wording ("Lagret — …") fits a saved-and-syncing focus change just as well.
+    // Mirrors CoverageSection's three-way split (started / already busy / failed to start).
+    // A sync that never starts must never be announced as if it did. Reuses coverage's i18n
+    // keys since that wording ("Lagret. Synkroniserer …") fits a saved-and-syncing focus change
+    // just as well.
     const sync = await api.post('/api/sync').then(
       (): 'started' | 'busy' | 'failed' => 'started',
       (err): 'busy' | 'failed' =>

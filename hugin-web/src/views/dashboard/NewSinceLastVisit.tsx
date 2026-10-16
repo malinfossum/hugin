@@ -62,8 +62,8 @@ export function NewSinceLastVisit() {
   const sectionRef = useRef<HTMLElement>(null)
   const { remember, restore } = useReturnFocus()
   // Snapshot of the asOf the user was actually looking at when they opened the dialog.
-  // A refetch (a sync completing) while the dialog is open must not change what gets posted —
-  // that would mark items the user never reviewed as seen.
+  // A refetch (a sync completing) while the dialog is open must not change what gets posted.
+  // That would mark items the user never reviewed as seen.
   const reviewedAsOf = useRef<string | null>(null)
 
   const handleConfirm = async () => {
@@ -197,7 +197,7 @@ export function NewSinceLastVisit() {
                       ) : (
                         <span>{ad.title}</span>
                       )}{' '}
-                      — {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+                      · {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
                     </li>
                   ))}
                 </ul>

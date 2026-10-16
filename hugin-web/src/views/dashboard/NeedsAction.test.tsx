@@ -81,10 +81,10 @@ describe('NeedsAction', () => {
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Skal med/)
-    expect(item).toHaveTextContent('følger med, ikke søkt — frist om 3 dager')
+    expect(item).toHaveTextContent('følger med, ikke søkt · frist om 3 dager')
 
     const today = screen.getByText(/Frist i dag/)
-    expect(today).toHaveTextContent('følger med, ikke søkt — frist i dag')
+    expect(today).toHaveTextContent('følger med, ikke søkt · frist i dag')
 
     expect(screen.queryByText(/Feil status/)).not.toBeInTheDocument()
     expect(screen.queryByText(/For langt unna/)).not.toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('NeedsAction', () => {
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
-    expect(item).toHaveTextContent('følger med, ikke søkt — frist utløpt')
+    expect(item).toHaveTextContent('følger med, ikke søkt · frist utløpt')
   })
 
   it('renders nothing when there are no near-frist active entries', async () => {
@@ -148,10 +148,10 @@ describe('NeedsAction', () => {
     }
 
     // NeedsAction's own filter already requires pipelineStatus === 'active', so every ad it
-    // shows is tracked — the adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
+    // shows is tracked. The adMatchesFocus bypass rule (tracked ads always pass, spec-mandated
     // to protect pipeline deadlines) makes the focus lens a structural no-op here. This ad sits
     // outside the seeded focus region (Oslo, kommune '0301', vs. focus fylke '34') and would be
-    // filtered by region if the bypass didn't apply — it must still render.
+    // filtered by region if the bypass didn't apply. It must still render.
     it('still shows a tracked, near-deadline ad outside the focus region (bypass makes the lens a no-op here)', async () => {
       seedFocus()
       const ads = [

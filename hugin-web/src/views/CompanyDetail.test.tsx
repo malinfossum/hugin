@@ -235,7 +235,7 @@ describe('CompanyDetail', () => {
     const link = screen.getByRole('link', { name: 'https://oslo.example' })
     expect(link).toHaveAttribute('href', 'https://oslo.example')
 
-    // Switching back to the main tab does not refetch it — the cache holds it.
+    // Switching back to the main tab does not refetch it. The cache holds it.
     await user.click(screen.getByRole('tab', { name: 'Hovedenhet' }))
     await screen.findByText('Hovedannonse')
     expect(calls['777777777']).toBe(1)
@@ -277,7 +277,7 @@ describe('CompanyDetail', () => {
     expect(screen.getByRole('tab', { name: 'Hovedenhet' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft — roving tabindex', async () => {
+  it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft: roving tabindex', async () => {
     const oslo = company({
       orgnr: '787878787',
       name: 'NYFJELL SPILL AS AVDELING OSLO',

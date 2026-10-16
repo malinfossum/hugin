@@ -170,7 +170,7 @@ describe('SyncHeader', () => {
         })
       },
     })
-    // A fresh callback each render mimics an un-memoized parent — the fix must not rely on it.
+    // A fresh callback each render mimics an un-memoized parent. The fix must not rely on it.
     const onSyncCompleted = renderHeader(fetchMock)
 
     await act(async () => {
@@ -314,7 +314,7 @@ describe('SyncHeader', () => {
     })
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
-    expect(liveRegion).toHaveTextContent('Kunne ikke starte synk — prøv igjen.')
+    expect(liveRegion).toHaveTextContent('Kunne ikke starte synk. Prøv igjen.')
     expect(liveRegion).not.toHaveTextContent('En synk kjører allerede.')
   })
 
@@ -330,7 +330,7 @@ describe('SyncHeader', () => {
               brreg: {
                 succeeded: false,
                 fetched: 0,
-                error: 'Ingen dekning valgt — velg kommuner i dashbordet',
+                error: 'Ingen dekning valgt. Velg kommuner i dashbordet',
               },
               nav: { succeeded: true, fetched: 0, error: null },
             })

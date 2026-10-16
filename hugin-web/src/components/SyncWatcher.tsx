@@ -34,7 +34,7 @@ export function SyncWatcherProvider({ onSyncCompleted, children }: SyncWatcherPr
   const handledPoll = useRef(0)
 
   // Completion is detected on each poll that answers (dataUpdatedAt moves even when the payload
-  // is identical to the last one — a sync that started and finished between two ticks looks the
+  // is identical to the last one: a sync that started and finished between two ticks looks the
   // same as the idle status before it). See syncStatusQuery for why polling never stops.
   // biome-ignore lint/correctness/useExhaustiveDependencies: dataUpdatedAt is the new-poll signal
   useEffect(() => {

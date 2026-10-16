@@ -18,7 +18,7 @@ interface UnitTab {
   label: string
 }
 
-/** Branch tab labels prefer the kommune name — it's the whole point of a branch tab (which
+/** Branch tab labels prefer the kommune name. It's the whole point of a branch tab (which
  * office is this?). Falls back to the display name when a branch has none, or when its
  * kommuneNavn collides with another branch's (kommune name alone wouldn't disambiguate them). */
 function branchTabLabel(branch: CompanyDto, branches: CompanyDto[]): string {
@@ -40,7 +40,9 @@ function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
             <span className="text-muted">{publishedText(ad.published, t)}</span>
           )}
           <span className="help">
-            {t('companies.deadlineLabel', { date: ad.expires ? formatDate(ad.expires) : '—' })}
+            {t('companies.deadlineLabel', {
+              date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
+            })}
           </span>
           {ad.sourceUrl && (
             <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
@@ -72,9 +74,9 @@ function UnitBody({
         <dt>{t('companies.orgnr')}</dt>
         <dd>{detail.company.orgnr}</dd>
         <dt>{t('companies.kommune')}</dt>
-        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? '—'}</dd>
+        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}</dd>
         <dt>{t('companies.nace')}</dt>
-        <dd>{detail.company.naceCode ?? '—'}</dd>
+        <dd>{detail.company.naceCode ?? t('companies.notGiven')}</dd>
         {detail.company.isBranch && detail.company.parentOrgnr && (
           <>
             <dt>{t('companies.parentCompany')}</dt>
@@ -97,7 +99,7 @@ function UnitBody({
   )
 }
 
-/** Only rendered when tabs exist — a `role="tabpanel"` isn't valid ARIA without a tablist to go
+/** Only rendered when tabs exist. A `role="tabpanel"` isn't valid ARIA without a tablist to go
  * with it, so the no-tabs case (a lone branch's own detail) renders the same content directly
  * instead of wrapping it. */
 function TabPanel({ selectedOrgnr, children }: { selectedOrgnr: string; children: ReactNode }) {
@@ -176,7 +178,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
 
       {tabs.length > 0 && (
         // Design-system tabs component (`.tab-list`/`.tab`) for the accent-underline styling;
-        // `cluster cluster-sm` layered on for its flex-wrap — the strip wraps rather than
+        // `cluster cluster-sm` layered on for its flex-wrap. The strip wraps rather than
         // scrolling when it doesn't fit a narrow (375px) screen.
         <div
           role="tablist"
