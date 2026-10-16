@@ -84,7 +84,7 @@ a.nav-link:focus-visible {
 }
 
 /* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent through
-   `color` (the SVG uses fill="currentColor". A var() in a fill attribute would silently not
+   `color` (the SVG uses fill="currentColor"; a var() in a fill attribute would silently not
    resolve). The wordmark matches the banner lockup: Space Grotesk 700. The brand is also the home
    link (spec v3.8 B1): it keeps the look of a wordmark, with no link colour or underline, and gets
    the full 44 px hit box. The focus ring is the design system's. */
