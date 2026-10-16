@@ -4,7 +4,7 @@ import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider } from '../context/focus'
 import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
-import { TestQueryProvider } from '../test-utils'
+import { TestQueryProvider, TestRouter } from '../test-utils'
 import { ApplicationsView } from './ApplicationsView'
 import { DeadlineList } from './dashboard/DeadlineList'
 import { NewSinceLastVisit } from './dashboard/NewSinceLastVisit'
@@ -101,7 +101,9 @@ function wrap(ui: React.ReactElement) {
       <LanguageProvider>
         <ReadOnlyProvider>
           <FocusProvider>
-            <LiveRegionProvider>{ui}</LiveRegionProvider>
+            <LiveRegionProvider>
+              <TestRouter>{ui}</TestRouter>
+            </LiveRegionProvider>
           </FocusProvider>
         </ReadOnlyProvider>
       </LanguageProvider>

@@ -8,6 +8,8 @@ export const nb = {
   'nav.export': 'Eksport',
   'nav.settings': 'Innstillinger',
 
+  'brand.homeLabel': 'Hugin, til dashbordet',
+
   'lang.switchToEn': 'Switch to English',
   'lang.switchToNb': 'Bytt til norsk',
 
@@ -290,6 +292,9 @@ export const nb = {
   'demo.banner':
     'Skrivebeskyttet demo. Ekte stillinger og selskaper fra NAV og Brreg for Innlandet, pluss tre fiktive firmaer med én fiktiv annonse hver. Pipelinen viser bare de fiktive firmaene. Ingen sporing, ingen informasjonskapsler; temavalg lagres bare i din nettleser.',
   'demo.repoLink': 'Kildekode på GitHub',
+
+  'footer.adsCredit': 'Annonser fra NAV',
+  'footer.companyCredit': 'Bedriftsdata fra Brønnøysundregistrene',
 
   // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen — an
   // empty result, not an error, so it gets a button instead of the generic failure banner.

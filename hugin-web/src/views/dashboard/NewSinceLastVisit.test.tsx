@@ -6,7 +6,7 @@ import { LanguageProvider } from '../../i18n'
 import { queryKeys } from '../../lib/queries'
 import { makeQueryClient } from '../../lib/queryClient'
 import type { AdDto, NewDto } from '../../lib/types'
-import { TestQueryProvider } from '../../test-utils'
+import { TestQueryProvider, TestRouter } from '../../test-utils'
 import { NewSinceLastVisit } from './NewSinceLastVisit'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -121,13 +121,15 @@ function fakeServer(dto: NewDto | null) {
   return fetchMock
 }
 
-function renderView(fetchMock: ReturnType<typeof vi.fn>) {
+function renderView(fetchMock: ReturnType<typeof vi.fn>, initialPath?: string) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <TestQueryProvider>
       <LanguageProvider>
         <LiveRegionProvider>
-          <NewSinceLastVisit />
+          <TestRouter initialPath={initialPath}>
+            <NewSinceLastVisit />
+          </TestRouter>
         </LiveRegionProvider>
       </LanguageProvider>
     </TestQueryProvider>
@@ -154,18 +156,43 @@ describe('NewSinceLastVisit', () => {
     const oslo = screen
       .getByRole('heading', { level: 4, name: '0301, 2 bedrifter' })
       .closest('div') as HTMLElement
-    expect(within(oslo).getByText('Acme AS')).toBeInTheDocument()
-    expect(within(oslo).getByText(/Acme Avdeling.*\[avdeling\]/)).toBeInTheDocument()
+    expect(within(oslo).getByRole('link', { name: 'Acme AS' })).toBeInTheDocument()
+    expect(
+      within(oslo).getByRole('link', { name: 'Acme Avdeling' }).closest('li')
+    ).toHaveTextContent('Acme Avdeling [avdeling]')
 
     const trondheim = screen
       .getByRole('heading', { level: 4, name: '4601, 1 bedrift' })
       .closest('div') as HTMLElement
-    expect(within(trondheim).getByText('Beta AS')).toBeInTheDocument()
+    expect(within(trondheim).getByRole('link', { name: 'Beta AS' })).toBeInTheDocument()
 
     const link = screen.getByRole('link', { name: 'Utvikler' })
     expect(link).toHaveAttribute('href', 'https://nav.no/stillinger/a1')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('links each new company to its own detail in the same tab, the branch tag outside the name', async () => {
+    renderView(fakeServer(newDto()))
+
+    const acme = await screen.findByRole('link', { name: 'Acme AS' })
+    expect(acme).toHaveAttribute('href', '/companies/715787630')
+    expect(acme).not.toHaveAttribute('target')
+    expect(acme).toHaveAttribute('data-return-focus', 'company:715787630')
+
+    // A branch opens itself, not its parent.
+    const branch = screen.getByRole('link', { name: 'Acme Avdeling' })
+    expect(branch).toHaveAttribute('href', '/companies/715787631')
+    expect(branch.closest('li')).toHaveTextContent('Acme Avdeling [avdeling]')
+  })
+
+  it("does not carry the dashboard's ?show= into a company link", async () => {
+    renderView(fakeServer(newDto()), '/?show=all')
+
+    expect(await screen.findByRole('link', { name: 'Beta AS' })).toHaveAttribute(
+      'href',
+      '/companies/715787632'
+    )
   })
 
   it('counts each place heading once for screen readers: the visible count is aria-hidden', async () => {
@@ -395,7 +422,9 @@ describe('NewSinceLastVisit', () => {
       <TestQueryProvider client={client}>
         <LanguageProvider>
           <LiveRegionProvider>
-            <NewSinceLastVisit />
+            <TestRouter>
+              <NewSinceLastVisit />
+            </TestRouter>
           </LiveRegionProvider>
         </LanguageProvider>
       </TestQueryProvider>

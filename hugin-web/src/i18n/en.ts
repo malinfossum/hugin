@@ -8,6 +8,8 @@ export const en = {
   'nav.export': 'Export',
   'nav.settings': 'Settings',
 
+  'brand.homeLabel': 'Hugin, to the dashboard',
+
   'lang.switchToEn': 'Switch to English',
   'lang.switchToNb': 'Bytt til norsk',
 
@@ -284,6 +286,9 @@ export const en = {
   'demo.banner':
     'Read-only demo. Real job ads and companies from NAV and Brreg for Innlandet, plus three fictional companies with one fictional ad each. The pipeline shows only the fictional companies. No tracking, no cookies; your theme choice is stored only in your browser.',
   'demo.repoLink': 'Source code on GitHub',
+
+  'footer.adsCredit': 'Ads from NAV',
+  'footer.companyCredit': 'Company data from the Brønnøysund Register Centre',
 
   'dashboard.noCoverageMessage': 'No coverage chosen.',
   'dashboard.noCoverageButton': 'Choose coverage',
