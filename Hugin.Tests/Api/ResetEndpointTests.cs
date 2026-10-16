@@ -149,7 +149,7 @@ public sealed class ResetEndpointTests
 
         var text = File.ReadAllText(factory.ConfigPath);
         Assert.That(text, Does.Contain("\"rust\"").And.Contain("\"navToken\": \"abc\"").And.Contain("\"custom\""),
-            "only the discovery keys are cleared — everything else round-trips");
+            "only the discovery keys are cleared. Everything else round-trips");
 
         var discovery = await client.GetFromJsonAsync<DiscoveryConfigDto>("/api/config/discovery");
         Assert.That(discovery!.Municipalities, Is.Empty);
@@ -188,7 +188,7 @@ public sealed class ResetEndpointTests
         // Regression for a review finding: if ClearScope() throws after WipeAsync() already
         // succeeded, the database is empty and a bare 500 would leave the user with no pointer
         // to the backup that was just taken. Forcing ClearScope() to fail here means putting a
-        // directory where hugin.json should be — File.Move onto an existing directory throws,
+        // directory where hugin.json should be. File.Move onto an existing directory throws,
         // the same failure mode a locked or permission-denied config file would produce.
         using var factory = new ApiFactory();
         Directory.CreateDirectory(factory.ConfigPath);
@@ -239,7 +239,7 @@ public sealed class ResetEndpointTests
     public async Task Reset_is_forbidden_in_public_mode()
     {
         using var factory = new ApiFactory(publicMode: true);
-        using var client = factory.CreateApiClient(); // X-Hugin: 1 — irrelevant in public mode
+        using var client = factory.CreateApiClient(); // X-Hugin: 1 is irrelevant in public mode
 
         var response = await client.PostAsJsonAsync("/api/reset", new ResetRequest("all"));
 
@@ -250,7 +250,7 @@ public sealed class ResetEndpointTests
     public async Task WipeAsync_round_trips_a_database_path_containing_an_apostrophe()
     {
         // VACUUM INTO takes a string literal, not a parameter, so an unescaped apostrophe in the
-        // path would break the SQL rather than merely fail to match a file — "C:\Users\O'Brien\"
+        // path would break the SQL rather than merely fail to match a file. "C:\Users\O'Brien\"
         // is an ordinary Windows path and must not throw.
         var dir = Path.Combine(Path.GetTempPath(), $"hugin-o'brien-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
@@ -294,7 +294,7 @@ public sealed class ResetEndpointTests
             var options = new DbContextOptionsBuilder<HuginDbContext>()
                 .UseSqlite(HuginDbInitializer.ConnectionString(dbPath)).Options;
             await using var db = new HuginDbContext(options);
-            // InitAsync seeds "sources-seed" already — add brreg/nav cursors for WipeAsync to delete.
+            // InitAsync seeds "sources-seed" already. Add brreg/nav cursors for WipeAsync to delete.
             await HuginDbInitializer.InitAsync(db, dbPath);
             db.SyncStates.Add(new SyncState { Source = "brreg", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c1" });
             db.SyncStates.Add(new SyncState { Source = "nav", LastSyncUtc = DateTimeOffset.UtcNow, Cursor = "c2" });

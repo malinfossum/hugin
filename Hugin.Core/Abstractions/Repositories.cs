@@ -7,7 +7,7 @@ public interface ICompanyRepository
     public Task<IReadOnlyList<Models.Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default);
 
     /// <summary>Branch units of one hovedenhet (<c>IsBranch &amp;&amp; ParentOrgnr == orgnr</c>),
-    /// ordered by municipality number then name — kommune-name ordering is a display-layer concern
+    /// ordered by municipality number then name. Kommune-name ordering is a display-layer concern
     /// (the endpoint resolves that name the same way it does for every other company).</summary>
     public Task<IReadOnlyList<Models.Company>> GetBranchesAsync(string orgnr, CancellationToken ct = default);
 
@@ -17,12 +17,12 @@ public interface ICompanyRepository
     /// The incoming website only overwrites the stored one when it is non-null: a different
     /// non-null value wins and clears the website check fields (re-check next sync), an equal
     /// one leaves them untouched, and the register offering no website at all is not a
-    /// correction — the stored website (register-sourced or ad-adopted) and its check state
+    /// correction. The stored website (register-sourced or ad-adopted) and its check state
     /// are left exactly as they were.</summary>
     public Task UpsertAsync(RegisterCompany company, DateTimeOffset seenAt, CancellationToken ct = default);
 
     /// <summary>Companies with a website that has never been checked, or whose last check is
-    /// older than <paramref name="olderThan"/> — oldest-checked first (never-checked first),
+    /// older than <paramref name="olderThan"/>: oldest-checked first (never-checked first),
     /// capped at <paramref name="take"/>.</summary>
     public Task<IReadOnlyList<Models.Company>> GetWebsitesDueForCheckAsync(DateTimeOffset olderThan, int take,
         CancellationToken ct = default);
@@ -31,7 +31,7 @@ public interface ICompanyRepository
     public Task SetWebsiteCheckAsync(string orgnr, bool ok, string? resolvedUrl, DateTimeOffset checkedUtc,
         CancellationToken ct = default);
 
-    /// <summary>Adopts a website sourced from a NAV ad — only when the company has no website,
+    /// <summary>Adopts a website sourced from a NAV ad, but only when the company has no website,
     /// or its register-listed one is confirmed dead (<see cref="Models.Company.WebsiteOk"/> is
     /// false). A healthy or not-yet-checked register website always outranks an ad's claim.
     /// Resets the check trio so the weekly checker probes the adopted URL. Returns whether it
@@ -75,10 +75,10 @@ public interface IAdRepository
     /// <summary>Manual pipeline link (null clears it). Returns false when the feedId is unknown.</summary>
     public Task<bool> SetLinkedOrgnrAsync(string feedId, string? orgnr, CancellationToken ct = default);
 
-    /// <summary>All stored ads for one employer — active and expired — newest published first.</summary>
+    /// <summary>All stored ads for one employer (active and expired), newest published first.</summary>
     public Task<IReadOnlyList<Models.Ad>> GetByEmployerAsync(string orgnr, CancellationToken ct = default);
 
-    /// <summary>Every stored ad — open, expired and hidden alike. No ordering promised.</summary>
+    /// <summary>Every stored ad: open, expired and hidden alike. No ordering promised.</summary>
     public Task<IReadOnlyList<Models.Ad>> GetAllAsync(CancellationToken ct = default);
 
     /// <summary>Demo seeder only: inserts the ad as given, or overwrites every feed-shaped field
@@ -104,7 +104,7 @@ public interface IPipelineRepository
     public Task<PipelineRemoval?> DeleteAsync(string orgnr, CancellationToken ct = default);
 }
 
-/// <summary>What <see cref="IPipelineRepository.DeleteAsync"/> removed — the only record left
+/// <summary>What <see cref="IPipelineRepository.DeleteAsync"/> removed: the only record left
 /// of the entry afterwards.</summary>
 public sealed record PipelineRemoval(Models.PipelineEntry Entry, int LinksCleared);
 
@@ -123,7 +123,7 @@ public interface IReviewMarkRepository
     public Task SetAsync(DateTimeOffset mark, CancellationToken ct = default);
 }
 
-/// <summary>Brreg's kommune register — number → name, covering every kommune, not just the
+/// <summary>Brreg's kommune register: number → name, covering every kommune, not just the
 /// configured ones.</summary>
 public interface IKommuneRepository
 {
@@ -132,7 +132,7 @@ public interface IKommuneRepository
     public Task UpsertManyAsync(IReadOnlyList<Models.Kommune> kommuner, CancellationToken ct = default);
 }
 
-/// <summary>Dashboard header links — db-backed since v3.2 (was config-only). Position is
+/// <summary>Dashboard header links. Db-backed since v3.2 (was config-only). Position is
 /// 1-based and dense; every write that changes the set keeps it that way.</summary>
 public interface ISourceRepository
 {

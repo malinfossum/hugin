@@ -30,7 +30,7 @@ public sealed class MunicipalityScope
         return new MunicipalityScope { NameToNumber = nameToNumber, AllowedNumbers = allowed, AllOfNorway = config.AllOfNorway };
     }
 
-    /// <summary>Resolves ANY known municipality name to its number — config names first, then
+    /// <summary>Resolves ANY known municipality name to its number: config names first, then
     /// register names (register names are ALL CAPS; matching is OrdinalIgnoreCase). This does
     /// not check the gate: a resolved number may or may not be in <see cref="AllowedNumbers"/>.</summary>
     public string? ResolveName(string? municipalName) =>

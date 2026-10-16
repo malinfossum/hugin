@@ -91,7 +91,7 @@ public sealed class SourcesEndpointTests
 
         var updated = await response.Content.ReadFromJsonAsync<SourceDtoProbe>();
         Assert.That(updated!.Label, Is.EqualTo("Proff.no"));
-        Assert.That(updated.Url, Is.EqualTo("https://proff.no"), "same normalization as seeding — bare host gains https://");
+        Assert.That(updated.Url, Is.EqualTo("https://proff.no"), "same normalization as seeding: bare host gains https://");
     }
 
     [Test]

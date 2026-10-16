@@ -18,7 +18,7 @@ public partial class V3StatusModel : Migration
             defaultValue: false);
 
         // Old: Funnet=0, SoektSelv=1, BedtGetSjekke=2, Svar=3.
-        // New: Active=0, Applied=1, Answered=2. Both outreach routes collapse into Applied —
+        // New: Active=0, Applied=1, Answered=2. Both outreach routes collapse into Applied.
         // Route is dropped right after, so the distinction has nowhere left to live.
         // ELSE 0 is defensive: this is a one-way migration (the pre-migration .bak is the
         // only way back), so a tampered or out-of-range Status must fall back to Active
@@ -48,7 +48,7 @@ public partial class V3StatusModel : Migration
             defaultValue: 0);
 
         // Best-effort inverse: Applied(1) cannot be told apart from the two routes it came
-        // from, so it maps back to SoektSelv. The original Route data is gone — that is the
+        // from, so it maps back to SoektSelv. The original Route data is gone. That is the
         // whole point of the pre-migration .bak HuginDbInitializer writes before this runs.
         migrationBuilder.Sql(
             "UPDATE Pipeline SET Status = CASE Status " +

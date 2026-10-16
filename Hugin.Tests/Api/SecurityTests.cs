@@ -51,6 +51,6 @@ public sealed class SecurityTests
         using var client = _factory.CreateClient();
         var response = await client.GetAsync("/api/status");
         Assert.That(response.Headers.Contains("X-Frame-Options"), Is.False,
-            "the public-mode headers are a public-mode thing — the local app is unchanged");
+            "the public-mode headers are a public-mode thing. The local app is unchanged");
     }
 }

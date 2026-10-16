@@ -14,8 +14,8 @@ public sealed record SyncSummary(SourceResult Brreg, SourceResult Nav, bool Base
 /// <summary>
 /// Pulls both sources into storage. Sync semantics are at-least-once: upserts are idempotent
 /// and the feed cursor advances only after its batch is stored, so a crash re-fetches a page
-/// rather than skipping it. Neither source can take the other down — a flaky connection must
-/// not kill the morning routine — so each is wrapped in its own result.
+/// rather than skipping it. Neither source can take the other down (a flaky connection must
+/// not kill the morning routine), so each is wrapped in its own result.
 /// </summary>
 public sealed class SyncService(
     IBrregClient brreg,
@@ -37,7 +37,7 @@ public sealed class SyncService(
     private const string NavState = "nav";
     private const string NavBackfillState = "nav-backfill";
 
-    // A website check is a "keep it fresh" background nicety, not tracked sync data — a small
+    // A website check is a "keep it fresh" background nicety, not tracked sync data. A small
     // daily slice keeps the whole tracked set current within a couple of weeks without ever
     // making a sync noticeably slower.
     private const int WebsiteCheckStaleness = 7;
@@ -46,7 +46,7 @@ public sealed class SyncService(
 
     /// <param name="fullNav">Walk the NAV feed from its oldest page (or the stored cursor)
     /// to the tail, instead of the capped daily pull. First run: the whole history.</param>
-    /// <param name="onNavPage">Called after each stored page with (pages, adsStored) — a
+    /// <param name="onNavPage">Called after each stored page with (pages, adsStored). A
     /// backfill takes minutes and deserves a heartbeat.</param>
     public async Task<SyncSummary> SyncAsync(bool fullNav = false,
         Action<int, int>? onNavPage = null, CancellationToken ct = default)
@@ -54,10 +54,10 @@ public sealed class SyncService(
         var now = clock.UtcNow;
 
         // Per-run config: a scope saved from the dashboard (or a hand edit) applies to the very
-        // next sync — no restart, no stale startup snapshot (spec v3.4 Part C).
+        // next sync: no restart, no stale startup snapshot (spec v3.4 Part C).
         var config = configSource.Load();
 
-        // The register must be current before the scope is built from it — a first-ever run
+        // The register must be current before the scope is built from it. A first-ever run
         // with an unreachable register simply degrades to config-only scope (kommuner.GetAllAsync
         // returns whatever is already stored, empty on a fresh database).
         await SyncKommunerAsync(ct);
@@ -74,7 +74,7 @@ public sealed class SyncService(
         }
         catch (Exception)
         {
-            // Nothing to report — the ads simply keep their previous flag until the next run.
+            // Nothing to report. The ads simply keep their previous flag until the next run.
         }
 
         var (websitesChecked, websitesDead) = await SyncWebsitesAsync(now, ct);
@@ -93,10 +93,10 @@ public sealed class SyncService(
 
     /// <summary>
     /// Best-effort like the kommune register: a website's reachability is a display nicety, not
-    /// tracked sync data, so any failure here — the due-query, a probe, storing a result — must
+    /// tracked sync data, so any failure here (the due-query, a probe, storing a result) must
     /// never fail the sync that just ran. The network probes run with bounded concurrency so a
     /// batch of dead or slow hosts cannot turn this into dozens of sequential 6-second waits;
-    /// the results are then written back one at a time — the scoped <c>HuginDbContext</c> a
+    /// the results are then written back one at a time. The scoped <c>HuginDbContext</c> a
     /// repository call closes over is not safe to use from more than one task at once.
     /// </summary>
     private async Task<(int Checked, int Dead)> SyncWebsitesAsync(DateTimeOffset now, CancellationToken ct)
@@ -140,38 +140,38 @@ public sealed class SyncService(
     /// <summary>
     /// One <see cref="IBrregClient.GetCompaniesAsync"/> call when the scope is still the plain
     /// configured municipalities (today's behavior, byte-identical). When the scope was expanded
-    /// — fylker or all-of-Norway — the allowed numbers are chunked by 2-char fylke prefix so
+    /// (fylker or all-of-Norway), the allowed numbers are chunked by 2-char fylke prefix so
     /// each query stays under Brreg's pagination window.
     /// </summary>
     private async Task<SourceResult> SyncBrregAsync(DateTimeOffset now, HuginConfig config, MunicipalityScope scope, CancellationToken ct)
     {
         // Declared outside the try so a later chunk's failure can still report what earlier
-        // chunks already fetched and stored — same convention as SyncNavAsync's `stored`.
+        // chunks already fetched and stored. Same convention as SyncNavAsync's `stored`.
         var fetchedTotal = 0;
         try
         {
             // Every scope number must be a real 4-digit kommunenummer before it is used to
-            // chunk or query Brreg. Checked ahead of the branch below, for both branches —
+            // chunk or query Brreg. Checked ahead of the branch below, for both branches:
             // a malformed configured number (too short, too long, non-digit) is just as wrong
             // in a plain unscaled config as in a fylke-expanded one, and either way it must
             // surface as this clear message instead of an ArgumentOutOfRangeException from
             // GroupBy(n => n[..2]) or a confusing failure once it reaches Brreg.
             if (scope.AllowedNumbers.FirstOrDefault(n => !IsValidKommuneNumber(n)) is { } invalid)
                 return new SourceResult(false, 0,
-                    $"Ugyldig kommunenummer i konfigurasjonen: «{invalid}» — må være 4 sifre");
+                    $"Ugyldig kommunenummer i konfigurasjonen: «{invalid}». Det må være 4 sifre");
 
-            // Nothing configured at all is the fresh-install case, not a register failure —
-            // the two need different messages because only one of them is the user's to fix.
+            // Nothing configured at all is the fresh-install case, not a register failure.
+            // The two need different messages because only one of them is the user's to fix.
             if (config.Municipalities.Count == 0 && config.Fylker.Count == 0 && !config.AllOfNorway)
-                return new SourceResult(false, 0, "Ingen dekning valgt — velg kommuner i dashbordet");
+                return new SourceResult(false, 0, "Ingen dekning valgt. Velg kommuner i dashbordet");
 
-            // An empty allow-set is not "no filter" — Brreg ignores `kommunenummer=` and answers
+            // An empty allow-set is not "no filter". Brreg ignores `kommunenummer=` and answers
             // with every unit in the country, so chunking one empty chunk would quietly turn a
             // fylke-only scope into a nationwide fetch whenever the kommune register is still
             // empty (fresh install, register fetch down). Stop instead: the config is fine, the
             // register just could not expand it yet, and the next run will have it.
             if (scope.AllowedNumbers.Count == 0)
-                return new SourceResult(false, 0, "Kommuneregisteret er tomt — dekningen kunne ikke utvides");
+                return new SourceResult(false, 0, "Kommuneregisteret er tomt. Dekningen kunne ikke utvides");
 
             var configured = config.Municipalities.Select(m => m.Number).ToHashSet();
             var chunks = scope.AllowedNumbers.SetEquals(configured)
@@ -198,7 +198,7 @@ public sealed class SyncService(
     private static bool IsValidKommuneNumber(string n) => n.Length == 4 && n.All(char.IsAsciiDigit);
 
     /// <summary>
-    /// The kommune register is a name lookup, not tracked data — a failure here must never
+    /// The kommune register is a name lookup, not tracked data. A failure here must never
     /// fail the brreg result that companies were just synced under. Names simply stay stale
     /// until the next successful sync.
     /// </summary>
@@ -211,7 +211,7 @@ public sealed class SyncService(
         }
         catch (Exception)
         {
-            // Best-effort — see summary above.
+            // Best-effort: see summary above.
         }
     }
 
@@ -219,7 +219,7 @@ public sealed class SyncService(
         Action<int, int>? onPage, CancellationToken ct)
     {
         var stored = 0;
-        // Orgnrs already attempted this run — one Brreg lookup per unknown employer,
+        // Orgnrs already attempted this run: one Brreg lookup per unknown employer,
         // no matter how many ads (or pages, in a --full backfill) report it.
         var attemptedEmployerOrgnrs = new HashSet<string>();
 
@@ -235,7 +235,7 @@ public sealed class SyncService(
             for (var page = 0; page < maxPages; page++)
             {
                 // A backfill with no stored position starts at the feed's oldest page; with
-                // one, it resumes — so an interrupted backfill continues instead of restarting.
+                // one, it resumes, so an interrupted backfill continues instead of restarting.
                 var feedPage = full && firstFetch && cursor is null
                     ? await nav.GetFirstPageAsync(config, scope, ct)
                     : await nav.GetPageAsync(cursor, config, scope, ct);
@@ -258,7 +258,7 @@ public sealed class SyncService(
                         }
                         catch (Exception)
                         {
-                            // Best-effort, same rule as employer enrichment — never fails the NAV sync.
+                            // Best-effort, same rule as employer enrichment: never fails the NAV sync.
                         }
                     }
                 }
@@ -267,8 +267,8 @@ public sealed class SyncService(
                 cursor = feedPage.NextCursor;
 
                 // At the tail there is no next page yet, but that page keeps collecting entries
-                // until it fills and rolls over. Resuming from it — rather than from "newest"
-                // — is what stops those entries being skipped; re-reading it is harmless
+                // until it fills and rolls over. Resuming from it (rather than from "newest")
+                // is what stops those entries being skipped; re-reading it is harmless
                 // because upserts are idempotent.
                 await syncState.SetAsync(stateKey, cursor ?? feedPage.PageId, now, ct);
 
@@ -277,7 +277,7 @@ public sealed class SyncService(
 
                 // A backfill that reached the tail hands that page to the daily sync and forgets
                 // its own position, so the next backfill starts over from the oldest page. An
-                // interrupted one leaves "nav" alone — the daily sync must not follow it back
+                // interrupted one leaves "nav" alone. The daily sync must not follow it back
                 // into history.
                 if (full)
                 {
@@ -298,7 +298,7 @@ public sealed class SyncService(
     /// <summary>
     /// Discovery (SyncBrregAsync) only pulls companies matching the configured nace/kommune
     /// filter, so an ad's employer can be a registry unit no local row exists for (e.g. NT ads
-    /// carrying NACE 92, which the discovery filter never fetches) — and the parent-chain
+    /// carrying NACE 92, which the discovery filter never fetches), and the parent-chain
     /// pipeline join in <see cref="AdOverviewService"/> needs that row to resolve up to the
     /// tracked orgnr. Best-effort, like track's out-of-filter fetch: a Brreg hiccup here must
     /// never fail the NAV sync or skip the ad, which is already stored by the time this runs.
@@ -316,7 +316,7 @@ public sealed class SyncService(
         }
         catch (Exception)
         {
-            // Orgnr stays in `attempted` either way — no retry within this run.
+            // Orgnr stays in `attempted` either way: no retry within this run.
         }
     }
 }

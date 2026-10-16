@@ -89,7 +89,7 @@ public class ConfigLoaderTests
         var config = ConfigLoader.Parse("""{ "keywords": ["rust"] }""", out _);
 
         Assert.That(config.Keywords, Is.EqualTo(new[] { "rust" }));
-        Assert.That(config.Municipalities, Is.Empty, "municipalities were not overridden — the default is empty");
+        Assert.That(config.Municipalities, Is.Empty, "municipalities were not overridden. The default is empty");
         Assert.That(config.Naeringskoder, Is.EqualTo(new[] { "62", "72", "63", "58.2", "64.19", "92", "61", "26.2" }));
         Assert.That(config.NavToken, Is.Null);
     }

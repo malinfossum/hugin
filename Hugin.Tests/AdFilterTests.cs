@@ -6,7 +6,7 @@ namespace Hugin.Tests;
 
 public class AdFilterTests
 {
-    // No default geography any more (spec v3.5 Part A) — Gjøvik/Hamar/Lillehammer configured
+    // No default geography any more (spec v3.5 Part A). Gjøvik/Hamar/Lillehammer configured
     // explicitly so the fixtures below keep testing what they always tested.
     private static readonly HuginConfig Config = new()
     {
@@ -49,7 +49,7 @@ public class AdFilterTests
     [Test]
     public void Fylke_scoped_municipality_from_the_register_is_allowed()
     {
-        // Not in config.Municipalities at all — only reachable via the fylke prefix expanding
+        // Not in config.Municipalities at all. It is only reachable via the fylke prefix expanding
         // against the kommune register. This is the case NAV ads could never satisfy before H18,
         // since the old gate only ever checked config.Municipalities directly.
         var cfg = new HuginConfig { Municipalities = [], Fylker = ["39"] };
@@ -63,7 +63,7 @@ public class AdFilterTests
     public void Municipality_number_outside_the_scope_gate_is_rejected_even_if_known()
     {
         // The register knows the number (so ResolveName could map it), but it is not in
-        // AllowedNumbers — resolution and the allow-gate are deliberately separate.
+        // AllowedNumbers. Resolution and the allow-gate are deliberately separate.
         var cfg = new HuginConfig { Municipalities = [] };
         var register = new Dictionary<string, string> { ["3909"] = "LARVIK" };
         var scope = MunicipalityScope.Build(cfg, register);
@@ -94,7 +94,7 @@ public class AdFilterTests
     [Test]
     public void Uncategorized_ad_passes_the_gate()
         => Assert.That(AdFilter.MatchesCategory([], Config), Is.True,
-            "fail open — never discard what NAV did not categorize");
+            "fail open: never discard what NAV did not categorize");
 
     [Test]
     public void No_configured_categories_disables_the_gate()

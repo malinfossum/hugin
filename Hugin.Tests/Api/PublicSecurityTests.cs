@@ -14,10 +14,10 @@ public sealed class PublicSecurityTests
     [Test]
     public async Task Write_with_the_dashboard_header_is_still_403_with_the_demo_title()
     {
-        using var client = _factory.CreateApiClient(); // X-Hugin: 1 — irrelevant in public mode
+        using var client = _factory.CreateApiClient(); // X-Hugin: 1 is irrelevant in public mode
         var response = await client.PostAsync("/api/seen", JsonContent.Create(new { asOf = DateTimeOffset.UtcNow }));
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
-        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("Demo — skrivebeskyttet"));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("Demo: skrivebeskyttet"));
     }
 
     [Test]

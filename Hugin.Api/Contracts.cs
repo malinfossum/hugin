@@ -51,7 +51,7 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
         new(c.Orgnr, c.Name, c.MunicipalityNumber, PlaceName.Resolve(c.MunicipalityNumber, config, kommuner),
             c.NaceCode, c.IsBranch, ResolveWebsite(c), c.ParentOrgnr, openAds.GetValueOrDefault(c.Orgnr));
 
-    // A website confirmed dead (WebsiteOk == false) is never rendered as a link — better no
+    // A website confirmed dead (WebsiteOk == false) is never rendered as a link. Better no
     // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this
     // feature existed. A checked-and-reachable site prefers the variant that actually answered
     // (WebsiteResolved), which may differ from the register's own https-prefixed value.
@@ -97,7 +97,7 @@ public sealed record DiscoveryConfigDto(IReadOnlyList<MunicipalityRef> Municipal
     public static DiscoveryConfigDto From(DiscoveryConfig d) => new(d.Municipalities, d.Fylker, d.AllOfNorway);
 }
 
-/// <summary>Numbers only — names are derived from the kommune register server-side (spec v3.4 Part A).</summary>
+/// <summary>Numbers only. Names are derived from the kommune register server-side (spec v3.4 Part A).</summary>
 public sealed record DiscoveryWriteRequest(IReadOnlyList<string>? MunicipalityNumbers, IReadOnlyList<string>? Fylker, bool AllOfNorway);
 
 public sealed record FocusConfigDto(IReadOnlyList<string> Naeringskoder, IReadOnlyList<string> Keywords)
@@ -113,7 +113,7 @@ public sealed record ResetRequest(string Mode);
 
 public sealed record ResetResultDto(string Mode, string? SnapshotPath);
 
-/// <summary>Same slugs as the CLI's track command — one vocabulary across both frontends.</summary>
+/// <summary>Same slugs as the CLI's track command: one vocabulary across both frontends.</summary>
 public static class StatusSlug
 {
     public static string ToSlug(PipelineStatus status) => status switch

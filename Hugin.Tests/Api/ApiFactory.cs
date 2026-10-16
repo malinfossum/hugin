@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Hugin.Tests.Api;
 
-/// <param name="autosync">Let StartupSync run on boot — only the boot-hold tests want that.</param>
+/// <param name="autosync">Let StartupSync run on boot. Only the boot-hold tests want that.</param>
 /// <param name="existingDb">Pre-create hugin.db so the host sees an existing install, not a fresh one.</param>
 /// <param name="publicMode">Boot the host as the hosted demo: hugin:public + hugin:state (a state dir
 /// under the temp dir holding an empty hugin.json) + hugin:workingdb pointed at this factory's DbPath.</param>
@@ -43,7 +43,7 @@ public sealed class ApiFactory(bool autosync = false, bool existingDb = false, b
             builder.UseSetting("hugin:state", StateDir);
             builder.UseSetting("hugin:workingdb", DbPath);
 
-            // No default geography any more (spec v3.5 Part A) — the real demo always ships
+            // No default geography any more (spec v3.5 Part A). The real demo always ships
             // with a scope already chosen. IConfigSource below is wired to ConfigPath (not the
             // state-dir file above) regardless of public mode, so that is where it belongs.
             File.WriteAllText(ConfigPath, """{ "municipalities": [{ "name": "Hamar", "number": "3403" }] }""");
@@ -82,7 +82,7 @@ public sealed class ApiFactory(bool autosync = false, bool existingDb = false, b
         });
     }
 
-    /// <summary>Client with the write header pre-set — the default for endpoint tests.</summary>
+    /// <summary>Client with the write header pre-set: the default for endpoint tests.</summary>
     public HttpClient CreateApiClient()
     {
         var client = CreateClient();

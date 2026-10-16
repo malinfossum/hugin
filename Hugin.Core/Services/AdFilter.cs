@@ -20,7 +20,7 @@ public static class AdFilter
 
     /// <summary>
     /// Post-enrichment precision gate on NAV's occupation categories (level1). Fails open:
-    /// an uncategorized ad, or an empty configured list, always passes — the gate exists to
+    /// an uncategorized ad, or an empty configured list, always passes. The gate exists to
     /// drop confident mismatches, never to guess.
     /// </summary>
     public static bool MatchesCategory(IReadOnlyList<string> level1Categories, HuginConfig config)

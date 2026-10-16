@@ -17,7 +17,7 @@ var publicFlag = Array.IndexOf(args, "--public") >= 0;
 var stateArg = ArgValue(args, "--state");
 
 // Beside-the-exe rule (matches ConfigLoader): default content root to the exe's own directory,
-// not the launch CWD — a published exe started from elsewhere must still find wwwroot. The
+// not the launch CWD. A published exe started from elsewhere must still find wwwroot. The
 // standard ASPNETCORE_CONTENTROOT env var still wins when set, e.g. for test hosts.
 var contentRoot = Environment.GetEnvironmentVariable("ASPNETCORE_CONTENTROOT") ?? AppContext.BaseDirectory;
 
@@ -28,7 +28,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 // Two doors into public mode: the --public flag for real runs, or hugin:public in configuration
-// (reachable as the hugin__public env var) for a host that sets it that way instead — ApiFactory
+// (reachable as the hugin__public env var) for a host that sets it that way instead. ApiFactory
 // uses this door for test hosts. Both doors must run through the same Validate + state-dir
 // sourcing below, or the config-only door skips the checks meant to keep a broken demo host from
 // silently doing the wrong thing (no --state/--config checks, hugin.json loaded from beside the
@@ -126,7 +126,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var dbPath = mode.Enabled ? mode.WorkingDbPath : file.DatabasePath;
 
     // Fresh install = no db on disk BEFORE InitAsync creates it: hold the boot sync for first-run.
-    // Never in public mode — there is no first-run dialog for a visitor to resolve (spec A5).
+    // Never in public mode. There is no first-run dialog for a visitor to resolve (spec A5).
     if (!mode.Enabled && !File.Exists(dbPath)) services.GetRequiredService<BootSyncGate>().Hold();
 
     if (mode.Enabled) services.GetRequiredService<DemoSnapshot>().CopyIn();
@@ -142,14 +142,14 @@ app.UseHuginSecurity(app.Services.GetRequiredService<PublicModeOptions>());
 // Physical wwwroot (a normal `dotnet publish`, or dev after `npm run build`) wins when present;
 // otherwise fall back to the frontend embedded into this assembly at publish time (the
 // single-file exe, which has no physical wwwroot beside it at all). UseDefaultFiles/UseStaticFiles
-// both resolve IWebHostEnvironment.WebRootFileProvider synchronously right here, at startup — so
+// both resolve IWebHostEnvironment.WebRootFileProvider synchronously right here, at startup. So
 // this must run before those two calls, not lazily inside a request.
 //
 // Set explicitly in BOTH branches rather than leaving the physical case to ASP.NET Core's default:
 // Microsoft.NET.Sdk.Web's "static web assets" dev convenience wraps the default WebRootFileProvider
 // in a CompositeFileProvider that resolves wwwroot/* back to this PROJECT'S OWN SOURCE TREE
 // (Hugin.Api\wwwroot on the machine that built it) ahead of the content-root-relative physical
-// folder — harmless for the real beside-the-exe deployment (no such manifest ships with a publish),
+// folder. That is harmless for the real beside-the-exe deployment (no such manifest ships with a publish),
 // but it silently defeats the ASPNETCORE_CONTENTROOT-based content-root override the test suite
 // uses to point at a temp wwwroot. A plain PhysicalFileProvider anchored at wwwrootPhysicalPath
 // sidesteps that composite entirely and keeps the beside-the-exe rule exact.
@@ -168,7 +168,7 @@ app.MapSync();
 app.MapSources();
 app.MapConfig();
 
-// SPA fallback — but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
+// SPA fallback, but /api stays API-shaped: an unknown endpoint is a 404 there, never index.html.
 app.MapFallback(async context =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
@@ -209,15 +209,15 @@ app.Lifetime.ApplicationStarted.Register(() =>
         // (ICU-backed culture, tzdata-backed Europe/Oslo) before anything else can go wrong.
         string oslo;
         try { oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo").Id; }
-        catch (TimeZoneNotFoundException) { oslo = "IKKE FUNNET — tzdata mangler"; }
-        Console.WriteLine($"Hugin kjører i public-modus på {listenAddress}:{port} — state: {publicMode.StateDir}. "
+        catch (TimeZoneNotFoundException) { oslo = "IKKE FUNNET (tzdata mangler)"; }
+        Console.WriteLine($"Hugin kjører i public-modus på {listenAddress}:{port}. State: {publicMode.StateDir}. "
             + $"Kultur: {System.Globalization.CultureInfo.CurrentCulture.Name}, tidssone Europe/Oslo: {oslo}.");
         Console.WriteLine("ADVARSEL: alt i state-mappen serveres skrivebeskyttet til alle som når porten. "
             + "Bruk aldri --public på en maskin med en ekte pipeline.");
         return;
     }
 
-    Console.WriteLine($"Hugin kjører på http://localhost:{port} — lukk dette vinduet for å avslutte.");
+    Console.WriteLine($"Hugin kjører på http://localhost:{port}. Lukk dette vinduet for å avslutte.");
 
     if (!openBrowser) return;
     try

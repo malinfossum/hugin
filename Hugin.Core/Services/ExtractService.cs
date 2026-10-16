@@ -8,13 +8,13 @@ public enum ExtractScope { New, Category, All }
 
 public enum ExtractFormat { Md, Txt, Json }
 
-/// <summary>Thrown when <see cref="ExtractScope.Category"/> is requested without a category —
+/// <summary>Thrown when <see cref="ExtractScope.Category"/> is requested without a category:
 /// the one combination that cannot produce a meaningful (even if empty) document.</summary>
 public sealed class MissingCategoryException() : Exception("kategori er påkrevd for scope=category");
 
 public sealed record ExtractResult(string Content, string FileName, string ContentType);
 
-/// <summary>One row of <see cref="ExtractDocument.Companies"/> — a DTO shape, never the EF entity,
+/// <summary>One row of <see cref="ExtractDocument.Companies"/>: a DTO shape, never the EF entity,
 /// so JSON serialization can never leak internal fields.</summary>
 public sealed record ExtractCompanyRow(string Orgnr, string Name, string? Kommune, string? KommuneNavn,
     string? Website, bool IsBranch);
@@ -22,7 +22,7 @@ public sealed record ExtractCompanyRow(string Orgnr, string Name, string? Kommun
 public sealed record ExtractAdRow(string FeedId, string Title, string? Employer, string? EmployerOrgnr,
     string? Kommune, DateTimeOffset? Expires, string? Category, string? SourceUrl);
 
-/// <summary>One outreach row — the Preparelogg-compatible shape (Dato · Bedrift · Nettside · Grunn · Svar).</summary>
+/// <summary>One outreach row: the Preparelogg-compatible shape (Dato · Bedrift · Nettside · Grunn · Svar).</summary>
 public sealed record ExtractTrackerRow(DateTimeOffset Updated, string CompanyName, string? Website,
     string Why, string? Svar);
 
@@ -60,7 +60,7 @@ public sealed class ExtractService(
         switch (scope)
         {
             case ExtractScope.New:
-                // No review mark yet (no sync has ever completed) — empty-but-valid document,
+                // No review mark yet (no sync has ever completed): empty-but-valid document,
                 // same "starts empty" rule as `hugin new`.
                 if (await reviewMark.GetAsync(ct) is { } mark)
                 {
@@ -106,7 +106,7 @@ public sealed class ExtractService(
         var rows = new List<ExtractTrackerRow>();
 
         // Active is pre-outreach and excluded by default (same rule the old MarkdownExporter
-        // enforced) — v3.1 makes inclusion an option via includeActive. An Active entry whose
+        // enforced); v3.1 makes inclusion an option via includeActive. An Active entry whose
         // ads have all expired sits under Utgått on screen, not Active, so it stays out here too.
         foreach (var entry in entries
             .Where(o => o.Entry.Status >= PipelineStatus.Applied
@@ -124,7 +124,7 @@ public sealed class ExtractService(
 
     // Resolution order matches PlaceName.Resolve in the API: configured municipality name first,
     // then the full Brreg kommune register, then the raw number as a last resort. Website
-    // resolution matches too — a confirmed-dead site (WebsiteOk == false) never appears.
+    // resolution matches too: a confirmed-dead site (WebsiteOk == false) never appears.
     private ExtractCompanyRow ToCompanyRow(Company c, IReadOnlyDictionary<string, string> kommuner)
     {
         var kommuneNavn = config.Municipalities.FirstOrDefault(m => m.Number == c.MunicipalityNumber)?.Name

@@ -8,7 +8,7 @@ namespace Hugin.Tests;
 
 /// <summary>
 /// Every other migration test runs against an empty db, which never exercises the data remap in
-/// <c>V3StatusModel.Up</c> — SQLite happily runs an UPDATE against zero rows. These tests seed
+/// <c>V3StatusModel.Up</c>: SQLite happily runs an UPDATE against zero rows. These tests seed
 /// real pre-migration rows (old Status ints, a Route column) and assert the remap itself.
 /// </summary>
 [TestFixture]
@@ -61,7 +61,7 @@ public sealed class V3StatusModelMigrationTests
                 Assert.That(byOrgnr.Select(p => p.Status), Is.EqualTo(new[] { 0, 1, 1, 2, 0 }),
                     "Funnet->Active, both outreach routes->Applied, Svar->Answered, out-of-range->Active");
                 Assert.That(byOrgnr.Select(p => p.Starred), Is.All.False,
-                    "Starred is a new column — every pre-existing row must default to false");
+                    "Starred is a new column. Every pre-existing row must default to false");
 
                 var connection = check.Database.GetDbConnection();
                 await connection.OpenAsync();

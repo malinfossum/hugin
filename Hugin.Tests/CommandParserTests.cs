@@ -92,7 +92,7 @@ public class CommandParserTests
     [Test]
     public void Untrack_without_orgnr_is_invalid()
         => Assert.That(CommandParser.Parse(["untrack"]),
-            Is.EqualTo(new InvalidCommand("mangler orgnr — bruk: hugin untrack <orgnr>")));
+            Is.EqualTo(new InvalidCommand("mangler orgnr. Bruk: hugin untrack <orgnr>")));
 
     [Test]
     public void Untrack_with_an_extra_argument_is_invalid()

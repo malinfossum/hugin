@@ -7,7 +7,7 @@ public sealed record LoadedConfig(HuginConfig Config, string ConfigPath, string 
 
 /// <summary>
 /// Reads hugin.json. A missing file is normal (first run); a broken one is a warning, never a
-/// crash — a typo in the config must not take the morning routine down with it.
+/// crash. A typo in the config must not take the morning routine down with it.
 /// </summary>
 public static class ConfigLoader
 {
@@ -39,7 +39,7 @@ public static class ConfigLoader
         catch (IOException ex)
         {
             return new LoadedConfig(new HuginConfig(), configPath, databasePath,
-                $"kunne ikke lese {configPath} ({ex.Message}) — bruker standardverdier");
+                $"kunne ikke lese {configPath} ({ex.Message}). Bruker standardverdier");
         }
 
         var config = Parse(json, out var warning);
@@ -57,7 +57,7 @@ public static class ConfigLoader
         }
         catch (JsonException ex)
         {
-            warning = $"ugyldig JSON i {FileName} ({ex.Message}) — bruker standardverdier";
+            warning = $"ugyldig JSON i {FileName} ({ex.Message}). Bruker standardverdier";
             return new HuginConfig();
         }
     }

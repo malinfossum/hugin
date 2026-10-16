@@ -55,7 +55,7 @@ public sealed class HuginDbInitializerTests
         try
         {
             // A real sqlite file already sitting at the path, with no __EFMigrationsHistory
-            // table yet, has every migration pending — exactly the "real data about to be
+            // table yet, has every migration pending. That is exactly the "real data about to be
             // migrated" case InitAsync must protect.
             await using (var seed = new SqliteConnection($"Data Source={path}"))
             {
@@ -93,7 +93,7 @@ public sealed class HuginDbInitializerTests
                 .UseSqlite(HuginDbInitializer.ConnectionString(path))
                 .Options;
 
-            // No file exists at the path yet — nothing to back up.
+            // No file exists at the path yet, so there is nothing to back up.
             Assert.That(File.Exists(path), Is.False);
 
             await using (var db = new HuginDbContext(options))
@@ -171,7 +171,7 @@ public sealed class HuginDbInitializerTests
     [Test]
     public async Task A_reset_does_not_resurrect_the_seeded_sources()
     {
-        // This is exactly what ResetService.WipeAsync deletes — the sources table itself, and
+        // This is exactly what ResetService.WipeAsync deletes: the sources table itself, and
         // the brreg/nav SyncStates rows only, never the "sources-seed" marker row. If a reset
         // ever wiped that marker too, the next launch's InitAsync would silently re-import the
         // three default sources and the config linkouts the user just deleted.
@@ -227,7 +227,7 @@ public sealed class HuginDbInitializerTests
 
             await using var check = new HuginDbContext(options);
             Assert.That(await check.Sources.CountAsync(), Is.Zero,
-                "seed is once-ever via the marker row, not when-empty — deleting everything must not resurrect it");
+                "seed is once-ever via the marker row, not when-empty. Deleting everything must not resurrect it");
         }
         finally
         {

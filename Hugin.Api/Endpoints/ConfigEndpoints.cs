@@ -43,16 +43,16 @@ public static class ConfigEndpoints
             var fylker = (request.Fylker ?? []).Distinct().ToList();
 
             if (numbers.FirstOrDefault(n => !IsKommuneNumber(n)) is { } badNumber)
-                return Results.Problem(statusCode: 400, title: $"Ugyldig kommunenummer «{badNumber}» — må være 4 sifre.");
+                return Results.Problem(statusCode: 400, title: $"Ugyldig kommunenummer «{badNumber}». Det må være 4 sifre.");
             if (fylker.FirstOrDefault(f => !IsFylkePrefix(f)) is { } badFylke)
-                return Results.Problem(statusCode: 400, title: $"Ugyldig fylkesnummer «{badFylke}» — må være 2 sifre.");
-            // Nothing selected at all writes an empty allow-set, which the sync cannot act on —
-            // and an empty kommunenummer filter is what makes Brreg return the whole country.
+                return Results.Problem(statusCode: 400, title: $"Ugyldig fylkesnummer «{badFylke}». Det må være 2 sifre.");
+            // Nothing selected at all writes an empty allow-set, which the sync cannot act on.
+            // And an empty kommunenummer filter is what makes Brreg return the whole country.
             if (numbers.Count == 0 && fylker.Count == 0 && !request.AllOfNorway)
-                return Results.Problem(statusCode: 400, title: "Tom dekning — velg minst én kommune, ett fylke eller hele Norge.");
+                return Results.Problem(statusCode: 400, title: "Tom dekning. Velg minst én kommune, ett fylke eller hele Norge.");
 
             // Names come from the register, never from the client. Fylke-only saves are allowed
-            // even when the register is unreachable (the dialog's degraded mode) — kommune numbers
+            // even when the register is unreachable (the dialog's degraded mode). Kommune numbers
             // are not, since they could not be validated or named.
             IReadOnlyDictionary<string, string>? known = null;
             try
@@ -74,7 +74,7 @@ public static class ConfigEndpoints
             }
             else if (fylker.FirstOrDefault(f => !Fylker.Known.Contains(f)) is { } unknownFylke)
             {
-                // No register to check against — the static fylke set still rules out a
+                // No register to check against. The static fylke set still rules out a
                 // well-formed prefix that no kommune has, which would otherwise be written and
                 // then fetch nothing.
                 return Results.Problem(statusCode: 400, title: $"Ukjent fylkesnummer «{unknownFylke}».");
@@ -94,7 +94,7 @@ public static class ConfigEndpoints
             }
 
             // First-run is resolved by saving; the dashboard starts the sync itself (POST /api/sync),
-            // so releasing here must not start one — that would hand the dashboard a 409.
+            // so releasing here must not start one. That would hand the dashboard a 409.
             gate.Release();
             return Results.Ok(DiscoveryConfigDto.From(file.ReadDiscovery()));
         });
@@ -112,16 +112,16 @@ public static class ConfigEndpoints
 
             if (codes.Count == 0)
                 return Results.Problem(statusCode: 400,
-                    title: "Ingen bransjer valgt — Brreg svarer med hele landet uten et næringskodefilter.");
+                    title: "Ingen bransjer valgt. Brreg svarer med hele landet uten et næringskodefilter.");
             if (codes.Count > MaxCodes || keywords.Count > MaxKeywords)
                 return Results.Problem(statusCode: 400,
-                    title: $"For mange oppføringer — maks {MaxCodes} bransjer og {MaxKeywords} nøkkelord.");
+                    title: $"For mange oppføringer. Maks {MaxCodes} bransjer og {MaxKeywords} nøkkelord.");
             if (codes.Concat(keywords).FirstOrDefault(v => v.Length > MaxLength) is { } tooLong)
                 return Results.Problem(statusCode: 400,
                     title: $"«{tooLong}» er lengre enn {MaxLength} tegn.");
             if (codes.FirstOrDefault(c => !NaceCode.Pattern().IsMatch(c)) is { } badCode)
                 return Results.Problem(statusCode: 400,
-                    title: $"Ugyldig næringskode «{badCode}» — to siffer, eventuelt punktum og ett til tre siffer.");
+                    title: $"Ugyldig næringskode «{badCode}»: to siffer, eventuelt punktum og ett til tre siffer.");
 
             try
             {
@@ -145,7 +145,7 @@ public static class ConfigEndpoints
             var code = nace?.Trim() ?? "";
             if (!NaceCode.Pattern().IsMatch(code))
                 return Results.Problem(statusCode: 400,
-                    title: $"Ugyldig næringskode «{code}» — to siffer, eventuelt punktum og ett til tre siffer.");
+                    title: $"Ugyldig næringskode «{code}»: to siffer, eventuelt punktum og ett til tre siffer.");
 
             var scope = MunicipalityScope.Build(file.Load(), await kommuner.GetAllAsync(ct));
             try
@@ -165,7 +165,7 @@ public static class ConfigEndpoints
             if (request.Mode is not ("scope" or "all"))
                 return Results.Problem(statusCode: 400, title: "Ukjent nullstillingsmodus.");
             if (runner.Status.Running)
-                return Results.Problem(statusCode: 409, title: "En synk kjører — vent til den er ferdig.");
+                return Results.Problem(statusCode: 409, title: "En synk kjører. Vent til den er ferdig.");
 
             string? snapshot = null;
             try
@@ -181,7 +181,7 @@ public static class ConfigEndpoints
                 var title = snapshot is null
                     ? $"Nullstillingen feilet: {ex.Message}"
                     : $"Nullstillingen feilet etter at sikkerhetskopien ble tatt: {ex.Message} "
-                        + $"Databasen er tømt — kopien ligger på {snapshot}.";
+                        + $"Databasen er tømt. Kopien ligger på {snapshot}.";
                 return Results.Problem(statusCode: 500, title: title);
             }
 

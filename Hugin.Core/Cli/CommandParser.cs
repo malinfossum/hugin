@@ -4,7 +4,7 @@ using Hugin.Core.Services;
 namespace Hugin.Core.Cli;
 
 /// <summary>
-/// Turns raw argv into a <see cref="Command"/>. Pure — no console, no exit codes.
+/// Turns raw argv into a <see cref="Command"/>. Pure: no console, no exit codes.
 /// Anything malformed comes back as <see cref="InvalidCommand"/> with a message in bokmål.
 /// </summary>
 public static class CommandParser
@@ -30,7 +30,7 @@ public static class CommandParser
             "list" => ParseList(args),
             "export" => ParseExport(args),
             "help" or "--help" or "-h" => new HelpCommand(),
-            var verb => new InvalidCommand($"ukjent kommando '{verb}' — bruk sync | new | track | untrack | list | export"),
+            var verb => new InvalidCommand($"ukjent kommando '{verb}'. Bruk sync | new | track | untrack | list | export"),
         };
     }
 
@@ -48,12 +48,12 @@ public static class CommandParser
 
     private static Command ParseTrack(string[] args)
     {
-        if (args.Length < 2) return new InvalidCommand("mangler orgnr — bruk: hugin track <orgnr> <status>");
-        if (args.Length < 3) return new InvalidCommand($"mangler status — bruk {StatusHelp}");
+        if (args.Length < 2) return new InvalidCommand("mangler orgnr. Bruk: hugin track <orgnr> <status>");
+        if (args.Length < 3) return new InvalidCommand($"mangler status. Bruk {StatusHelp}");
 
         var orgnr = args[1];
         if (!TryParseStatus(args[2], out var status))
-            return new InvalidCommand($"ukjent status '{args[2]}' — bruk {StatusHelp}");
+            return new InvalidCommand($"ukjent status '{args[2]}'. Bruk {StatusHelp}");
 
         var (options, error) = ReadOptions(args, 3, ["why", "note", "svar"]);
         if (error is not null) return new InvalidCommand(error);
@@ -66,7 +66,7 @@ public static class CommandParser
 
     private static Command ParseUntrack(string[] args)
     {
-        if (args.Length < 2) return new InvalidCommand("mangler orgnr — bruk: hugin untrack <orgnr>");
+        if (args.Length < 2) return new InvalidCommand("mangler orgnr. Bruk: hugin untrack <orgnr>");
 
         var (_, error) = ReadOptions(args, 2, []);
         return error is not null ? new InvalidCommand(error) : new UntrackCommand(args[1]);
@@ -81,7 +81,7 @@ public static class CommandParser
         if (options.TryGetValue("status", out var raw))
         {
             if (!TryParseStatus(raw, out var parsed))
-                return new InvalidCommand($"ukjent status '{raw}' — bruk {StatusHelp}");
+                return new InvalidCommand($"ukjent status '{raw}'. Bruk {StatusHelp}");
             status = parsed;
         }
 
@@ -98,14 +98,14 @@ public static class CommandParser
         if (options.TryGetValue("format", out var rawFormat))
         {
             if (!TryParseFormat(rawFormat, out format))
-                return new InvalidCommand($"ukjent format '{rawFormat}' — bruk {FormatHelp}");
+                return new InvalidCommand($"ukjent format '{rawFormat}'. Bruk {FormatHelp}");
         }
 
         var scope = ExtractScope.All;
         if (options.TryGetValue("scope", out var rawScope))
         {
             if (!TryParseScope(rawScope, out scope))
-                return new InvalidCommand($"ukjent scope '{rawScope}' — bruk {ScopeHelp}");
+                return new InvalidCommand($"ukjent scope '{rawScope}'. Bruk {ScopeHelp}");
         }
 
         var category = options.GetValueOrDefault("category");
@@ -150,8 +150,8 @@ public static class CommandParser
 
     /// <summary>
     /// Walks "--flag value" pairs from <paramref name="from"/>. Options outside
-    /// <paramref name="allowed"/>, bare words, and value-less options are all errors —
-    /// a silently dropped argument is worse than a refusal.
+    /// <paramref name="allowed"/>, bare words, and value-less options are all errors.
+    /// A silently dropped argument is worse than a refusal.
     /// </summary>
     private static (Dictionary<string, string> Options, string? Error) ReadOptions(
         string[] args, int from, string[] allowed)
