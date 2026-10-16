@@ -199,7 +199,7 @@ describe('FocusSection', () => {
     renderSection()
     await userEvent.click(await screen.findByRole('button', { name: 'Legg til anbefalte' }))
 
-    const expected = 'Anbefalte bransjer lagt til: 2 — 132 bedrifter totalt.'
+    const expected = 'Anbefalte bransjer lagt til: 2. Totalt 132 bedrifter.'
     expect(await screen.findByText(expected)).toBeInTheDocument()
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await waitFor(() => expect(liveRegion).toHaveTextContent(expected))
@@ -220,7 +220,7 @@ describe('FocusSection', () => {
 
     expect(
       await screen.findByText(
-        'Anbefalte bransjer lagt til: 2 — 87 bedrifter totalt for 1 av dem (resten ukjent, Brreg var utilgjengelig).'
+        'Anbefalte bransjer lagt til: 2. Totalt 87 bedrifter for 1 av dem (resten ukjent, Brreg var utilgjengelig).'
       )
     ).toBeInTheDocument()
   })
@@ -401,8 +401,8 @@ describe('FocusSection', () => {
     await userEvent.type(await screen.findByLabelText('Legg til bransje'), '99')
     await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
 
-    expect(await screen.findByText('99 — 7 bedrifter')).toBeInTheDocument()
-    expect(screen.queryByText(/— 0 bedrifter/)).not.toBeInTheDocument()
+    expect(await screen.findByText('99: 7 bedrifter')).toBeInTheDocument()
+    expect(screen.queryByText(/: 0 bedrifter/)).not.toBeInTheDocument()
   })
 
   it('shows the literal zero-count text only for a genuine zero (name and units both empty)', async () => {
@@ -415,7 +415,7 @@ describe('FocusSection', () => {
     await userEvent.type(await screen.findByLabelText('Legg til bransje'), '99')
     await userEvent.click(screen.getByRole('button', { name: 'Vis antall' }))
 
-    expect(await screen.findByText('99 — 0 bedrifter')).toBeInTheDocument()
+    expect(await screen.findByText('99: 0 bedrifter')).toBeInTheDocument()
   })
 
   it('shows a failure message, not a fabricated zero, when Brreg is unreachable', async () => {
@@ -443,7 +443,7 @@ describe('FocusSection', () => {
       expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
     })
     const liveRegion = document.querySelector('[aria-live="polite"]')
-    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret — synkroniserer …'))
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret. Synkroniserer …'))
   })
 
   it('a keywords-only change does not start a sync on save', async () => {
@@ -456,7 +456,7 @@ describe('FocusSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
-    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret — gjelder fra neste synk'))
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret. Gjelder fra neste synk'))
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(false)
   })
 
@@ -485,8 +485,8 @@ describe('FocusSection', () => {
     await waitFor(() => {
       expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
     })
-    expect(await screen.findByText('Lagret — brukes ved neste synk')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Brukes ved neste synk')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('says the sync could not start when the save went through but the sync did not (finding 3)', async () => {
@@ -501,8 +501,8 @@ describe('FocusSection', () => {
     await waitFor(() => {
       expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
     })
-    expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synken kunne ikke starte')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('removing the last bransje chip moves focus to the add field (finding 4)', async () => {

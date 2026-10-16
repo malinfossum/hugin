@@ -689,7 +689,7 @@ describe('Dekning (coverage)', () => {
       fylker: [],
       allOfNorway: false,
     })
-    expect(await screen.findByText('Lagret — synkroniserer …')).toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synkroniserer …')).toBeInTheDocument()
     expect(
       server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
     ).toBe(true)
@@ -722,8 +722,8 @@ describe('Dekning (coverage)', () => {
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
-    expect(await screen.findByText('Lagret — brukes ved neste synk')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Brukes ved neste synk')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('saves the fylke alone when the kommune list is unavailable', async () => {
@@ -799,8 +799,8 @@ describe('Dekning (coverage)', () => {
 
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
-    expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synken kunne ikke starte')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('a coverage save resets Fokus’s preview cache — a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
@@ -813,12 +813,12 @@ describe('Dekning (coverage)', () => {
     await user.type(within(focusSection).getByLabelText('Legg til bransje'), '62')
     await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
     expect(
-      await within(focusSection).findByText('62 · IT-tjenester — 10 bedrifter')
+      await within(focusSection).findByText('62 · IT-tjenester: 10 bedrifter')
     ).toBeInTheDocument()
 
     await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
-    await screen.findByText('Lagret — synkroniserer …')
+    await screen.findByText('Lagret. Synkroniserer …')
 
     // FocusSection is NOT remounted (Task 11 finding 2 — a remount would also discard an
     // unsaved draft): the preview endpoint has only been called once so far, invalidated
@@ -833,7 +833,7 @@ describe('Dekning (coverage)', () => {
     await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
 
     expect(
-      await within(focusSection).findByText('62 · IT-tjenester — 20 bedrifter')
+      await within(focusSection).findByText('62 · IT-tjenester: 20 bedrifter')
     ).toBeInTheDocument()
     const previewCallsAfter = server.fetchMock.mock.calls.filter(([u]) =>
       String(u).startsWith('/api/config/focus/preview')
@@ -856,7 +856,7 @@ describe('Dekning (coverage)', () => {
 
     await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
-    await screen.findByText('Lagret — synkroniserer …')
+    await screen.findByText('Lagret. Synkroniserer …')
 
     // A coverage save must not have called Fokus's own PUT — the draft is still just local
     // state, unsaved, and it is still there.

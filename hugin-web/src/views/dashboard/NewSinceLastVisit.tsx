@@ -197,7 +197,7 @@ export function NewSinceLastVisit() {
                       ) : (
                         <span>{ad.title}</span>
                       )}{' '}
-                      — {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+                      · {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
                     </li>
                   ))}
                 </ul>

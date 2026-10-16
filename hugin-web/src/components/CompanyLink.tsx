@@ -27,7 +27,7 @@ export function CompanyLink({
 
   return (
     <span className={`cluster cluster-sm ${className ?? ''}`.trim()}>
-      {t('companies.noWebsite')} —
+      {t('companies.noWebsite')}:
       <a href={googleSearchUrl(name, kommuneNavn)} target="_blank" rel="noopener noreferrer">
         {t('companies.googleSearch')}
       </a>

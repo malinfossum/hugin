@@ -1,4 +1,4 @@
-// Norwegian bokmål string table. Keep the key set IDENTICAL to en.ts — the key-parity test in
+// Norwegian bokmål string table. Keep the key set IDENTICAL to en.ts. The key-parity test in
 // index.test.ts is the drift guard (spec decision 3 / loopholes).
 export const nb = {
   'nav.ariaLabel': 'Hovedmeny',
@@ -43,7 +43,7 @@ export const nb = {
   'sync.now': 'Synk nå',
   'sync.syncing': 'synker …',
   'sync.alreadyRunning': 'En synk kjører allerede.',
-  'sync.startFailed': 'Kunne ikke starte synk — prøv igjen.',
+  'sync.startFailed': 'Kunne ikke starte synk. Prøv igjen.',
   'sync.done': 'Synk ferdig.',
   'sync.failedFull': 'Synk feilet: {error}',
   'sync.failedPartial': 'Synk delvis feilet: {error}',
@@ -79,7 +79,7 @@ export const nb = {
     'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.',
   'needsAction.loadError': 'Kunne ikke laste annonser.',
   'needsAction.notApplied': 'følger med, ikke søkt',
-  'needsAction.item': '{title} — {status} — {deadline}',
+  'needsAction.item': '{title} · {status} · {deadline}',
   'needsAction.deadlineToday': 'frist i dag',
   'needsAction.deadlineExpired': 'frist utløpt',
   'needsAction.deadlineInDays': 'frist om {n} dager',
@@ -119,12 +119,12 @@ export const nb = {
   'newSince.description':
     'Bedrifter og annonser som har kommet til siden du sist trykket «Merk som sett».',
   'newSince.loadError': 'Kunne ikke laste nytt siden sist.',
-  'newSince.noSyncYet': 'Ingen sync er kjørt ennå — trykk Synk nå.',
+  'newSince.noSyncYet': 'Ingen sync er kjørt ennå. Trykk Synk nå.',
   'newSince.newCompanies': 'Nye bedrifter ({n})',
   'newSince.newAds': 'Nye annonser ({n})',
   'newSince.markSeen': 'Merk som sett',
   'newSince.none': '(ingen nye)',
-  'newSince.confirmTitle': 'Merket flyttes — dette kan ikke angres.',
+  'newSince.confirmTitle': 'Merket flyttes. Dette kan ikke angres.',
   'newSince.markError': 'Kunne ikke merke som sett.',
   'newSince.markedAnnounce': 'Merket som sett.',
   'newSince.unknownPlace': 'Ukjent sted',
@@ -173,6 +173,7 @@ export const nb = {
   'companies.seeAdAtNav': 'Se annonse hos NAV',
   'companies.noWebsite': 'har ikke egen nettside',
   'companies.googleSearch': 'Google-søk',
+  'companies.notGiven': 'Ikke oppgitt',
   'companies.websiteFilterLabel': 'Nettside',
   'companies.websiteHas': 'Har nettside',
   'companies.websiteNone': 'Uten nettside',
@@ -204,7 +205,7 @@ export const nb = {
   'export.enterCategoryHint': 'Skriv inn en kategori for å se forhåndsvisning.',
   'export.loadError': 'Kunne ikke laste eksport.',
   'export.copiedAnnounce': 'Kopiert til utklippstavlen.',
-  'export.copyFailedAnnounce': 'Kunne ikke kopiere — merk teksten manuelt.',
+  'export.copyFailedAnnounce': 'Kunne ikke kopiere. Merk teksten manuelt.',
 
   'coverage.heading': 'Dekning',
   'coverage.hint':
@@ -212,12 +213,12 @@ export const nb = {
   'coverage.kommunerLegend': 'Kommuner i {fylke}',
   'coverage.kommunerHint': 'Ingen valgt = hele fylket.',
   'coverage.kommunerUnavailable':
-    'Kommunelisten er ikke tilgjengelig ennå — velg fylke nå, og kommuner under Innstillinger senere.',
+    'Kommunelisten er ikke tilgjengelig ennå. Velg fylke nå, og kommuner under Innstillinger senere.',
   'coverage.loadError': 'Kunne ikke laste dekningen.',
   'coverage.save': 'Lagre dekning',
-  'coverage.saved': 'Lagret — synkroniserer …',
-  'coverage.savedSyncBusy': 'Lagret — brukes ved neste synk',
-  'coverage.savedSyncFailed': 'Lagret — synken kunne ikke starte',
+  'coverage.saved': 'Lagret. Synkroniserer …',
+  'coverage.savedSyncBusy': 'Lagret. Brukes ved neste synk',
+  'coverage.savedSyncFailed': 'Lagret. Synken kunne ikke starte',
   'coverage.saveFailed': 'Kunne ikke lagre dekningen: {error}',
   'coverage.othersHint': 'Dekkes også, utenfor {fylke}',
   'coverage.otherFylke': '{fylke} (hele fylket)',
@@ -230,22 +231,22 @@ export const nb = {
   'focus.addCode': 'Legg til bransje',
   'focus.addCodeToList': 'Legg til bransje i listen',
   'focus.previewButton': 'Vis antall',
-  'focus.previewResult': '{code} · {name} — {units} bedrifter',
-  'focus.previewUnknown': '{code} — 0 bedrifter',
-  // Ruling 3: the count resolved but Brreg returned no name — shown honestly with the code
+  'focus.previewResult': '{code} · {name}: {units} bedrifter',
+  'focus.previewUnknown': '{code}: 0 bedrifter',
+  // Ruling 3: the count resolved but Brreg returned no name. It is shown honestly with the code
   // standing in for the missing name, never previewUnknown's literal "0" for a real count.
-  'focus.previewNoName': '{code} — {units} bedrifter',
+  'focus.previewNoName': '{code}: {units} bedrifter',
   'focus.previewFailed': 'Kunne ikke hente antall',
-  // A format failure is not a Brreg failure — previewFailed above claims a lookup that never
+  // A format failure is not a Brreg failure. previewFailed above claims a lookup that never
   // ran. Used by both the preview button and Add, so a typo gets one honest answer either way.
   'focus.invalidCode':
-    'Ugyldig bransjekode — to sifre, med valgfritt punktum og 1–3 sifre til (f.eks. «62» eller «58.2»).',
+    'Ugyldig bransjekode: to sifre, med valgfritt punktum og 1–3 sifre til (f.eks. «62» eller «58.2»).',
   'focus.covered': '{code} dekkes allerede av {broader}',
   'focus.recommended': 'Legg til anbefalte',
   'focus.recommendedFailed': 'Kunne ikke hente anbefalte bransjer.',
-  'focus.recommendedAddedTotal': 'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt.',
+  'focus.recommendedAddedTotal': 'Anbefalte bransjer lagt til: {count}. Totalt {units} bedrifter.',
   'focus.recommendedAddedPartial':
-    'Anbefalte bransjer lagt til: {count} — {units} bedrifter totalt for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
+    'Anbefalte bransjer lagt til: {count}. Totalt {units} bedrifter for {known} av dem (resten ukjent, Brreg var utilgjengelig).',
   'focus.removeCode': 'Fjern bransje {code}',
   'focus.keywordsLegend': 'Nøkkelord',
   'focus.keywordsHint': 'Endringer gjelder annonser som kommer inn etter neste synk.',
@@ -253,7 +254,7 @@ export const nb = {
   'focus.addKeywordToList': 'Legg til nøkkelord i listen',
   'focus.removeKeyword': 'Fjern nøkkelord «{keyword}»',
   'focus.save': 'Lagre fokus',
-  'focus.savedNoSync': 'Lagret — gjelder fra neste synk',
+  'focus.savedNoSync': 'Lagret. Gjelder fra neste synk',
   'focus.saveFailed': 'Kunne ikke lagre fokus: {error}',
   'focus.loadError': 'Kunne ikke laste fokus.',
   // Part C full backfill (ruling 4): lives on this card, not SyncHeader (v3.2 polling trap).
@@ -296,16 +297,16 @@ export const nb = {
   'footer.adsCredit': 'Annonser fra NAV',
   'footer.companyCredit': 'Bedriftsdata fra Brønnøysundregistrene',
 
-  // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen — an
+  // v3.5 Part A4: the dashboard's own prompt when a sync ends with no coverage chosen. It is an
   // empty result, not an error, so it gets a button instead of the generic failure banner.
   'dashboard.noCoverageMessage': 'Ingen dekning valgt.',
   'dashboard.noCoverageButton': 'Velg dekning',
   'dashboard.noCoverageAnnounce': 'Ingen dekning valgt. Velg fylke, kommune eller hele landet.',
 
-  // v3.5 Part D — Nullstilling. Two levels, both danger-styled and behind a typed confirmation
+  // v3.5 Part D: Nullstilling. Two levels, both danger-styled and behind a typed confirmation
   // for the hard one; the confirm word itself stays "NULLSTILL" in both languages (spec-locked).
   'reset.heading': 'Nullstilling',
-  'reset.hint': 'To nivåer for å begynne på nytt — velg det du trenger. Ingen av dem kan angres.',
+  'reset.hint': 'To nivåer for å begynne på nytt. Velg det du trenger. Ingen av dem kan angres.',
   'reset.scopeButton': 'Nullstill dekning',
   'reset.scopeConfirmTitle': 'Nullstille dekningen?',
   'reset.scopeConfirmBody':
@@ -315,13 +316,13 @@ export const nb = {
   'reset.hardButton': 'Start på nytt',
   'reset.hardConfirmTitle': 'Slette alt og starte på nytt?',
   'reset.hardConfirmIntro':
-    'Dette kan ikke angres. Pipelinen din forsvinner for godt — bedrifter og annonser kommer tilbake ved neste synk.',
+    'Dette kan ikke angres. Pipelinen din forsvinner for godt. Bedrifter og annonser kommer tilbake ved neste synk.',
   'reset.hardCounts': '{companies} bedrifter, {activeAds} annonser, {pipelineEntries} i Søknader.',
   'reset.hardConfirmButton': 'Slett alt',
   'reset.confirmLabel': 'Skriv NULLSTILL for å bekrefte',
   'reset.hardDone': 'Nullstilt. Sikkerhetskopi lagret: {path}',
   'reset.hardFailed': 'Kunne ikke nullstille: {error}',
   // D2: the snapshot path must genuinely be read, not fire past the user via an immediate
-  // reload — the reload now waits for this button instead of firing on its own.
+  // reload. The reload now waits for this button instead of firing on its own.
   'reset.hardReload': 'Last siden på nytt',
 } as const

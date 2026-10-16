@@ -40,7 +40,7 @@ function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
             <span className="text-muted">{publishedText(ad.published, t)}</span>
           )}
           <span className="help">
-            {t('companies.deadlineLabel', { date: ad.expires ? formatDate(ad.expires) : '—' })}
+            {t('companies.deadlineLabel', { date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven') })}
           </span>
           {ad.sourceUrl && (
             <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
@@ -72,9 +72,9 @@ function UnitBody({
         <dt>{t('companies.orgnr')}</dt>
         <dd>{detail.company.orgnr}</dd>
         <dt>{t('companies.kommune')}</dt>
-        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? '—'}</dd>
+        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}</dd>
         <dt>{t('companies.nace')}</dt>
-        <dd>{detail.company.naceCode ?? '—'}</dd>
+        <dd>{detail.company.naceCode ?? t('companies.notGiven')}</dd>
         {detail.company.isBranch && detail.company.parentOrgnr && (
           <>
             <dt>{t('companies.parentCompany')}</dt>

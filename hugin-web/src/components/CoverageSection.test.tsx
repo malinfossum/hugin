@@ -63,7 +63,7 @@ describe('CoverageSection', () => {
 
     await user.click(lillehammer)
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
-    expect(await screen.findByText('Lagret — synkroniserer …')).toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synkroniserer …')).toBeInTheDocument()
     expect(within(section).getByRole('checkbox', { name: 'Hamar' })).toBeChecked()
     expect(lillehammer).toBeChecked()
 

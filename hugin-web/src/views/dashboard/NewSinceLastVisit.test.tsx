@@ -144,7 +144,7 @@ describe('NewSinceLastVisit', () => {
   it('renders the empty-state text when no sync has ever run (204)', async () => {
     renderView(fakeServer(null))
 
-    expect(await screen.findByText('Ingen sync er kjørt ennå — trykk Synk nå.')).toBeInTheDocument()
+    expect(await screen.findByText('Ingen sync er kjørt ennå. Trykk Synk nå.')).toBeInTheDocument()
   })
 
   it('renders grouped companies (by kommune, [avdeling] for branches) and ads with counts', async () => {

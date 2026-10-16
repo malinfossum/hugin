@@ -59,7 +59,7 @@ function fakeServer(
       const respond = () => {
         if (options.resetStatus) {
           return jsonResponse(
-            { title: 'En synk kjører — vent til den er ferdig.' },
+            { title: 'En synk kjører. Vent til den er ferdig.' },
             { status: options.resetStatus }
           )
         }
@@ -251,7 +251,7 @@ describe('ResetSection', () => {
 
     expect(
       await screen.findByText(
-        'Kunne ikke nullstille dekningen: En synk kjører — vent til den er ferdig.'
+        'Kunne ikke nullstille dekningen: En synk kjører. Vent til den er ferdig.'
       )
     ).toBeInTheDocument()
     // Not treated as success: the stored focus survives the failed request.
@@ -271,7 +271,7 @@ describe('ResetSection', () => {
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
     expect(
-      await screen.findByText('Kunne ikke nullstille: En synk kjører — vent til den er ferdig.')
+      await screen.findByText('Kunne ikke nullstille: En synk kjører. Vent til den er ferdig.')
     ).toBeInTheDocument()
     expect(window.localStorage.getItem('hugin-focus')).not.toBeNull()
     expect(reload).not.toHaveBeenCalled()
@@ -286,7 +286,7 @@ describe('ResetSection', () => {
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
-    await screen.findByText('Kunne ikke nullstille: En synk kjører — vent til den er ferdig.')
+    await screen.findByText('Kunne ikke nullstille: En synk kjører. Vent til den er ferdig.')
 
     await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
     expect(screen.getByLabelText('Skriv NULLSTILL for å bekrefte')).toHaveValue('')

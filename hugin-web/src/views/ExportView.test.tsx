@@ -276,7 +276,7 @@ describe('ExportView', () => {
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
     await vi.waitFor(() => {
-      expect(liveRegion).toHaveTextContent('Kunne ikke kopiere — merk teksten manuelt.')
+      expect(liveRegion).toHaveTextContent('Kunne ikke kopiere. Merk teksten manuelt.')
     })
   })
 })
