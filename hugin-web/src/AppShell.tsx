@@ -258,7 +258,7 @@ export function AppShell() {
               onSaveFocus={(f, options) => setFocus(f, options)}
               onDone={() => {
                 setFirstRunDone(true)
-                // The scope was just written server-side — flip the live value now rather than
+                // The scope was just written server-side: flip the live value now rather than
                 // waiting for a reload to re-fetch /api/status, or `scopeConfigured === false` (still
                 // the boot-time snapshot) would keep this same condition true and reopen the dialog
                 // right after it closes (Task 11 finding 1).

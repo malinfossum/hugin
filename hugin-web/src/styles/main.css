@@ -485,8 +485,7 @@ a.brand:focus-visible {
   }
 }
 
-/* Demo banner (read-only showcase): a static region right after the header. */
-/* The design-system .app-shell is a two-row grid (header, main). Hugin adds the footer as a last
+/* Shell rows: header, [banner], main, footer. The design-system .app-shell is a two-row grid (header, main). Hugin adds the footer as a last
    row, and the demo banner as a row under the header. Main keeps the one stretching 1fr row in
    both layouts, so on a short view the footer sits at the bottom of the screen instead of
    taking the stretch, and the banner never pushes main down. */
@@ -496,6 +495,8 @@ a.brand:focus-visible {
 .app-shell:has(.demo-banner) {
   grid-template-rows: auto auto 1fr auto;
 }
+
+/* Demo banner (read-only showcase): a static region right after the header. */
 .demo-banner {
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
@@ -507,7 +508,8 @@ a.brand:focus-visible {
 }
 
 /* Footer (spec v3.8 B2): muted, small and centred. Small text does not mean small targets: each
-   link's hit box is 44 px tall, centred on the line. */
+   link's hit box is 44 px tall, centred on the line. A link in a flex row (the GitHub link) gets
+   that height as its row; a link inside running text (NLOD) is handled below. */
 .app-footer {
   border-top: 1px solid var(--border);
   font-size: var(--text-sm);
@@ -521,4 +523,10 @@ a.brand:focus-visible {
   display: inline-flex;
   align-items: center;
   min-block-size: 44px;
+}
+/* A link inside running text keeps the 44 px hit box but takes only one line of space: an
+   inline-level box's margin box sets the line's height, its border box the hit area. The box
+   overlaps the credit text above it, which is not interactive. */
+.app-footer span > a {
+  margin-block: calc((1lh - 44px) / 2);
 }
