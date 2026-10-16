@@ -46,4 +46,42 @@ public class CoreTests
         var endOfToday = new DateTimeOffset(2026, 9, 3, 23, 59, 59, TimeSpan.FromHours(2));
         Assert.That(MakeAd(true, endOfToday).IsOpenAt(Now), Is.True);
     }
+
+    [Test]
+    public void Retrack_keeps_every_value_that_was_not_passed()
+    {
+        var entry = PipelineEntry.Track("123456789", PipelineStatus.Active, "god grunn", "notat", null,
+            starred: true, Now);
+
+        entry.Retrack(PipelineStatus.Applied, why: null, note: null, svar: "takk", starred: null, Now.AddDays(7));
+
+        Assert.That(entry.Status, Is.EqualTo(PipelineStatus.Applied));
+        Assert.That(entry.Why, Is.EqualTo("god grunn"));
+        Assert.That(entry.Note, Is.EqualTo("notat"));
+        Assert.That(entry.SvarText, Is.EqualTo("takk"));
+        Assert.That(entry.Starred, Is.True);
+        Assert.That(entry.Created, Is.EqualTo(Now), "Created belongs to the first sighting");
+        Assert.That(entry.Updated, Is.EqualTo(Now.AddDays(7)));
+    }
+
+    [Test]
+    public void Retrack_can_clear_the_star_on_purpose()
+    {
+        var entry = PipelineEntry.Track("123456789", PipelineStatus.Active, null, null, null, starred: true, Now);
+
+        entry.Retrack(PipelineStatus.Active, null, null, null, starred: false, Now);
+
+        Assert.That(entry.Starred, Is.False);
+    }
+
+    [TestCase(PipelineStatus.Active, "", false)]
+    [TestCase(PipelineStatus.Applied, "", true)]
+    [TestCase(PipelineStatus.Answered, "   ", true)]
+    [TestCase(PipelineStatus.Applied, "god grunn", false)]
+    public void Only_applied_and_answered_entries_need_a_why(PipelineStatus status, string why, bool needsWhy)
+    {
+        var entry = PipelineEntry.Track("123456789", status, why, null, null, null, Now);
+
+        Assert.That(entry.NeedsWhy, Is.EqualTo(needsWhy));
+    }
 }

@@ -50,24 +50,20 @@ public sealed class PipelineService(
 
         var existing = await pipeline.GetByOrgnrAsync(orgnr, ct);
 
-        // Options that were not passed leave the stored values alone — re-tracking a company
-        // to move its status must never wipe the begrunnelse written last week, or the star.
-        var entry = new PipelineEntry
+        PipelineEntry entry;
+        if (existing is null)
         {
-            Id = existing?.Id ?? 0,
-            Orgnr = orgnr,
-            Status = status,
-            Starred = starred ?? existing?.Starred ?? false,
-            Why = why ?? existing?.Why ?? "",
-            Note = note ?? existing?.Note,
-            SvarText = svar ?? existing?.SvarText,
-            Created = existing?.Created ?? now,
-            Updated = now,
-        };
+            entry = PipelineEntry.Track(orgnr, status, why, note, svar, starred, now);
+        }
+        else
+        {
+            existing.Retrack(status, why, note, svar, starred, now);
+            entry = existing;
+        }
 
         await pipeline.UpsertAsync(entry, ct);
 
-        var warning = status != PipelineStatus.Active && string.IsNullOrWhiteSpace(entry.Why)
+        var warning = entry.NeedsWhy
             ? $"mangler begrunnelse — legg til hvorfor {orgnr} er interessant (--why \"...\")"
             : null;
 
