@@ -1,4 +1,4 @@
-/** Display transform only — the db and extract keep Brreg's raw (ALL-CAPS) names
+/** Display transform only: the db and extract keep Brreg's raw (ALL-CAPS) names
  * (spec v3.1 item 14). Applied only when the name has no lowercase letters, so
  * NAV's already-mixed-case employer names pass through untouched. */
 const LEGAL_FORMS = new Set([

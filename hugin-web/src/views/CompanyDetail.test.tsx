@@ -2,6 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LanguageProvider } from '../i18n'
+import { queryKeys } from '../lib/queries'
+import { makeQueryClient } from '../lib/queryClient'
 import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
 import { TestQueryProvider } from '../test-utils'
 import { CompanyDetail } from './CompanyDetail'
@@ -93,6 +95,35 @@ describe('CompanyDetail', () => {
 
     await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  })
+
+  it('focuses the heading when a retry succeeds after cached data was hidden by an error', async () => {
+    const detail: CompanyDetailDto = { company: company(), ads: [], branches: [] }
+    const { fetchMock } = fakeServer({ '777777777': detail })
+    vi.stubGlobal('fetch', fetchMock)
+    // Cached data plus a failed refetch: the error hides the body, the heading does not exist.
+    const client = makeQueryClient()
+    client.setQueryData(queryKeys.company('777777777'), detail)
+    client
+      .getQueryCache()
+      .find({ queryKey: queryKeys.company('777777777') })
+      ?.setState({
+        status: 'error',
+        error: new Error('offline'),
+      })
+    const user = userEvent.setup()
+    render(
+      <TestQueryProvider client={client}>
+        <LanguageProvider>
+          <CompanyDetail orgnr="777777777" onClose={vi.fn()} />
+        </LanguageProvider>
+      </TestQueryProvider>
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Prøv igjen' }))
+
+    const heading = await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })
+    await waitFor(() => expect(heading).toHaveFocus())
   })
 
   it('renders a tablist with the main unit plus one tab per branch, labeled by kommuneNavn', async () => {
@@ -197,12 +228,14 @@ describe('CompanyDetail', () => {
     expect(
       await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
     ).toBeInTheDocument()
+    // The heading takes focus once per opened company: a branch tab keeps it.
+    expect(screen.getByRole('tab', { name: 'Oslo' })).toHaveFocus()
     expect(screen.getByText('Oslo-annonse')).toBeInTheDocument()
     expect(screen.queryByText('Hovedannonse')).not.toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'https://oslo.example' })
     expect(link).toHaveAttribute('href', 'https://oslo.example')
 
-    // Switching back to the main tab does not refetch it — the cache holds it.
+    // Switching back to the main tab does not refetch it. The cache holds it.
     await user.click(screen.getByRole('tab', { name: 'Hovedenhet' }))
     await screen.findByText('Hovedannonse')
     expect(calls['777777777']).toBe(1)
@@ -244,7 +277,7 @@ describe('CompanyDetail', () => {
     expect(screen.getByRole('tab', { name: 'Hovedenhet' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft — roving tabindex', async () => {
+  it('moves focus (and selection) across tabs with ArrowRight/ArrowLeft: roving tabindex', async () => {
     const oslo = company({
       orgnr: '787878787',
       name: 'NYFJELL SPILL AS AVDELING OSLO',

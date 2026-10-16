@@ -88,11 +88,14 @@ export interface StatusDto {
   companies: number
   pipelineEntries: number
   readOnly: boolean
-  /** True when municipalities, fylker or allOfNorway is non-empty — false on a fresh install
+  /** True when municipalities, fylker or allOfNorway is non-empty, false on a fresh install
    * with no scope chosen yet (v3.5 Part A3). Optional, not `| null`: an older or degraded
    * response can omit the field entirely rather than sending it as an explicit null (Task 11
-   * finding 5) — readOnly.tsx's state mirrors that same absence rather than papering over it. */
+   * finding 5). readOnly.tsx's state mirrors that same absence rather than papering over it. */
   scopeConfigured?: boolean
+  /** The build's `git describe` stamp, like `v3.10.0`, or `dev` for an unstamped build (spec
+   * v3.8 B3). Optional for the same reason as `scopeConfigured`: an older server omits it. */
+  version?: string
 }
 
 export interface SourceResultDto {
@@ -144,6 +147,6 @@ export interface NacePreviewDto {
 
 export interface ResetResultDto {
   mode: 'scope' | 'all'
-  /** Only set for mode "all" — the VACUUM INTO snapshot taken before the wipe. */
+  /** Only set for mode "all": the VACUUM INTO snapshot taken before the wipe. */
   snapshotPath: string | null
 }

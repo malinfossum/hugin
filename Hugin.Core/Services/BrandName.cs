@@ -3,7 +3,7 @@ namespace Hugin.Core.Services;
 /// <summary>
 /// A company's brand word, for spotting sister companies the register does not link
 /// (same brand, separate orgnr, no shared parent). A judgement call that will sometimes be
-/// wrong — acceptable only because its one caller turns a match into a warning, never a refusal.
+/// wrong. That is acceptable only because its one caller turns a match into a warning, never a refusal.
 /// </summary>
 public static class BrandName
 {

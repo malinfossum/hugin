@@ -42,7 +42,7 @@ public class CoreTests
     [Test]
     public void An_ad_expiring_at_the_end_of_today_is_still_open()
     {
-        // NAV's expires is end-of-day in local time (23:59:59+02:00) — the deadline day counts.
+        // NAV's expires is end-of-day in local time (23:59:59+02:00). The deadline day counts.
         var endOfToday = new DateTimeOffset(2026, 9, 3, 23, 59, 59, TimeSpan.FromHours(2));
         Assert.That(MakeAd(true, endOfToday).IsOpenAt(Now), Is.True);
     }

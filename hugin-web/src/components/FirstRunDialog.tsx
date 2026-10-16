@@ -112,7 +112,7 @@ export function FirstRunDialog({ open, onSaveFocus, onDone, onDismiss }: Props) 
       await api.put('/api/config/discovery', toDiscoveryRequest(chosen))
       queryClient.invalidateQueries({ queryKey: queryKeys.discovery })
     } catch (err) {
-      // The lens still works without the server scope — for this session only, so the dialog
+      // The lens still works without the server scope, for this session only, so the dialog
       // comes back next launch; show the error, keep Start as retry.
       onSaveFocus(focus, { persist: false })
       setError(

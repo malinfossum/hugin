@@ -131,7 +131,7 @@ describe('ApplicationsView', () => {
     expect(within(expiredSection).getByText('Utgått-firma')).toBeInTheDocument()
     expect(within(activeSection).queryByText('Utgått-firma')).not.toBeInTheDocument()
     expect(within(activeSection).getByText('Aktiv-firma')).toBeInTheDocument()
-    // Applied stays put — the ad expiring after you applied is the normal course of things.
+    // Applied stays put. The ad expiring after you applied is the normal course of things.
     expect(within(appliedSection).getByText('Søkt-firma')).toBeInTheDocument()
     expect(within(expiredSection).queryByText('Søkt-firma')).not.toBeInTheDocument()
   })

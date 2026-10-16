@@ -20,7 +20,7 @@ public static class HuginDbInitializer
     /// <paramref name="databasePath"/> is optional so tests that only care about migrate+WAL can
     /// omit it; both real hosts (CLI, API) pass their own <c>loaded.DatabasePath</c>.
     /// <paramref name="config"/> and <paramref name="now"/> are likewise optional so those same
-    /// tests need not care about seeding — real hosts pass their loaded config and their
+    /// tests need not care about seeding. Real hosts pass their loaded config and their
     /// <see cref="Hugin.Core.Abstractions.IClock"/>'s current time.
     /// </summary>
     public static async Task InitAsync(HuginDbContext db, string? databasePath = null, HuginConfig? config = null,
@@ -29,7 +29,7 @@ public static class HuginDbInitializer
         if (databasePath is not null && File.Exists(databasePath)
             && (await db.Database.GetPendingMigrationsAsync(ct)).Any())
         {
-            // A schema-changing migration is about to run against real data — keep an
+            // A schema-changing migration is about to run against real data. Keep an
             // unmigrated copy in case something goes wrong. Best-effort: a backup failure (an
             // AV lock, a read-only .bak, permissions, whatever the filesystem throws) must
             // never block the migration itself from running, so every exception is swallowed
@@ -39,11 +39,11 @@ public static class HuginDbInitializer
         }
 
         await db.Database.MigrateAsync(ct);
-        // WAL is a property of the db file, not the connection — setting it once persists.
+        // WAL is a property of the db file, not the connection. Setting it once persists.
         await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", ct);
 
         // Sources move from hugin.json into the db in v3.2; the marker makes this an import
-        // that runs once ever, not "whenever the table happens to be empty" — deleting every
+        // that runs once ever, not "whenever the table happens to be empty". Deleting every
         // source by hand must not resurrect the defaults on the next launch.
         var seeded = await db.SyncStates.FindAsync(["sources-seed"], ct);
         if (seeded is null)

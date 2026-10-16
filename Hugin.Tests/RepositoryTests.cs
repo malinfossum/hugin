@@ -65,7 +65,7 @@ public class RepositoryTests
         await repo.UpsertAsync(Fjellkart(), T1);
         await repo.SetWebsiteCheckAsync("734161181", ok: true, resolvedUrl: "http://fjellkart.example", T1);
 
-        // Same website on the next sync — the check must survive, not be re-cleared to unchecked.
+        // Same website on the next sync. The check must survive, not be re-cleared to unchecked.
         await repo.UpsertAsync(Fjellkart(), T2);
 
         var c = await repo.GetAsync("734161181");
@@ -94,7 +94,7 @@ public class RepositoryTests
     public async Task Upsert_preserves_an_existing_website_when_the_register_offers_none()
     {
         // v3.1 item 24 changes this deliberately: the register going silent on a website is
-        // not a correction — a company can drop off Brreg's `hjemmeside` field for reasons
+        // not a correction. A company can drop off Brreg's `hjemmeside` field for reasons
         // unrelated to the site dying, and by the time item 24 shipped that website might
         // have been *adopted* from a NAV ad rather than sourced from the register at all.
         // Erasing it on every "no website this sync" would undo the adoption. A register that
@@ -107,7 +107,7 @@ public class RepositoryTests
 
         var c = await repo.GetAsync("734161181");
         Assert.That(c!.Website, Is.EqualTo("https://fjellkart.example"), "absence is not a correction");
-        Assert.That(c.WebsiteOk, Is.False, "the prior check state survives too — nothing changed");
+        Assert.That(c.WebsiteOk, Is.False, "the prior check state survives too: nothing changed");
         Assert.That(c.WebsiteCheckedUtc, Is.EqualTo(T1));
     }
 
@@ -528,7 +528,7 @@ public class RepositoryTests
     [Test]
     public async Task Upsert_preserves_hidden_flag()
     {
-        // The v1 upsert trap in reverse: Hidden is Hugin's own field — the feed knows nothing
+        // The v1 upsert trap in reverse: Hidden is Hugin's own field. The feed knows nothing
         // about it, so the update path must never touch it or every daily sync would resurrect
         // everything dismissed.
         var repo = new EfAdRepository(_db);

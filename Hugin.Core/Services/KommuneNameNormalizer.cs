@@ -21,7 +21,7 @@ public static class KommuneNameNormalizer
     }
 
     // TextInfo.ToTitleCase treats an all-uppercase word as an acronym and leaves it alone,
-    // so the input must be lowercased first — that is what actually titlecases "VÅGÅ".
+    // so the input must be lowercased first. That is what actually titlecases "VÅGÅ".
     private static string TitleCaseSegment(string segment) =>
         segment.Length == 0 ? segment : NbNo.TextInfo.ToTitleCase(segment.ToLower(NbNo));
 }

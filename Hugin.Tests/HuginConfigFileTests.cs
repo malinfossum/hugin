@@ -21,7 +21,7 @@ public class HuginConfigFileTests
 
         File.WriteAllText(ConfigPath, """{ "fylker": ["39"] }""");
 
-        Assert.That(file.Load().Fylker, Is.EqualTo(new[] { "39" }), "no caching — sync reads this per run");
+        Assert.That(file.Load().Fylker, Is.EqualTo(new[] { "39" }), "no caching: sync reads this per run");
     }
 
     [Test]

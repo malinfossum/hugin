@@ -90,7 +90,7 @@ public sealed class ReadEndpointTests
         var now = DateTimeOffset.UtcNow;
         using (var scope = _factory.Services.CreateScope())
         {
-            // 0301 (Oslo) is outside the configured municipality list — a parent or an
+            // 0301 (Oslo) is outside the configured municipality list: a parent or an
             // enriched ad employer sitting in the capital, resolved only via the register.
             await scope.ServiceProvider.GetRequiredService<ICompanyRepository>()
                 .UpsertAsync(new RegisterCompany("111222333", "Oslo-kontoret AS", "0301", "62.100", null, false, null), now);
@@ -224,7 +224,7 @@ public sealed class ReadEndpointTests
             var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
             await repo.UpsertAsync(new RegisterCompany("777777777", "Nyfjell Spill AS", "3407", "62.100", null,
                 false, null), now);
-            // Muni 4601 sorts after 0301 — asserting on kommune order, not insertion order, catches an
+            // Muni 4601 sorts after 0301. Asserting on kommune order, not insertion order, catches an
             // impl that accidentally orders by name only (which would put these two the other way).
             await repo.UpsertAsync(new RegisterCompany("111111111", "Nyfjell Spill AS Avd B", "4601", "62.100",
                 "777777777", true, null), now);

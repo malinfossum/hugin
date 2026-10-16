@@ -3,18 +3,18 @@ using Hugin.Core.Services;
 
 namespace Hugin.Core.Abstractions;
 
-/// <summary>A company as the register returns it — before it becomes a stored <see cref="Models.Company"/>.</summary>
+/// <summary>A company as the register returns it (before it becomes a stored <see cref="Models.Company"/>).</summary>
 public sealed record RegisterCompany(string Orgnr, string Name, string? MunicipalityNumber,
     string? NaceCode, string? ParentOrgnr, bool IsBranch, string? Website);
 
-/// <summary>An ad as the feed returns it — before it becomes a stored <see cref="Models.Ad"/>.</summary>
+/// <summary>An ad as the feed returns it (before it becomes a stored <see cref="Models.Ad"/>).</summary>
 public sealed record FeedAd(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
     string? MunicipalityNumber, DateTimeOffset? Published, DateTimeOffset? Expires, string? SourceUrl, bool IsActive,
     string? Category = null, string? EmployerHomepage = null);
 
 /// <summary>
 /// One page of the feed. <paramref name="NextCursor"/> is null at the tail, where the page is
-/// still collecting entries — <paramref name="PageId"/> is what a later sync resumes from.
+/// still collecting entries. <paramref name="PageId"/> is what a later sync resumes from.
 /// </summary>
 public sealed record FeedPage(IReadOnlyList<FeedAd> Ads, string? NextCursor, string? PageId = null);
 
@@ -25,12 +25,12 @@ public interface IBrregClient
 
     public Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default);
 
-    /// <summary>The full kommune register (number → display name) — every kommune, not just
+    /// <summary>The full kommune register (number → display name): every kommune, not just
     /// the ones Hugin is configured to track.</summary>
     public Task<IReadOnlyList<Models.Kommune>> GetKommunerAsync(CancellationToken ct = default);
 
     /// <summary>How many units one nace code has inside the given kommuner, plus the register's
-    /// own description of the code — read from `page.totalElements` with `size=1`, so it costs
+    /// own description of the code. It is read from `page.totalElements` with `size=1`, so it costs
     /// two requests and no payload. Used by the dashboard's preview, never by sync.</summary>
     public Task<(int Units, string? Name)> CountAsync(string naceCode,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default);
@@ -38,12 +38,12 @@ public interface IBrregClient
 
 public interface INavFeedClient
 {
-    /// <summary>A null cursor lands at the newest page — the normal daily entry point.
+    /// <summary>A null cursor lands at the newest page: the normal daily entry point.
     /// <paramref name="config"/> carries this run's keywords/categories (read fresh per sync);
     /// <paramref name="scope"/> resolves each ad's municipality name and gates it.</summary>
     public Task<FeedPage> GetPageAsync(string? cursor, HuginConfig config, MunicipalityScope scope, CancellationToken ct = default);
 
-    /// <summary>The feed's oldest page — the entry point for a full backfill.</summary>
+    /// <summary>The feed's oldest page: the entry point for a full backfill.</summary>
     public Task<FeedPage> GetFirstPageAsync(HuginConfig config, MunicipalityScope scope, CancellationToken ct = default);
 }
 
@@ -54,12 +54,12 @@ public sealed record WebsiteProbeResult(bool Ok, string? ResolvedUrl);
 /// <summary>
 /// Checks whether a company's register-listed website is actually reachable. Brreg's
 /// `hjemmeside` field is stale for a meaningful slice of companies (dead domains, or
-/// https-prefixed at ingest when the site only serves http) — this is what tells the
+/// https-prefixed at ingest when the site only serves http). This is what tells the
 /// dashboard which links are worth rendering.
 /// </summary>
 public interface IWebsiteProber
 {
-    /// <summary>Never throws — any failure (timeout, DNS, non-2xx/3xx) is reported as
+    /// <summary>Never throws. Any failure (timeout, DNS, non-2xx/3xx) is reported as
     /// <c>Ok: false</c>, never an exception.</summary>
     public Task<WebsiteProbeResult> ProbeAsync(string url, CancellationToken ct = default);
 }

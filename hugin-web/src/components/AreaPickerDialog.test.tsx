@@ -115,7 +115,7 @@ describe('AreaPickerDialog', () => {
     expect(onApply).toHaveBeenCalledWith([{ fylke: '34', kommuner: ['3403'] }])
   })
 
-  it('unticking the last kommune leaves the whole fylke — the box goes from mixed to checked', async () => {
+  it('unticking the last kommune leaves the whole fylke: the box goes from mixed to checked', async () => {
     const user = userEvent.setup()
     const { onApply } = renderDialog({ value: [{ fylke: '34', kommuner: ['3403'] }] })
 
@@ -245,7 +245,7 @@ describe('AreaPickerDialog', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
-  it('reopening seeds the draft from value again — a cancelled edit is gone', async () => {
+  it('reopening seeds the draft from value again, so a cancelled edit is gone', async () => {
     const user = userEvent.setup()
     const { rerender } = renderDialog({ value: [{ fylke: '39', kommuner: [] }] })
 

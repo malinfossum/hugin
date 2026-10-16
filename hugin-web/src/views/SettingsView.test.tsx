@@ -31,14 +31,14 @@ const DEFAULT_KOMMUNER: KommuneDto[] = [
   { number: '3405', name: 'Lillehammer' },
 ]
 
-/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE —
+/** Fake server backing full Sources CRUD: GET list, POST add, PUT edit, POST reorder, DELETE,
  * plus the discovery-config trio (GET/PUT /api/config/discovery, GET /api/kommuner,
  * POST /api/sync) the Dekning section always fetches on mount, in every scenario. Pass `null`
  * as seed to make GET /api/sources reject (load-failure scenarios). `discovery`/`kommuner` seed
  * the Dekning section, `kommunerDown` makes GET /api/kommuner fail (the fylke-only degraded
  * mode), and `putStatus` makes the PUT fail with that status instead of echoing `discovery`
  * back; `syncStatus` makes POST /api/sync answer with that status (409 = one already runs).
- * Returns `{ fetchMock, puts }` — `puts` records every PUT /api/config/discovery body. */
+ * Returns `{ fetchMock, puts }`. `puts` records every PUT /api/config/discovery body. */
 function fakeServer(
   seed: SourceDto[] | null,
   options: {
@@ -49,7 +49,7 @@ function fakeServer(
     putStatus?: number
     syncStatus?: number
     /** Successive `units` counts GET /api/config/focus/preview?nace=62 answers with, one per
-     * call — the last value repeats once exhausted. Lets a test tell a fresh Brreg fetch apart
+     * call. The last value repeats once exhausted. Lets a test tell a fresh Brreg fetch apart
      * from a cached one (Task 11 ruling 2). */
     focusPreviewUnits?: number[]
   } = {}
@@ -199,7 +199,7 @@ afterEach(() => {
   window.localStorage.removeItem('hugin-focus')
 })
 
-/** The Dekning card, once its scope has loaded — the heading is there from the first render, the
+/** The Dekning card, once its scope has loaded: the heading is there from the first render, the
  * fields only after the scope arrives. */
 async function readyCoverageSection() {
   const section = await screen.findByRole('region', { name: 'Dekning' })
@@ -398,7 +398,7 @@ describe('SettingsView', () => {
     expect(moveDownButtons[1]).toBeDisabled()
   })
 
-  it('carries no language or theme controls — both live in the topbar', async () => {
+  it('carries no language or theme controls: both live in the topbar', async () => {
     renderView(fakeServer([]).fetchMock)
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
@@ -621,7 +621,7 @@ describe('SettingsView', () => {
     )
     expect(loadFocus()).toEqual({ regions: [], categories: [] })
     expect(within(section).getByText('Hele Norge')).toBeInTheDocument()
-    // announce() posts after a 50 ms timer — give it that window, then assert silence.
+    // announce() posts after a 50 ms timer. Give it that window, then assert silence.
     await new Promise((resolve) => setTimeout(resolve, 80))
     expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('')
   })
@@ -689,7 +689,7 @@ describe('Dekning (coverage)', () => {
       fylker: [],
       allOfNorway: false,
     })
-    expect(await screen.findByText('Lagret — synkroniserer …')).toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synkroniserer …')).toBeInTheDocument()
     expect(
       server.fetchMock.mock.calls.some(([u, i]) => u === '/api/sync' && i?.method === 'POST')
     ).toBe(true)
@@ -722,13 +722,13 @@ describe('Dekning (coverage)', () => {
     await user.click(within(section).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
-    expect(await screen.findByText('Lagret — brukes ved neste synk')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Brukes ved neste synk')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
   it('saves the fylke alone when the kommune list is unavailable', async () => {
     // No checkboxes are rendered in this mode, so the prefilled kommuner are invisible and
-    // un-clearable — and the API would reject numbers it cannot verify. Save the fylke.
+    // un-clearable. The API would reject numbers it cannot verify. Save the fylke.
     const server = fakeServer([], { kommunerDown: true })
     const user = userEvent.setup()
     renderView(server.fetchMock)
@@ -799,11 +799,11 @@ describe('Dekning (coverage)', () => {
 
     await user.click(within(section).getByRole('button', { name: 'Lagre dekning' }))
 
-    expect(await screen.findByText('Lagret — synken kunne ikke starte')).toBeInTheDocument()
-    expect(screen.queryByText('Lagret — synkroniserer …')).not.toBeInTheDocument()
+    expect(await screen.findByText('Lagret. Synken kunne ikke starte')).toBeInTheDocument()
+    expect(screen.queryByText('Lagret. Synkroniserer …')).not.toBeInTheDocument()
   })
 
-  it('a coverage save resets Fokus’s preview cache — a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
+  it('a coverage save resets Fokus’s preview cache: a re-previewed code fetches again instead of serving the old count (Task 11 ruling 2)', async () => {
     const server = fakeServer([], { focusPreviewUnits: [10, 20] })
     const user = userEvent.setup()
     renderView(server.fetchMock)
@@ -813,14 +813,14 @@ describe('Dekning (coverage)', () => {
     await user.type(within(focusSection).getByLabelText('Legg til bransje'), '62')
     await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
     expect(
-      await within(focusSection).findByText('62 · IT-tjenester — 10 bedrifter')
+      await within(focusSection).findByText('62 · IT-tjenester: 10 bedrifter')
     ).toBeInTheDocument()
 
     await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
-    await screen.findByText('Lagret — synkroniserer …')
+    await screen.findByText('Lagret. Synkroniserer …')
 
-    // FocusSection is NOT remounted (Task 11 finding 2 — a remount would also discard an
+    // FocusSection is NOT remounted (Task 11 finding 2: a remount would also discard an
     // unsaved draft): the preview endpoint has only been called once so far, invalidated
     // through a version-qualified cache key instead.
     const previewCalls = server.fetchMock.mock.calls.filter(([u]) =>
@@ -828,12 +828,12 @@ describe('Dekning (coverage)', () => {
     )
     expect(previewCalls).toHaveLength(1)
 
-    // Same instance, same field still holding '62' from before the save — just click Preview
+    // Same instance, same field still holding '62' from before the save. Just click Preview
     // again rather than retyping into a field a remount would have cleared.
     await user.click(within(focusSection).getByRole('button', { name: 'Vis antall' }))
 
     expect(
-      await within(focusSection).findByText('62 · IT-tjenester — 20 bedrifter')
+      await within(focusSection).findByText('62 · IT-tjenester: 20 bedrifter')
     ).toBeInTheDocument()
     const previewCallsAfter = server.fetchMock.mock.calls.filter(([u]) =>
       String(u).startsWith('/api/config/focus/preview')
@@ -856,9 +856,9 @@ describe('Dekning (coverage)', () => {
 
     await user.click(within(coverageSection).getByRole('checkbox', { name: 'Lillehammer' }))
     await user.click(within(coverageSection).getByRole('button', { name: 'Lagre dekning' }))
-    await screen.findByText('Lagret — synkroniserer …')
+    await screen.findByText('Lagret. Synkroniserer …')
 
-    // A coverage save must not have called Fokus's own PUT — the draft is still just local
+    // A coverage save must not have called Fokus's own PUT. The draft is still just local
     // state, unsaved, and it is still there.
     expect(within(focusSection).getByText('47.911')).toBeInTheDocument()
     const focusPuts = server.fetchMock.mock.calls.filter(

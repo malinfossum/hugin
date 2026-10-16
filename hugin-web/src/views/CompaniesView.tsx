@@ -18,10 +18,10 @@ interface CompanyGroup {
  * first-seen list order (API orders by name). A branch without a loaded parent is
  * its own group (enrichment usually loads parents, but never guaranteed).
  *
- * Assumes Brreg's register is strictly two-tier (hovedenhet + underenheter — no
- * underenhet is itself the parent of another underenhet). `!parent.isBranch` guards
+ * Assumes Brreg's register is strictly two-tier (hovedenhet + underenheter, where
+ * no underenhet is itself the parent of another underenhet). `!parent.isBranch` guards
  * that assumption: a branch whose `parentOrgnr` points at another branch (a chain, or
- * a mutual pair pointing at each other) does not get treated as a group main — it
+ * a mutual pair pointing at each other) does not get treated as a group main. It
  * falls back to its own standalone row instead of being duplicated as both a nested
  * branch and a top-level group. */
 function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
@@ -39,7 +39,7 @@ function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
     }
   }
   // Map insertion order reflects whichever member (main or branch) was first encountered while
-  // walking the source list — a group can otherwise surface at a branch's earlier position. The
+  // walking the source list. A group can otherwise surface at a branch's earlier position. The
   // list is meant to read top-to-bottom in the source's own order, so re-sort by the MAIN unit's
   // own index once every group is known.
   return [...groups.values()].sort(
@@ -66,7 +66,7 @@ interface CompaniesViewProps {
   selectedOrgnr: string | null
   onOpenCompany: (orgnr: string) => void
   onCloseCompany: () => void
-  /** «Endre i Innstillinger» — the lens is edited in Settings only (spec v3.6 B4). */
+  /** «Endre i Innstillinger»: the lens is edited in Settings only (spec v3.6 B4). */
   onOpenSettings: () => void
 }
 
@@ -106,10 +106,10 @@ export function CompaniesView({
     if (!target) return
     pendingFocusOrgnr.current = null
     // Safe to assume the ref is still mounted: filter inputs are unmounted while detail is
-    // open (not just hidden), so the row list never re-filters behind our back — the
+    // open (not just hidden), so the row list never re-filters behind our back. The
     // opening row is always present in rowRefs when we return to it. Branches no longer have
     // their own list row (they live as tabs inside CompanyDetail), so the target is always a
-    // group's main or an orphan-standalone row — no ancestor <details> to reopen anymore.
+    // group's main or an orphan-standalone row, with no ancestor <details> to reopen anymore.
     const el = rowRefs.current.get(target)
     if (!el) return
     el.focus()
@@ -117,7 +117,7 @@ export function CompaniesView({
 
   const regions = focus?.regions ?? []
 
-  // Chip names come from the companies already loaded — this view stays fetch-free. A kommune
+  // Chip names come from the companies already loaded. This view stays fetch-free. A kommune
   // with no company in the list shows by number, which is the RegionChips fallback.
   const kommuneNames = useMemo(() => {
     const names = new Map<string, string>()
@@ -150,7 +150,7 @@ export function CompaniesView({
     onOpenCompany(orgnr)
   }
 
-  // Every row rendered here is a group main — either a real hovedenhet, or a branch standing in
+  // Every row rendered here is a group main: either a real hovedenhet, or a branch standing in
   // for one because its own parent wasn't loaded (an "orphan" branch). The tag only makes sense
   // in that second case: a real hovedenhet is never itself a branch.
   const renderRow = (group: CompanyGroup) => {

@@ -9,14 +9,14 @@ public sealed record AdOverview(string FeedId, string Title, string? EmployerNam
 
 /// <summary>
 /// One pipeline entry with the ads it is linked to summarised: <see cref="AdsExpired"/> is true
-/// when the entry has ads and none of them is still open. Derived on every read, never stored —
-/// a fresh ad from the same employer brings the entry back by itself.
+/// when the entry has ads and none of them is still open. Derived on every read, never stored.
+/// A fresh ad from the same employer brings the entry back by itself.
 /// </summary>
 public sealed record PipelineOverview(PipelineEntry Entry, bool AdsExpired);
 
 /// <summary>
 /// The dashboard's deadline view: active ads with the outreach pipeline joined in, soonest
-/// frist first. Ads without a frist sort last — a missing deadline is not an urgent one.
+/// frist first. Ads without a frist sort last. A missing deadline is not an urgent one.
 /// </summary>
 /// <remarks>
 /// NAV sometimes reports a different registry unit than the one actually tracked (example:
@@ -25,7 +25,7 @@ public sealed record PipelineOverview(PipelineEntry Entry, bool AdsExpired);
 /// first; when it misses, both the ad's orgnr and every pipeline entry's orgnr are resolved
 /// to their registry root (following ParentOrgnr, max 4 hops) and matched on that root instead.
 /// A manual link (<see cref="Ad.LinkedOrgnr"/>, set from the dashboard) wins over both when it
-/// names a tracked entry — the sister-company case no chain reaches.
+/// names a tracked entry: the sister-company case no chain reaches.
 /// </remarks>
 public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pipeline, IClock clock,
     ICompanyRepository companies)
@@ -59,7 +59,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
     /// Every pipeline entry (optionally one status) with its expiry summary. Ads are assigned to
     /// entries by the same rule the dashboard badges use, so the two views agree ad for ad: an
     /// ad belongs to the entry with its exact orgnr, else to the entry sharing its registry root.
-    /// The index is always built from all entries — filtering first would hand an ad to the
+    /// The index is always built from all entries. Filtering first would hand an ad to the
     /// wrong entry when its exact match sits outside the filter.
     /// </summary>
     public async Task<IReadOnlyList<PipelineOverview>> GetPipelineOverviewAsync(PipelineStatus? status = null,

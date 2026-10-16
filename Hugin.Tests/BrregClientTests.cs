@@ -99,7 +99,7 @@ public class BrregClientTests
     [Test]
     public async Task CountAsync_reads_total_elements_and_description_from_both_paths()
     {
-        // Reuses the existing enheter/underenheter fixtures — their page.totalElements (131, 146)
+        // Reuses the existing enheter/underenheter fixtures. Their page.totalElements (131, 146)
         // and the first record's naeringskode1.beskrivelse are real Brreg response shapes.
         var client = new BrregClient(HttpFixtures.Client(request =>
         {

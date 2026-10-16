@@ -4,7 +4,7 @@ namespace Hugin.Core.Services;
 
 /// <summary>
 /// The top of a company's chain in Enhetsregisteret. <c>ParentOrgnr</c> is Brreg's
-/// <c>overordnetEnhet</c> — a branch's hovedenhet or a public body's parent — not group
+/// <c>overordnetEnhet</c> (a branch's hovedenhet or a public body's parent), not group
 /// (konsern) membership, which the register API does not expose.
 /// </summary>
 public static class RegistryRoot

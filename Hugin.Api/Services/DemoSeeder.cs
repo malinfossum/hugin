@@ -79,7 +79,7 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
             }
             if (entry?.Orgnr is null || !Orgnr().IsMatch(entry.Orgnr))
             {
-                problems.Add($"ugyldig orgnr «{entry?.Orgnr}» — må være ni siffer");
+                problems.Add($"ugyldig orgnr «{entry?.Orgnr}». Det må være ni siffer");
                 continue;
             }
             if (StatusSlug.Parse(entry.Status) is not { } status)

@@ -20,7 +20,7 @@ public sealed record PublicModeOptions(bool Enabled, string StateDir, string Wor
 
 public static class PublicMode
 {
-    public const string WriteRefusedTitle = "Demo — skrivebeskyttet";
+    public const string WriteRefusedTitle = "Demo: skrivebeskyttet";
 
     /// <summary>Loopback unless public. Port: --port, then (public only) the PORT env App Service sets, then 5111.</summary>
     public static (IPAddress Address, int Port) ListenAddress(bool isPublic, string? portArg, string? portEnv)
@@ -36,9 +36,9 @@ public static class PublicMode
     {
         if (!isPublic) return null;
         if (stateDir is null) return "--public krever --state <mappe>.";
-        if (configArg is not null) return "--public og --config kan ikke kombineres — state-mappen eier hugin.json.";
+        if (configArg is not null) return "--public og --config kan ikke kombineres. State-mappen eier hugin.json.";
         var config = Path.Combine(stateDir, ConfigLoader.FileName);
-        if (!File.Exists(config)) return $"Fant ikke {config} — public-modus starter aldri en førstegangsdialog.";
+        if (!File.Exists(config)) return $"Fant ikke {config}. Public-modus starter aldri en førstegangsdialog.";
         return null;
     }
 }

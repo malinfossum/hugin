@@ -10,8 +10,8 @@ export function getFailureMessage(sync: SyncRunStatus, t: T): string | null {
 }
 
 // Exact prefix `SyncBrregAsync` returns when no municipalities, fylker or allOfNorway are
-// configured (v3.5 Part A2) — an empty result, not an error, so it gets its own prompt instead
-// of the generic failure banner (Part A4).
+// configured (v3.5 Part A2). It is an empty result, not an error, so it gets its own prompt
+// instead of the generic failure banner (Part A4).
 const NO_COVERAGE_PREFIX = 'Ingen dekning valgt'
 
 export function isNoCoverageFailure(sync: SyncRunStatus): boolean {

@@ -90,7 +90,7 @@ export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
   const linkSelectRef = useRef<HTMLSelectElement>(null)
   const returnFocusTo = useRef<string | null>(null)
 
-  // Moved once the action has succeeded — the mutation resolves only after its refetch has landed.
+  // Moved once the action has succeeded. The mutation resolves only after its refetch has landed.
   // null focuses the heading; a feedId focuses that row's Skjul button (which every action keeps).
   const moveFocus = (target: string | null) => {
     const button = target ? skjulRefs.current.get(target) : undefined

@@ -27,12 +27,12 @@ public sealed class BootSyncTests
         var dismiss = await client.PostAsync("/api/first-run-dismissed", null);
         Assert.That(dismiss.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
 
-        // No default geography any more (spec v3.5 Part A) — dismiss releases the hold and the
+        // No default geography any more (spec v3.5 Part A). Dismiss releases the hold and the
         // sync runs, but Brreg has nothing to fetch without a configured scope. The first-run
         // dialog that fills it in is a later task; here only the hold/release timing is at stake.
         var status = await SyncEndpointTests.PollUntilFinished(client);
         Assert.That(status.Brreg!.Succeeded, Is.False, "the sync ran, but no scope was ever configured");
-        Assert.That(status.Brreg.Error, Is.EqualTo("Ingen dekning valgt — velg kommuner i dashbordet"));
+        Assert.That(status.Brreg.Error, Is.EqualTo("Ingen dekning valgt. Velg kommuner i dashbordet"));
     }
 
     [Test]
@@ -84,10 +84,10 @@ public sealed class BootSyncTests
 
         await Task.Delay(300);
         var status = await client.GetFromJsonAsync<SyncRunStatus>("/api/sync/status");
-        Assert.That(status!.FinishedUtc, Is.Null, "the dashboard starts the sync — the PUT only lifts the hold");
+        Assert.That(status!.FinishedUtc, Is.Null, "the dashboard starts the sync. The PUT only lifts the hold");
 
         var start = await client.PostAsync("/api/sync", null);
-        Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), "no 409 — nothing else is running");
+        Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), "no 409: nothing else is running");
         var finished = await SyncEndpointTests.PollUntilFinished(client);
         Assert.That(finished.Brreg!.Succeeded, Is.True);
     }
@@ -146,7 +146,7 @@ public sealed class BootSyncTests
         using var factory = new ApiFactory(autosync: true, publicMode: true);
         factory.Brreg.Companies.Add(new RegisterCompany("444444444", "BERGLI DESIGN AS", "3403", "62.100", null, false, null));
         // StateDir itself isn't created until ConfigureWebHost runs (lazily, on the first
-        // CreateClient() call below) — create it now so the seed file is in place before boot.
+        // CreateClient() call below). Create it now so the seed file is in place before boot.
         Directory.CreateDirectory(factory.StateDir);
         File.WriteAllText(Path.Combine(factory.StateDir, "demo-pipeline.json"),
             """[{ "orgnr": "444444444", "status": "active", "why": "Demo: sporet for å vise badges." }]""");
@@ -166,7 +166,7 @@ public sealed class BootSyncTests
     }
 
     /// <summary>Important 1 fix: seeder + copy-back run in their own try in SyncRunner, so a
-    /// throw from the sync scope itself must not also cost the demo its persisted snapshot —
+    /// throw from the sync scope itself must not also cost the demo its persisted snapshot,
     /// and must not be mislabelled as coming from the seeder/copy step. IKommuneRepository's
     /// GetAllAsync is the one unguarded call inside SyncService.SyncAsync (used to build the
     /// scope before either source runs), so swapping it for one that throws reproduces exactly

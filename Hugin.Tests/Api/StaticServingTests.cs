@@ -13,18 +13,18 @@ using Microsoft.Extensions.FileProviders;
 namespace Hugin.Tests.Api;
 
 /// <summary>
-/// Dedicated factory pointing content root at a temp dir with a marker wwwroot/index.html —
-/// the shared ApiFactory stays untouched because no other suite needs a fake frontend build.
+/// Dedicated factory pointing content root at a temp dir with a marker wwwroot/index.html.
+/// The shared ApiFactory stays untouched because no other suite needs a fake frontend build.
 ///
 /// Program.cs anchors content root to AppContext.BaseDirectory (the beside-the-exe rule, so a
 /// published exe finds wwwroot regardless of launch CWD) via an explicit
 /// WebApplicationOptions.ContentRootPath. That's set once, directly on the environment, before
-/// WebApplicationFactory gets a chance to intercept via ConfigureWebHost/UseSetting — by the time
+/// WebApplicationFactory gets a chance to intercept via ConfigureWebHost/UseSetting. By the time
 /// that callback runs, ContentRootPath is already fixed and no longer config-driven, so
 /// UseSetting("contentRoot", ...) is silently ignored (verified empirically). The one thing that
 /// still reaches Program.cs before it decides the content root is a real process environment
-/// variable, which Program.cs already treats as the standard override (ASPNETCORE_CONTENTROOT) —
-/// so that's the lever this factory pulls instead.
+/// variable, which Program.cs already treats as the standard override (ASPNETCORE_CONTENTROOT).
+/// So that's the lever this factory pulls instead.
 /// </summary>
 public sealed class StaticServingFactory : WebApplicationFactory<Program>
 {
@@ -42,7 +42,7 @@ public sealed class StaticServingFactory : WebApplicationFactory<Program>
         Directory.CreateDirectory(Path.Combine(_tempDir, "wwwroot"));
         File.WriteAllText(Path.Combine(_tempDir, "wwwroot", "index.html"), Marker);
 
-        // Must be set before the host is first built (lazily, on CreateClient()/Services access) —
+        // Must be set before the host is first built (lazily, on CreateClient()/Services access).
         // NUnit runs fixtures in this project sequentially (no [Parallelizable]), so this process-
         // wide variable is safely scoped to this factory's lifetime: set here, cleared in Dispose.
         Environment.SetEnvironmentVariable(ContentRootEnvVar, _tempDir);
@@ -125,7 +125,7 @@ public sealed class StaticServingTests
 }
 
 /// <summary>
-/// Points content root at a temp dir with NO wwwroot subfolder at all — forces Program.cs into the
+/// Points content root at a temp dir with NO wwwroot subfolder at all. That forces Program.cs into the
 /// embedded-frontend branch (ManifestEmbeddedFileProvider) instead of the physical-folder one
 /// StaticServingFactory above exercises. Same env-var lever as StaticServingFactory; see its doc
 /// comment for why.
@@ -176,12 +176,12 @@ public sealed class EmbeddedServingFactory : WebApplicationFactory<Program>
 }
 
 /// <summary>
-/// Exercises the embedded-frontend branch end-to-end — but only when this test run's Hugin.Api
+/// Exercises the embedded-frontend branch end-to-end, but only when this test run's Hugin.Api
 /// build actually has a frontend embedded. Hugin.Api.csproj embeds wwwroot conditionally on
 /// `Exists('wwwroot')` at build time, so an API-only dev build (no `npm run build` yet) has nothing
 /// embedded to serve. Forcing that precondition from here would mean either running the frontend
 /// build as a `dotnet test` dependency (couples the .NET suite to node tooling) or shipping a fake
-/// embedded resource the real csproj doesn't carry — both worse than a clean, self-documenting
+/// embedded resource the real csproj doesn't carry. Both are worse than a clean, self-documenting
 /// skip. When wwwroot IS present (as it normally is on Malin's machine after `.\build.ps1` or
 /// `npm run build`), this runs for real and proves the whole path; the task 6 smoke step
 /// additionally verifies it against the actual single-file publish.
@@ -214,8 +214,8 @@ public sealed class EmbeddedServingTests
     private void SkipIfNothingEmbedded()
     {
         if (_embeddedFrontendPresent) return;
-        Assert.Ignore("This Hugin.Api build has no wwwroot embedded (no `npm run build` yet) — " +
-            "run `.\\build.ps1` to exercise the embedded branch. See EmbeddedServingTests' doc " +
+        Assert.Ignore("This Hugin.Api build has no wwwroot embedded (no `npm run build` yet). " +
+            "Run `.\\build.ps1` to exercise the embedded branch. See EmbeddedServingTests' doc " +
             "comment and the task 6 smoke step for the full story.");
     }
 

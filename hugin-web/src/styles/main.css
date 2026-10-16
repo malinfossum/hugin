@@ -1,4 +1,4 @@
-/* Design system — reset, tokens, then base element styling, then the primitive/component/
+/* Design system: reset, tokens, then base element styling, then the primitive/component/
    composition/utility layers, in the order the DS's own index files intend (tokens before
    anything that reads a token; palettes/typeskins import last inside tokens/index.css so they
    win ties; compositions combine primitives+components into higher-level patterns like
@@ -14,14 +14,14 @@
 
 /* Native <dialog> hidden-state guard. The DS .stack class sets display:flex on the
    confirm dialog (ConfirmDialog.tsx), which overrides the UA's dialog:not([open])
-   { display:none } — the v3 design pass made every closed dialog render inline.
+   { display:none }. The v3 design pass made every closed dialog render inline.
    Restoring the UA rule at author level wins over .stack on specificity (0,1,1 > 0,1,0). */
 dialog:not([open]) {
   display: none;
 }
 
 /* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
-   up to 1.75rem) is sized for marketing/hero pages — on a data-dense dashboard it read as way
+   up to 1.75rem) is sized for marketing/hero pages. On a data-dense dashboard it read as way
    too loud. Hugin's real page title is a visually-hidden h1 (see App.tsx), and every visible
    section title is an h2 (DeadlineList, NewSinceLastVisit, NeedsAction, ApplicationsView,
    CompanyDetail), so this is the scale that actually matters here. Steps each level down one
@@ -37,12 +37,12 @@ h3 {
   font-size: var(--text-md);
 }
 
-/* Touch targets ≥44px (a11y spec) — mobile-first, applies at every breakpoint. */
+/* Touch targets ≥44px (a11y spec). Mobile-first, applies at every breakpoint. */
 button {
   min-height: 44px;
 }
 
-/* .nav-link (design-system/components/nav.css) is sized at 2.5rem — below the 44px floor
+/* .nav-link (design-system/components/nav.css) is sized at 2.5rem, below the 44px floor
    above, and a class selector beats that bare-element rule on specificity. Restore it here
    rather than editing the read-only design-system. */
 .nav-link {
@@ -57,7 +57,7 @@ a.nav-link:focus-visible {
 }
 
 /* Topbar on phones: the brand and the two quick toggles share the first row, the nav takes a
-   full row under them — otherwise the toggles wrap onto a third row where they read as two
+   full row under them. Otherwise the toggles wrap onto a third row where they read as two
    more nav entries. The controls wrapper dissolves (display: contents) so flex order can seat
    the toggles beside the brand while the DOM keeps nav before toggles for tab order. */
 .topbar-controls {
@@ -83,15 +83,28 @@ a.nav-link:focus-visible {
   }
 }
 
-/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent
-   through `color` (the SVG uses fill="currentColor" — var() in a fill attribute
-   would silently not resolve). The wordmark matches the banner lockup: Space Grotesk 700. */
+/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent through
+   `color` (the SVG uses fill="currentColor"; a var() in a fill attribute would silently not
+   resolve). The wordmark matches the banner lockup: Space Grotesk 700. The brand is also the home
+   link (spec v3.8 B1): it keeps the look of a wordmark, with no link colour or underline, and gets
+   the full 44 px hit box. The focus ring is the design system's. */
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  min-block-size: 44px;
   font-family: var(--font-display);
   font-size: 1.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+/* The base `a:hover, a:focus-visible` rule (0,1,1) would underline and recolour the logo on
+   keyboard focus; this (0,2,1) rule wins on both states, the same as `a.nav-link` above. The
+   outline is not touched, so the focus ring stays. */
+a.brand:hover,
+a.brand:focus-visible {
+  color: inherit;
+  text-decoration: none;
 }
 .brand-mark {
   width: 2rem;
@@ -122,7 +135,7 @@ a.nav-link:focus-visible {
   }
 }
 
-/* Urgency — color never alone; the days-left number/text always renders beside it. */
+/* Urgency: color never alone. The days-left number/text always renders beside it. */
 .frist-rod {
   color: var(--danger);
 }
@@ -130,7 +143,7 @@ a.nav-link:focus-visible {
   color: var(--warning);
 }
 
-/* Trenger handling — the loudest element on the dashboard: a warning alert surface plus a
+/* Trenger handling: the loudest element on the dashboard. It is a warning alert surface plus a
    strong accent border. Still not decoration-only: the heading and each row's frist text
    carry the meaning on their own. */
 .needs-action {
@@ -144,7 +157,7 @@ a.nav-link:focus-visible {
   padding-block: 0.25rem;
 }
 
-/* Nullstilling (v3.5 Part D) — same "loud edge" treatment as .needs-action, in the
+/* Nullstilling (v3.5 Part D): same "loud edge" treatment as .needs-action, in the
    danger hue: both irreversible reset levels live here, so the section itself should read as
    destructive before either button is ever clicked. */
 .reset-section {
@@ -163,7 +176,7 @@ a.nav-link:focus-visible {
   padding: 0;
 }
 
-/* Applications: entries lift off their section card (item 11 — verified live:
+/* Applications: entries lift off their section card (item 11, verified live:
    .panel and section.card both resolved to surface-3 before this). */
 .applications-view .panel {
   background: var(--elevated-bg);
@@ -247,13 +260,13 @@ a.nav-link:focus-visible {
 
 /* Sync header: the source names are the labels of the card, the timestamps the values. The
    whole list is muted, so the terms take the full text ink and weight to stand apart from the
-   dates under them — a label must read as a label, not as more of the same text. */
+   dates under them. A label must read as a label, not as more of the same text. */
 .sync-times dt {
   color: var(--text);
   font-weight: 600;
 }
 
-/* Company detail — definition list as a two-column term/value grid. */
+/* Company detail: definition list as a two-column term/value grid. */
 .company-detail-dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -321,7 +334,7 @@ a.nav-link:focus-visible {
 }
 
 /* Same reason as .lang-toggle: the fieldset is the semantic group for the kommune
-   checkboxes, not a boxed form section — strip the native chrome. */
+   checkboxes, not a boxed form section. Strip the native chrome. */
 .coverage-group {
   border: 0;
   margin: 0;
@@ -330,7 +343,7 @@ a.nav-link:focus-visible {
 }
 
 /* Coverage cascade (v3.4): one checkbox row per kommune. Rows are ≥44 px touch targets; the
-   grid fills in mobile-first — one column on a phone, more as width allows. */
+   grid fills in mobile-first: one column on a phone, more as width allows. */
 .coverage-kommuner {
   display: grid;
   grid-template-columns: 1fr;
@@ -372,7 +385,7 @@ a.nav-link:focus-visible {
 }
 
 /* Fokus card (v3.5 Part B): bransje codes and keywords, each a removable chip. Wraps
-   mobile-first — the list just grows taller on a narrow viewport, never scrolls sideways. */
+   mobile-first: the list just grows taller on a narrow viewport, never scrolls sideways. */
 .focus-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -472,13 +485,18 @@ a.nav-link:focus-visible {
   }
 }
 
-/* Demo banner (read-only showcase): a static region right after the header. */
-/* The design-system .app-shell is a two-row grid (header, main). The demo banner is a third
-   child, so without this it takes the stretching 1fr row and pushes main to the bottom of the
-   viewport whenever the view is shorter than the screen. */
-.app-shell:has(.demo-banner) {
-  grid-template-rows: auto auto 1fr;
+/* Shell rows: header, [banner], main, footer. The design-system .app-shell is a two-row grid (header, main). Hugin adds the footer as a last
+   row, and the demo banner as a row under the header. Main keeps the one stretching 1fr row in
+   both layouts, so on a short view the footer sits at the bottom of the screen instead of
+   taking the stretch, and the banner never pushes main down. */
+.app-shell {
+  grid-template-rows: auto 1fr auto;
 }
+.app-shell:has(.demo-banner) {
+  grid-template-rows: auto auto 1fr auto;
+}
+
+/* Demo banner (read-only showcase): a static region right after the header. */
 .demo-banner {
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
@@ -487,4 +505,28 @@ a.nav-link:focus-visible {
 }
 .demo-banner p {
   margin: 0;
+}
+
+/* Footer (spec v3.8 B2): muted, small and centred. Small text does not mean small targets: each
+   link's hit box is 44 px tall, centred on the line. A link in a flex row (the GitHub link) gets
+   that height as its row; a link inside running text (NLOD) is handled below. */
+.app-footer {
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.app-footer .cluster {
+  justify-content: center;
+  text-align: center;
+}
+.app-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+}
+/* A link inside running text keeps the 44 px hit box but takes only one line of space: an
+   inline-level box's margin box sets the line's height, its border box the hit area. The box
+   overlaps the credit text above it, which is not interactive. */
+.app-footer span > a {
+  margin-block: calc((1lh - 44px) / 2);
 }

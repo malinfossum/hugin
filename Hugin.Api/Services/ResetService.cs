@@ -18,7 +18,7 @@ public sealed class ResetService(HuginDbContext db, HuginConfigFile file, IClock
     /// <summary>
     /// Order matters and is not negotiable: SQLite refuses VACUUM and VACUUM INTO inside a
     /// transaction, so the snapshot and the compaction sit outside the one that deletes rows.
-    /// The file itself is never deleted — this process holds it open.
+    /// The file itself is never deleted. This process holds it open.
     /// </summary>
     public async Task<string> WipeAsync(CancellationToken ct = default)
     {
@@ -27,7 +27,7 @@ public sealed class ResetService(HuginDbContext db, HuginConfigFile file, IClock
         if (snapshot.Contains('\n') || snapshot.Contains('\0'))
             throw new InvalidOperationException("Ugyldig sti for sikkerhetskopi.");
 
-        // VACUUM INTO takes a string literal, not a parameter — double every quote in the path.
+        // VACUUM INTO takes a string literal, not a parameter. Double every quote in the path.
         // C:\Users\O'Brien\ is an ordinary Windows path. Built with string.Concat rather than
         // interpolation: EF1002 flags an interpolated-string argument to ExecuteSqlRawAsync as a
         // possible injection even though this value is server-generated and already escaped.

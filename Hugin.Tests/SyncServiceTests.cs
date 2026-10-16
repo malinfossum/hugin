@@ -193,7 +193,7 @@ public class SyncServiceTests
     public async Task Full_sync_ignores_the_incremental_cursor_and_walks_from_the_beginning()
     {
         // A normal sync parks the nav cursor at the tail. A backfill that resumed from it would
-        // read one page and report success — the widened-keywords case Part C exists for.
+        // read one page and report success. That is the widened-keywords case Part C exists for.
         var nav = new FakeNavFeedClient(
             new FeedPage([Ad("a", "Backend-utvikler", "3403")], "hale-side", "side-1"),
             new FeedPage([Ad("b", "Frontend-utvikler", "3403")], null, "hale-side"));
@@ -246,7 +246,7 @@ public class SyncServiceTests
     [Test]
     public async Task Full_sync_is_not_capped_at_a_hundred_pages()
     {
-        // 150 chained pages, one matching ad each — a capped walk would stop at 100.
+        // 150 chained pages, one matching ad each. A capped walk would stop at 100.
         var pages = Enumerable.Range(0, 150)
             .Select(i => new FeedPage([Ad($"annonse-{i}", "Backend-utvikler", "3403")],
                 i < 149 ? $"side-{i + 1}" : null, $"side-{i}"))
@@ -337,7 +337,7 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.True, "a kommune-register hiccup must not fail company discovery");
-        Assert.That(h.Kommuner.Store, Is.Empty, "names simply stay stale — nothing to upsert on failure");
+        Assert.That(h.Kommuner.Store, Is.Empty, "names simply stay stale: nothing to upsert on failure");
     }
 
     [Test]
@@ -346,7 +346,7 @@ public class SyncServiceTests
         var h = Build();
         await h.Service.SyncAsync();
 
-        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "pins today's behavior — no chunking without scaling");
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "pins today's behavior: no chunking without scaling");
         Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
     }
 
@@ -366,7 +366,7 @@ public class SyncServiceTests
         await h.Service.SyncAsync();
 
         Assert.That(h.Brreg.CompaniesRequests[1], Is.EquivalentTo(new[] { "3909" }),
-            "the second run must read the new scope — no restart");
+            "the second run must read the new scope, no restart");
     }
 
     [Test]
@@ -388,7 +388,7 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.True);
-        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "one chunk — every allowed number shares the '39' prefix");
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "one chunk: every allowed number shares the '39' prefix");
         Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3903", "3905" }));
     }
 
@@ -448,7 +448,7 @@ public class SyncServiceTests
         var summary = await harness.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.False);
-        Assert.That(summary.Brreg.Error, Is.EqualTo("Ingen dekning valgt — velg kommuner i dashbordet"));
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ingen dekning valgt. Velg kommuner i dashbordet"));
         Assert.That(harness.Brreg.CompaniesRequests, Is.Empty, "nothing may be fetched without a scope");
     }
 
@@ -458,7 +458,7 @@ public class SyncServiceTests
         // hugin-web/src/views/dashboard/SyncHeader.tsx prefix-matches this exact literal
         // ('Ingen dekning valgt') to special-case the no-coverage failure into a prompt with a
         // button that reopens the coverage dialog. Nothing on the web side pins that string to
-        // this one — if SyncBrregAsync's wording changes, this test must go red before the
+        // this one. If SyncBrregAsync's wording changes, this test must go red before the
         // dashboard's prompt silently stops firing.
         var harness = Build(config: new HuginConfig { Municipalities = [] });
 
@@ -472,7 +472,7 @@ public class SyncServiceTests
     {
         // A fylke-only config plus an empty kommune register (fresh install, register fetch
         // down) leaves AllowedNumbers empty. Chunking that would send `kommunenummer=` to
-        // Brreg, which ignores an empty filter and answers with every IT unit in the country —
+        // Brreg, which ignores an empty filter and answers with every IT unit in the country,
         // so the sync has to stop here instead of quietly widening the scope to all of Norway.
         var brreg = new FakeBrregClient { Companies = { Company() }, ThrowsOnGetKommuner = true };
         var config = new HuginConfig { Municipalities = [], Fylker = ["39"] };
@@ -482,13 +482,13 @@ public class SyncServiceTests
 
         Assert.That(h.Brreg.CompaniesRequests, Is.Empty, "nothing may be fetched under an empty scope");
         Assert.That(summary.Brreg.Succeeded, Is.False);
-        Assert.That(summary.Brreg.Error, Is.EqualTo("Kommuneregisteret er tomt — dekningen kunne ikke utvides"));
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Kommuneregisteret er tomt. Dekningen kunne ikke utvides"));
     }
 
     [Test]
     public async Task Fylke_or_all_of_norway_with_an_empty_register_falls_back_to_a_single_configured_call()
     {
-        // A first-ever run (or a register outage) leaves the register empty — Fylker/AllOfNorway
+        // A first-ever run (or a register outage) leaves the register empty. Fylker/AllOfNorway
         // then expand nothing, so AllowedNumbers collapses back to the plain configured set and
         // the SetEquals check takes the single-call path, same as an unscaled config.
         var brreg = new FakeBrregClient { Companies = { Company() } };
@@ -502,7 +502,7 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.True);
-        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "empty register — nothing to expand into");
+        Assert.That(h.Brreg.CompaniesRequests, Has.Count.EqualTo(1), "empty register: nothing to expand into");
         Assert.That(h.Brreg.CompaniesRequests[0], Is.EquivalentTo(new[] { "3407", "3403", "3405", "3411" }));
     }
 
@@ -524,16 +524,16 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.False);
-        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37» — må være 4 sifre"));
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37». Det må være 4 sifre"));
         Assert.That(h.Brreg.CompaniesRequests, Is.Empty,
-            "validation runs before any brreg call — chunking must never throw a raw ArgumentOutOfRangeException");
+            "validation runs before any brreg call. Chunking must never throw a raw ArgumentOutOfRangeException");
     }
 
     [Test]
     public async Task Malformed_configured_kommune_number_fails_the_same_way_in_a_plain_unscaled_config()
     {
         // The plain-config branch (SetEquals) skips chunking entirely, so it would otherwise
-        // never hit the ArgumentOutOfRangeException path — but a malformed number is just as
+        // never hit the ArgumentOutOfRangeException path, but a malformed number is just as
         // wrong here, so validation must not be scoped to only the fylke-expanded branch.
         var config = new HuginConfig { Municipalities = [new MunicipalityRef("Ugyldig", "37")] };
 
@@ -541,7 +541,7 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.False);
-        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37» — må være 4 sifre"));
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «37». Det må være 4 sifre"));
         Assert.That(h.Brreg.CompaniesRequests, Is.Empty);
     }
 
@@ -556,7 +556,7 @@ public class SyncServiceTests
         var summary = await h.Service.SyncAsync();
 
         Assert.That(summary.Brreg.Succeeded, Is.False);
-        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «ABCD» — må være 4 sifre"));
+        Assert.That(summary.Brreg.Error, Is.EqualTo("Ugyldig kommunenummer i konfigurasjonen: «ABCD». Det må være 4 sifre"));
     }
 
     [Test]
@@ -681,7 +681,7 @@ public class SyncServiceTests
     public async Task Two_ads_for_the_same_employer_with_different_homepages_pin_the_first_one_adopted()
     {
         // Pinned rule (first-write-wins within a run): AdoptWebsiteAsync only fills a website
-        // that is currently null (or a confirmed-dead one) — so once the first ad in this page
+        // that is currently null (or a confirmed-dead one). So once the first ad in this page
         // has claimed the empty slot, the second ad's different homepage sees a filled slot and
         // backs off. This is a pin of today's upsert behavior, not a new rule.
         var adA = AdWithEmployer("a", "734161181") with { EmployerHomepage = "https://forste.no" };
@@ -701,7 +701,7 @@ public class SyncServiceTests
     {
         var ad = AdWithEmployer("a", "734161181") with { EmployerHomepage = "https://fjellkart.example" };
         var h = Build(nav: new FakeNavFeedClient(new FeedPage([ad], null)));
-        // No stored company for this orgnr — AdoptWebsiteAsync on the fake returns false rather
+        // No stored company for this orgnr. AdoptWebsiteAsync on the fake returns false rather
         // than throwing, but the wiring itself is wrapped in try/catch (same rule as employer
         // enrichment) so a repository failure here must never take the NAV sync down with it.
 

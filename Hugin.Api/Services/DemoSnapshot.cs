@@ -8,7 +8,7 @@ namespace Hugin.Api.Services;
 /// Public-mode persistence (demo spec Part B). App Service mounts /home as a CIFS share where
 /// SQLite locking does not work, so the host runs on a working copy on local disk and keeps a
 /// plain-file snapshot in the state dir: copy-in once at boot (only when no working copy is
-/// there — an in-place restart keeps its newer copy), copy-back after every sync via a
+/// there, since an in-place restart keeps its newer copy), copy-back after every sync via a
 /// checkpoint, a .tmp and a move. Every failure is a warning: the worst case is a full re-walk
 /// on the next cold start, never a broken demo.
 /// </summary>
@@ -20,12 +20,12 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
         if (!mode.Enabled) return false;
         if (File.Exists(mode.WorkingDbPath))
         {
-            logger.LogInformation("Arbeidskopi finnes allerede — beholder den framfor snapshot i {State}.", mode.StateDir);
+            logger.LogInformation("Arbeidskopi finnes allerede. Beholder den framfor snapshot i {State}.", mode.StateDir);
             return false;
         }
         if (!File.Exists(mode.SnapshotPath))
         {
-            logger.LogWarning("Ingen snapshot i {State} — starter tom (full synk).", mode.StateDir);
+            logger.LogWarning("Ingen snapshot i {State}. Starter tom (full synk).", mode.StateDir);
             return false;
         }
 
@@ -50,7 +50,7 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
         try
         {
             // One retry after a short delay: a concurrent reader's mark can clear between the
-            // two attempts. Still busy after both means the WAL was not folded in — copying
+            // two attempts. Still busy after both means the WAL was not folded in. Copying
             // hugin.db now would produce a valid-looking but stale snapshot with an empty log,
             // so the copy is skipped rather than risked; the next sync tries again.
             if (!await TryCheckpointAsync(db, ct))
@@ -58,7 +58,7 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
                 await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
                 if (!await TryCheckpointAsync(db, ct))
                 {
-                    logger.LogWarning("WAL fortsatt opptatt etter ny forsøk — hopper over kopiering til {State}.", mode.StateDir);
+                    logger.LogWarning("WAL fortsatt opptatt etter nytt forsøk. Hopper over kopiering til {State}.", mode.StateDir);
                     return false;
                 }
             }
@@ -76,7 +76,7 @@ public sealed class DemoSnapshot(PublicModeOptions mode, ILogger<DemoSnapshot> l
     }
 
     /// <summary>Runs PRAGMA wal_checkpoint(TRUNCATE) through a raw command so its (busy, log,
-    /// checkpointed) row is actually read — ExecuteSqlRawAsync discards it, so a busy checkpoint
+    /// checkpointed) row is actually read. ExecuteSqlRawAsync discards it, so a busy checkpoint
     /// (a concurrent reader holding a read mark) would otherwise fail silently and let the copy
     /// below run against a WAL that was never folded into the db file. True only when busy = 0.
     /// Opens/closes through the Database facade (ref-counted) rather than the raw connection, so

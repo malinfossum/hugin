@@ -15,7 +15,10 @@ import type { PipelineDto, PipelineStatusSlug, TrackResponse } from '../lib/type
 /** The statuses you can pick. */
 const STATUSES: PipelineStatusSlug[] = ['active', 'applied', 'answered']
 
-/** The sections on screen. Expired is derived — an active entry whose ads have all expired — never a status. */
+/**
+ * The sections on screen. Expired is derived (an active entry whose ads have all expired),
+ * never a status.
+ */
 type Section = PipelineStatusSlug | 'expired'
 const SECTIONS: Section[] = ['active', 'applied', 'answered', 'expired']
 
@@ -42,7 +45,7 @@ function loadSortMode(): SortMode {
     const stored = window.localStorage.getItem(SORT_STORAGE_KEY)
     if (stored === 'starred' || stored === 'updated' || stored === 'name') return stored
   } catch {
-    /* localStorage unavailable (private mode etc.) — fall back to the default */
+    /* localStorage unavailable (private mode etc.): fall back to the default */
   }
   return 'starred'
 }
@@ -51,7 +54,7 @@ function saveSortMode(mode: SortMode): void {
   try {
     window.localStorage.setItem(SORT_STORAGE_KEY, mode)
   } catch {
-    /* localStorage unavailable — sort choice just won't persist */
+    /* localStorage unavailable: sort choice just won't persist */
   }
 }
 

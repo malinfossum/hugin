@@ -16,7 +16,7 @@ public static class WriteEndpoints
             // Dashboard tracking starts from synced data; only the CLI fetches unknown
             // orgnr from Brreg (spec: CLI/dashboard seam).
             if (await companies.GetAsync(orgnr) is null)
-                return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr} — synk først, eller bruk hugin track.");
+                return Results.Problem(statusCode: 404, title: $"Fant ikke orgnr {orgnr}. Synk først, eller bruk hugin track.");
 
             var result = await pipeline.TrackAsync(orgnr, status, request.Why, request.Note, request.Svar, request.Starred);
             var name = (await companies.GetAsync(orgnr))!.Name;

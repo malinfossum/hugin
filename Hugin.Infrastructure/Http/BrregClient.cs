@@ -40,7 +40,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
     private readonly IClock _clock = clock ?? new SystemClock();
 
     // Brreg's registration dates are Norwegian calendar days, so the open upper bound of a
-    // bisected range is "today in Norway" — not the UTC date, which lags it by up to two hours
+    // bisected range is "today in Norway", not the UTC date, which lags it by up to two hours
     // and would leave a unit registered late in the evening outside every slice.
     private static readonly TimeZoneInfo Norway = FindNorway();
 
@@ -78,7 +78,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
 
     public async Task<RegisterCompany?> GetByOrgnrAsync(string orgnr, CancellationToken ct = default)
     {
-        // The NACE filter governs discovery, never tracking — a company fetched by orgnr is
+        // The NACE filter governs discovery, never tracking. A company fetched by orgnr is
         // stored whatever its industry code (a lottery operator is 92, a state agency 84).
         return await FetchOneAsync($"enheter/{orgnr}", isBranch: false, ct)
             ?? await FetchOneAsync($"underenheter/{orgnr}", isBranch: true, ct);
@@ -151,7 +151,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
     /// <summary>
     /// Walks every page of one query. If page 0 reports totalElements at or above the window,
     /// the query is split into two inclusive date halves ([lo, mid] and [mid+1, hi]) and each
-    /// half walked recursively instead — the halves partition the range, so their union is
+    /// half walked recursively instead. The halves partition the range, so their union is
     /// exactly the unsplit set. A slice that still overflows at the depth cap (or is a single
     /// day) is walked as far as the window allows and logged, naming the slice.
     /// </summary>
@@ -191,7 +191,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
                 }
 
                 _logger.LogWarning(
-                    "Brreg: {Path} for kommune {Kommuner} registrert {From}–{To} gir {Total} treff — over grensen på {Window}; bare de første hentes. Del opp dekningen (færre kommuner per fylke).",
+                    "Brreg: {Path} for kommune {Kommuner} registrert {From}–{To} gir {Total} treff. Det er over grensen på {Window}, så bare de første hentes. Del opp dekningen (færre kommuner per fylke).",
                     basePath, string.Join(',', municipalities), lo, hi, totalElements, paginationWindow);
             }
 

@@ -150,7 +150,7 @@ internal static class Program
     private static async Task<int> RunSyncAsync(IServiceProvider services, SyncCommand command)
     {
         if (command.Full)
-            Console.WriteLine("Full gjennomgang av NAV-feeden — første gang tar dette noen minutter. "
+            Console.WriteLine("Full gjennomgang av NAV-feeden. Første gang tar dette noen minutter. "
                 + "Avbrytes den, fortsetter neste `hugin sync --full` der den slapp.");
 
         var summary = await services.GetRequiredService<SyncService>().SyncAsync(
@@ -191,7 +191,7 @@ internal static class Program
 
         if (summary.BothFailed)
         {
-            Console.Error.WriteLine("Begge kildene feilet — ingenting ble oppdatert.");
+            Console.Error.WriteLine("Begge kildene feilet. Ingenting ble oppdatert.");
             return 1;
         }
 
@@ -200,7 +200,7 @@ internal static class Program
         static string Line(string source, SourceResult result, string unit) =>
             result.Succeeded
                 ? $"{source}: {result.Fetched} {unit}"
-                : $"{source}: feilet ({result.Error}) — fortsetter med lagrede data";
+                : $"{source}: feilet ({result.Error}). Fortsetter med lagrede data";
     }
 
     private static async Task<int> RunNewAsync(IServiceProvider services, NewCommand command, HuginConfig config)
@@ -210,7 +210,7 @@ internal static class Program
 
         if (items is null)
         {
-            Console.WriteLine("Ingen sync er kjørt ennå — kjør `hugin sync` først.");
+            Console.WriteLine("Ingen sync er kjørt ennå. Kjør `hugin sync` først.");
             return 0;
         }
 
@@ -249,7 +249,7 @@ internal static class Program
             {
                 var marker = ad.IsOpenAt(services.GetRequiredService<IClock>().UtcNow) ? "" : "  [utgått]";
                 var category = ad.Category is null ? "" : $"  [{ad.Category}]";
-                Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{category}{marker}");
+                Console.WriteLine($"  {ad.Title} · {ad.EmployerName}{category}{marker}");
                 if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
             }
         }
@@ -297,7 +297,7 @@ internal static class Program
                         ? "samme hovedenhet i Enhetsregisteret"
                         : $"samme merkenavn «{BrandName.Token(related.Name)}»";
                     Console.Error.WriteLine(
-                        $"  {related.Entry.Orgnr} {related.Name} ({CliLabels.Status(related.Entry.Status)}) — {reason}");
+                        $"  {related.Entry.Orgnr} {related.Name} ({CliLabels.Status(related.Entry.Status)}): {reason}");
                 }
 
                 Console.Error.WriteLine($"  Angre: hugin untrack {result.Entry.Orgnr}");
@@ -316,7 +316,7 @@ internal static class Program
         {
             // Only an unknown orgnr needs the network (the Brreg lookup); a known one never
             // gets here. Offline is an inconvenience, not a crash.
-            Console.Error.WriteLine($"Feil: fikk ikke kontakt med Enhetsregisteret ({ex.Message}) — prøv igjen senere.");
+            Console.Error.WriteLine($"Feil: fikk ikke kontakt med Enhetsregisteret ({ex.Message}). Prøv igjen senere.");
             return 1;
         }
     }
@@ -331,7 +331,7 @@ internal static class Program
         }
 
         // No confirmation prompt (the CLI runs unattended), so this printout is the only record
-        // left of the entry — everything needed to re-track it by hand.
+        // left of the entry: everything needed to re-track it by hand.
         var entry = result.Removal.Entry;
         var who = result.CompanyName is null ? entry.Orgnr : $"{entry.Orgnr} {result.CompanyName}";
         Console.WriteLine($"Fjernet {who} fra oppfølgingen.");
@@ -357,7 +357,7 @@ internal static class Program
 
             if (companies.Count == 0)
             {
-                Console.WriteLine("Ingen selskaper lagret ennå — kjør `hugin sync`.");
+                Console.WriteLine("Ingen selskaper lagret ennå. Kjør `hugin sync`.");
                 return 0;
             }
 
@@ -376,7 +376,7 @@ internal static class Program
 
             if (ads.Count == 0)
             {
-                Console.WriteLine("Ingen aktive annonser lagret — kjør `hugin sync --full` for å hente historikken.");
+                Console.WriteLine("Ingen aktive annonser lagret. Kjør `hugin sync --full` for å hente historikken.");
                 return 0;
             }
 
@@ -389,7 +389,7 @@ internal static class Program
                 foreach (var ad in group)
                 {
                     var expires = ad.Expires is { } e ? $"  (frist {e:yyyy-MM-dd})" : "";
-                    Console.WriteLine($"  {ad.Title} — {ad.EmployerName}{expires}");
+                    Console.WriteLine($"  {ad.Title} · {ad.EmployerName}{expires}");
                     if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
                 }
 
@@ -403,7 +403,7 @@ internal static class Program
 
         if (entries.Count == 0)
         {
-            Console.WriteLine("Ingen oppføringer i pipelinen ennå — bruk `hugin track <orgnr> <status>`.");
+            Console.WriteLine("Ingen oppføringer i pipelinen ennå. Bruk `hugin track <orgnr> <status>`.");
             return 0;
         }
 
@@ -442,7 +442,7 @@ internal static class Program
     private static void PrintUsage()
     {
         Console.WriteLine("""
-            hugin — jobbradar for utviklerstillinger
+            hugin: jobbradar for utviklerstillinger
 
               hugin sync [--full]                 Hent selskaper fra Brreg og annonser fra NAV;
                                                   --full går gjennom hele NAV-historikken (første gang: alle åpne annonser)

@@ -1,7 +1,7 @@
 import type { T } from '../i18n'
 import type { PipelineStatusSlug } from './types'
 
-/** Localized label for a pipeline status slug — a function of the current language rather
+/** Localized label for a pipeline status slug. It is a function of the current language rather
  * than a fixed table, since the display text (Følger med/Søkt/Svar ↔ Watching/Applied/Answered)
  * changes with the language toggle. */
 export function pipelineLabel(t: T, status: PipelineStatusSlug): string {

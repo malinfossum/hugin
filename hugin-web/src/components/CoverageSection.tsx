@@ -16,18 +16,18 @@ import { useAnnounce } from './LiveRegion'
 import { UnsavedChangesGuard } from './UnsavedChangesGuard'
 
 interface CoverageSectionProps {
-  /** Fires once the PUT succeeds — before the follow-up sync is even attempted, since the scope
+  /** Fires once the PUT succeeds, before the follow-up sync is even attempted. The scope
    * it reads is already the new one. SettingsView uses this to bump a `previewVersion` counter
    * that is passed to FocusSection and folded into its per-code preview cache key (v3.5 Task 11
    * ruling 2): the cached count for a bransje code depends on the coverage it was previewed
    * under, and a stale count read after changing coverage would be wrong, not just stale.
-   * FocusSection is never remounted for this — that would also discard an unsaved
+   * FocusSection is never remounted for this, since that would also discard an unsaved
    * bransje/keyword draft. */
   onSaved?: () => void
 }
 
-/** Settings → Dekning (spec v3.4 Part B): edits the server's discovery scope — what sync
- * fetches — through the same fylke → kommune cascade as the first-run dialog. Loads the scope
+/** Settings → Dekning (spec v3.4 Part B): edits the server's discovery scope (what sync
+ * fetches) through the same fylke → kommune cascade as the first-run dialog. Loads the scope
  * and the kommune list once on mount; Save PUTs the scope and starts a sync, announcing
  * honestly when that sync is busy or could not start. */
 export function CoverageSection({ onSaved }: CoverageSectionProps) {
@@ -37,7 +37,7 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
   // the scope it has.
   const loadFailed = isError && config === undefined
   // What the person has changed since the scope loaded. The shown draft is the server's scope
-  // until then, and their edits after — a refetch never overwrites an unsaved draft.
+  // until then, and their edits after. A refetch never overwrites an unsaved draft.
   const [edited, setEdited] = useState<CoverageDraft | null>(null)
   const coverage = edited ?? (config ? fromDiscoveryConfig(config) : null)
   // An edit undone by hand (a kommune ticked and unticked again) leaves nothing to lose.
@@ -78,7 +78,7 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
     }
     onSaved?.()
     // A sync that was already running read the old scope before this save, so the new one
-    // only takes effect on the next run — say that instead of claiming a sync is fetching it.
+    // only takes effect on the next run. Say that instead of claiming a sync is fetching it.
     // Any other failure to start is said plainly too: the scope is saved, nothing is fetching.
     const sync = await api.post('/api/sync').then(
       (): 'started' | 'busy' | 'failed' => 'started',

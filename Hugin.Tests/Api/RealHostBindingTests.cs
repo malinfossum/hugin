@@ -6,11 +6,11 @@ using System.Net.Sockets;
 namespace Hugin.Tests.Api;
 
 /// <summary>
-/// The spec promises loopback-only binding "asserted by a test" — but WebApplicationFactory
+/// The spec promises loopback-only binding "asserted by a test", but WebApplicationFactory
 /// (used by every other Api test) swaps Kestrel out for an in-memory TestServer, so it can never
 /// exercise the real <c>ConfigureKestrel(o => o.Listen(IPAddress.Loopback, port))</c> call in
 /// Program.cs. This test runs the actual Hugin.Api host as a subprocess and reads the OS's TCP
-/// listener table directly — deterministic, and independent of LAN reachability or firewall
+/// listener table directly. That is deterministic, and independent of LAN reachability or firewall
 /// behavior (which a "try to connect from outside" test would be at the mercy of).
 /// </summary>
 [TestFixture]
@@ -68,7 +68,7 @@ public sealed class RealHostBindingTests
                 .Where(l => l.Port == port)
                 .ToList();
 
-            Assert.That(listeners, Is.Not.Empty, "no listener found for the host's port — cannot assert its bind address");
+            Assert.That(listeners, Is.Not.Empty, "no listener found for the host's port, so it cannot assert its bind address");
             Assert.That(listeners, Has.All.Matches<IPEndPoint>(l => IPAddress.IsLoopback(l!.Address)),
                 $"expected loopback-only binding, found: {string.Join(", ", listeners.Select(l => l.Address))}");
         }

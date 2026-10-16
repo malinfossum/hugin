@@ -2,7 +2,7 @@ namespace Hugin.Api.Services;
 
 /// <summary>
 /// Holds the boot auto-sync on a fresh install (no hugin.db when the host started) until the
-/// first-run dialog resolves — otherwise the default Innlandet scope would race the user's
+/// first-run dialog resolves. Otherwise the default Innlandet scope would race the user's
 /// choice and be fetched for nothing (spec v3.4 Part C, the stress-test's 🔴). Saving the
 /// discovery config releases it (the dashboard then starts the sync itself); an Esc-dismiss
 /// releases it AND starts the sync with the config defaults.
@@ -18,7 +18,7 @@ public sealed class BootSyncGate
         lock (_lock) Held = true;
     }
 
-    /// <summary>Returns true when there was a hold to release — the caller decides what to do next.</summary>
+    /// <summary>Returns true when there was a hold to release. The caller decides what to do next.</summary>
     public bool Release()
     {
         lock (_lock)

@@ -9,7 +9,7 @@ export interface Region {
   kommuner: string[]
 }
 
-/** Canonical order: regions by fylke number, kommuner by number, deduped — so two equal
+/** Canonical order: regions by fylke number, kommuner by number, deduped, so two equal
  * filters are equal as JSON and chips never reorder because of tick order. Numbers are
  * fixed-width digit strings, so plain string sort is numeric sort. */
 export function normalizeRegions(regions: Region[]): Region[] {
@@ -54,7 +54,7 @@ export function tickKommune(regions: Region[], kommune: string): Region[] {
   ])
 }
 
-/** Untick a kommune. Unticking the last one leaves the WHOLE fylke — dropping the region here
+/** Untick a kommune. Unticking the last one leaves the WHOLE fylke. Dropping the region here
  * would make "all of Innlandet" unreachable by unticking, and unticking must never widen. The
  * fylke tick box is how a fylke is removed. */
 export function untickKommune(regions: Region[], kommune: string): Region[] {

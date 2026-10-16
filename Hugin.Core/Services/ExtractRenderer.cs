@@ -6,7 +6,7 @@ namespace Hugin.Core.Services;
 
 /// <summary>
 /// Renders an <see cref="ExtractDocument"/> to markdown, plain text, or JSON. Pure string/JSON
-/// building — no console, no files. Section shapes mirror the CLI's `hugin new` headers and the
+/// building: no console, no files. Section shapes mirror the CLI's `hugin new` headers and the
 /// old MarkdownExporter's Preparelogg-compatible "## Søkt" table, so both stay familiar.
 /// </summary>
 internal static class ExtractRenderer
@@ -33,7 +33,7 @@ internal static class ExtractRenderer
                 break;
 
             case "category":
-                AdSection(sb, $"## Aktiv — {Plain(document.Category)}", document.Ads, md: true);
+                AdSection(sb, $"## Aktiv: {Plain(document.Category)}", document.Ads, md: true);
                 break;
 
             case "all":
@@ -61,7 +61,7 @@ internal static class ExtractRenderer
                 break;
 
             case "category":
-                AdSection(sb, $"Aktiv — {Plain(document.Category)}", document.Ads, md: false);
+                AdSection(sb, $"Aktiv: {Plain(document.Category)}", document.Ads, md: false);
                 break;
 
             case "all":
@@ -181,7 +181,7 @@ internal static class ExtractRenderer
             .Trim();
     }
 
-    /// <summary>Same collapsing as <see cref="Cell"/> but no pipe escaping — .txt has no table
+    /// <summary>Same collapsing as <see cref="Cell"/> but no pipe escaping: .txt has no table
     /// syntax to protect.</summary>
     private static string Plain(string? value)
     {

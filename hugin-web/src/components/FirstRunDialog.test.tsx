@@ -111,7 +111,7 @@ describe('FirstRunDialog v2', () => {
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
   })
 
-  it('Start with several kommuner ticked seeds all of them — the lens no longer collapses to the fylke', async () => {
+  it('Start with several kommuner ticked seeds all of them, so the lens no longer collapses to the fylke', async () => {
     fakeServer()
     const user = userEvent.setup()
     const onSaveFocus = vi.fn()
@@ -173,7 +173,7 @@ describe('FirstRunDialog v2', () => {
 
   it('saves the fylke alone when /api/kommuner is unreachable', async () => {
     // The prefilled kommuner have no checkboxes in this mode, so they are invisible and
-    // un-clearable — sending them would only earn a 503 the user cannot act on. The fylke is
+    // un-clearable. Sending them would only earn a 503 the user cannot act on. The fylke is
     // what the dialog actually shows, so the fylke is what gets saved.
     const calls = fakeServer({ kommunerDown: true })
     const user = userEvent.setup()
@@ -201,7 +201,7 @@ describe('FirstRunDialog v2', () => {
   })
 
   it('Start stays disabled while the kommune list is still loading', async () => {
-    // Before the list settles the cascade cannot tell "no list" from "not yet" — and Start in
+    // Before the list settles the cascade cannot tell "no list" from "not yet". Start in
     // that window would have saved the fylke alone, silently dropping the prefilled kommuner.
     fakeServer({ kommunerPending: true })
     render(

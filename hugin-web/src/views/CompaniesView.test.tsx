@@ -10,7 +10,7 @@ import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
 import { TestQueryProvider } from '../test-utils'
 import { type CompaniesFilters, CompaniesView } from './CompaniesView'
 
-/** CompaniesView no longer owns selection or filter state (the router does) — this harness stands in
+/** CompaniesView no longer owns selection or filter state (the router does). This harness stands in
  * for that, so the existing click-through tests can drive open/close the same way a user
  * would, without each test wiring its own useState. */
 function CompaniesViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: () => void }) {
@@ -29,7 +29,7 @@ function CompaniesViewHarness({ onOpenSettings = () => {} }: { onOpenSettings?: 
 }
 
 /** Test-only stand-in for "somewhere else" (Settings, or the first-run dialog) writing to the
- * shared FocusContext — proves CompaniesView reads focus live rather than mirroring it into
+ * shared FocusContext. It proves CompaniesView reads focus live rather than mirroring it into
  * local state that would go stale once written from outside the view. */
 function ExternalFocusSetter() {
   const { setFocus } = useFocus()
@@ -157,7 +157,7 @@ describe('CompaniesView', () => {
     expect(await screen.findByText('1 bedrift')).toBeInTheDocument()
   })
 
-  it('counts rendered rows, not raw units — a branch+parent pair (2 units, 1 row) is singular', async () => {
+  it('counts rendered rows, not raw units: a branch+parent pair (2 units, 1 row) is singular', async () => {
     const companies = [
       company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
@@ -405,7 +405,7 @@ describe('CompaniesView', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
-  it('CompanyDetail shows the missing-website note and a Google fallback link when there is no website — no Proff anywhere', async () => {
+  it('CompanyDetail shows the missing-website note and a Google fallback link when there is no website, with no Proff anywhere', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Uten Nettside AS', website: null, kommuneNavn: 'Oslo' }),
     ]
@@ -443,7 +443,7 @@ describe('CompaniesView', () => {
     expect(await screen.findByRole('heading', { name: 'Nyfjell Spill AS' })).toBeInTheDocument()
   })
 
-  it('renders exactly one list row for a company with branches — branches moved into CompanyDetail', async () => {
+  it('renders exactly one list row for a company with branches: branches moved into CompanyDetail', async () => {
     const companies = [
       company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
@@ -464,8 +464,8 @@ describe('CompaniesView', () => {
     await screen.findByText('Nyfjell Spill AS')
     expect(screen.getByText('Standalone AS')).toBeInTheDocument()
 
-    // One group per hovedenhet/standalone (2), not one row per unit (3) — and no branch row
-    // hiding inside a nested list either.
+    // One group per hovedenhet/standalone (2), not one row per unit (3). No branch row hides
+    // inside a nested list either.
     const outerList = container.querySelector('.companies-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
@@ -495,7 +495,7 @@ describe('CompaniesView', () => {
       company({
         orgnr: '111222333',
         name: 'NYFJELL SPILL AS AVDELING OSLO SENTRUM',
-        parentOrgnr: '787878787', // parent is itself a branch — not a valid hovedenhet
+        parentOrgnr: '787878787', // parent is itself a branch, so not a valid hovedenhet
         isBranch: true,
         kommuneNavn: 'Oslo',
       }),
@@ -504,7 +504,7 @@ describe('CompaniesView', () => {
 
     await screen.findByText('Nyfjell Spill AS')
 
-    // A's group (with B nested, invisible in the list) + C's standalone row — 2 groups, not 3.
+    // A's group (with B nested, invisible in the list) + C's standalone row: 2 groups, not 3.
     const outerList = container.querySelector('.companies-view > ul')
     if (!outerList) throw new Error('outer companies list not found')
     expect(outerList.children).toHaveLength(2)
@@ -533,7 +533,7 @@ describe('CompaniesView', () => {
 
   it("groups appear at the MAIN unit's position, not a branch's earlier position in the source list", async () => {
     const companies = [
-      // The branch is listed before its own hovedenhet here — a naive first-seen-position
+      // The branch is listed before its own hovedenhet here. A naive first-seen-position
       // grouping would surface "Nyfjell Spill AS" first (its branch is seen at index 0).
       // The fix orders by the main's own index, so "Mellomstor AS" (index 1) comes first.
       company({
@@ -679,7 +679,7 @@ describe('CompaniesView', () => {
     expect(onCloseCompany).toHaveBeenCalledTimes(1)
   })
 
-  it('filters the list by the stored regions — whole fylke and narrowed fylke', async () => {
+  it('filters the list by the stored regions: whole fylke and narrowed fylke', async () => {
     saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
@@ -713,7 +713,7 @@ describe('CompaniesView', () => {
     expect(screen.queryByText('Acme AS')).not.toBeInTheDocument()
   })
 
-  it('reacts live to a focus change made outside the view — context is the single reactive owner', async () => {
+  it('reacts live to a focus change made outside the view: context is the single reactive owner', async () => {
     const companies = [
       company({ orgnr: '1', name: 'Acme AS', kommune: '3403', kommuneNavn: 'Hamar' }),
       company({ orgnr: '2', name: 'Beta Software', kommune: '0301', kommuneNavn: 'Oslo' }),
@@ -736,7 +736,7 @@ describe('CompaniesView', () => {
     await screen.findByText('Acme AS')
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
 
-    // A focus change from outside this view (e.g. Settings) — the filtered list must pick
+    // A focus change from outside this view (e.g. Settings). The filtered list must pick
     // it up immediately, without the view being remounted.
     await user.click(screen.getByRole('button', { name: 'Set Oslo externally' }))
 

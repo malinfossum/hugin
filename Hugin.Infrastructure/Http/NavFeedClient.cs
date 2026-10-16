@@ -11,7 +11,7 @@ namespace Hugin.Infrastructure.Http;
 /// <summary>
 /// The NAV stillingsfeed (arbeidsplassen.no), a JSON Feed 1.0 stream behind a JWT bearer.
 ///
-/// Field map — list shape captured live 2026-08-18, detail shape from the published
+/// Field map: list shape captured live 2026-08-18, detail shape from the published
 /// OpenAPI at /api/openapi.json (FeedEntryContent → ad_content: FeedAd):
 ///   page          → items[]._feed_entry, cursor at next_id (null at the tail), page id at id
 ///   summary       → uuid, status ("ACTIVE"/"INACTIVE"), title, businessName, municipal, sistEndret
@@ -23,14 +23,14 @@ namespace Hugin.Infrastructure.Http;
 ///
 /// Two things the feed does NOT provide, and how they are handled:
 ///
-/// 1. There is no kommunenummer anywhere — municipalities arrive as names ("HAMAR"). The
+/// 1. There is no kommunenummer anywhere. Municipalities arrive as names ("HAMAR"). The
 ///    sync's <see cref="MunicipalityScope"/> resolves the name (config names first, then the
 ///    kommune register) and everything unresolved maps to null (and is then filtered out).
 ///
 /// 2. A feed page carries summaries only, not ad bodies. Fetching every entry would mean
 ///    1000 requests per page, so the summary is filtered first (municipality + keyword) and
-///    only survivors are enriched. Inactive ads return a stub with no ad_content — expected,
-///    NAV strips content once an ad is gone — so the summary values stand and IsActive flips.
+///    only survivors are enriched. Inactive ads return a stub with no ad_content. That is expected:
+///    NAV strips content once an ad is gone, so the summary values stand and IsActive flips.
 /// </summary>
 public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : INavFeedClient
 {
@@ -99,7 +99,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var root = doc.RootElement;
 
-        // The summary's status is historical — written when the feed entry was appended. The
+        // The summary's status is historical: written when the feed entry was appended. The
         // detail response carries the ad's status NOW, and now is what IsActive means. During
         // a backfill this is the difference between 3 open ads and 11 phantom ones.
         var isActiveNow = Text(root, "status") is { } current
@@ -144,7 +144,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
         var response = await SendOnceAsync(path, forceRefresh: false, ct);
         if (response.StatusCode != HttpStatusCode.Unauthorized) return response;
 
-        // The public token rotates at irregular intervals — refetch once, then give up.
+        // The public token rotates at irregular intervals. Refetch once, then give up.
         response.Dispose();
         response = await SendOnceAsync(path, forceRefresh: true, ct);
 
@@ -152,7 +152,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
         {
             response.Dispose();
             throw new NavAuthException(
-                "NAV avviste tokenet to ganger — sjekk navToken i hugin.json, eller prøv igjen senere.");
+                "NAV avviste tokenet to ganger. Sjekk navToken i hugin.json, eller prøv igjen senere.");
         }
 
         return response;

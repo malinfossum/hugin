@@ -1,4 +1,4 @@
-/** Thin fetch wrapper. Writes always carry X-Hugin: 1 — the API's CSRF gate. */
+/** Thin fetch wrapper. Writes always carry X-Hugin: 1 (the API's CSRF gate). */
 export class ApiError extends Error {
   status: number
 
@@ -27,7 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (type.includes('json') ? response.json() : response.text()) as Promise<T>
 }
 
-/** Always reads the body as text, regardless of the response's content type — for previewing a
+/** Always reads the body as text, regardless of the response's content type. This previews a
  * file download (e.g. extract's json/md/txt formats) verbatim rather than auto-parsing json. */
 async function requestText(path: string): Promise<string> {
   const response = await fetch(path)
@@ -42,7 +42,7 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   getText: (path: string) => requestText(path),
   /** A GET that acts outward on the caller's behalf (e.g. the focus preview's Brreg calls) is
-   * gated behind the same X-Hugin header as a write — plain `get` sends no headers at all. */
+   * gated behind the same X-Hugin header as a write. Plain `get` sends no headers at all. */
   getGuarded: <T>(path: string) => request<T>(path, { headers: guardHeaders }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, {

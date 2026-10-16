@@ -1,6 +1,6 @@
 namespace Hugin.Core.Models;
 
-/// <summary>A dashboard header link the user can add, edit, reorder, or remove — the db-backed
+/// <summary>A dashboard header link the user can add, edit, reorder, or remove: the db-backed
 /// replacement for hugin.json's config-only linkouts.</summary>
 public sealed class Source
 {

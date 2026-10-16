@@ -67,7 +67,7 @@ describe('SourcesCard', () => {
   })
 
   it('renders fetched sources after the fixed links, in the position order the API returned, with shortened labels', async () => {
-    // The API orders by position server-side (Task 2) — the card renders the list as received.
+    // The API orders by position server-side (Task 2). The card renders the list as received.
     renderCard(
       fakeServer([
         sourceDto({

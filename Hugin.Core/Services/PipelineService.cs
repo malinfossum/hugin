@@ -64,7 +64,7 @@ public sealed class PipelineService(
         await pipeline.UpsertAsync(entry, ct);
 
         var warning = entry.NeedsWhy
-            ? $"mangler begrunnelse — legg til hvorfor {orgnr} er interessant (--why \"...\")"
+            ? $"mangler begrunnelse. Legg til hvorfor {orgnr} er interessant (--why \"...\")"
             : null;
 
         // Only a new row warns: re-tracking an entry means the relationship was accepted once.

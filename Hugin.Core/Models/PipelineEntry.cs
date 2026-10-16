@@ -9,7 +9,7 @@ public enum PipelineStatus
 
 /// <summary>
 /// One outreach entry per company. <see cref="Why"/> is the "Grunn til at de er
-/// interessante" column — export flags entries where it is empty. <see cref="Starred"/> is an
+/// interessante" column. Export flags entries where it is empty. <see cref="Starred"/> is an
 /// independent "want to apply" flag, orthogonal to <see cref="Status"/>.
 /// </summary>
 public sealed class PipelineEntry
