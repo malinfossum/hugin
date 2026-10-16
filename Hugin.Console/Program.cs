@@ -414,7 +414,7 @@ internal static class Program
             var company = await repository.GetAsync(entry.Orgnr);
             Console.WriteLine($"{entry.Updated:yyyy-MM-dd}  {CliLabels.Status(entry.Status),-16}  "
                 + $"{company?.Name ?? entry.Orgnr}");
-            Console.WriteLine($"    Grunn: {(entry.MissingWhy ? ExtractRenderer.MissingWhyMarker : entry.Why)}");
+            Console.WriteLine($"    Grunn: {(entry.MissingWhy ? "⚠ mangler begrunnelse" : entry.Why)}");
         }
 
         return 0;
