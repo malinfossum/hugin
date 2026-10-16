@@ -284,7 +284,7 @@ internal static class Program
                 Console.WriteLine($"Hentet {command.Orgnr} fra Enhetsregisteret.");
 
             Console.WriteLine($"{result.Entry.Orgnr}: {CliLabels.Status(result.Entry.Status)}");
-            if (!string.IsNullOrWhiteSpace(result.Entry.Why)) Console.WriteLine($"  Grunn: {result.Entry.Why}");
+            if (!result.Entry.MissingWhy) Console.WriteLine($"  Grunn: {result.Entry.Why}");
             if (!string.IsNullOrWhiteSpace(result.Entry.Note)) Console.WriteLine($"  Notat: {result.Entry.Note}");
             if (!string.IsNullOrWhiteSpace(result.Entry.SvarText)) Console.WriteLine($"  Svar: {result.Entry.SvarText}");
 
@@ -337,7 +337,7 @@ internal static class Program
         Console.WriteLine($"Fjernet {who} fra oppfølgingen.");
         Console.WriteLine($"  Status: {CliLabels.Status(entry.Status)}");
         if (entry.Starred) Console.WriteLine("  Stjernemerket: ja");
-        if (!string.IsNullOrWhiteSpace(entry.Why)) Console.WriteLine($"  Grunn: {entry.Why}");
+        if (!entry.MissingWhy) Console.WriteLine($"  Grunn: {entry.Why}");
         if (!string.IsNullOrWhiteSpace(entry.Note)) Console.WriteLine($"  Notat: {entry.Note}");
         if (!string.IsNullOrWhiteSpace(entry.SvarText)) Console.WriteLine($"  Svar: {entry.SvarText}");
         Console.WriteLine($"  Opprettet: {entry.Created.ToLocalTime():yyyy-MM-dd}");
@@ -414,7 +414,7 @@ internal static class Program
             var company = await repository.GetAsync(entry.Orgnr);
             Console.WriteLine($"{entry.Updated:yyyy-MM-dd}  {CliLabels.Status(entry.Status),-16}  "
                 + $"{company?.Name ?? entry.Orgnr}");
-            Console.WriteLine($"    Grunn: {(string.IsNullOrWhiteSpace(entry.Why) ? "⚠ mangler begrunnelse" : entry.Why)}");
+            Console.WriteLine($"    Grunn: {(entry.MissingWhy ? "⚠ mangler begrunnelse" : entry.Why)}");
         }
 
         return 0;
