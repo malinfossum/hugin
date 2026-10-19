@@ -1,6 +1,6 @@
 import { Input as InputPrimitive } from '@base-ui/react/input'
-import { cn } from 'cn'
 import type * as React from 'react'
+import { cn } from '@/lib/utils'
 
 /** At Hugin's 44px target floor (a11y spec), on the sheet fill like the native select. */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {

@@ -1,6 +1,7 @@
 // One time scale for every lifeline chart (DESIGN.md, the Scale Bar and Lifeline rules): a window
 // of whole weeks that starts on a Monday a few weeks back and runs some weeks ahead, the same day
-// width everywhere it is drawn. Days are local calendar days, so an ad that expires 23:59 UTC
+// width everywhere it is drawn. A company's history spans months or years, so its sheet uses a
+// window of whole months instead, read off a bar of alternating months. Days are local calendar days, so an ad that expires 23:59 UTC
 // lands on the date the user sees.
 
 const DAY_MS = 86_400_000
@@ -16,9 +17,9 @@ function dateOfDay(day: number): Date {
 }
 
 export interface TimeWindow {
-  /** First day (a Monday), inclusive. */
+  /** First day (a Monday, or a first of the month for a month window), inclusive. */
   start: number
-  /** Day after the last, exclusive: start + weeks * 7. */
+  /** Day after the last, exclusive. */
   end: number
 }
 
@@ -81,6 +82,46 @@ export function monthLabels(window: TimeWindow): MonthLabel[] {
     if (date.getDate() !== 1) continue
     const x = position(window, day)
     out.push({ date, x, alignEnd: x > 78 })
+  }
+  return out
+}
+
+/** Whole months from the one holding `first` to the one holding `last`, widened back to at least
+ * `minMonths` so a short history still has room to read. */
+export function monthWindow(first: number, last: number, minMonths = 3): TimeWindow {
+  const from = dateOfDay(first)
+  const to = dateOfDay(last)
+  const end = new Date(to.getFullYear(), to.getMonth() + 1, 1)
+  const span = (end.getFullYear() - from.getFullYear()) * 12 + end.getMonth() - from.getMonth()
+  const start = new Date(end.getFullYear(), end.getMonth() - Math.max(span, minMonths), 1)
+  return { start: dayNumber(start), end: dayNumber(end) }
+}
+
+export interface Month {
+  /** First of the month, as a Date. */
+  first: Date
+  /** Left edge and width, in percent. */
+  x: number
+  width: number
+  /** Alternates along the bar, like the black and white segments of a map's scale. */
+  filled: boolean
+}
+
+/** The months of a month window, as segments of its scale bar. */
+export function months(window: TimeWindow): Month[] {
+  const out: Month[] = []
+  const first = dateOfDay(window.start)
+  for (let i = 0; ; i++) {
+    const date = new Date(first.getFullYear(), first.getMonth() + i, 1)
+    const day = dayNumber(date)
+    if (day >= window.end) break
+    const next = dayNumber(new Date(date.getFullYear(), date.getMonth() + 1, 1))
+    out.push({
+      first: date,
+      x: position(window, day),
+      width: position(window, next) - position(window, day),
+      filled: i % 2 === 0,
+    })
   }
   return out
 }

@@ -5,7 +5,7 @@
   "plugins": [],
   "categories": { "correctness": "off" },
   "jsPlugins": ["@shadcn/lint"],
-  "ignorePatterns": ["design-system", "src/routeTree.gen.ts"],
+  "ignorePatterns": ["src/routeTree.gen.ts"],
   "rules": {
     "shadcn/no-restyle": ["error", { "allow": ["layout"] }],
     "shadcn/no-raw-colors": "error",
@@ -22,98 +22,6 @@
         "shadcn/no-restyle": "off",
         "shadcn/no-arbitrary-values": "off",
         "shadcn/require-static-classes": "off"
-      }
-    },
-    {
-      // Not migrated yet: these files still use the workbench design-system classes, which load
-      // from legacy.css outside the Tailwind theme, so the linter can't see them. The list is
-      // the migration tracker. A migrated file comes off it (and gets the strict rules); when it
-      // is empty, this override, legacy.css and design-system/ go. Don't add files to it.
-      "files": [
-        "src/AppShell.tsx",
-        "src/components/AreaPickerDialog.tsx",
-        "src/components/ConfirmDialog.tsx",
-        "src/components/CoverageFields.tsx",
-        "src/components/CoverageSection.tsx",
-        "src/components/DisplayFilterSection.tsx",
-        "src/components/FirstRunDialog.tsx",
-        "src/components/FocusSection.tsx",
-        "src/components/LiveRegion.tsx",
-        "src/components/ResetSection.tsx",
-        "src/views/ExportView.tsx",
-        "src/views/SettingsView.tsx"
-      ],
-      "rules": {
-        "shadcn/no-unknown-classes": [
-          "error",
-          {
-            // The DS and main.css classes these files use. "selec*" stands for the DS .select
-            // class: @shadcn/lint 0.2.1 reads a bare "select" entry only as Tailwind's select-*
-            // class group, so it never matches the literal class.
-            "allow": [
-              "alert",
-              "alert-danger",
-              "alert-success",
-              "alert-warning",
-              "area-fylke",
-              "area-fylke-count",
-              "area-fylke-label",
-              "area-fylke-row",
-              "area-kommuner",
-              "area-picker",
-              "area-picker-body",
-              "badge",
-              "badge-accent",
-              "badge-warning",
-              "btn",
-              "btn-danger",
-              "btn-ghost",
-              "btn-primary",
-              "btn-secondary",
-              "card",
-              "cluster",
-              "cluster-between",
-              "cluster-sm",
-              "coverage-group",
-              "coverage-kommune",
-              "coverage-kommuner",
-              "coverage-other",
-              "coverage-others",
-              "dialog-actions",
-              "export-controls",
-              "export-markdown",
-              "export-view",
-              "field",
-              "focus-add-row",
-              "focus-chip",
-              "focus-chip-list",
-              "help",
-              "icon-btn",
-              "input",
-              "label",
-              "main-content",
-              "modal",
-              "panel",
-              "panel-hover",
-              "reset-section",
-              "settings-group",
-              "settings-section",
-              "settings-view",
-              "spinner",
-              "stack",
-              "stack-lg",
-              "stack-sm",
-              "sync-counts",
-              "sync-header",
-              "sync-times",
-              "textarea",
-              "visually-hidden",
-              "selec*"
-            ]
-          }
-        ],
-        // .text-strong is a DS utility, not a theme color.
-        "shadcn/no-raw-colors": ["error", { "allow": ["text-strong"] }]
       }
     }
   ]

@@ -1,12 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ConfirmDialog } from './ConfirmDialog'
 
 // Mirrors real controlled usage: the parent flips `open` to false from inside
-// onConfirm/onCancel, which is exactly the scenario that can double-fire onCancel
-// via the dialog's native close event.
+// onConfirm/onCancel, which must not also fire onCancel through the dialog's own close.
 function ControlledWrapper({
   onConfirmSpy,
   onCancelSpy,
@@ -44,7 +43,7 @@ describe('ConfirmDialog', () => {
       />
     )
 
-    expect(screen.getByRole('dialog', { name: 'Slett rad?' })).toBeVisible()
+    expect(screen.getByRole('alertdialog', { name: 'Slett rad?' })).toBeVisible()
   })
 
   it('fires onConfirm when the confirm button is clicked', async () => {
@@ -96,10 +95,10 @@ describe('ConfirmDialog', () => {
 
     const buttons = screen.getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Avbryt', 'Slett'])
-    expect(screen.getByRole('button', { name: 'Slett' })).toHaveClass('btn-primary')
+    expect(screen.getByRole('button', { name: 'Slett' })).toHaveClass('bg-primary')
   })
 
-  it('renders the confirm button as btn-danger when variant is "danger", Avbryt still first', () => {
+  it('renders the confirm button as destructive when variant is "danger", Avbryt still first', () => {
     render(
       <ConfirmDialog
         open
@@ -114,11 +113,11 @@ describe('ConfirmDialog', () => {
     const buttons = screen.getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Avbryt', 'Slett alt'])
     const confirm = screen.getByRole('button', { name: 'Slett alt' })
-    expect(confirm).toHaveClass('btn-danger')
-    expect(confirm).not.toHaveClass('btn-primary')
+    expect(confirm).toHaveClass('text-destructive')
+    expect(confirm).not.toHaveClass('bg-primary')
   })
 
-  it('focuses the heading when the dialog opens, not the first focusable child (Task 11 finding 4)', () => {
+  it('focuses the heading when the dialog opens, not the first focusable child (Task 11 finding 4)', async () => {
     render(
       <ConfirmDialog
         open
@@ -131,7 +130,7 @@ describe('ConfirmDialog', () => {
       </ConfirmDialog>
     )
 
-    expect(screen.getByRole('heading', { name: 'Slett rad?' })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Slett rad?' })).toHaveFocus())
   })
 
   it('sets aria-describedby on the confirm button from confirmDescribedBy', () => {
@@ -221,13 +220,14 @@ describe('ConfirmDialog controlled close (regression)', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('fires onCancel once for a native close (e.g. Escape) while still open', () => {
+  it('fires onCancel once for Escape while still open', async () => {
+    const user = userEvent.setup()
     const onConfirm = vi.fn()
     const onCancel = vi.fn()
     render(<ControlledWrapper onConfirmSpy={onConfirm} onCancelSpy={onCancel} />)
 
-    const dialog = screen.getByRole('dialog', { name: 'Slett rad?' })
-    dialog.dispatchEvent(new Event('close'))
+    await screen.findByRole('alertdialog', { name: 'Slett rad?' })
+    await user.keyboard('{Escape}')
 
     expect(onCancel).toHaveBeenCalledTimes(1)
   })

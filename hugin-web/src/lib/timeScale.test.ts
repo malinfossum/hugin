@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { dayNumber, monthLabels, position, timeWindow, weeks } from './timeScale'
+import {
+  dayNumber,
+  monthLabels,
+  months,
+  monthWindow,
+  position,
+  timeWindow,
+  weeks,
+} from './timeScale'
 
 const friday16Oct = new Date(2026, 9, 16, 9, 24)
 
@@ -48,5 +56,28 @@ describe('timeScale', () => {
     // Narrow window from 05.10: 27 days of October, so October is labelled at the left edge.
     const labels = monthLabels(timeWindow(friday16Oct, 11, 9))
     expect(labels[0]).toEqual({ date: new Date(2026, 9, 5), x: 0, alignEnd: false })
+  })
+})
+
+describe('month scale', () => {
+  it('spans whole months from the first day to the last', () => {
+    const w = monthWindow(dayNumber(new Date(2025, 10, 14)), dayNumber(new Date(2026, 9, 16)))
+    expect(w.start).toBe(dayNumber(new Date(2025, 10, 1)))
+    expect(w.end).toBe(dayNumber(new Date(2026, 10, 1)))
+  })
+
+  it('widens a short history back to the minimum number of months', () => {
+    const day = dayNumber(friday16Oct)
+    const w = monthWindow(day, day, 3)
+    expect(w.start).toBe(dayNumber(new Date(2026, 7, 1)))
+    expect(w.end).toBe(dayNumber(new Date(2026, 10, 1)))
+  })
+
+  it('splits the window into alternating months whose widths fill the bar', () => {
+    const list = months(monthWindow(dayNumber(new Date(2026, 0, 5)), dayNumber(friday16Oct)))
+    expect(list).toHaveLength(10)
+    expect(list[0].first).toEqual(new Date(2026, 0, 1))
+    expect(list.map((month) => month.filled).slice(0, 3)).toEqual([true, false, true])
+    expect(list.reduce((sum, month) => sum + month.width, 0)).toBeCloseTo(100)
   })
 })

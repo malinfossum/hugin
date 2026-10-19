@@ -32,20 +32,6 @@ if (typeof globalThis.localStorage === 'undefined') {
   })
 }
 
-// jsdom does not implement the <dialog> element's modal behavior.
-// Polyfill showModal/close so ConfirmDialog can be tested without a real browser.
-// close() mirrors the native no-op-when-already-closed rule and dispatches a real
-// 'close' event when it does close. That way tests exercise ConfirmDialog's actual
-// close-event handling instead of a handler that silently never fires.
-HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-  this.setAttribute('open', '')
-}
-HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-  if (!this.hasAttribute('open')) return
-  this.removeAttribute('open')
-  this.dispatchEvent(new Event('close'))
-}
-
 // jsdom doesn't implement window.scrollTo. It logs a "Not implemented" console error instead
 // of the no-op real browsers give it in a headless context. App.tsx's view-switcher calls it to
 // restore per-view scroll position, so give it a minimal polyfill that actually tracks scrollY
@@ -62,4 +48,10 @@ window.scrollTo = ((x?: number | ScrollToOptions, y?: number) => {
 // pins every test to nb unless a test explicitly overrides it (e.g. the language-toggle test).
 beforeEach(() => {
   window.localStorage.setItem('hugin-lang', 'nb')
+  // Session state (the dashboard's open places) must not carry from one test into the next.
+  try {
+    window.sessionStorage?.clear()
+  } catch {
+    // No sessionStorage in this environment: nothing to carry over.
+  }
 })

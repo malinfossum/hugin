@@ -20,7 +20,8 @@ const STATUS: StatusDto = {
   nav: null,
   reviewMark: null,
   activeAds: 283,
-  companies: 1037,
+  companies: 412,
+  storedCompanies: 8037,
   pipelineEntries: 13,
   readOnly: false,
   scopeConfigured: true,
@@ -107,7 +108,7 @@ describe('ResetSection', () => {
     const user = userEvent.setup()
     renderSection(fakeServer().fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
 
     const confirm = screen.getByRole('button', { name: 'Slett alt' })
     expect(confirm).toBeDisabled()
@@ -116,11 +117,20 @@ describe('ResetSection', () => {
     expect(confirm).toBeEnabled()
   })
 
+  it('counts every company in the store, not only those in the current coverage', async () => {
+    const user = userEvent.setup()
+    renderSection(fakeServer().fetchMock)
+
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
+
+    expect(await screen.findByText(/^8\s037 bedrifter, 283 annonser/)).toBeInTheDocument()
+  })
+
   it('rejects anything short of the exact word', async () => {
     const user = userEvent.setup()
     renderSection(fakeServer().fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     const confirm = screen.getByRole('button', { name: 'Slett alt' })
     const field = screen.getByLabelText('Skriv NULLSTILL for å bekrefte')
 
@@ -138,7 +148,7 @@ describe('ResetSection', () => {
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Nullstill dekning' })).not.toBeInTheDocument()
     )
-    expect(screen.queryByRole('button', { name: 'Start på nytt' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Slett alle data' })).not.toBeInTheDocument()
   })
 
   it('Nullstill dekning posts { mode: "scope" } and resets the stored focus', async () => {
@@ -148,7 +158,7 @@ describe('ResetSection', () => {
     renderSection(fetchMock)
 
     await user.click(screen.getByRole('button', { name: 'Nullstill dekning' }))
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('alertdialog')
     await user.click(within(dialog).getByRole('button', { name: 'Nullstill dekning' }))
 
     await waitFor(() => expect(posts).toEqual([{ mode: 'scope' }]))
@@ -161,9 +171,9 @@ describe('ResetSection', () => {
     renderSection(fetchMock)
 
     const scopeButton = screen.getByRole('button', { name: 'Nullstill dekning' })
-    const hardButton = screen.getByRole('button', { name: 'Start på nytt' })
+    const hardButton = screen.getByRole('button', { name: 'Slett alle data' })
     await user.click(scopeButton)
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('alertdialog')
     await user.click(within(dialog).getByRole('button', { name: 'Nullstill dekning' }))
 
     expect(scopeButton).toBeDisabled()
@@ -174,7 +184,7 @@ describe('ResetSection', () => {
     expect(hardButton).toBeEnabled()
   })
 
-  it('Start på nytt posts { mode: "all" }, shows the returned snapshot path and resets focus without reloading yet', async () => {
+  it('Slett alle data posts { mode: "all" }, shows the returned snapshot path and resets focus without reloading yet', async () => {
     const user = userEvent.setup()
     const reload = stubReload()
     saveFocus({ regions: [{ fylke: '34', kommuner: [] }], categories: [] })
@@ -183,7 +193,7 @@ describe('ResetSection', () => {
     })
     renderSection(fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
@@ -201,7 +211,7 @@ describe('ResetSection', () => {
     // since the database this screen reflects is already gone.
     expect(reload).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Nullstill dekning' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Start på nytt' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Slett alle data' })).toBeDisabled()
   })
 
   it('reloads only once the person presses the reload button after reading the snapshot path', async () => {
@@ -212,7 +222,7 @@ describe('ResetSection', () => {
     })
     renderSection(fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
     await screen.findByText('Nullstilt. Sikkerhetskopi lagret: hugin.db.reset-20260909-120000.bak')
@@ -231,7 +241,7 @@ describe('ResetSection', () => {
     })
     renderSection(fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
@@ -246,7 +256,7 @@ describe('ResetSection', () => {
     renderSection(fetchMock)
 
     await user.click(screen.getByRole('button', { name: 'Nullstill dekning' }))
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('alertdialog')
     await user.click(within(dialog).getByRole('button', { name: 'Nullstill dekning' }))
 
     expect(
@@ -266,7 +276,7 @@ describe('ResetSection', () => {
     const { fetchMock } = fakeServer({ resetStatus: 409 })
     renderSection(fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
@@ -282,13 +292,13 @@ describe('ResetSection', () => {
     const { fetchMock } = fakeServer({ resetStatus: 409 })
     renderSection(fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     await user.type(screen.getByLabelText('Skriv NULLSTILL for å bekrefte'), 'NULLSTILL')
     await user.click(screen.getByRole('button', { name: 'Slett alt' }))
 
     await screen.findByText('Kunne ikke nullstille: En synk kjører. Vent til den er ferdig.')
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
     expect(screen.getByLabelText('Skriv NULLSTILL for å bekrefte')).toHaveValue('')
     expect(screen.getByRole('button', { name: 'Slett alt' })).toBeDisabled()
   })
@@ -297,12 +307,14 @@ describe('ResetSection', () => {
     const user = userEvent.setup()
     renderSection(fakeServer().fetchMock)
 
-    await user.click(screen.getByRole('button', { name: 'Start på nytt' }))
+    await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
 
-    const dialog = screen.getByRole('dialog', { name: 'Slette alt og starte på nytt?' })
-    expect(
-      within(dialog).getByRole('heading', { name: 'Slette alt og starte på nytt?' })
-    ).toHaveFocus()
+    const dialog = screen.getByRole('alertdialog', { name: 'Slette alt og starte på nytt?' })
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole('heading', { name: 'Slette alt og starte på nytt?' })
+      ).toHaveFocus()
+    )
 
     const confirm = screen.getByRole('button', { name: 'Slett alt' })
     const describedBy = confirm.getAttribute('aria-describedby')

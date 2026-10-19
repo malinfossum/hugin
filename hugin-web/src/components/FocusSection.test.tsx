@@ -4,9 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ReadOnlyProvider } from '../context/readOnly'
 import { LanguageProvider } from '../i18n'
 import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
-import { TestQueryProvider } from '../test-utils'
+import { TestQueryProvider, toastRegion } from '../test-utils'
 import { FocusSection } from './FocusSection'
 import { LiveRegionProvider } from './LiveRegion'
+import { Toaster } from './ui/toast'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -110,9 +111,11 @@ function renderSection(props: { previewVersion?: number } = {}) {
   return render(
     <TestQueryProvider>
       <LanguageProvider>
-        <LiveRegionProvider>
-          <FocusSection {...props} />
-        </LiveRegionProvider>
+        <Toaster>
+          <LiveRegionProvider>
+            <FocusSection {...props} />
+          </LiveRegionProvider>
+        </Toaster>
       </LanguageProvider>
     </TestQueryProvider>
   )
@@ -123,9 +126,11 @@ function renderReadOnly() {
     <TestQueryProvider>
       <LanguageProvider>
         <ReadOnlyProvider>
-          <LiveRegionProvider>
-            <FocusSection />
-          </LiveRegionProvider>
+          <Toaster>
+            <LiveRegionProvider>
+              <FocusSection />
+            </LiveRegionProvider>
+          </Toaster>
         </ReadOnlyProvider>
       </LanguageProvider>
     </TestQueryProvider>
@@ -360,9 +365,11 @@ describe('FocusSection', () => {
     rerender(
       <TestQueryProvider>
         <LanguageProvider>
-          <LiveRegionProvider>
-            <FocusSection previewVersion={1} />
-          </LiveRegionProvider>
+          <Toaster>
+            <LiveRegionProvider>
+              <FocusSection previewVersion={1} />
+            </LiveRegionProvider>
+          </Toaster>
         </LanguageProvider>
       </TestQueryProvider>
     )
@@ -442,7 +449,7 @@ describe('FocusSection', () => {
     await waitFor(() => {
       expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(true)
     })
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret. Synkroniserer …'))
   })
 
@@ -455,7 +462,7 @@ describe('FocusSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Legg til nøkkelord i listen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Lagre fokus' }))
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => expect(liveRegion).toHaveTextContent('Lagret. Gjelder fra neste synk'))
     expect(calls.some((c) => c.url === '/api/sync' && c.method === 'POST')).toBe(false)
   })
@@ -530,7 +537,7 @@ describe('FocusSection', () => {
 
     renderSection()
     await userEvent.click(await screen.findByRole('button', { name: 'Full NAV-gjennomgang' }))
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await screen.findByRole('alertdialog')
     expect(dialog).toHaveTextContent(/minutter/)
     expect(dialog).toHaveTextContent(/aktive annonser/)
     await userEvent.click(within(dialog).getByRole('button', { name: 'Full NAV-gjennomgang' }))
@@ -545,7 +552,7 @@ describe('FocusSection', () => {
 
     renderSection()
     await userEvent.click(await screen.findByRole('button', { name: 'Full NAV-gjennomgang' }))
-    const dialog = await screen.findByRole('dialog')
+    const dialog = await screen.findByRole('alertdialog')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Avbryt' }))
 
     expect(calls.some((c) => c.url === '/api/sync?full=1')).toBe(false)

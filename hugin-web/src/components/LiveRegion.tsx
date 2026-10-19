@@ -16,7 +16,7 @@ export function LiveRegionProvider({ children }: { children: ReactNode }) {
   return (
     <AnnounceContext.Provider value={announce}>
       {children}
-      <div aria-live="polite" className="visually-hidden">
+      <div aria-live="polite" className="sr-only">
         {message}
       </div>
     </AnnounceContext.Provider>

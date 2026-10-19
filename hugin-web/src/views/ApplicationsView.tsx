@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { cn } from 'cn'
 import { AlertTriangle, Star } from 'lucide-react'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import { useAnnounce } from '../components/LiveRegion'
 import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { NativeSelect, NativeSelectOption } from '../components/ui/native-select'
 import { Textarea } from '../components/ui/textarea'
+import { toast } from '../components/ui/toast'
 import { useReadOnly } from '../context/readOnly'
 import { localeFor, type T, type TranslationKey, useLang, useT } from '../i18n'
 import { ApiError } from '../lib/api'
@@ -93,7 +94,7 @@ function toFormState(entry: PipelineDto): FormState {
 }
 
 export function ApplicationsView() {
-  const { data: entries = [], isError, refetch } = useQuery(pipelineQuery())
+  const { data: entries = [], isError, isSuccess: loaded, refetch } = useQuery(pipelineQuery())
   // Two separate mutations, so a star toggle's pending state never blocks or clears the form's.
   const saveEntry = useSavePipelineEntry()
   const saveStar = useSavePipelineEntry()
@@ -156,7 +157,7 @@ export function ApplicationsView() {
     setWarning(response.warning ? { orgnr, message: response.warning } : null)
     setEditingOrgnr(null)
     setForm(null)
-    announce(t('applications.saved'))
+    toast.add({ type: 'success', title: t('applications.saved') })
   }
 
   const toggleStar = async (entry: PipelineDto) => {
@@ -172,7 +173,11 @@ export function ApplicationsView() {
         starred: !entry.starred,
       })
     } catch (err) {
-      announce(err instanceof ApiError ? err.message : t('applications.starError'))
+      toast.add({
+        type: 'error',
+        title: err instanceof ApiError ? err.message : t('applications.starError'),
+        priority: 'high',
+      })
       return
     }
     setWarning(response.warning ? { orgnr: entry.orgnr, message: response.warning } : null)
@@ -194,30 +199,59 @@ export function ApplicationsView() {
     )
   }
 
+  // The page head (DESIGN.md): the view's own count in the headline size, its context under it.
+  const headline = (
+    <p className="min-h-8 font-heading text-2xl font-semibold text-balance text-foreground tabular-nums md:min-h-10 md:text-headline">
+      {loaded &&
+        (entries.length === 0
+          ? t('applications.countNone')
+          : entries.length === 1
+            ? t('applications.countOne')
+            : t('applications.count', { n: entries.length }))}
+    </p>
+  )
+
+  // Four empty columns and a sort control for nothing read as broken: the head and one sentence
+  // instead, naming where an entry comes from.
+  if (loaded && entries.length === 0) {
+    return (
+      <div className="flex flex-col pt-6 font-sans md:pt-10">
+        {headline}
+        <p className="mt-2 text-body-sm text-ink-tertiary">{t('applications.empty')}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col pt-6 font-sans md:pt-10">
-      <div className="flex items-center gap-2 md:justify-end">
-        <label htmlFor="soknader-sortering" className="text-sm text-muted-foreground">
-          {t('applications.sortBy')}
-        </label>
-        <NativeSelect
-          id="soknader-sortering"
-          size="touch"
-          className="flex-1 md:flex-none"
-          value={sortMode}
-          onChange={(event) => handleSortChange(event.target.value as SortMode)}
-        >
-          {SORT_OPTION_KEYS.map((option) => (
-            <NativeSelectOption key={option.value} value={option.value}>
-              {t(option.labelKey)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+      <div className="flex flex-col gap-x-10 gap-y-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-2">
+          {headline}
+          <p className="text-sm text-muted-foreground">{t('applications.context')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="soknader-sortering" className="text-sm text-muted-foreground">
+            {t('applications.sortBy')}
+          </label>
+          <NativeSelect
+            id="soknader-sortering"
+            size="touch"
+            className="flex-1 md:flex-none"
+            value={sortMode}
+            onChange={(event) => handleSortChange(event.target.value as SortMode)}
+          >
+            {SORT_OPTION_KEYS.map((option) => (
+              <NativeSelectOption key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
 
       {/* The pipeline as four columns on the sheet (two on a tablet, stacked on a phone): each
       status a titled column over a hairline, each company a row in it. */}
-      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-9 grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-4">
         {SECTIONS.map((section) => {
           const sectionEntries = sortEntries(
             entries.filter((e) => sectionFor(e) === section),

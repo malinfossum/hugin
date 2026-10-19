@@ -134,6 +134,10 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
             .OrderBy(c => c.Name)
             .ToList());
 
+    // The whole store is a valid superset; CompanyListing does the filtering.
+    public Task<IReadOnlyList<Company>> GetListCandidatesAsync(CompanyListQuery query, CancellationToken ct = default) =>
+        GetAllAsync(ct: ct);
+
     public Task<int> CountAsync(IReadOnlySet<string>? municipalities = null, CancellationToken ct = default) =>
         Task.FromResult(Store.Values.Count(c =>
             municipalities is null || c.MunicipalityNumber is null || municipalities.Contains(c.MunicipalityNumber)));

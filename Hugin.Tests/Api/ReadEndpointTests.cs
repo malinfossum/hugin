@@ -13,7 +13,7 @@ public sealed record CompanyDetailDtoProbe(CompanyDtoProbe Company, List<AdDtoPr
     List<CompanyDtoProbe> Branches);
 public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string Status, bool Starred, bool AdsExpired);
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
-    int Companies, int PipelineEntries);
+    int Companies, int StoredCompanies, int PipelineEntries);
 public sealed record StatusVersionProbe(string? Version);
 public sealed record CompanyGroupProbe(CompanyDtoProbe Main, List<CompanyDtoProbe> Branches);
 public sealed record CompanyPageProbe(int Total, List<CompanyGroupProbe> Groups);
@@ -108,7 +108,7 @@ public sealed class ReadEndpointTests
     }
 
     [Test]
-    public async Task Companies_page_and_status_count_keep_to_the_coverage_while_the_full_list_keeps_everything()
+    public async Task Companies_page_and_status_count_keep_to_the_coverage_while_the_full_list_and_stored_count_keep_everything()
     {
         // Coverage narrowed to Gjøvik after an earlier, wider sync left an Oslo company behind.
         File.WriteAllText(_factory.ConfigPath, """{ "municipalities": [{ "name": "Gjøvik", "number": "3407" }] }""");
@@ -127,6 +127,7 @@ public sealed class ReadEndpointTests
         Assert.That(page!.Groups.Select(g => g.Main.Orgnr), Is.EqualTo(new[] { "100000001" }));
         Assert.That(page.Total, Is.EqualTo(1));
         Assert.That(status!.Companies, Is.EqualTo(1));
+        Assert.That(status.StoredCompanies, Is.EqualTo(2), "a full reset deletes the Oslo company too");
         Assert.That(all!, Has.Count.EqualTo(2), "the unpaged machine interface still returns the whole store");
     }
 

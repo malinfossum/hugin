@@ -14,8 +14,8 @@ describe('scroll restoration key', () => {
     expect(scrollKeyAt('/companies')).toBe('/companies')
   })
 
-  it('keeps the company list and a company detail apart', () => {
-    expect(scrollKeyAt('/companies/715787630')).toBe('/companies/715787630')
+  it('gives a company detail the list key: the detail is a dialog over the list', () => {
+    expect(scrollKeyAt('/companies/715787630')).toBe('/companies')
   })
 
   it('ignores search params, so a filter does not start the list over at the top', () => {

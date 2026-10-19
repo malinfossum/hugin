@@ -10,14 +10,21 @@ interface DashboardViewProps {
   onShowChange: (show: 'active' | 'all') => void
   /** Reopens the first-run dialog: wired from App.tsx (SyncHeader's empty-coverage prompt). */
   onRequestCoverage: () => void
+  /** Opens Settings, offered where the display filter hides every open ad. */
+  onOpenSettings?: () => void
 }
 
-export function DashboardView({ show, onShowChange, onRequestCoverage }: DashboardViewProps) {
+export function DashboardView({
+  show,
+  onShowChange,
+  onRequestCoverage,
+  onOpenSettings,
+}: DashboardViewProps) {
   return (
     <div className="flex flex-col gap-8">
       <SyncHeader onRequestCoverage={onRequestCoverage} />
       <NeedsAction />
-      <DeadlineList show={show} onShowChange={onShowChange} />
+      <DeadlineList show={show} onShowChange={onShowChange} onOpenSettings={onOpenSettings} />
       <NewSinceLastVisit />
       <SourcesCard />
     </div>

@@ -44,10 +44,12 @@ Hugin is a job radar for the Norwegian developer job market. It does the morning
 
 Set by the maintainer (Malin) for the 2026 redesign. Colours, fonts and layout are open; these are not:
 
-- Functionality, routes and the i18n texts stay as they are. New UI copy, and any change to what a screen does, goes to the maintainer for approval first.
+- Functionality and routes stay as they are. Any change to what a screen does goes to the maintainer for approval first.
+- New UI text is welcome. Every string goes in both `hugin-web/src/i18n/nb.ts` and `en.ts`, never hardcoded in a component, and each pull request lists its new texts in the description so the maintainer can review the wording there.
 - Both themes, dark and light, remain.
 - The accessibility floor: WCAG AA contrast, 44 px click targets, visible focus.
-- Redesign proposals go to the maintainer as mockups before they are built into the app.
+- Anything drawn, like the deadline timeline, must also be readable by keyboard and screen reader, with a list or table behind it carrying the same information.
+- Redesign proposals go to the maintainer as mockups; she approved the dashboard direction on 16 October 2026.
 
 ## Brand Commitments
 
