@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Button } from '../../components/ui/button'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
 import { adsQuery } from '../../lib/queries'
@@ -27,19 +28,27 @@ export function NeedsAction() {
 
   if (!loadError && needsAction.length === 0) return null
 
+  // DESIGN.md: a sentence between hairlines with a rust lead, never a filled panel or side stripe.
   return (
-    <section aria-labelledby="needs-action-heading" className="needs-action alert alert-warning">
-      <h2 id="needs-action-heading">{t('needsAction.heading')}</h2>
-      <p className="text-muted">{t('needsAction.description')}</p>
+    <section
+      aria-labelledby="needs-action-heading"
+      className="flex flex-col gap-1.5 border-y border-border py-3 font-sans text-body-sm"
+    >
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h2 id="needs-action-heading" className="font-heading text-body-sm font-semibold text-rust">
+          {t('needsAction.heading')}
+        </h2>
+        <p className="text-small text-muted-foreground">{t('needsAction.description')}</p>
+      </div>
       {loadError && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
+        <p role="status" className="flex flex-wrap items-center gap-x-3">
           {loadError}
-          <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
+          <Button variant="link" className="min-h-11" onClick={() => refetch()}>
             {t('common.retry')}
-          </button>
+          </Button>
         </p>
       )}
-      <ul>
+      <ul className="flex list-none flex-col gap-1 ps-0">
         {needsAction.map((ad) => (
           <li key={ad.feedId}>
             {t('needsAction.item', {

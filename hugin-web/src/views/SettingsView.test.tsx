@@ -223,7 +223,7 @@ describe('SettingsView', () => {
   it('a source added here also appears in the dashboard card, via the shared query cache', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', fakeServer([]).fetchMock)
-    const { container } = render(
+    render(
       <TestQueryProvider>
         <LanguageProvider>
           <LiveRegionProvider>
@@ -235,7 +235,8 @@ describe('SettingsView', () => {
         </LanguageProvider>
       </TestQueryProvider>
     )
-    const card = container.querySelector('.sources-card') as HTMLElement
+    // Settings has its own «Kilder» section; the dashboard's sources line is rendered first.
+    const card = screen.getAllByRole('region', { name: 'Kilder' })[0]
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     await user.type(screen.getByLabelText('Etikett'), 'Vitae')

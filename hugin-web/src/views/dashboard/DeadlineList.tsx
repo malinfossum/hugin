@@ -1,38 +1,37 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { cn } from 'cn'
+import { AlertTriangle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useAnnounce } from '../../components/LiveRegion'
 import { UnsavedChangesGuard } from '../../components/UnsavedChangesGuard'
+import { Button } from '../../components/ui/button'
+import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { useReadOnly } from '../../context/readOnly'
-import { type T, useT } from '../../i18n'
+import { localeFor, type T, useLang, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
 import { formatDate } from '../../lib/dates'
 import { useSavePipelineEntry, useSetAdHidden, useSetAdLink } from '../../lib/mutations'
 import { pipelineLabel } from '../../lib/pipelineLabels'
-import { adsQuery, pipelineQuery } from '../../lib/queries'
+import { adsQuery, pipelineQuery, statusQuery } from '../../lib/queries'
+import { dayNumber, monthLabels, position, timeWindow, weeks } from '../../lib/timeScale'
 import type { AdDto, PipelineDto } from '../../lib/types'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 
-function urgencyClass(daysLeft: number | null): string | undefined {
-  if (daysLeft === null) return undefined
-  if (daysLeft <= 3) return 'frist-rod'
-  if (daysLeft <= 7) return 'frist-gul'
-  return undefined
+/** Rust's one job (DESIGN.md): closing within 7 days, today and already past included. */
+function isClosing(daysLeft: number | null): boolean {
+  return daysLeft !== null && daysLeft <= 7
 }
 
-/** Badge treatment for the days-left chip, layered with the urgency color class above. */
-function daysLeftBadgeClass(daysLeft: number | null): string {
-  const badge =
-    daysLeft === null
-      ? 'badge'
-      : daysLeft <= 3
-        ? 'badge badge-danger'
-        : daysLeft <= 7
-          ? 'badge badge-warning'
-          : 'badge'
-  const urgency = urgencyClass(daysLeft)
-  return urgency ? `${badge} ${urgency}` : badge
+/** Which colour a lifeline's future carries. Closing beats applied (DESIGN.md, Lifeline rule). */
+function lifelineTone(ad: AdDto): 'closing' | 'applied' | 'open' {
+  if (isClosing(ad.daysLeft)) return 'closing'
+  return ad.pipelineStatus === 'applied' ? 'applied' : 'open'
 }
+
+/** A scale position for the at-x / span-x utilities (index.css), as a CSS percentage. */
+const pct = (n: number) => `${n}%`
 
 function daysLeftText(daysLeft: number | null, t: T): string {
   if (daysLeft === null) return t('deadlines.none')
@@ -40,10 +39,6 @@ function daysLeftText(daysLeft: number | null, t: T): string {
   if (daysLeft === 0) return t('deadlines.todayBadge')
   if (daysLeft === 1) return t('deadlines.dayBadgeOne')
   return t('deadlines.daysBadge', { n: daysLeft })
-}
-
-function formatExpires(expires: string | null): string | null {
-  return expires ? formatDate(expires) : null
 }
 
 export type Show = 'active' | 'all'
@@ -110,6 +105,21 @@ export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
   }, [linking, tracked])
 
   const visibleAds = ads.filter((ad) => adMatchesFocus(ad, focus))
+
+  // The sheet's one time scale: three weeks back and nine ahead, tighter on a phone so a day
+  // keeps some width. The seen mark is the review mark ("Mark as seen"); null before any sync.
+  const { data: status } = useQuery(statusQuery())
+  const [lang] = useLang()
+  const narrow = useMediaQuery('(max-width: 767px)')
+  const now = new Date()
+  const scale = narrow ? timeWindow(now, 11, 9) : timeWindow(now, 21, 12)
+  const at = (day: number) => position(scale, day)
+  const today = dayNumber(now)
+  const reviewMark = status?.reviewMark ? new Date(status.reviewMark) : null
+  const seen = reviewMark ? dayNumber(reviewMark) : null
+  const monthName = (date: Date) => date.toLocaleString(localeFor(lang), { month: 'long' })
+  const dayMonth = (date: Date) =>
+    `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`
 
   const handleSkjul = async (feedId: string) => {
     const index = visibleAds.findIndex((a) => a.feedId === feedId)
@@ -203,160 +213,425 @@ export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
   }
 
   return (
-    <section aria-labelledby="deadlines-heading" className="deadline-list card stack">
-      <h2 id="deadlines-heading" ref={headingRef} tabIndex={-1}>
-        {t('deadlines.heading')}
-      </h2>
-      <p className="text-muted">{t('deadlines.description')}</p>
-      <div className="field">
-        <label className="label" htmlFor="deadlines-show">
-          {t('deadlines.showLabel')}
-        </label>
-        <select
-          id="deadlines-show"
-          className="select"
-          value={show}
-          onChange={(event) => {
-            setActionError(null)
-            onShowChange(event.target.value as Show)
-          }}
+    <section aria-labelledby="deadlines-heading" className="flex flex-col pt-4 font-sans">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <h2
+          id="deadlines-heading"
+          ref={headingRef}
+          tabIndex={-1}
+          className="font-heading text-xl font-semibold"
         >
-          <option value="active">{t('deadlines.showDefault')}</option>
-          <option value="all">{t('deadlines.showAll')}</option>
-        </select>
+          {t('deadlines.heading')}
+        </h2>
+        <p className="text-body-sm text-muted-foreground">{t('deadlines.description')}</p>
+        <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
+          <label htmlFor="deadlines-show" className="text-sm text-muted-foreground">
+            {t('deadlines.showLabel')}
+          </label>
+          <NativeSelect
+            id="deadlines-show"
+            size="touch"
+            className="flex-1 md:flex-none"
+            value={show}
+            onChange={(event) => {
+              setActionError(null)
+              onShowChange(event.target.value as Show)
+            }}
+          >
+            <NativeSelectOption value="active">{t('deadlines.showDefault')}</NativeSelectOption>
+            <NativeSelectOption value="all">{t('deadlines.showAll')}</NativeSelectOption>
+          </NativeSelect>
+        </div>
       </div>
       {error && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="status"
+          className="mt-3 flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
           {error}
-          <button
-            type="button"
-            className="btn btn-ghost"
+          <Button
+            variant="link"
+            className="min-h-11"
             onClick={() => {
               setActionError(null)
               refetch()
             }}
           >
             {t('common.retry')}
-          </button>
+          </Button>
         </p>
       )}
-      <ul className="stack stack-sm">
-        {visibleAds.map((ad) => (
-          <li key={ad.feedId} className="frist-row">
-            <div className="stack stack-sm">
-              {ad.sourceUrl ? (
-                <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
-                  {ad.title}
-                </a>
-              ) : (
-                <span>{ad.title}</span>
-              )}
-              <span className="text-muted">
-                {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+
+      {/* The scale bar: alternating whole weeks under the month names, Monday dates under it. */}
+      <div aria-hidden="true" className="mt-5 flex">
+        <div className="hidden shrink-0 md:block md:w-90" />
+        <div className="relative h-21 flex-1 md:h-14">
+          {seen !== null && (
+            <span
+              className="at-x absolute top-0 -translate-x-full pe-1.5 text-xs whitespace-nowrap text-contour md:hidden"
+              style={{ '--x': pct(at(seen)) }}
+            >
+              {t('deadlines.seenMark', { date: dayMonth(reviewMark as Date) })}
+            </span>
+          )}
+          <span
+            className="at-x absolute top-4.5 ps-1.5 text-xs font-semibold whitespace-nowrap md:hidden"
+            style={{ '--x': pct(at(today)) }}
+          >
+            {t('deadlines.todayMark', { date: dayMonth(now) })}
+          </span>
+          {monthLabels(scale).map((month) =>
+            month.alignEnd ? (
+              <span
+                key={month.date.getTime()}
+                className="absolute top-9 right-0 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
+              >
+                {monthName(month.date)}
               </span>
-            </div>
-            <div className="frist-meta">
-              <span className="text-muted">{formatExpires(ad.expires)}</span>
-              <span className={daysLeftBadgeClass(ad.daysLeft)}>
-                {daysLeftText(ad.daysLeft, t)}
+            ) : (
+              <span
+                key={month.date.getTime()}
+                className="at-x absolute top-9 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
+                style={{ '--x': pct(month.x) }}
+              >
+                {monthName(month.date)}
               </span>
-              <span className="frist-category text-muted">{ad.category}</span>
-            </div>
-            <div className="cluster cluster-sm">
-              {ad.pipelineStatus && (
-                <span className="badge badge-accent">{pipelineLabel(t, ad.pipelineStatus)}</span>
-              )}
-              {!readOnly && ad.linkedOrgnr && (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => handleUnlink(ad.feedId)}
-                >
-                  {t('deadlines.unlink')}
-                </button>
-              )}
-              {!readOnly && !ad.pipelineStatus && ad.employerOrgnr && (
-                <button type="button" className="btn btn-ghost" onClick={() => handleTrack(ad)}>
-                  {t('deadlines.track')}
-                </button>
-              )}
-              {!readOnly && !ad.pipelineStatus && linking !== ad.feedId && (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  ref={(el) => {
-                    if (el) linkRefs.current.set(ad.feedId, el)
-                    else linkRefs.current.delete(ad.feedId)
-                  }}
-                  onClick={() => openLink(ad.feedId)}
-                >
-                  {t('deadlines.link')}
-                </button>
-              )}
-              {!readOnly &&
-                (ad.hidden ? (
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => handleAngreSkjul(ad.feedId)}
-                  >
-                    {t('deadlines.undoHide')}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    ref={(el) => {
-                      if (el) skjulRefs.current.set(ad.feedId, el)
-                      else skjulRefs.current.delete(ad.feedId)
-                    }}
-                    onClick={() => handleSkjul(ad.feedId)}
-                  >
-                    {t('deadlines.hide')}
-                  </button>
-                ))}
-            </div>
-            {linking === ad.feedId && tracked !== null && (
-              <div className="frist-link cluster cluster-sm">
-                <div className="field">
-                  <label className="label" htmlFor={`frist-link-${ad.feedId}`}>
-                    {t('deadlines.linkLabel')}
-                  </label>
-                  <select
-                    id={`frist-link-${ad.feedId}`}
-                    ref={linkSelectRef}
-                    className="select"
-                    value={linkTarget}
-                    onChange={(event) => setLinkTarget(event.target.value)}
-                  >
-                    <option value="">{t('deadlines.linkPlaceholder')}</option>
-                    {tracked.map((c) => (
-                      <option key={c.orgnr} value={c.orgnr}>
-                        {displayCompanyName(c.companyName)}
-                      </option>
-                    ))}
-                  </select>
+            )
+          )}
+          {weeks(scale).map((week, i) => (
+            <span key={week.monday.getTime()}>
+              <span
+                className={cn(
+                  'span-x absolute bottom-5.5 h-1 border border-muted-foreground dark:border-ink-tertiary',
+                  week.filled && 'bg-muted-foreground dark:bg-ink-tertiary'
+                )}
+                style={{ '--x': pct(week.x), '--w': pct(week.width) }}
+              />
+              <span
+                className={cn(
+                  'at-x absolute bottom-0 text-xs text-ink-tertiary tabular-nums',
+                  week.x > 4 && '-translate-x-1/2',
+                  i % 2 === 1 && 'max-md:hidden'
+                )}
+                style={{ '--x': pct(week.x) }}
+              >
+                {dayMonth(week.monday)}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative">
+        <ul className="flex list-none flex-col ps-0">
+          {visibleAds.map((ad) => {
+            const published = ad.published ? new Date(ad.published) : null
+            const from = published ? dayNumber(published) : null
+            const expires = ad.expires ? dayNumber(new Date(ad.expires)) : null
+            const isNew = reviewMark !== null && published !== null && published > reviewMark
+            const clipped = from === null || from < scale.start
+            const tone = lifelineTone(ad)
+            const end = expires ?? today
+            const flip = at(end) > (narrow ? 60 : 84)
+            return (
+              <li
+                key={ad.feedId}
+                className="group flex flex-col border-t border-border hover:bg-muted"
+              >
+                <div className="flex flex-col md:flex-row">
+                  <div className="flex min-w-0 flex-col justify-center gap-0.5 pt-4 pb-1 md:w-90 md:shrink-0 md:py-3.5 md:pe-5">
+                    <span className="font-medium md:truncate">
+                      {ad.sourceUrl ? (
+                        <a
+                          href={ad.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-foreground no-underline hover:underline"
+                        >
+                          {ad.title}
+                        </a>
+                      ) : (
+                        ad.title
+                      )}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
+                      {isNew && (
+                        <span className="font-semibold text-forest">{t('deadlines.newBadge')}</span>
+                      )}
+                      {ad.pipelineStatus && (
+                        <span
+                          className={
+                            ad.pipelineStatus === 'applied'
+                              ? 'font-semibold text-lake'
+                              : 'font-semibold text-foreground'
+                          }
+                        >
+                          {pipelineLabel(t, ad.pipelineStatus)}
+                        </span>
+                      )}
+                      <span>
+                        {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+                        {ad.kommuneNavn && ` · ${ad.kommuneNavn}`}
+                      </span>
+                    </span>
+                    {!readOnly && (
+                      // Reserved line: the employer never moves, the row height never jumps;
+                      // shown on hover or focus, always on touch screens.
+                      <span className="invisible flex flex-wrap gap-x-3.5 opacity-0 transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 pointer-coarse:visible pointer-coarse:opacity-100">
+                        {ad.linkedOrgnr && (
+                          <Button
+                            variant="link"
+                            size="xs"
+                            className="min-h-11"
+                            onClick={() => handleUnlink(ad.feedId)}
+                          >
+                            {t('deadlines.unlink')}
+                          </Button>
+                        )}
+                        {!ad.pipelineStatus && ad.employerOrgnr && (
+                          <Button
+                            variant="link"
+                            size="xs"
+                            className="min-h-11"
+                            onClick={() => handleTrack(ad)}
+                          >
+                            {t('deadlines.track')}
+                          </Button>
+                        )}
+                        {!ad.pipelineStatus && linking !== ad.feedId && (
+                          <Button
+                            variant="link"
+                            size="xs"
+                            className="min-h-11"
+                            ref={(el) => {
+                              if (el) linkRefs.current.set(ad.feedId, el)
+                              else linkRefs.current.delete(ad.feedId)
+                            }}
+                            onClick={() => openLink(ad.feedId)}
+                          >
+                            {t('deadlines.link')}
+                          </Button>
+                        )}
+                        {ad.hidden ? (
+                          <Button
+                            variant="link"
+                            size="xs"
+                            className="min-h-11"
+                            onClick={() => handleAngreSkjul(ad.feedId)}
+                          >
+                            {t('deadlines.undoHide')}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="link"
+                            size="xs"
+                            className="min-h-11"
+                            ref={(el) => {
+                              if (el) skjulRefs.current.set(ad.feedId, el)
+                              else skjulRefs.current.delete(ad.feedId)
+                            }}
+                            onClick={() => handleSkjul(ad.feedId)}
+                          >
+                            {t('deadlines.hide')}
+                          </Button>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {/* The lifeline: from the day the ad appeared to its frist, on the shared scale. */}
+                  <div className="relative mb-2 h-10 flex-1 md:mb-0 md:h-auto md:min-h-17.5">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'span-x absolute top-1/2',
+                        isNew ? 'border-t-2 border-forest' : 'border-t border-input',
+                        clipped && 'fade-in-start'
+                      )}
+                      style={{
+                        '--x': pct(clipped ? 0 : at(from ?? scale.start)),
+                        '--w': pct(
+                          Math.max(0, at(today) - (clipped ? 0 : at(from ?? scale.start)))
+                        ),
+                      }}
+                    />
+                    {clipped ? (
+                      published && (
+                        <span className="absolute bottom-1/2 left-0 mb-1.5 text-xs text-ink-tertiary tabular-nums">
+                          {t('deadlines.since', { date: formatDate(ad.published as string) })}
+                        </span>
+                      )
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'at-x absolute top-1/2 size-1.75 -translate-1/2 rounded-full border',
+                          isNew ? 'border-forest bg-forest' : 'border-ink-tertiary bg-background'
+                        )}
+                        style={{ '--x': pct(at(from ?? scale.start)) }}
+                      />
+                    )}
+                    {/* Phones have no shared overlay; each line carries its own seen and today marks. */}
+                    {seen !== null && (
+                      <span
+                        aria-hidden="true"
+                        className="at-x absolute inset-y-2 border-l border-dashed border-contour md:hidden"
+                        style={{ '--x': pct(at(seen)) }}
+                      />
+                    )}
+                    <span
+                      aria-hidden="true"
+                      className="at-x absolute inset-y-2 border-l border-foreground md:hidden"
+                      style={{ '--x': pct(at(today)) }}
+                    />
+                    {expires !== null && expires >= today && (
+                      <>
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'span-x absolute top-1/2 -translate-y-1/2 border-t-2',
+                            tone === 'closing' && 'border-rust',
+                            tone === 'applied' && 'border-lake',
+                            tone === 'open' && 'border-contour'
+                          )}
+                          style={{ '--x': pct(at(today)), '--w': pct(at(expires) - at(today)) }}
+                        />
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'at-x absolute top-1/2 h-3 w-0.5 -translate-1/2',
+                            tone === 'closing' && 'bg-rust',
+                            tone === 'applied' && 'bg-lake',
+                            tone === 'open' && 'bg-contour'
+                          )}
+                          style={{ '--x': pct(at(expires)) }}
+                        />
+                      </>
+                    )}
+                    <span
+                      className={cn(
+                        'at-x absolute text-sm whitespace-nowrap text-muted-foreground tabular-nums',
+                        flip ? 'bottom-1/2 mb-2 -translate-x-full' : 'top-1/2 -translate-y-1/2 ps-3'
+                      )}
+                      style={{ '--x': pct(at(end)) }}
+                    >
+                      {ad.expires && (
+                        <b
+                          className={
+                            isClosing(ad.daysLeft)
+                              ? 'font-semibold text-rust'
+                              : 'font-semibold text-foreground'
+                          }
+                        >
+                          {formatDate(ad.expires)}
+                        </b>
+                      )}
+                      {ad.expires && ' · '}
+                      <span className={isClosing(ad.daysLeft) ? 'text-rust' : undefined}>
+                        {daysLeftText(ad.daysLeft, t)}
+                      </span>
+                    </span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={!linkTarget}
-                  onClick={() => handleLink(ad.feedId)}
-                >
-                  {t('deadlines.linkConfirm')}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => closeLink(ad.feedId)}
-                >
-                  {t('common.cancel')}
-                </button>
+                {linking === ad.feedId && tracked !== null && (
+                  <div className="flex flex-wrap items-end gap-3 pb-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        htmlFor={`frist-link-${ad.feedId}`}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {t('deadlines.linkLabel')}
+                      </label>
+                      <NativeSelect
+                        id={`frist-link-${ad.feedId}`}
+                        ref={linkSelectRef}
+                        size="touch"
+                        value={linkTarget}
+                        onChange={(event) => setLinkTarget(event.target.value)}
+                      >
+                        <NativeSelectOption value="">
+                          {t('deadlines.linkPlaceholder')}
+                        </NativeSelectOption>
+                        {tracked.map((c) => (
+                          <NativeSelectOption key={c.orgnr} value={c.orgnr}>
+                            {displayCompanyName(c.companyName)}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </div>
+                    <Button
+                      size="touch"
+                      disabled={!linkTarget}
+                      onClick={() => handleLink(ad.feedId)}
+                    >
+                      {t('deadlines.linkConfirm')}
+                    </Button>
+                    <Button variant="ghost" size="touch" onClick={() => closeLink(ad.feedId)}>
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+        {/* The shared marks over the lifeline column: the dashed seen mark, today's line, and
+        the forest wash between them (what is new). Both lines reach up through the scale bar,
+        stopping short of the month names.
+        Mark as seen slides the seen line up to today and the wash closes behind it. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 left-90 max-md:hidden"
+        >
+          {seen !== null && (
+            <>
+              <div
+                className="span-x absolute inset-y-0 bg-forest-wash transition-all duration-700 ease-out motion-reduce:transition-none"
+                style={{ '--x': pct(at(seen)), '--w': pct(Math.max(0, at(today) - at(seen))) }}
+              />
+              <div
+                className="at-x absolute -top-7 bottom-0 border-l border-dashed border-contour transition-all duration-700 ease-out motion-reduce:transition-none"
+                style={{ '--x': pct(at(seen)) }}
+              >
+                <span className="absolute right-1.5 -bottom-6.5 text-small whitespace-nowrap text-contour">
+                  {t('deadlines.seenMark', { date: dayMonth(reviewMark as Date) })}
+                </span>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+            </>
+          )}
+          <div
+            className="at-x absolute -top-7 bottom-0 border-l border-foreground"
+            style={{ '--x': pct(at(today)) }}
+          >
+            <span className="absolute -bottom-6.5 left-1.5 text-small font-semibold whitespace-nowrap">
+              {t('deadlines.todayMark', { date: dayMonth(now) })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-9 flex flex-wrap gap-x-6.5 gap-y-1.5 border-t border-border pt-3.5 text-small text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="w-5 border-t-2 border-forest" />
+          {t('deadlines.keyNew')}
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="w-5 border-t-2 border-rust" />
+          {t('deadlines.keyClosing')}
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="w-5 border-t-2 border-lake" />
+          {t('deadlines.keyApplied')}
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="w-5 border-t-2 border-contour" />
+          {t('deadlines.keyOpen')}
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="h-3.5 border-l border-dashed border-contour" />
+          {t('deadlines.keySeen')}
+        </span>
+      </p>
 
       <UnsavedChangesGuard dirty={linkDirty} />
     </section>

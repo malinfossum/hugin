@@ -1,7 +1,9 @@
+import { X } from 'lucide-react'
 import { type RefObject, useEffect, useRef } from 'react'
 import { useT } from '../i18n'
 import { fylkeName } from '../lib/fylker'
 import type { Region } from '../lib/regions'
+import { Button } from './ui/button'
 
 interface Props {
   regions: Region[]
@@ -44,10 +46,13 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
     onRemove?.(regions[index].fylke)
   }
 
-  if (regions.length === 0) return <p className="text-muted">{t('areas.wholeCountry')}</p>
+  if (regions.length === 0)
+    return <p className="text-sm text-muted-foreground">{t('areas.wholeCountry')}</p>
 
+  // Read-only, a chip is plain text: on the sheet only controls get a border. With ✕ it is a
+  // control, so it takes the select's shape, and the ✕ inside keeps the 44px floor.
   return (
-    <ul className="region-chip-list">
+    <ul className="flex list-none flex-wrap items-center gap-x-5 gap-y-2 ps-0 text-sm text-foreground">
       {regions.map((region, index) => {
         const fylke = fylkeName(region.fylke)
         const names = region.kommuner
@@ -57,19 +62,28 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
         const collapsed = names.length > COLLAPSE_ABOVE
         const short = `${fylke}: ${names.slice(0, SHOWN_WHEN_COLLAPSED).join(', ')} ${t('areas.more', { n: names.length - SHOWN_WHEN_COLLAPSED })}`
         return (
-          <li key={region.fylke} className="region-chip badge" title={collapsed ? full : undefined}>
+          <li
+            key={region.fylke}
+            className={
+              onRemove
+                ? 'inline-flex h-11 items-center rounded-lg border border-input bg-card ps-3 font-medium text-foreground'
+                : 'font-medium text-foreground'
+            }
+            title={collapsed ? full : undefined}
+          >
             {collapsed ? (
               <>
                 <span aria-hidden="true">{short}</span>
-                <span className="visually-hidden">{full}</span>
+                <span className="sr-only">{full}</span>
               </>
             ) : (
               <span>{full}</span>
             )}
             {onRemove && (
-              <button
-                type="button"
-                className="btn btn-ghost icon-btn"
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                className="size-11"
                 aria-label={t('areas.remove', { fylke })}
                 ref={(el) => {
                   if (el) removeRefs.current.set(region.fylke, el)
@@ -77,8 +91,8 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
                 }}
                 onClick={() => remove(index)}
               >
-                <span aria-hidden="true">✕</span>
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             )}
           </li>
         )

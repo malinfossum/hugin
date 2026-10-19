@@ -1,0 +1,699 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T07:52:45+00:00",
+  "title": "Design System: Hugin",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Map Paper",
+        "canonical": "#f6f6f3",
+        "oklch": "oklch(97.2% 0.004 106.5)",
+        "tonalRamp": [
+          "oklch(15% 0.004 106.5)",
+          "oklch(26% 0.004 106.5)",
+          "oklch(38% 0.004 106.5)",
+          "oklch(50% 0.004 106.5)",
+          "oklch(62% 0.004 106.5)",
+          "oklch(74% 0.004 106.5)",
+          "oklch(86% 0.004 106.5)",
+          "oklch(95% 0.004 106.5)"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#fbfbf9",
+        "oklch": "oklch(98.8% 0.003 106.4)",
+        "tonalRamp": [
+          "oklch(15% 0.003 106.4)",
+          "oklch(26% 0.003 106.4)",
+          "oklch(38% 0.003 106.4)",
+          "oklch(50% 0.003 106.4)",
+          "oklch(62% 0.003 106.4)",
+          "oklch(74% 0.003 106.4)",
+          "oklch(86% 0.003 106.4)",
+          "oklch(95% 0.003 106.4)"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Wash",
+        "canonical": "#eeede8",
+        "oklch": "oklch(94.5% 0.007 97.4)",
+        "tonalRamp": [
+          "oklch(15% 0.007 97.4)",
+          "oklch(26% 0.007 97.4)",
+          "oklch(38% 0.007 97.4)",
+          "oklch(50% 0.007 97.4)",
+          "oklch(62% 0.007 97.4)",
+          "oklch(74% 0.007 97.4)",
+          "oklch(86% 0.007 97.4)",
+          "oklch(95% 0.007 97.4)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e2e1db",
+        "oklch": "oklch(90.9% 0.008 98.9)",
+        "tonalRamp": [
+          "oklch(15% 0.008 98.9)",
+          "oklch(26% 0.008 98.9)",
+          "oklch(38% 0.008 98.9)",
+          "oklch(50% 0.008 98.9)",
+          "oklch(62% 0.008 98.9)",
+          "oklch(74% 0.008 98.9)",
+          "oklch(86% 0.008 98.9)",
+          "oklch(95% 0.008 98.9)"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#c9c6bb",
+        "oklch": "oklch(82.6% 0.015 94.2)",
+        "tonalRamp": [
+          "oklch(15% 0.015 94.2)",
+          "oklch(26% 0.015 94.2)",
+          "oklch(38% 0.015 94.2)",
+          "oklch(50% 0.015 94.2)",
+          "oklch(62% 0.015 94.2)",
+          "oklch(74% 0.015 94.2)",
+          "oklch(86% 0.015 94.2)",
+          "oklch(95% 0.015 94.2)"
+        ]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Survey Ink",
+        "canonical": "#22262a",
+        "oklch": "oklch(26.6% 0.009 248.2)",
+        "tonalRamp": [
+          "oklch(15% 0.009 248.2)",
+          "oklch(26% 0.009 248.2)",
+          "oklch(38% 0.009 248.2)",
+          "oklch(50% 0.009 248.2)",
+          "oklch(62% 0.009 248.2)",
+          "oklch(74% 0.009 248.2)",
+          "oklch(86% 0.009 248.2)",
+          "oklch(95% 0.009 248.2)"
+        ]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "#555a5f",
+        "oklch": "oklch(46.5% 0.010 248.0)",
+        "tonalRamp": [
+          "oklch(15% 0.010 248.0)",
+          "oklch(26% 0.010 248.0)",
+          "oklch(38% 0.010 248.0)",
+          "oklch(50% 0.010 248.0)",
+          "oklch(62% 0.010 248.0)",
+          "oklch(74% 0.010 248.0)",
+          "oklch(86% 0.010 248.0)",
+          "oklch(95% 0.010 248.0)"
+        ]
+      },
+      "ink-tertiary": {
+        "role": "neutral",
+        "displayName": "Ink Tertiary",
+        "canonical": "#686c71",
+        "oklch": "oklch(52.9% 0.009 253.9)",
+        "tonalRamp": [
+          "oklch(15% 0.009 253.9)",
+          "oklch(26% 0.009 253.9)",
+          "oklch(38% 0.009 253.9)",
+          "oklch(50% 0.009 253.9)",
+          "oklch(62% 0.009 253.9)",
+          "oklch(74% 0.009 253.9)",
+          "oklch(86% 0.009 253.9)",
+          "oklch(95% 0.009 253.9)"
+        ]
+      },
+      "contour": {
+        "role": "secondary",
+        "displayName": "Contour Brown",
+        "canonical": "#76593c",
+        "oklch": "oklch(48.7% 0.057 65.8)",
+        "tonalRamp": [
+          "oklch(15% 0.057 65.8)",
+          "oklch(26% 0.057 65.8)",
+          "oklch(38% 0.057 65.8)",
+          "oklch(50% 0.057 65.8)",
+          "oklch(62% 0.057 65.8)",
+          "oklch(74% 0.057 65.8)",
+          "oklch(86% 0.057 65.8)",
+          "oklch(95% 0.057 65.8)"
+        ]
+      },
+      "forest": {
+        "role": "secondary",
+        "displayName": "Forest",
+        "canonical": "#4a6b46",
+        "oklch": "oklch(49.2% 0.069 141.8)",
+        "tonalRamp": [
+          "oklch(15% 0.069 141.8)",
+          "oklch(26% 0.069 141.8)",
+          "oklch(38% 0.069 141.8)",
+          "oklch(50% 0.069 141.8)",
+          "oklch(62% 0.069 141.8)",
+          "oklch(74% 0.069 141.8)",
+          "oklch(86% 0.069 141.8)",
+          "oklch(95% 0.069 141.8)"
+        ]
+      },
+      "lake": {
+        "role": "secondary",
+        "displayName": "Lake",
+        "canonical": "#2f6a8f",
+        "oklch": "oklch(50.2% 0.085 239.2)",
+        "tonalRamp": [
+          "oklch(15% 0.085 239.2)",
+          "oklch(26% 0.085 239.2)",
+          "oklch(38% 0.085 239.2)",
+          "oklch(50% 0.085 239.2)",
+          "oklch(62% 0.085 239.2)",
+          "oklch(74% 0.085 239.2)",
+          "oklch(86% 0.085 239.2)",
+          "oklch(95% 0.085 239.2)"
+        ]
+      },
+      "rust": {
+        "role": "secondary",
+        "displayName": "Rust",
+        "canonical": "#a24b16",
+        "oklch": "oklch(51.6% 0.131 47.0)",
+        "tonalRamp": [
+          "oklch(15% 0.131 47.0)",
+          "oklch(26% 0.131 47.0)",
+          "oklch(38% 0.131 47.0)",
+          "oklch(50% 0.131 47.0)",
+          "oklch(62% 0.131 47.0)",
+          "oklch(74% 0.131 47.0)",
+          "oklch(86% 0.131 47.0)",
+          "oklch(95% 0.131 47.0)"
+        ]
+      },
+      "paper-dark": {
+        "role": "neutral",
+        "displayName": "Map Paper (night)",
+        "canonical": "#171918",
+        "oklch": "oklch(21.1% 0.004 164.7)",
+        "tonalRamp": [
+          "oklch(15% 0.004 164.7)",
+          "oklch(26% 0.004 164.7)",
+          "oklch(38% 0.004 164.7)",
+          "oklch(50% 0.004 164.7)",
+          "oklch(62% 0.004 164.7)",
+          "oklch(74% 0.004 164.7)",
+          "oklch(86% 0.004 164.7)",
+          "oklch(95% 0.004 164.7)"
+        ]
+      },
+      "sheet-dark": {
+        "role": "neutral",
+        "displayName": "Sheet (night)",
+        "canonical": "#1c1f1d",
+        "oklch": "oklch(23.5% 0.006 156.8)",
+        "tonalRamp": [
+          "oklch(15% 0.006 156.8)",
+          "oklch(26% 0.006 156.8)",
+          "oklch(38% 0.006 156.8)",
+          "oklch(50% 0.006 156.8)",
+          "oklch(62% 0.006 156.8)",
+          "oklch(74% 0.006 156.8)",
+          "oklch(86% 0.006 156.8)",
+          "oklch(95% 0.006 156.8)"
+        ]
+      },
+      "wash-dark": {
+        "role": "neutral",
+        "displayName": "Wash (night)",
+        "canonical": "#232624",
+        "oklch": "oklch(26.5% 0.006 156.8)",
+        "tonalRamp": [
+          "oklch(15% 0.006 156.8)",
+          "oklch(26% 0.006 156.8)",
+          "oklch(38% 0.006 156.8)",
+          "oklch(50% 0.006 156.8)",
+          "oklch(62% 0.006 156.8)",
+          "oklch(74% 0.006 156.8)",
+          "oklch(86% 0.006 156.8)",
+          "oklch(95% 0.006 156.8)"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (night)",
+        "canonical": "#2c302d",
+        "oklch": "oklch(30.4% 0.008 153.4)",
+        "tonalRamp": [
+          "oklch(15% 0.008 153.4)",
+          "oklch(26% 0.008 153.4)",
+          "oklch(38% 0.008 153.4)",
+          "oklch(50% 0.008 153.4)",
+          "oklch(62% 0.008 153.4)",
+          "oklch(74% 0.008 153.4)",
+          "oklch(86% 0.008 153.4)",
+          "oklch(95% 0.008 153.4)"
+        ]
+      },
+      "rule-strong-dark": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (night)",
+        "canonical": "#454a46",
+        "oklch": "oklch(40.3% 0.009 151.7)",
+        "tonalRamp": [
+          "oklch(15% 0.009 151.7)",
+          "oklch(26% 0.009 151.7)",
+          "oklch(38% 0.009 151.7)",
+          "oklch(50% 0.009 151.7)",
+          "oklch(62% 0.009 151.7)",
+          "oklch(74% 0.009 151.7)",
+          "oklch(86% 0.009 151.7)",
+          "oklch(95% 0.009 151.7)"
+        ]
+      },
+      "ink-dark": {
+        "role": "primary",
+        "displayName": "Survey Ink (night)",
+        "canonical": "#e8e7e2",
+        "oklch": "oklch(92.7% 0.007 97.4)",
+        "tonalRamp": [
+          "oklch(15% 0.007 97.4)",
+          "oklch(26% 0.007 97.4)",
+          "oklch(38% 0.007 97.4)",
+          "oklch(50% 0.007 97.4)",
+          "oklch(62% 0.007 97.4)",
+          "oklch(74% 0.007 97.4)",
+          "oklch(86% 0.007 97.4)",
+          "oklch(95% 0.007 97.4)"
+        ]
+      },
+      "ink-secondary-dark": {
+        "role": "neutral",
+        "displayName": "Ink Secondary (night)",
+        "canonical": "#b0b0a8",
+        "oklch": "oklch(75.5% 0.011 106.7)",
+        "tonalRamp": [
+          "oklch(15% 0.011 106.7)",
+          "oklch(26% 0.011 106.7)",
+          "oklch(38% 0.011 106.7)",
+          "oklch(50% 0.011 106.7)",
+          "oklch(62% 0.011 106.7)",
+          "oklch(74% 0.011 106.7)",
+          "oklch(86% 0.011 106.7)",
+          "oklch(95% 0.011 106.7)"
+        ]
+      },
+      "ink-tertiary-dark": {
+        "role": "neutral",
+        "displayName": "Ink Tertiary (night)",
+        "canonical": "#9a9a92",
+        "oklch": "oklch(68.4% 0.012 106.7)",
+        "tonalRamp": [
+          "oklch(15% 0.012 106.7)",
+          "oklch(26% 0.012 106.7)",
+          "oklch(38% 0.012 106.7)",
+          "oklch(50% 0.012 106.7)",
+          "oklch(62% 0.012 106.7)",
+          "oklch(74% 0.012 106.7)",
+          "oklch(86% 0.012 106.7)",
+          "oklch(95% 0.012 106.7)"
+        ]
+      },
+      "contour-dark": {
+        "role": "secondary",
+        "displayName": "Contour Brown (night)",
+        "canonical": "#c9a882",
+        "oklch": "oklch(75.2% 0.064 70.5)",
+        "tonalRamp": [
+          "oklch(15% 0.064 70.5)",
+          "oklch(26% 0.064 70.5)",
+          "oklch(38% 0.064 70.5)",
+          "oklch(50% 0.064 70.5)",
+          "oklch(62% 0.064 70.5)",
+          "oklch(74% 0.064 70.5)",
+          "oklch(86% 0.064 70.5)",
+          "oklch(95% 0.064 70.5)"
+        ]
+      },
+      "forest-dark": {
+        "role": "secondary",
+        "displayName": "Forest (night)",
+        "canonical": "#97c290",
+        "oklch": "oklch(77.0% 0.084 141.1)",
+        "tonalRamp": [
+          "oklch(15% 0.084 141.1)",
+          "oklch(26% 0.084 141.1)",
+          "oklch(38% 0.084 141.1)",
+          "oklch(50% 0.084 141.1)",
+          "oklch(62% 0.084 141.1)",
+          "oklch(74% 0.084 141.1)",
+          "oklch(86% 0.084 141.1)",
+          "oklch(95% 0.084 141.1)"
+        ]
+      },
+      "lake-dark": {
+        "role": "secondary",
+        "displayName": "Lake (night)",
+        "canonical": "#8bbadb",
+        "oklch": "oklch(76.7% 0.069 239.4)",
+        "tonalRamp": [
+          "oklch(15% 0.069 239.4)",
+          "oklch(26% 0.069 239.4)",
+          "oklch(38% 0.069 239.4)",
+          "oklch(50% 0.069 239.4)",
+          "oklch(62% 0.069 239.4)",
+          "oklch(74% 0.069 239.4)",
+          "oklch(86% 0.069 239.4)",
+          "oklch(95% 0.069 239.4)"
+        ]
+      },
+      "rust-dark": {
+        "role": "secondary",
+        "displayName": "Rust (night)",
+        "canonical": "#e6935f",
+        "oklch": "oklch(73.7% 0.121 51.9)",
+        "tonalRamp": [
+          "oklch(15% 0.121 51.9)",
+          "oklch(26% 0.121 51.9)",
+          "oklch(38% 0.121 51.9)",
+          "oklch(50% 0.121 51.9)",
+          "oklch(62% 0.121 51.9)",
+          "oklch(74% 0.121 51.9)",
+          "oklch(86% 0.121 51.9)",
+          "oklch(95% 0.121 51.9)"
+        ]
+      },
+      "forest-wash": {
+        "role": "secondary",
+        "displayName": "Forest Wash",
+        "canonical": "rgb(74 107 70 / 0.15)"
+      },
+      "rust-wash": {
+        "role": "secondary",
+        "displayName": "Rust Wash",
+        "canonical": "rgb(162 75 22 / 0.07)"
+      },
+      "select": {
+        "role": "secondary",
+        "displayName": "Selection",
+        "canonical": "rgb(47 106 143 / 0.18)"
+      },
+      "forest-wash-dark": {
+        "role": "secondary",
+        "displayName": "Forest Wash (night)",
+        "canonical": "rgb(151 194 144 / 0.12)"
+      },
+      "rust-wash-dark": {
+        "role": "secondary",
+        "displayName": "Rust Wash (night)",
+        "canonical": "rgb(230 147 95 / 0.08)"
+      },
+      "select-dark": {
+        "role": "secondary",
+        "displayName": "Selection (night)",
+        "canonical": "rgb(139 186 219 / 0.25)"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The delta headline, one per view; counts in forest."
+      },
+      "headline-narrow": {
+        "displayName": "Headline (narrow)",
+        "purpose": "Headline below 760px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads."
+      },
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Wordmark beside the raven."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text."
+      },
+      "row-title": {
+        "displayName": "Row title",
+        "purpose": "Item titles in lists and deadline rows."
+      },
+      "body-secondary": {
+        "displayName": "Body secondary",
+        "purpose": "Needs-action sentence, captions, button labels (500), popover text."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Sync meta, row sublines, frist figures, labels, footer."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Row actions, legend, mark labels, arrival sublines."
+      },
+      "map-label": {
+        "displayName": "Map label",
+        "purpose": "Uppercase, tracked: month and kommune names in contour only."
+      },
+      "scale-figure": {
+        "displayName": "Scale figure",
+        "purpose": "Week dates under the scale bar, since labels; tabular."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating",
+        "value": "0 10px 28px rgb(34 38 42 / 0.12), 0 2px 6px rgb(34 38 42 / 0.06)",
+        "purpose": "Popovers, menus and dialogs only (light)."
+      },
+      {
+        "name": "floating-dark",
+        "value": "0 10px 28px rgb(0 0 0 / 0.4), 0 2px 6px rgb(0 0 0 / 0.25)",
+        "purpose": "Popovers, menus and dialogs only (dark)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-mark",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The seen mark sliding to today and the forest wash collapsing."
+      },
+      {
+        "name": "duration-mark",
+        "value": "700ms",
+        "purpose": "Seen-mark slide and wash collapse (left, width, opacity); state re-renders after it."
+      },
+      {
+        "name": "duration-dim",
+        "value": "600ms",
+        "purpose": "Arrivals dimming to 0.45 once cleared by Mark as seen."
+      },
+      {
+        "name": "duration-reveal",
+        "value": "150ms",
+        "purpose": "Row actions fading in on hover/focus-within."
+      },
+      {
+        "name": "row-highlight",
+        "value": "1800ms",
+        "purpose": "How long a row stays lit after a jump from needs-action."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Under prefers-reduced-motion all of the above transitions are removed."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "medium",
+        "value": "1100px"
+      },
+      {
+        "name": "narrow",
+        "value": "760px"
+      },
+      {
+        "name": "touch",
+        "value": "(hover: none)"
+      }
+    ],
+    "focus": {
+      "outline": "2px solid lake",
+      "offset": "2px",
+      "radius": "3px"
+    },
+    "lines": {
+      "hairline": "1px solid rule",
+      "past": "1px solid rule-strong",
+      "past-new": "1.5px solid forest",
+      "future": "2px solid contour|lake|rust",
+      "tip": "2px x 12px",
+      "start-dot": "7px",
+      "today": "1px solid ink",
+      "seen": "1px dashed contour",
+      "scale-segment": "4px tall, 1px border ink-secondary (dark: ink-tertiary), alternate weeks filled",
+      "clip-fade": "mask linear-gradient 0 to 40px"
+    },
+    "fonts": {
+      "family": "Hanken Grotesk",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ],
+      "delivery": "Self-host and bundle in the shipped app (offline single executable); the prototype's Google Fonts link is prototype-only."
+    }
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default action: paper-toned, icon plus word.",
+      "html": "<button class=\"ds-btn\" type=\"button\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"/><path d=\"M21 3v5h-5\"/><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"/><path d=\"M8 16H3v5\"/></svg>Sync now</button>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:6px;border:1px solid var(--rule-2);background:var(--sheet);color:var(--ink);font-family:'Hanken Grotesk',system-ui,sans-serif;font-weight:500;font-size:15px;cursor:pointer;} .ds-btn:hover{background:var(--wash);} .ds-btn:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action per view (Mark as seen): ink on paper.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Mark as seen</button>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-btn-primary{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:'Hanken Grotesk',system-ui,sans-serif;font-weight:500;font-size:15px;cursor:pointer;} .ds-btn-primary:hover{opacity:0.86;} .ds-btn-primary:disabled{opacity:0.4;cursor:default;} .ds-btn-primary:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Top-bar tools (theme, language); always carries an accessible label.",
+      "html": "<button class=\"ds-icon-btn\" type=\"button\" aria-label=\"Switch to dark theme\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/></svg></button>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-icon-btn{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--ink-2);cursor:pointer;} .ds-icon-btn:hover{color:var(--ink);background:var(--wash);} .ds-icon-btn:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Filter select with an inline label.",
+      "html": "<label class=\"ds-select-label\">Show <select class=\"ds-select\"><option>Active deadlines</option><option>Including hidden</option></select></label>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-select-label{display:inline-flex;align-items:center;gap:8px;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:14px;color:var(--ink-2);} .ds-select{font-family:'Hanken Grotesk',system-ui,sans-serif;font-weight:500;font-size:14px;color:var(--ink);background:var(--sheet);border:1px solid var(--rule-2);border-radius:6px;height:36px;padding:0 10px;} .ds-select:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Text links in the top bar; wash marks hover and the current page.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main\"><a href=\"#\" aria-current=\"page\">Dashboard</a><a href=\"#\">Applications</a><a href=\"#\">Companies</a><a href=\"#\">Settings</a></nav>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-nav{display:flex;gap:4px;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16px;border-bottom:1px solid var(--rule);padding:14px 0;background:var(--paper);} .ds-nav a{padding:6px 12px;border-radius:6px;color:var(--ink-2);text-decoration:none;} .ds-nav a:hover{color:var(--ink);background:var(--wash);} .ds-nav a[aria-current]{color:var(--ink);background:var(--wash);font-weight:500;} .ds-nav a:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Needs-action sentence",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "One sentence between hairlines with a rust run-in lead; never a filled panel or side stripe.",
+      "html": "<p class=\"ds-needs\"><span><b>Needs action.</b> Fullstackutvikler (.NET/React) at Mjøskode AS closes Tuesday 20 October, in 3 days. You're watching it but haven't applied.</span><button type=\"button\">Show in deadlines</button></p>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-needs{margin:0;padding:12px 0;border-block:1px solid var(--rule);display:flex;gap:12px;align-items:baseline;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:15px;color:var(--ink);background:var(--paper);} .ds-needs b{color:var(--rust);font-weight:600;} .ds-needs button{margin-left:auto;border:0;background:none;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:14px;color:var(--ink-2);text-decoration:underline;text-decoration-color:var(--rule-2);text-underline-offset:3px;white-space:nowrap;cursor:pointer;} .ds-needs button:hover{color:var(--ink);} .ds-needs button:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;}"
+    },
+    {
+      "name": "Deadline row with lifeline",
+      "kind": "custom",
+      "refersTo": "deadline-row",
+      "description": "Title column plus a lifeline on the shared scale; row actions reveal on hover/focus.",
+      "html": "<div class=\"ds-row\" tabindex=\"0\"><div class=\"ds-title\"><span class=\"ds-t\">Fullstackutvikler (.NET/React)</span><span class=\"ds-s\"><b class=\"ds-new\">New</b>Mjøskode AS · Hamar</span><span class=\"ds-acts\"><button type=\"button\">Watch</button><button type=\"button\">Hide</button></span></div><div class=\"ds-life\"><i class=\"ds-past\" style=\"left:10%;width:40%\"></i><i class=\"ds-start\" style=\"left:10%\"></i><i class=\"ds-zone\"></i><i class=\"ds-today\" style=\"left:50%\"></i><i class=\"ds-future\" style=\"left:50%;width:20%\"></i><i class=\"ds-tip\" style=\"left:70%\"></i><span class=\"ds-end\" style=\"left:70%\"><b>20.10</b> · 3 days</span></div></div>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-row{display:grid;grid-template-columns:240px 1fr;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);min-height:70px;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--paper);outline:none;} .ds-row:hover,.ds-row:focus-within{background:var(--wash);} .ds-title{padding:14px 20px 14px 0;display:flex;flex-direction:column;justify-content:center;gap:3px;} .ds-t{font-weight:500;line-height:1.3;} .ds-s{font-size:14px;color:var(--ink-2);display:flex;gap:12px;} .ds-new{color:var(--forest);font-weight:600;} .ds-acts{display:flex;gap:14px;opacity:0;visibility:hidden;transition:opacity .15s;} .ds-row:hover .ds-acts,.ds-row:focus-within .ds-acts{opacity:1;visibility:visible;} .ds-acts button{border:0;background:none;padding:3px 0;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13px;color:var(--ink-2);text-decoration:underline;text-decoration-color:var(--rule-2);text-underline-offset:3px;cursor:pointer;} .ds-acts button:hover{color:var(--ink);} .ds-acts button:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;} .ds-life{position:relative;} .ds-life i{position:absolute;top:50%;} .ds-past{height:0;border-top:1.5px solid var(--forest);} .ds-start{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--forest);} .ds-zone{top:0 !important;bottom:0;left:30%;width:20%;background:var(--forest-wash);border-left:1px dashed var(--contour);} .ds-today{top:0 !important;bottom:0;border-left:1px solid var(--ink);} .ds-future{height:0;border-top:2px solid var(--rust);margin-top:-1px;} .ds-tip{width:2px;height:12px;margin:-6px 0 0 -1px;background:var(--rust);} .ds-end{position:absolute;top:50%;transform:translateY(-50%);padding-left:12px;font-size:14px;color:var(--rust);font-variant-numeric:tabular-nums;white-space:nowrap;}"
+    },
+    {
+      "name": "Map label (kommune)",
+      "kind": "custom",
+      "refersTo": "map-label",
+      "description": "Tracked uppercase contour lettering for kommune and month names only.",
+      "html": "<div class=\"ds-place\"><h3 class=\"ds-map-label\">Hamar<span>4</span></h3><ul><li><a href=\"#\">Heksa AS</a><small>IT consultancy</small></li></ul></div>",
+      "css": ":host{--paper:#f6f6f3;--sheet:#fbfbf9;--wash:#eeede8;--rule:#e2e1db;--rule-2:#c9c6bb;--ink:#22262a;--ink-2:#555a5f;--ink-3:#686c71;--contour:#76593c;--forest:#4a6b46;--forest-wash:rgb(74 107 70 / 0.15);--lake:#2f6a8f;--rust:#a24b16;--shadow:0 10px 28px rgb(34 38 42 / 0.12),0 2px 6px rgb(34 38 42 / 0.06);} .ds-place{font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--paper);width:220px;} .ds-map-label{margin:0 0 10px;text-transform:uppercase;letter-spacing:0.1em;font-size:12px;font-weight:600;color:var(--contour);display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1px solid var(--rule);} .ds-map-label span{font-size:14px;color:var(--ink-2);letter-spacing:0;font-weight:500;font-variant-numeric:tabular-nums;} .ds-place ul{list-style:none;margin:0;padding:0;} .ds-place a{color:inherit;font-weight:500;text-decoration:none;} .ds-place a:hover{text-decoration:underline;} .ds-place a:focus-visible{outline:2px solid var(--lake);outline-offset:2px;border-radius:3px;} .ds-place small{display:block;color:var(--ink-2);font-size:13px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Topographic Sheet",
+    "overview": "Hugin is a map sheet, not a dashboard. The page is warm-grey paper with ink on it, and the only colours are the map's own: contour brown, forest, lake and rust, each with one job. Structure comes from hairlines and alignment, the way a printed sheet separates its parts, never from boxed panels or tiles. Time is the main axis: every open ad is drawn as a lifeline from the day it appeared to its frist, under one alternating week scale bar, with a solid today line and a dashed seen mark the user moves.\n\nDensity is that of a working map: a daily tool, read in a short morning session, so rows are compact (70px), figures are tabular, and the type stays in one family at modest sizes. Emphasis comes from weight and from the map colours, not from size jumps or decoration. The dark theme is the same sheet at night: same hues, lifted in lightness and muted in chroma, never glowing.\n\nThe world refuses the card-grid dashboard: KPI tiles, bordered or filled content panels, filled callouts and coloured side stripes. It refuses synthesized small caps (map lettering is real uppercase, tracked) and neon-on-dark.",
+    "keyCharacteristics": [
+      "Warm-grey paper (light) or night-map charcoal (dark), ink text, four map colours with one job each.",
+      "Hairline rules (1px) separate everything; no content sits inside a card.",
+      "One content edge at 48px, a 360px title column, and a second edge where the scale bar and lifelines begin.",
+      "Time drawn, not listed: lifelines, a week scale bar, a today line and a movable seen mark.",
+      "Hanken Grotesk throughout; tracked uppercase map lettering for months and kommuner.",
+      "Motion is rare and meaningful: the seen mark sliding to today is the signature."
+    ],
+    "rules": [
+      {
+        "name": "The One Job Rule",
+        "body": "Each map colour means one thing: contour is time and map lettering, forest is new, lake is applied (and the interaction layer), rust is closing within 7 days. A colour that appears somewhere must mean its job there. Never use a map colour for decoration or for a second data meaning.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Only Colour Rule",
+        "body": "Every coloured state also has a word, a figure or a line style: \"New\", \"Applied\" and \"Watching\" as text, \"3 days\" beside a rust frist, today solid versus seen dashed, a legend under the sheet. Colour is never the only signal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Night Map Rule",
+        "body": "Dark is the same sheet at night: the same four hues raised in lightness and lowered in chroma, on near-neutral charcoal. No neon, no glows, no pure black.",
+        "section": "colors"
+      },
+      {
+        "name": "The Map Lettering Rule",
+        "body": "Tracked uppercase (12px, 600, 0.1em) belongs to place and time names on the map: months and kommuner. It is never a section kicker, an eyebrow, a button style or a status label.",
+        "section": "typography"
+      },
+      {
+        "name": "The Real Caps Rule",
+        "body": "Map lettering is real uppercase with tracking. Never synthesize small caps (`font-variant: small-caps` on a family without them).",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Edges Rule",
+        "body": "There is one content edge and one time edge. Content that is not drawn in time aligns to the content edge; anything drawn in time, or listed beside the title column, starts at the 360px time edge. Don't introduce a third.",
+        "section": "layout"
+      },
+      {
+        "name": "The Scale Bar Rule",
+        "body": "Time is read off one scale bar per sheet: alternating filled and hollow 4px week segments starting on Mondays (ink-secondary in light, ink-tertiary in dark), a 12px tabular date under each Monday (every other date hidden on narrow), and contour map-label month names above. Every lifeline on the sheet uses that same scale; never give rows their own scale.",
+        "section": "layout"
+      },
+      {
+        "name": "The Lifeline Rule",
+        "body": "A lifeline runs from the day an ad appeared to its frist. The past (appeared to today) is a 1px strong hairline, or 1.5px forest if new; it starts at a 7px dot (hollow ink-tertiary, or filled forest if new) or, if it began before the window, fades in over 40px with a \"since\" label. The future (today to frist) is 2px in the ad's one colour (contour open, lake applied, rust closing) and ends in a 2×12px tick with the frist and days left beside it (flipped above the line near the right edge). Closing beats applied: an applied ad closing within 7 days is rust.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Not Panel Rule",
+        "body": "Sections and rows are separated by 1px `rule` lines (top and bottom borders), never by enclosing boxes, filled panels or shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** separate sections and rows with 1px `rule` hairlines and nothing else.",
+      "**Do** give each map colour exactly one job: contour for time and map lettering, forest for new, lake for applied and focus, rust for closing within 7 days.",
+      "**Do** pair every coloured state with a word, figure or line style, and carry the legend wherever lifelines are drawn.",
+      "**Do** align content to the one 48px edge and anything drawn in time to the 360px time edge.",
+      "**Do** set dates, counts and scale figures in tabular figures.",
+      "**Do** keep row actions revealed on hover and focus-within, and always visible when `hover: none`.",
+      "**Do** self-host Hanken Grotesk in the shipped app; it runs offline.",
+      "**Do** honour `prefers-reduced-motion` by removing the seen-mark slide and fades."
+    ],
+    "donts": [
+      "**Don't** build cards, KPI tiles or bordered/filled content panels; the dashboard is one sheet.",
+      "**Don't** render needs-action or any alert as a filled callout or a box with a coloured side stripe; it is a sentence between hairlines.",
+      "**Don't** use tracked uppercase for kickers, eyebrows, buttons or status labels; it is map lettering for months and kommuner only.",
+      "**Don't** synthesize small caps.",
+      "**Don't** put a shadow on anything in the page flow; shadow is for floating layers only.",
+      "**Don't** use neon or glowing saturated hues on the dark theme; it is a night map of the same colours.",
+      "**Don't** use a map colour for decoration or a second meaning.",
+      "**Don't** load fonts from a CDN in the shipped app."
+    ]
+  }
+}

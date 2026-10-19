@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { cn } from 'cn'
+import { AlertTriangle, ArrowLeft, ExternalLink } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 'react'
 import { CompanyLink } from '../components/CompanyLink'
+import { Button } from '../components/ui/button'
 import { type T, useT } from '../i18n'
 import { ApiError } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
@@ -27,31 +30,62 @@ function branchTabLabel(branch: CompanyDto, branches: CompanyDto[]): string {
   return sharedByCount > 1 ? displayCompanyName(branch.name) : branch.kommuneNavn
 }
 
+/** The ad history as sheet rows: title, then a subline of its state and dates. An expired ad's
+ * title drops to ink-secondary, so it never reads as active (PRODUCT.md: truth over completeness). */
 function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
-  if (ads.length === 0) return <p className="empty-hint">{t('companies.noAds')}</p>
+  if (ads.length === 0)
+    return <p className="text-body-sm text-muted-foreground">{t('companies.noAds')}</p>
 
   return (
-    <ul className="stack stack-sm">
+    <ul className="flex list-none flex-col border-b border-border ps-0">
       {ads.map((ad) => (
-        <li key={ad.feedId} className="panel stack stack-sm">
-          <span className="text-strong">{ad.title}</span>
-          {!ad.isActive && <span className="badge">{t('companies.expiredTag')}</span>}
-          {publishedText(ad.published, t) && (
-            <span className="text-muted">{publishedText(ad.published, t)}</span>
-          )}
-          <span className="help">
-            {t('companies.deadlineLabel', {
-              date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
-            })}
-          </span>
+        <li
+          key={ad.feedId}
+          className="flex flex-col gap-x-6 gap-y-0.5 border-t border-border py-3 md:flex-row md:items-center"
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span
+              className={cn(
+                'font-medium',
+                ad.isActive ? 'text-foreground' : 'text-muted-foreground'
+              )}
+            >
+              {ad.title}
+            </span>
+            <span className="flex flex-wrap gap-x-3 text-sm text-muted-foreground tabular-nums">
+              {!ad.isActive && <span className="font-semibold">{t('companies.expiredTag')}</span>}
+              {publishedText(ad.published, t) && <span>{publishedText(ad.published, t)}</span>}
+              <span>
+                {t('companies.deadlineLabel', {
+                  date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
+                })}
+              </span>
+            </span>
+          </div>
           {ad.sourceUrl && (
-            <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              href={ad.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm text-foreground underline decoration-input underline-offset-3 hover:decoration-current md:self-center"
+            >
               {t('companies.seeAdAtNav')}
+              <ExternalLink aria-hidden="true" className="size-3.5 text-muted-foreground" />
             </a>
           )}
         </li>
       ))}
     </ul>
+  )
+}
+
+/** The unit's register facts as one wrapping line of label-over-value pairs between hairlines. */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="font-medium break-words text-foreground tabular-nums">{children}</dd>
+    </div>
   )
 }
 
@@ -66,34 +100,37 @@ function UnitBody({
 }) {
   return (
     <>
-      <h2 ref={headingRef} tabIndex={-1}>
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="font-heading text-2xl font-semibold text-balance text-foreground md:text-headline"
+      >
         {displayCompanyName(detail.company.name)}
         {detail.company.isBranch && ` ${t('common.branchTag')}`}
       </h2>
-      <dl className="company-detail-dl">
-        <dt>{t('companies.orgnr')}</dt>
-        <dd>{detail.company.orgnr}</dd>
-        <dt>{t('companies.kommune')}</dt>
-        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}</dd>
-        <dt>{t('companies.nace')}</dt>
-        <dd>{detail.company.naceCode ?? t('companies.notGiven')}</dd>
+      <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-4 border-y border-border py-4">
+        <Fact label={t('companies.orgnr')}>{detail.company.orgnr}</Fact>
+        <Fact label={t('companies.kommune')}>
+          {detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}
+        </Fact>
+        <Fact label={t('companies.nace')}>
+          {detail.company.naceCode ?? t('companies.notGiven')}
+        </Fact>
         {detail.company.isBranch && detail.company.parentOrgnr && (
-          <>
-            <dt>{t('companies.parentCompany')}</dt>
-            <dd>{detail.company.parentOrgnr}</dd>
-          </>
+          <Fact label={t('companies.parentCompany')}>{detail.company.parentOrgnr}</Fact>
         )}
-        <dt>{t('companies.websiteRow')}</dt>
-        <dd>
+        <Fact label={t('companies.websiteRow')}>
           <CompanyLink
             name={displayCompanyName(detail.company.name)}
             kommuneNavn={detail.company.kommuneNavn}
             website={detail.company.website}
           />
-        </dd>
+        </Fact>
       </dl>
 
-      <h3>{t('companies.adHistory')}</h3>
+      <h3 className="mt-10 mb-3 font-heading text-xl font-semibold text-foreground">
+        {t('companies.adHistory')}
+      </h3>
       <AdHistory ads={detail.ads} t={t} />
     </>
   )
@@ -108,7 +145,7 @@ function TabPanel({ selectedOrgnr, children }: { selectedOrgnr: string; children
       role="tabpanel"
       id="unit-tabpanel"
       aria-labelledby={`unit-tab-${selectedOrgnr}`}
-      className="stack"
+      className="flex flex-col"
     >
       {children}
     </div>
@@ -171,19 +208,18 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
   }
 
   return (
-    <div className="company-detail card stack">
-      <button type="button" className="btn btn-ghost" onClick={onClose}>
+    <div className="flex flex-col pt-4 font-sans md:pt-8">
+      <Button variant="link" className="-ms-2.5 min-h-11 self-start" onClick={onClose}>
+        <ArrowLeft aria-hidden="true" />
         {t('common.back')}
-      </button>
+      </Button>
 
       {tabs.length > 0 && (
-        // Design-system tabs component (`.tab-list`/`.tab`) for the accent-underline styling;
-        // `cluster cluster-sm` layered on for its flex-wrap. The strip wraps rather than
-        // scrolling when it doesn't fit a narrow (375px) screen.
+        // The units as underline tabs on a hairline; the strip wraps on a narrow screen.
         <div
           role="tablist"
           aria-label={t('companies.unitTabs')}
-          className="tab-list cluster cluster-sm"
+          className="mt-4 mb-6 flex flex-wrap gap-x-1 border-b border-border"
         >
           {tabs.map((tab, index) => {
             const selected = tab.orgnr === selectedOrgnr
@@ -196,7 +232,12 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
                 aria-selected={selected}
                 aria-controls="unit-tabpanel"
                 tabIndex={selected ? 0 : -1}
-                className="tab"
+                className={cn(
+                  '-mb-px min-h-11 rounded-t-lg border-0 border-b-2 bg-transparent px-3 text-body-sm hover:bg-muted hover:text-foreground',
+                  selected
+                    ? 'border-foreground font-medium text-foreground'
+                    : 'border-transparent text-muted-foreground'
+                )}
                 ref={(el) => {
                   if (el) tabRefs.current.set(tab.orgnr, el)
                   else tabRefs.current.delete(tab.orgnr)
@@ -212,11 +253,15 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       )}
 
       {error && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="status"
+          className="mt-4 flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
           {error}
-          <button type="button" className="btn btn-ghost" onClick={() => unitQuery.refetch()}>
+          <Button variant="link" className="min-h-11" onClick={() => unitQuery.refetch()}>
             {t('common.retry')}
-          </button>
+          </Button>
         </p>
       )}
 
@@ -227,7 +272,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </TabPanel>
         ) : (
-          <div className="stack">
+          <div className="mt-4 flex flex-col">
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </div>
         ))}

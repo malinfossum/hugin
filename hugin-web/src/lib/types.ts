@@ -112,6 +112,18 @@ export interface SyncRunStatus {
   nav: SourceResultDto | null
 }
 
+/** A hovedenhet and its branches: one row in the Companies view. */
+export interface CompanyGroupDto {
+  main: CompanyDto
+  branches: CompanyDto[]
+}
+
+/** One page of `/api/companies?limit=…`; `total` counts every matching group. */
+export interface CompanyPageDto {
+  total: number
+  groups: CompanyGroupDto[]
+}
+
 export interface KommuneDto {
   number: string
   name: string

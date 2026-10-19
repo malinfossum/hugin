@@ -1,0 +1,18 @@
+/* The pre-shadcn styling, in the `legacy` cascade layer. Loaded by Vite rather than through
+   index.css: the design system's own index files use `@import url(...)`, which Tailwind leaves
+   unresolved but Vite inlines, and every nested import inherits layer(legacy).
+
+   This file loads before index.css, so its @layer statement fixes the order: legacy sits after
+   Tailwind's base (the DS reset and element styling beat preflight) and before utilities (every
+   Tailwind class beats every DS class). The DS files go in the order its own index files intend:
+   tokens before anything that reads a token, compositions after components, utilities last. */
+@layer theme, base, legacy, components, utilities;
+
+@import url("../../design-system/base/reset.css") layer(legacy);
+@import url("../../design-system/tokens/index.css") layer(legacy);
+@import url("../../design-system/base/base.css") layer(legacy);
+@import url("../../design-system/primitives/index.css") layer(legacy);
+@import url("../../design-system/components/index.css") layer(legacy);
+@import url("../../design-system/compositions/index.css") layer(legacy);
+@import url("../../design-system/utilities/index.css") layer(legacy);
+@import url("./main.css") layer(legacy);

@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
+import { cn } from 'cn'
+import { AlertTriangle, Star } from 'lucide-react'
 import { useState } from 'react'
 import { useAnnounce } from '../components/LiveRegion'
 import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { NativeSelect, NativeSelectOption } from '../components/ui/native-select'
+import { Textarea } from '../components/ui/textarea'
 import { useReadOnly } from '../context/readOnly'
 import { localeFor, type T, type TranslationKey, useLang, useT } from '../i18n'
 import { ApiError } from '../lib/api'
@@ -175,191 +181,253 @@ export function ApplicationsView() {
 
   if (error) {
     return (
-      <p role="status" className="alert alert-danger cluster cluster-sm">
+      <p
+        role="status"
+        className="mt-6 flex flex-wrap items-center gap-x-3 border-y border-border py-3 font-sans text-body-sm md:mt-10"
+      >
+        <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
         {error}
-        <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
+        <Button variant="link" className="min-h-11" onClick={() => refetch()}>
           {t('common.retry')}
-        </button>
+        </Button>
       </p>
     )
   }
 
   return (
-    <div className="applications-view stack stack-lg">
-      <div className="field">
-        <label className="label" htmlFor="soknader-sortering">
+    <div className="flex flex-col pt-6 font-sans md:pt-10">
+      <div className="flex items-center gap-2 md:justify-end">
+        <label htmlFor="soknader-sortering" className="text-sm text-muted-foreground">
           {t('applications.sortBy')}
         </label>
-        <select
+        <NativeSelect
           id="soknader-sortering"
-          className="select"
+          size="touch"
+          className="flex-1 md:flex-none"
           value={sortMode}
           onChange={(event) => handleSortChange(event.target.value as SortMode)}
         >
           {SORT_OPTION_KEYS.map((option) => (
-            <option key={option.value} value={option.value}>
+            <NativeSelectOption key={option.value} value={option.value}>
               {t(option.labelKey)}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
-      {SECTIONS.map((section) => {
-        const sectionEntries = sortEntries(
-          entries.filter((e) => sectionFor(e) === section),
-          sortMode,
-          locale
-        )
-        const headingId = `pipeline-heading-${section}`
-        return (
-          <section key={section} aria-labelledby={headingId} className="card stack">
-            <h2 id={headingId}>{sectionLabel(t, section)}</h2>
-            {section === 'active' && <p className="muted help">{t('applications.activeHint')}</p>}
-            {section === 'expired' && <p className="muted help">{t('applications.expiredHint')}</p>}
-            <ul className="stack stack-sm">
-              {sectionEntries.map((entry) => {
-                const missingWhy = entry.status !== 'active' && !entry.why
-                const isEditing = editingOrgnr === entry.orgnr
-                return (
-                  <li key={entry.orgnr} className="panel stack stack-sm">
-                    <div className="cluster cluster-sm cluster-between">
-                      <span className="text-strong">{displayCompanyName(entry.companyName)}</span>
-                      {!readOnly && (
-                        <button
-                          type="button"
-                          className="btn btn-ghost icon-btn"
-                          aria-pressed={entry.starred}
-                          aria-label={
-                            entry.starred
-                              ? t('applications.starRemove')
-                              : t('applications.starGive')
-                          }
-                          disabled={starPending === entry.orgnr}
-                          onClick={() => toggleStar(entry)}
-                        >
-                          <span aria-hidden="true">{entry.starred ? '★' : '☆'}</span>
-                        </button>
-                      )}
-                    </div>
-                    {!isEditing && (
-                      <>
-                        <div className="cluster cluster-sm">
-                          {missingWhy ? (
-                            <span className="badge badge-warning">
-                              {t('applications.missingWhy')}
-                            </span>
-                          ) : (
-                            entry.why && <span className="text-muted">{entry.why}</span>
+      {/* The pipeline as four columns on the sheet (two on a tablet, stacked on a phone): each
+      status a titled column over a hairline, each company a row in it. */}
+      <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-4">
+        {SECTIONS.map((section) => {
+          const sectionEntries = sortEntries(
+            entries.filter((e) => sectionFor(e) === section),
+            sortMode,
+            locale
+          )
+          const headingId = `pipeline-heading-${section}`
+          return (
+            <section key={section} aria-labelledby={headingId} className="flex min-w-0 flex-col">
+              <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+                <h2 id={headingId} className="font-heading text-xl font-semibold text-foreground">
+                  {sectionLabel(t, section)}
+                </h2>
+                <span aria-hidden="true" className="text-sm text-muted-foreground tabular-nums">
+                  {sectionEntries.length}
+                </span>
+              </div>
+              <ul className="mt-2 flex list-none flex-col ps-0">
+                {sectionEntries.map((entry) => {
+                  const missingWhy = entry.status !== 'active' && !entry.why
+                  const isEditing = editingOrgnr === entry.orgnr
+                  return (
+                    <li
+                      key={entry.orgnr}
+                      className="flex flex-col gap-1 border-b border-border py-3 text-foreground"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        {/* An expired entry's name drops to ink-secondary: never read as active. */}
+                        <h3
+                          className={cn(
+                            'min-w-0 pt-2.5 text-base font-medium break-words',
+                            section === 'expired' ? 'text-muted-foreground' : 'text-foreground'
                           )}
-                          {entry.note && <span className="text-muted">{entry.note}</span>}
-                          {entry.svar && <span className="text-muted">{entry.svar}</span>}
-                          <span className="help">{formatDate(entry.updated)}</span>
-                        </div>
-                        {warning?.orgnr === entry.orgnr && (
-                          <p role="status" className="badge badge-warning">
-                            ⚠ {warning.message}
-                          </p>
-                        )}
+                        >
+                          {displayCompanyName(entry.companyName)}
+                        </h3>
                         {!readOnly && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            onClick={() => startEdit(entry)}
-                          >
-                            {t('applications.edit')}
-                          </button>
-                        )}
-                      </>
-                    )}
-                    {isEditing && form && (
-                      <form
-                        className="stack stack-sm"
-                        onSubmit={(event) => handleSubmit(entry.orgnr, event)}
-                      >
-                        <div className="field">
-                          <label className="label" htmlFor={`status-${entry.orgnr}`}>
-                            {t('common.status')}
-                          </label>
-                          <select
-                            id={`status-${entry.orgnr}`}
-                            className="select"
-                            value={form.status}
-                            onChange={(event) =>
-                              setForm({
-                                ...form,
-                                status: event.target.value as PipelineStatusSlug,
-                              })
+                          <Button
+                            variant="ghost"
+                            size="icon-lg"
+                            className="-me-2.5 size-11"
+                            aria-pressed={entry.starred}
+                            aria-label={
+                              entry.starred
+                                ? t('applications.starRemove')
+                                : t('applications.starGive')
                             }
+                            disabled={starPending === entry.orgnr}
+                            onClick={() => toggleStar(entry)}
                           >
-                            {STATUSES.map((slug) => (
-                              <option key={slug} value={slug}>
-                                {pipelineLabel(t, slug)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="field">
-                          <label className="label" htmlFor={`why-${entry.orgnr}`}>
-                            {t('applications.why')}
-                          </label>
-                          <textarea
-                            id={`why-${entry.orgnr}`}
-                            className="textarea"
-                            value={form.why}
-                            onChange={(event) => setForm({ ...form, why: event.target.value })}
-                          />
-                        </div>
-
-                        <div className="field">
-                          <label className="label" htmlFor={`note-${entry.orgnr}`}>
-                            {t('applications.note')}
-                          </label>
-                          <input
-                            id={`note-${entry.orgnr}`}
-                            className="input"
-                            type="text"
-                            value={form.note}
-                            onChange={(event) => setForm({ ...form, note: event.target.value })}
-                          />
-                        </div>
-
-                        <div className="field">
-                          <label className="label" htmlFor={`svar-${entry.orgnr}`}>
-                            {t('applications.answer')}
-                          </label>
-                          <input
-                            id={`svar-${entry.orgnr}`}
-                            className="input"
-                            type="text"
-                            value={form.svar}
-                            onChange={(event) => setForm({ ...form, svar: event.target.value })}
-                          />
-                        </div>
-
-                        {formError && (
-                          <p role="status" className="alert alert-danger">
-                            {formError}
-                          </p>
+                            <Star
+                              aria-hidden="true"
+                              className={entry.starred ? 'fill-current' : undefined}
+                            />
+                          </Button>
                         )}
+                      </div>
+                      {!isEditing && (
+                        <>
+                          <div className="flex flex-col gap-0.5 text-sm text-muted-foreground">
+                            {missingWhy ? (
+                              <span className="font-semibold text-foreground">
+                                {t('applications.missingWhy')}
+                              </span>
+                            ) : (
+                              entry.why && (
+                                <span className="text-body-sm text-foreground">{entry.why}</span>
+                              )
+                            )}
+                            {entry.note && <span>{entry.note}</span>}
+                            {entry.svar && <span>{entry.svar}</span>}
+                            <span className="text-small text-ink-tertiary tabular-nums">
+                              {formatDate(entry.updated)}
+                            </span>
+                          </div>
+                          {warning?.orgnr === entry.orgnr && (
+                            <p role="status" className="text-sm font-medium text-foreground">
+                              ⚠ {warning.message}
+                            </p>
+                          )}
+                          {!readOnly && (
+                            <Button
+                              variant="link"
+                              size="xs"
+                              className="-ms-2 min-h-11 self-start"
+                              onClick={() => startEdit(entry)}
+                            >
+                              {t('applications.edit')}
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      {isEditing && form && (
+                        <form
+                          className="mt-1 flex flex-col gap-3"
+                          onSubmit={(event) => handleSubmit(entry.orgnr, event)}
+                        >
+                          <div className="flex flex-col gap-1.5">
+                            <label
+                              htmlFor={`status-${entry.orgnr}`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {t('common.status')}
+                            </label>
+                            <NativeSelect
+                              id={`status-${entry.orgnr}`}
+                              size="touch"
+                              className="w-full"
+                              value={form.status}
+                              onChange={(event) =>
+                                setForm({
+                                  ...form,
+                                  status: event.target.value as PipelineStatusSlug,
+                                })
+                              }
+                            >
+                              {STATUSES.map((slug) => (
+                                <NativeSelectOption key={slug} value={slug}>
+                                  {pipelineLabel(t, slug)}
+                                </NativeSelectOption>
+                              ))}
+                            </NativeSelect>
+                          </div>
 
-                        <div className="cluster cluster-sm">
-                          <button type="submit" className="btn btn-primary">
-                            {t('common.save')}
-                          </button>
-                          <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                            {t('common.cancel')}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-        )
-      })}
+                          <div className="flex flex-col gap-1.5">
+                            <label
+                              htmlFor={`why-${entry.orgnr}`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {t('applications.why')}
+                            </label>
+                            <Textarea
+                              id={`why-${entry.orgnr}`}
+                              value={form.why}
+                              onChange={(event) => setForm({ ...form, why: event.target.value })}
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label
+                              htmlFor={`note-${entry.orgnr}`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {t('applications.note')}
+                            </label>
+                            <Input
+                              id={`note-${entry.orgnr}`}
+                              type="text"
+                              value={form.note}
+                              onChange={(event) => setForm({ ...form, note: event.target.value })}
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                            <label
+                              htmlFor={`svar-${entry.orgnr}`}
+                              className="text-sm text-muted-foreground"
+                            >
+                              {t('applications.answer')}
+                            </label>
+                            <Input
+                              id={`svar-${entry.orgnr}`}
+                              type="text"
+                              value={form.svar}
+                              onChange={(event) => setForm({ ...form, svar: event.target.value })}
+                            />
+                          </div>
+
+                          {formError && (
+                            <p
+                              role="status"
+                              className="flex items-center gap-x-2 text-body-sm text-foreground"
+                            >
+                              <AlertTriangle
+                                aria-hidden="true"
+                                className="size-4 shrink-0 text-destructive"
+                              />
+                              {formError}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="submit" size="touch">
+                              {t('common.save')}
+                            </Button>
+                            <Button variant="ghost" size="touch" onClick={cancelEdit}>
+                              {t('common.cancel')}
+                            </Button>
+                          </div>
+                        </form>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              {/* Footnotes under the list, so every column's first row starts on the same line. */}
+              {section === 'active' && (
+                <p className="mt-3 text-small text-muted-foreground">
+                  {t('applications.activeHint')}
+                </p>
+              )}
+              {section === 'expired' && (
+                <p className="mt-3 text-small text-muted-foreground">
+                  {t('applications.expiredHint')}
+                </p>
+              )}
+            </section>
+          )
+        })}
+      </div>
 
       <UnsavedChangesGuard dirty={formDirty} />
     </div>

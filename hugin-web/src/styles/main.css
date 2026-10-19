@@ -1,23 +1,35 @@
-/* Design system: reset, tokens, then base element styling, then the primitive/component/
-   composition/utility layers, in the order the DS's own index files intend (tokens before
-   anything that reads a token; palettes/typeskins import last inside tokens/index.css so they
-   win ties; compositions combine primitives+components into higher-level patterns like
-   .app-shell, so they load after components but still before utilities, which stay the final
-   override layer). */
-@import url("../../design-system/base/reset.css");
-@import url("../../design-system/tokens/index.css");
-@import url("../../design-system/base/base.css");
-@import url("../../design-system/primitives/index.css");
-@import url("../../design-system/components/index.css");
-@import url("../../design-system/compositions/index.css");
-@import url("../../design-system/utilities/index.css");
-
 /* Native <dialog> hidden-state guard. The DS .stack class sets display:flex on the
    confirm dialog (ConfirmDialog.tsx), which overrides the UA's dialog:not([open])
    { display:none }. The v3 design pass made every closed dialog render inline.
    Restoring the UA rule at author level wins over .stack on specificity (0,1,1 > 0,1,0). */
 dialog:not([open]) {
   display: none;
+}
+
+/* Tailwind's preflight resets form controls, fieldsets, legends and lists that the DS never
+   styles, and the legacy views were built on the browser defaults for them (button text color,
+   fieldset border and padding, list bullets and indent). Hand the defaults back to everything
+   that isn't a shadcn part (those carry data-slot and expect preflight). Zero specificity, so
+   every DS rule still wins. Margins stay out: the DS reset zeroes them itself. */
+:where(button, input, select, textarea, optgroup, option, fieldset, legend):where(
+  :not([data-slot])
+) {
+  color: revert;
+  padding: revert;
+  border: revert;
+  border-radius: revert;
+  background-color: revert;
+}
+:where(ul, ol, menu):where(:not([data-slot])) {
+  list-style: revert;
+  padding-inline-start: revert;
+}
+
+/* The DS .grid carries a gap (--space-5). Hugin never uses it, but shadcn components use
+   Tailwind's `grid`, and this file's layer would still hand them that gap wherever no gap-*
+   utility sets one. Roll it back to Tailwind's base. */
+.grid {
+  gap: revert-layer;
 }
 
 /* Heading scale, capped. The DS base scale (h1 = --text-4xl, up to 3.75rem; h2 = --text-2xl,
@@ -42,85 +54,7 @@ button {
   min-height: 44px;
 }
 
-/* .nav-link (design-system/components/nav.css) is sized at 2.5rem, below the 44px floor
-   above, and a class selector beats that bare-element rule on specificity. Restore it here
-   rather than editing the read-only design-system. */
-.nav-link {
-  min-height: 44px;
-}
-
-/* The nav entries are links (router), and the base `a:hover` underline would show on them; they
-   signal state with the aria-current background instead, as they did when they were buttons. */
-a.nav-link:hover,
-a.nav-link:focus-visible {
-  text-decoration: none;
-}
-
-/* Topbar on phones: the brand and the two quick toggles share the first row, the nav takes a
-   full row under them. Otherwise the toggles wrap onto a third row where they read as two
-   more nav entries. The controls wrapper dissolves (display: contents) so flex order can seat
-   the toggles beside the brand while the DOM keeps nav before toggles for tab order. */
-.topbar-controls {
-  display: contents;
-}
-.topbar-controls nav {
-  order: 3;
-  flex-basis: 100%;
-}
-.topbar-toggles {
-  order: 2;
-}
-@media (min-width: 768px) {
-  .topbar-controls {
-    display: flex;
-  }
-  .topbar-controls nav {
-    order: 0;
-    flex-basis: auto;
-  }
-  .topbar-toggles {
-    order: 0;
-  }
-}
-
-/* Topbar brand: the raven mark sits beside the wordmark and takes the palette accent through
-   `color` (the SVG uses fill="currentColor"; a var() in a fill attribute would silently not
-   resolve). The wordmark matches the banner lockup: Space Grotesk 700. The brand is also the home
-   link (spec v3.8 B1): it keeps the look of a wordmark, with no link colour or underline, and gets
-   the full 44 px hit box. The focus ring is the design system's. */
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-block-size: 44px;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  color: inherit;
-  text-decoration: none;
-}
-/* The base `a:hover, a:focus-visible` rule (0,1,1) would underline and recolour the logo on
-   keyboard focus; this (0,2,1) rule wins on both states, the same as `a.nav-link` above. The
-   outline is not touched, so the focus ring stays. */
-a.brand:hover,
-a.brand:focus-visible {
-  color: inherit;
-  text-decoration: none;
-}
-.brand-mark {
-  width: 2rem;
-  height: 2rem;
-  color: rgb(var(--accent-rgb));
-}
-
-/* Icon inside a topbar quick toggle (the language globe). Sized in em so its drawn circle
-   (~14 px at 16 px text) matches the ☀ glyph's ink beside it, measured 14 × 13 px. */
-.toggle-icon {
-  display: block;
-  width: 0.9375em;
-  height: 0.9375em;
-}
-
-/* Vertical rhythm for <main>; .container already handles inline padding + max-width. */
+/* Vertical rhythm for <main>; its inline padding and max-width are Tailwind classes (AppShell). */
 .main-content {
   padding-block: var(--space-4);
 }
@@ -135,127 +69,10 @@ a.brand:focus-visible {
   }
 }
 
-/* Urgency: color never alone. The days-left number/text always renders beside it. */
-.frist-rod {
-  color: var(--danger);
-}
-.frist-gul {
-  color: var(--warning);
-}
-
-/* Trenger handling: the loudest element on the dashboard. It is a warning alert surface plus a
-   strong accent border. Still not decoration-only: the heading and each row's frist text
-   carry the meaning on their own. */
-.needs-action {
-  border-inline-start: 3px solid var(--warning);
-}
-.needs-action ul {
-  list-style: none;
-  padding: 0;
-}
-.needs-action li {
-  padding-block: 0.25rem;
-}
-
-/* Nullstilling (v3.5 Part D): same "loud edge" treatment as .needs-action, in the
-   danger hue: both irreversible reset levels live here, so the section itself should read as
+/* Nullstilling (v3.5 Part D): a "loud edge" in the danger hue. Both irreversible reset levels live here, so the section itself should read as
    destructive before either button is ever clicked. */
 .reset-section {
   border-inline-start: 3px solid var(--danger);
-}
-
-/* Content lists throughout the app are custom-styled rows, never bullet lists. */
-.deadline-list ul,
-.new-since-last-visit ul,
-.applications-view ul,
-.companies-view ul,
-.company-detail ul,
-.sources-card ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* Applications: entries lift off their section card (item 11, verified live:
-   .panel and section.card both resolved to surface-3 before this). */
-.applications-view .panel {
-  background: var(--elevated-bg);
-}
-
-/* Frister rows: title block + one meta line + actions. The meta line uses fixed
-   column widths so date / days-chip / category align vertically across rows. */
-.frist-row {
-  display: grid;
-  gap: var(--space-2);
-  padding-block: var(--space-4);
-  border-block-end: 1px solid var(--border);
-}
-.frist-row:last-child {
-  border-block-end: 0;
-}
-.frist-meta {
-  display: grid;
-  grid-template-columns: 6.5rem 7.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-}
-.frist-category {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-@media (min-width: 768px) {
-  .frist-row {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) auto;
-    align-items: center;
-    gap: var(--space-4);
-  }
-  /* The manual-link form opens as a fourth child of the row: give it the full width so the
-     select sits on its own line under the three columns instead of squeezing into the first. */
-  .frist-link {
-    grid-column: 1 / -1;
-  }
-}
-
-/* Bedrifter row button: name+branch tag stacked over kommune on mobile, spread across a
-   single line from tablet up. */
-.companies-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  width: 100%;
-  text-align: left;
-}
-@media (min-width: 768px) {
-  .companies-row {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-.companies-row strong {
-  font-weight: 500;
-}
-
-/* Bedrifter row container: the row button and its CompanyLink stack on mobile,
-   sit side by side from tablet up. */
-.companies-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-@media (min-width: 768px) {
-  .companies-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-3);
-  }
-}
-
-.companies-filters {
-  align-items: flex-end;
 }
 
 /* Sync header: the source names are the labels of the card, the timestamps the values. The
@@ -264,24 +81,6 @@ a.brand:focus-visible {
 .sync-times dt {
   color: var(--text);
   font-weight: 600;
-}
-
-/* Company detail: definition list as a two-column term/value grid. */
-.company-detail-dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-2) var(--space-4);
-}
-.company-detail-dl dt {
-  color: var(--text-faint);
-  font-size: var(--text-sm);
-}
-
-/* Muted, centered one-liners for empty/idle states. */
-.empty-hint {
-  color: var(--text-faint);
-  text-align: center;
-  padding-block: var(--space-4);
 }
 
 .spinner {
@@ -406,31 +205,6 @@ a.brand:focus-visible {
   align-items: flex-end;
 }
 
-/* Visningsfilter chips (v3.6): one chip per region, wrapping like the Fokus chips. The ✕ keeps
-   the 44 px floor even inside a badge. */
-.region-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.region-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.region-chip button {
-  min-inline-size: 44px;
-  min-block-size: 44px;
-}
-
-/* Bedrifter reads the lens, Settings edits it: chips and the link share one wrapping row. */
-.companies-lens {
-  align-items: center;
-}
-
 /* Area picker (v3.6): the dialog is capped to the viewport and only the fylke list scrolls,
    so the search box and the Avbryt/Bruk footer stay put. Fylke rows are ≥44 px targets with
    the tick box, the count and the disclosure on one line; kommuner sit indented under the
@@ -483,50 +257,4 @@ a.brand:focus-visible {
   .area-kommuner {
     grid-template-columns: repeat(3, 1fr);
   }
-}
-
-/* Shell rows: header, [banner], main, footer. The design-system .app-shell is a two-row grid (header, main). Hugin adds the footer as a last
-   row, and the demo banner as a row under the header. Main keeps the one stretching 1fr row in
-   both layouts, so on a short view the footer sits at the bottom of the screen instead of
-   taking the stretch, and the banner never pushes main down. */
-.app-shell {
-  grid-template-rows: auto 1fr auto;
-}
-.app-shell:has(.demo-banner) {
-  grid-template-rows: auto auto 1fr auto;
-}
-
-/* Demo banner (read-only showcase): a static region right after the header. */
-.demo-banner {
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  padding-block: var(--space-2);
-  font-size: var(--text-sm);
-}
-.demo-banner p {
-  margin: 0;
-}
-
-/* Footer (spec v3.8 B2): muted, small and centred. Small text does not mean small targets: each
-   link's hit box is 44 px tall, centred on the line. A link in a flex row (the GitHub link) gets
-   that height as its row; a link inside running text (NLOD) is handled below. */
-.app-footer {
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-.app-footer .cluster {
-  justify-content: center;
-  text-align: center;
-}
-.app-footer a {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 44px;
-}
-/* A link inside running text keeps the 44 px hit box but takes only one line of space: an
-   inline-level box's margin box sets the line's height, its border box the hit area. The box
-   overlaps the credit text above it, which is not interactive. */
-.app-footer span > a {
-  margin-block: calc((1lh - 44px) / 2);
 }

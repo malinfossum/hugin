@@ -52,6 +52,7 @@ The dashboard host also exposes its data as plain HTTP/JSON over the same `hugin
 
 - **Read:** `/api/status`, `/api/ads`, `/api/new`, `/api/companies`, `/api/companies/{orgnr}`, `/api/pipeline`, `/api/extract`, `/api/sources`, `/api/sync/status`, `/api/kommuner`, `/api/config/discovery`, `/api/config/focus`, `/api/config/focus/recommended`
 - **Write:** `PUT /api/pipeline/{orgnr}` · `POST|PUT|DELETE /api/sources` (+ `/reorder`) · `POST|DELETE /api/ads/{feedId}/hide` · `PUT|DELETE /api/ads/{feedId}/link` · `POST /api/seen` · `POST /api/sync` (`?full=1` for a full backfill) · `PUT /api/config/discovery` · `PUT /api/config/focus` · `GET /api/config/focus/preview` (side-effecting, needs `X-Hugin: 1` too) · `POST /api/reset` · `POST /api/first-run-dismissed`
+- **Paging:** `/api/companies` without `limit` returns the full list. With `limit` (and `offset`) it returns one page of grouped companies, `{ total, groups: [{ main, branches }] }`, kept to the configured coverage (companies left from a wider coverage chosen earlier stay in the store but out of the page, and out of `/api/status`'s count) and filtered by the optional `fylker`/`kommuner` (comma-separated), `q`, `website=has|none` and `ads=open`.
 
 ## Configuration
 

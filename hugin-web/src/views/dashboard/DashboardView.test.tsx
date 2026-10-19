@@ -97,6 +97,10 @@ function renderDashboard(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
+/** The dashboard's headline: what arrived since the review mark (here: nothing). The date is
+ * left open so the test doesn't depend on the machine's time zone. */
+const DELTA = /^Ingenting nytt siden \d{2}\.\d{2}\.\d{4}\.$/
+
 /** The card headings in DOM order. A closed ConfirmDialog still renders its own h2 inside a
  * <dialog>, so headings inside a dialog are not cards and are skipped. */
 const headingTexts = () =>
@@ -114,7 +118,7 @@ function elementUnder(headingName: string) {
 function expectDescription(headingName: string, text: string) {
   const description = elementUnder(headingName)
   expect(description.tagName).toBe('P')
-  expect(description).toHaveClass('text-muted')
+  expect(description).toHaveClass('text-muted-foreground')
   expect(description).toHaveTextContent(text)
 }
 
@@ -134,21 +138,21 @@ describe('DashboardView', () => {
   it('orders the cards action first, sources last', async () => {
     renderDashboard(fakeServer([WATCHED_SOON]))
     await screen.findByRole('heading', { level: 2, name: 'Trenger handling' })
+    await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(headingTexts()).toEqual([
-      'Synkronisering',
-      'Trenger handling',
-      'Frister',
-      'Nytt siden sist',
-      'Kilder',
-    ])
+    const [delta, ...cards] = headingTexts()
+    expect(delta).toMatch(DELTA)
+    expect(cards).toEqual(['Trenger handling', 'Frister', 'Nytt siden sist', 'Kilder'])
   })
 
   it('puts Frister directly under the sync strip when nothing needs action', async () => {
     renderDashboard(fakeServer([UNTRACKED]))
     await screen.findByText('Løs annonse')
+    await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(headingTexts()).toEqual(['Synkronisering', 'Frister', 'Nytt siden sist', 'Kilder'])
+    const [delta, ...cards] = headingTexts()
+    expect(delta).toMatch(DELTA)
+    expect(cards).toEqual(['Frister', 'Nytt siden sist', 'Kilder'])
   })
 
   it('gives every card a muted description directly under its heading', async () => {
@@ -197,10 +201,10 @@ describe('DashboardView', () => {
     )
   })
 
-  it('gives the sync strip no description', async () => {
+  it('heads the sync strip with the delta, the sync times directly under it', async () => {
     renderDashboard(fakeServer([]))
-    await screen.findByRole('heading', { level: 2, name: 'Synkronisering' })
+    const headline = await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(elementUnder('Synkronisering').tagName).toBe('DL')
+    expect(headline.nextElementSibling?.querySelector('dl')).not.toBeNull()
   })
 })
