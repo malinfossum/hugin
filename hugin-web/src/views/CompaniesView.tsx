@@ -173,7 +173,7 @@ export function CompaniesView({
             {openAds > 0 && (
               <>
                 {' '}
-                <span className="text-muted">
+                <span className="text-muted-foreground">
                   {openAds === 1
                     ? t('companies.openAdsOne')
                     : t('companies.openAds', { n: openAds })}
@@ -181,7 +181,7 @@ export function CompaniesView({
               </>
             )}
           </span>
-          <span className="text-muted">{c.kommuneNavn ?? c.kommune}</span>
+          <span className="text-muted-foreground">{c.kommuneNavn ?? c.kommune}</span>
         </button>
       </div>
     )
@@ -268,7 +268,7 @@ export function CompaniesView({
         </div>
       </div>
 
-      <p role="status" className="text-muted">
+      <p role="status" className="text-muted-foreground">
         {visibleGroups.length === 1
           ? t('companies.countOne')
           : t('companies.count', { n: visibleGroups.length })}

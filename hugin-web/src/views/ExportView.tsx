@@ -175,7 +175,7 @@ export function ExportView() {
       </div>
 
       {!ready ? (
-        <p className="text-muted">
+        <p className="text-muted-foreground">
           {scope === '' ? t('export.chooseScopeHint') : t('export.enterCategoryHint')}
         </p>
       ) : (
