@@ -73,7 +73,9 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
 }
 
 function namesInSection(section: HTMLElement): (string | null)[] {
-  return Array.from(section.querySelectorAll('.text-strong')).map((el) => el.textContent)
+  return within(section)
+    .getAllByRole('heading', { level: 3 })
+    .map((el) => el.textContent)
 }
 
 afterEach(() => {

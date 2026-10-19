@@ -48,8 +48,15 @@ function fakeServer(
         })
       )
     }
-    if (url === '/api/companies') {
-      return Promise.resolve(jsonResponse(options.companies ?? []))
+    if (url.startsWith('/api/companies?')) {
+      // One page of the server-side company list; no filtering needed in these tests.
+      const companies = options.companies ?? []
+      return Promise.resolve(
+        jsonResponse({
+          total: companies.length,
+          groups: companies.map((main) => ({ main, branches: [] })),
+        })
+      )
     }
     if (url === '/api/sources') {
       return Promise.resolve(jsonResponse([]))
@@ -141,7 +148,7 @@ describe('App', () => {
     // name (and tooltip) says the language it switches TO.
     const enButton = await screen.findByRole('button', { name: 'Switch to English' })
     expect(enButton).toHaveAttribute('title', 'Switch to English')
-    expect(enButton.querySelector('svg.toggle-icon')).not.toBeNull()
+    expect(enButton.querySelector('svg')).not.toBeNull()
 
     await user.click(enButton)
 
@@ -278,8 +285,13 @@ describe('App', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = typeof input === 'string' ? input : input.toString()
-        if (url === '/api/companies') {
-          return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: 'Acme AS' }]))
+        if (url.startsWith('/api/companies?')) {
+          return Promise.resolve(
+            jsonResponse({
+              total: 1,
+              groups: [{ main: { orgnr: '715787630', name: 'Acme AS' }, branches: [] }],
+            })
+          )
         }
         if (url === '/api/companies/715787630') {
           return Promise.resolve(
@@ -306,8 +318,13 @@ describe('App', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = typeof input === 'string' ? input : input.toString()
-        if (url === '/api/companies') {
-          return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: 'Acme AS' }]))
+        if (url.startsWith('/api/companies?')) {
+          return Promise.resolve(
+            jsonResponse({
+              total: 1,
+              groups: [{ main: { orgnr: '715787630', name: 'Acme AS' }, branches: [] }],
+            })
+          )
         }
         if (url === '/api/companies/715787630') {
           return Promise.resolve(
@@ -370,12 +387,17 @@ describe('App', () => {
     expect(window.localStorage.getItem('hugin-focus')).toBeNull()
 
     // The seed is session-only state, not a side effect on its own. Prove it actually reached
-    // the app's Focus context by reading it back from a view that filters by it: Bedrifter shows
-    // only companies in the seeded fylke ('34' = Innlandet, from the fake server's discovery
-    // config), not the unset default (which would show both).
+    // the app's Focus context by reading it back from a view that filters by it: Bedrifter asks
+    // the server for the seeded fylke ('34' = Innlandet, from the fake server's discovery
+    // config), not the unset default (which would send no region at all).
     await user.click(screen.getByRole('link', { name: 'Bedrifter' }))
-    await screen.findByText('Innlandet AS')
-    expect(screen.queryByText('Oslo AS')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([u]) => String(u).startsWith('/api/companies?') && String(u).includes('fylker=34')
+        )
+      ).toBe(true)
+    )
   })
 
   it('keeps the first-run dialog closed until /api/status has answered, then opens it locally', async () => {

@@ -40,6 +40,15 @@ Hugin is a job radar for the Norwegian developer job market. It does the morning
 - Data is dense and tabular in places (company lists, deadline lists); the dashboard is used daily, not occasionally.
 - Frontend: React 19, TypeScript, Vite, TanStack Router and Query, Tailwind v4 with shadcn/ui on Base UI (migration from the workbench design system in progress).
 
+## Redesign Constraints
+
+Set by the maintainer (Malin) for the 2026 redesign. Colours, fonts and layout are open; these are not:
+
+- Functionality, routes and the i18n texts stay as they are. New UI copy, and any change to what a screen does, goes to the maintainer for approval first.
+- Both themes, dark and light, remain.
+- The accessibility floor: WCAG AA contrast, 44 px click targets, visible focus.
+- Redesign proposals go to the maintainer as mockups before they are built into the app.
+
 ## Brand Commitments
 
 - Name: Hugin, after Odin's raven of thought, who flies out each morning and returns with tidings (his sibling Munin remembers).

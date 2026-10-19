@@ -1,97 +1,86 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { useAnnounce } from '../../components/LiveRegion'
-import { useReadOnly } from '../../context/readOnly'
+import { AlertTriangle } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { Button } from '../../components/ui/button'
 import { useReturnFocus } from '../../context/returnFocus'
-import { useT } from '../../i18n'
+import { type T, useT } from '../../i18n'
 import { displayCompanyName } from '../../lib/companyName'
-import { useMarkSeen } from '../../lib/mutations'
+import { formatDate } from '../../lib/dates'
 import { newQuery } from '../../lib/queries'
-import type { CompanyDto } from '../../lib/types'
+import type { AdDto, CompanyDto, NewDto } from '../../lib/types'
 
-/** Groups items by place, preserving first-seen order of both groups and members. */
-function groupByPlace<T>(
-  items: T[],
-  placeOf: (item: T) => string | null,
-  unknownPlace: string
-): [string, T[]][] {
-  const groups = new Map<string, T[]>()
-  for (const item of items) {
-    const key = placeOf(item) ?? unknownPlace
-    const group = groups.get(key)
-    if (group) group.push(item)
-    else groups.set(key, [item])
-  }
-  return [...groups.entries()]
+interface Place {
+  name: string
+  ads: AdDto[]
+  /** Companies, with a branch that shares its parent's name folded into the parent. */
+  companies: { company: CompanyDto; branches: number }[]
+  /** Every new register entry here, branches included: what the count reports. */
+  companyCount: number
 }
 
-/** «Hamar · 3» on screen, «Hamar, 3 bedrifter» for a screen reader: the visible count is
- * aria-hidden so the number is read once, with its noun. */
-function PlaceHeading({
-  place,
-  count,
-  spokenCount,
-}: {
-  place: string
-  count: number
-  spokenCount: string
-}) {
-  return (
-    <h4 className="text-muted-foreground">
-      {place}
-      <span aria-hidden="true"> · {count}</span>
-      <span className="visually-hidden">, {spokenCount}</span>
-    </h4>
-  )
+/** Groups the new ads and companies by place (kommune name, else number, else unknown), in
+ * first-seen order of places and members. Region is the hard gate, so this is the reading
+ * order: where first, then what. */
+function groupByPlace(data: NewDto, unknownPlace: string): Place[] {
+  const places = new Map<string, Place>()
+  const placeFor = (name: string | null) => {
+    const key = name ?? unknownPlace
+    let place = places.get(key)
+    if (!place) {
+      place = { name: key, ads: [], companies: [], companyCount: 0 }
+      places.set(key, place)
+    }
+    return place
+  }
+  for (const ad of data.ads) placeFor(ad.kommuneNavn ?? ad.kommune).ads.push(ad)
+  for (const company of data.companies) {
+    const place = placeFor(company.kommuneNavn ?? company.kommune)
+    place.companyCount++
+    const parent = company.isBranch
+      ? place.companies.find(
+          (entry) => !entry.company.isBranch && entry.company.name === company.name
+        )
+      : undefined
+    if (parent) parent.branches++
+    else place.companies.push({ company, branches: 0 })
+  }
+  return [...places.values()]
+}
+
+/** «Hamar 3» on screen, «Hamar, 1 annonse og 2 bedrifter» for a screen reader: the visible
+ * count is aria-hidden so the numbers are read once, with their nouns. */
+function spokenCount(place: Place, t: T): string {
+  const ads =
+    place.ads.length === 0
+      ? null
+      : place.ads.length === 1
+        ? t('newSince.placeAdsOne')
+        : t('newSince.placeAds', { n: place.ads.length })
+  const companies =
+    place.companyCount === 0
+      ? null
+      : place.companyCount === 1
+        ? t('newSince.placeCompaniesOne')
+        : t('newSince.placeCompanies', { n: place.companyCount })
+  if (ads && companies) return t('newSince.placeAdsAndCompanies', { ads, companies })
+  return ads ?? companies ?? ''
 }
 
 export function NewSinceLastVisit() {
   const t = useT()
-  const markSeen = useMarkSeen()
   const { data: fetched, isError, isFetching, isSuccess: loaded, refetch } = useQuery(newQuery())
   // null from the query means the server has not synced yet.
   const data = fetched ?? undefined
-  const [actionError, setActionError] = useState<string | null>(null)
-  const error = actionError ?? (isError ? t('newSince.loadError') : null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const announce = useAnnounce()
-  const { readOnly } = useReadOnly()
+  const error = isError ? t('newSince.loadError') : null
   const headingRef = useRef<HTMLHeadingElement>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const { remember, restore } = useReturnFocus()
-  // Snapshot of the asOf the user was actually looking at when they opened the dialog.
-  // A refetch (a sync completing) while the dialog is open must not change what gets posted.
-  // That would mark items the user never reviewed as seen.
-  const reviewedAsOf = useRef<string | null>(null)
-
-  const handleConfirm = async () => {
-    const asOf = reviewedAsOf.current
-    if (!asOf) return
-    setConfirmOpen(false)
-    try {
-      await markSeen.mutateAsync(asOf)
-    } catch {
-      setActionError(t('newSince.markError'))
-      return
-    }
-    reviewedAsOf.current = null
-    setActionError(null)
-    // The mutation resolves only once the refetch has landed.
-    headingRef.current?.focus()
-    announce(t('newSince.markedAnnounce'))
-  }
-
-  const handleCancel = () => {
-    reviewedAsOf.current = null
-    setConfirmOpen(false)
-  }
 
   const hasNew = !!data && (data.companies.length > 0 || data.ads.length > 0)
 
-  // Back from a company opened here remounts this card and refetches its list. Once the fresh
-  // list has rendered, focus goes back to the link that opened the company, or to this card's
+  // Back from a company opened here remounts this section and refetches its list. Once the fresh
+  // list has rendered, focus goes back to the link that opened the company, or to this section's
   // heading when the company is no longer new (spec v3.8 B5). Waiting for the refetch keeps a
   // link the fresh data removes from being focused for a moment and then lost. A failed refetch
   // also restores (to the heading), so focus never stays on <body>.
@@ -103,133 +92,118 @@ export function NewSinceLastVisit() {
     <section
       ref={sectionRef}
       aria-labelledby="new-since-heading"
-      className="new-since-last-visit card stack"
+      className="flex flex-col gap-4 pt-10 font-sans md:flex-row md:gap-0"
     >
-      <h2 id="new-since-heading" ref={headingRef} tabIndex={-1}>
-        {t('newSince.heading')}
-      </h2>
-      <p className="text-muted-foreground">{t('newSince.description')}</p>
-      {error && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
-          {error}
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              setActionError(null)
-              refetch()
-            }}
-          >
-            {t('common.retry')}
-          </button>
+      <div className="flex flex-col gap-1 md:w-90 md:shrink-0 md:pe-8">
+        <h2
+          id="new-since-heading"
+          ref={headingRef}
+          tabIndex={-1}
+          className="font-heading text-xl font-semibold"
+        >
+          {t('newSince.heading')}
+        </h2>
+        <p className="text-body-sm text-pretty text-muted-foreground">
+          {t('newSince.description')}
         </p>
-      )}
-      {!error && loaded && data === undefined && (
-        <p className="empty-hint">{t('newSince.noSyncYet')}</p>
-      )}
-      {!error && loaded && data && (
-        <div className="stack">
-          <div className="panel stack stack-sm">
-            <h3>{t('newSince.newCompanies', { n: data.companies.length })}</h3>
-            {groupByPlace(
-              data.companies,
-              (company: CompanyDto) => company.kommuneNavn ?? company.kommune,
-              t('newSince.unknownPlace')
-            ).map(([place, companies]) => (
-              <div key={place} className="stack stack-sm">
-                <PlaceHeading
-                  place={place}
-                  count={companies.length}
-                  spokenCount={
-                    companies.length === 1
-                      ? t('newSince.placeCompaniesOne')
-                      : t('newSince.placeCompanies', { n: companies.length })
-                  }
-                />
-                <ul className="stack stack-sm">
-                  {companies.map((company) => (
-                    <li key={company.orgnr}>
-                      {/* Opens the company's detail (spec v3.8 B5). data-return-focus lets the
-                      card focus this link again when Back returns here. */}
-                      <Link
-                        to="/companies/{-$orgnr}"
-                        params={{ orgnr: company.orgnr }}
-                        search={{}}
-                        data-return-focus={`company:${company.orgnr}`}
-                        onClick={() =>
-                          remember(`company:${company.orgnr}`, `/companies/${company.orgnr}`)
-                        }
-                      >
-                        {displayCompanyName(company.name)}
-                      </Link>
-                      {company.isBranch ? ` ${t('common.branchTag')}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="panel stack stack-sm">
-            <h3>{t('newSince.newAds', { n: data.ads.length })}</h3>
-            {groupByPlace(
-              data.ads,
-              (ad) => ad.kommuneNavn ?? ad.kommune,
-              t('newSince.unknownPlace')
-            ).map(([place, ads]) => (
-              <div key={place} className="stack stack-sm">
-                <PlaceHeading
-                  place={place}
-                  count={ads.length}
-                  spokenCount={
-                    ads.length === 1
-                      ? t('newSince.placeAdsOne')
-                      : t('newSince.placeAds', { n: ads.length })
-                  }
-                />
-                <ul className="stack stack-sm">
-                  {ads.map((ad) => (
-                    <li key={ad.feedId}>
+      </div>
+      <div className="flex-1">
+        {error && (
+          <p
+            role="status"
+            className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm"
+          >
+            <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
+            {error}
+            <Button variant="link" className="min-h-11" onClick={() => refetch()}>
+              {t('common.retry')}
+            </Button>
+          </p>
+        )}
+        {!error && loaded && data === undefined && (
+          <p className="text-body-sm text-muted-foreground">{t('newSince.noSyncYet')}</p>
+        )}
+        {!error && loaded && data && !hasNew && (
+          <p className="text-body-sm text-muted-foreground">{t('newSince.none')}</p>
+        )}
+        {!error && loaded && data && hasNew && (
+          <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 xl:grid-cols-4">
+            {groupByPlace(data, t('newSince.unknownPlace')).map((place) => (
+              <div key={place.name}>
+                {/* Map lettering (DESIGN.md): the kommune name in tracked contour capitals. */}
+                <h3 className="flex items-baseline justify-between border-b border-border pb-1.5 text-xs font-semibold tracking-widest text-contour uppercase">
+                  {place.name}
+                  <span
+                    aria-hidden="true"
+                    className="text-sm font-medium tracking-normal text-muted-foreground normal-case tabular-nums"
+                  >
+                    {' '}
+                    {place.ads.length + place.companyCount}
+                  </span>
+                  <span className="sr-only">, {spokenCount(place, t)}</span>
+                </h3>
+                <ul className="mt-2.5 flex list-none flex-col gap-2.5 ps-0">
+                  {place.ads.map((ad) => (
+                    <li key={ad.feedId} className="flex flex-col">
                       {ad.sourceUrl ? (
-                        <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={ad.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-foreground no-underline hover:underline"
+                        >
                           {ad.title}
                         </a>
                       ) : (
-                        <span>{ad.title}</span>
-                      )}{' '}
-                      · {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
+                        <span className="font-medium">{ad.title}</span>
+                      )}
+                      <small className="text-small text-muted-foreground">
+                        <span className="font-semibold text-forest">{t('newSince.adTag')}</span>
+                        {ad.employer && ` · ${displayCompanyName(ad.employer)}`}
+                        {ad.expires &&
+                          ` · ${t('newSince.deadline', { date: formatDate(ad.expires) })}`}
+                      </small>
+                    </li>
+                  ))}
+                  {place.companies.map(({ company, branches }) => (
+                    <li key={company.orgnr} className="flex flex-col">
+                      <span className="font-medium">
+                        {/* Opens the company's detail (spec v3.8 B5). data-return-focus lets the
+                        section focus this link again when Back returns here. */}
+                        <Link
+                          to="/companies/{-$orgnr}"
+                          params={{ orgnr: company.orgnr }}
+                          search={{}}
+                          data-return-focus={`company:${company.orgnr}`}
+                          onClick={() =>
+                            remember(`company:${company.orgnr}`, `/companies/${company.orgnr}`)
+                          }
+                          className="text-foreground underline decoration-input underline-offset-3 hover:decoration-current"
+                        >
+                          {displayCompanyName(company.name)}
+                        </Link>
+                        {branches > 0 && (
+                          <span className="text-small font-normal whitespace-nowrap text-muted-foreground">
+                            {' '}
+                            {branches === 1
+                              ? t('newSince.withBranch')
+                              : t('newSince.withBranches', { n: branches })}
+                          </span>
+                        )}
+                      </span>
+                      {company.isBranch && (
+                        <small className="text-small text-muted-foreground">
+                          {t('newSince.branch')}
+                        </small>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-
-          {hasNew ? (
-            !readOnly && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  reviewedAsOf.current = data.asOf
-                  setConfirmOpen(true)
-                }}
-              >
-                {t('newSince.markSeen')}
-              </button>
-            )
-          ) : (
-            <p className="empty-hint">{t('newSince.none')}</p>
-          )}
-        </div>
-      )}
-      <ConfirmDialog
-        open={confirmOpen}
-        title={t('newSince.confirmTitle')}
-        confirmLabel={t('newSince.markSeen')}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-      />
+        )}
+      </div>
     </section>
   )
 }

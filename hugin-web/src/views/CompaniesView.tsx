@@ -1,54 +1,24 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RegionChips } from '../components/RegionChips'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { NativeSelect, NativeSelectOption } from '../components/ui/native-select'
 import { useFocus } from '../context/focus'
 import { useT } from '../i18n'
 import { displayCompanyName } from '../lib/companyName'
-import { companiesQuery } from '../lib/queries'
-import { regionMatches } from '../lib/regions'
-import type { CompanyDto } from '../lib/types'
+import {
+  COMPANY_PAGE_SIZE,
+  type CompanyListParams,
+  companyPagesQuery,
+  kommunerQuery,
+} from '../lib/queries'
+import type { CompanyGroupDto } from '../lib/types'
 import { CompanyDetail } from './CompanyDetail'
 
-interface CompanyGroup {
-  main: CompanyDto
-  branches: CompanyDto[]
-}
-
-/** Groups branches under their parent when the parent is in the list; parents keep
- * first-seen list order (API orders by name). A branch without a loaded parent is
- * its own group (enrichment usually loads parents, but never guaranteed).
- *
- * Assumes Brreg's register is strictly two-tier (hovedenhet + underenheter, where
- * no underenhet is itself the parent of another underenhet). `!parent.isBranch` guards
- * that assumption: a branch whose `parentOrgnr` points at another branch (a chain, or
- * a mutual pair pointing at each other) does not get treated as a group main. It
- * falls back to its own standalone row instead of being duplicated as both a nested
- * branch and a top-level group. */
-function groupCompanies(companies: CompanyDto[]): CompanyGroup[] {
-  const byOrgnr = new Map(companies.map((c) => [c.orgnr, c]))
-  const indexByOrgnr = new Map(companies.map((c, i) => [c.orgnr, i]))
-  const groups = new Map<string, CompanyGroup>()
-  for (const c of companies) {
-    const parent = c.parentOrgnr ? byOrgnr.get(c.parentOrgnr) : undefined
-    if (parent && parent.orgnr !== c.orgnr && !parent.isBranch) {
-      const g = groups.get(parent.orgnr) ?? { main: parent, branches: [] }
-      g.branches.push(c)
-      groups.set(parent.orgnr, g)
-    } else if (!groups.has(c.orgnr)) {
-      groups.set(c.orgnr, { main: c, branches: [] })
-    }
-  }
-  // Map insertion order reflects whichever member (main or branch) was first encountered while
-  // walking the source list. A group can otherwise surface at a branch's earlier position. The
-  // list is meant to read top-to-bottom in the source's own order, so re-sort by the MAIN unit's
-  // own index once every group is known.
-  return [...groups.values()].sort(
-    (a, b) => (indexByOrgnr.get(a.main.orgnr) ?? 0) - (indexByOrgnr.get(b.main.orgnr) ?? 0)
-  )
-}
-
 /** The row stands for the whole group, so its count is the group total: main plus branches. */
-function groupOpenAds(group: CompanyGroup): number {
+function groupOpenAds(group: CompanyGroupDto): number {
   return group.branches.reduce((sum, branch) => sum + branch.openAds, group.main.openAds)
 }
 
@@ -78,7 +48,6 @@ export function CompaniesView({
   onCloseCompany,
   onOpenSettings,
 }: CompaniesViewProps) {
-  const { data: companies = [], isError, refetch } = useQuery(companiesQuery())
   const { focus } = useFocus()
   // Read from context every render, so a lens change in Settings reaches this view live.
   const search = filters.q ?? ''
@@ -98,8 +67,6 @@ export function CompaniesView({
   const pendingFocusOrgnr = useRef<string | null>(null)
   const t = useT()
 
-  const error = isError ? t('companies.loadError') : null
-
   useEffect(() => {
     if (selectedOrgnr !== null) return
     const target = pendingFocusOrgnr.current
@@ -117,32 +84,33 @@ export function CompaniesView({
 
   const regions = focus?.regions ?? []
 
-  // Chip names come from the companies already loaded. This view stays fetch-free. A kommune
-  // with no company in the list shows by number, which is the RegionChips fallback.
-  const kommuneNames = useMemo(() => {
-    const names = new Map<string, string>()
-    for (const c of companies) if (c.kommune && c.kommuneNavn) names.set(c.kommune, c.kommuneNavn)
-    return names
-  }, [companies])
+  // The search reaches the server a beat after typing stops, not on every keystroke.
+  const [querySearch, setQuerySearch] = useState(search)
+  useEffect(() => {
+    const timer = setTimeout(() => setQuerySearch(search), 250)
+    return () => clearTimeout(timer)
+  }, [search])
 
-  const filtered = companies.filter((c) => {
-    if (!regionMatches(c.kommune, regions)) return false
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (websiteFilter === 'has' && !c.website) return false
-    if (websiteFilter === 'none' && c.website) return false
-    return true
-  })
+  // The display filter lives in this browser, so it travels with the request: whole fylker,
+  // and the kommuner of a narrowed one.
+  const params: CompanyListParams = {
+    fylker: regions.filter((r) => r.kommuner.length === 0).map((r) => r.fylke),
+    kommuner: regions.flatMap((r) => r.kommuner),
+    q: querySearch,
+    website: websiteFilter,
+    ads: adsFilter,
+  }
+  const { data, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteQuery({ ...companyPagesQuery(params), placeholderData: keepPreviousData })
+  const visibleGroups = data?.pages.flatMap((page) => page.groups) ?? []
+  const total = data?.pages[0]?.total ?? 0
+  const error = isError ? t('companies.loadError') : null
 
-  // Group over the full list (not `filtered`) so a group whose main doesn't match but whose
-  // branch does (or vice versa) still renders. Region, search and website are matched per unit,
-  // then a group renders when the main or any branch matches. The ads filter applies to the
-  // group: its open-ad total (the count the row shows) must be above 0. Non-matching branches
-  // inside a visible group still render, as context, when the group is expanded.
-  const matchingOrgnrs = new Set(filtered.map((c) => c.orgnr))
-  const visibleGroups = groupCompanies(companies).filter(
-    (g) =>
-      (matchingOrgnrs.has(g.main.orgnr) || g.branches.some((b) => matchingOrgnrs.has(b.orgnr))) &&
-      (adsFilter !== 'open' || groupOpenAds(g) > 0)
+  // Chip names come from the kommune register (fetched once per session), not the list.
+  const { data: register = [] } = useQuery(kommunerQuery())
+  const kommuneNames = useMemo(
+    () => new Map(register.map((k) => [k.number, k.name] as const)),
+    [register]
   )
 
   const openDetail = (orgnr: string) => {
@@ -153,37 +121,39 @@ export function CompaniesView({
   // Every row rendered here is a group main: either a real hovedenhet, or a branch standing in
   // for one because its own parent wasn't loaded (an "orphan" branch). The tag only makes sense
   // in that second case: a real hovedenhet is never itself a branch.
-  const renderRow = (group: CompanyGroup) => {
+  // A row is a sheet row (DESIGN.md): the name in the title column, the kommune on the time edge,
+  // open ads at the right. On a phone the kommune and ads go to a subline under the name.
+  const renderRow = (group: CompanyGroupDto) => {
     const c = group.main
     const openAds = groupOpenAds(group)
     return (
-      <div className="companies-item">
-        <button
-          type="button"
-          className="panel panel-hover companies-row"
-          ref={(el) => {
-            if (el) rowRefs.current.set(c.orgnr, el)
-            else rowRefs.current.delete(c.orgnr)
-          }}
-          onClick={() => openDetail(c.orgnr)}
-        >
-          <span>
-            <strong>{displayCompanyName(c.name)}</strong>
-            {c.isBranch && ` ${t('common.branchTag')}`}
-            {openAds > 0 && (
-              <>
-                {' '}
-                <span className="text-muted-foreground">
-                  {openAds === 1
-                    ? t('companies.openAdsOne')
-                    : t('companies.openAds', { n: openAds })}
-                </span>
-              </>
-            )}
-          </span>
-          <span className="text-muted-foreground">{c.kommuneNavn ?? c.kommune}</span>
-        </button>
-      </div>
+      <button
+        type="button"
+        className="flex min-h-13 w-full flex-col justify-center gap-0.5 border-0 bg-transparent px-0 py-2.5 text-start text-foreground hover:bg-muted md:flex-row md:items-center md:justify-start md:gap-0"
+        ref={(el) => {
+          if (el) rowRefs.current.set(c.orgnr, el)
+          else rowRefs.current.delete(c.orgnr)
+        }}
+        onClick={() => openDetail(c.orgnr)}
+      >
+        <span className="min-w-0 md:w-90 md:shrink-0 md:truncate md:pe-5">
+          <span className="font-medium">{displayCompanyName(c.name)}</span>
+          {c.isBranch && (
+            <>
+              {' '}
+              <span className="text-sm text-muted-foreground">{t('common.branchTag')}</span>
+            </>
+          )}
+        </span>
+        <span className="flex flex-wrap gap-x-3 text-sm text-muted-foreground md:contents">
+          <span className="md:flex-1">{c.kommuneNavn ?? c.kommune}</span>
+          {openAds > 0 && (
+            <span className="text-muted-foreground tabular-nums md:pe-3">
+              {openAds === 1 ? t('companies.openAdsOne') : t('companies.openAds', { n: openAds })}
+            </span>
+          )}
+        </span>
+      </button>
     )
   }
 
@@ -193,33 +163,48 @@ export function CompaniesView({
 
   if (error) {
     return (
-      <p role="status" className="alert alert-danger cluster cluster-sm">
+      <p
+        role="status"
+        className="mt-6 flex flex-wrap items-center gap-x-3 border-y border-border py-3 font-sans text-body-sm md:mt-10"
+      >
+        <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
         {error}
-        <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
+        <Button variant="link" className="min-h-11" onClick={() => refetch()}>
           {t('common.retry')}
-        </button>
+        </Button>
       </p>
     )
   }
 
   return (
-    <div className="companies-view stack">
-      <div className="companies-lens cluster cluster-sm">
+    <div className="flex flex-col pt-6 font-sans md:pt-10">
+      {/* The head: the count as the headline (it follows the filters, so it is the status a
+      screen reader hears), then the display filter it is counted under. */}
+      <p
+        role="status"
+        className="font-heading text-2xl font-semibold text-foreground tabular-nums md:text-headline"
+      >
+        {total === 1 ? t('companies.countOne') : t('companies.count', { n: total })}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
         <RegionChips regions={regions} kommuneNames={kommuneNames} />
-        <button type="button" className="btn btn-ghost" onClick={onOpenSettings}>
+        <Button variant="link" className="-ms-2.5 min-h-11" onClick={onOpenSettings}>
           {t('companies.editInSettings')}
-        </button>
+        </Button>
       </div>
 
-      <div className="companies-filters cluster">
-        <div className="field">
-          <label className="label" htmlFor="companies-search">
+      <div className="mt-5 flex flex-col gap-3 md:mt-7 md:flex-row md:flex-wrap md:items-center md:gap-x-6">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="companies-search"
+            className="w-20 text-sm text-muted-foreground md:w-auto"
+          >
             {t('companies.search')}
           </label>
-          <input
+          <Input
             id="companies-search"
-            className="input"
             type="search"
+            className="flex-1 md:w-72 md:flex-none"
             value={searchInput}
             onChange={(event) => {
               const next = event.target.value
@@ -230,13 +215,17 @@ export function CompaniesView({
           />
         </div>
 
-        <div className="field">
-          <label className="label" htmlFor="companies-website-filter">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="companies-website-filter"
+            className="w-20 text-sm text-muted-foreground md:w-auto"
+          >
             {t('companies.websiteFilterLabel')}
           </label>
-          <select
+          <NativeSelect
             id="companies-website-filter"
-            className="select"
+            size="touch"
+            className="flex-1 md:flex-none"
             value={websiteFilter}
             onChange={(event) =>
               onFiltersChange({
@@ -244,41 +233,55 @@ export function CompaniesView({
               })
             }
           >
-            <option value="">{t('common.all')}</option>
-            <option value="has">{t('companies.websiteHas')}</option>
-            <option value="none">{t('companies.websiteNone')}</option>
-          </select>
+            <NativeSelectOption value="">{t('common.all')}</NativeSelectOption>
+            <NativeSelectOption value="has">{t('companies.websiteHas')}</NativeSelectOption>
+            <NativeSelectOption value="none">{t('companies.websiteNone')}</NativeSelectOption>
+          </NativeSelect>
         </div>
 
-        <div className="field">
-          <label className="label" htmlFor="companies-ads-filter">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="companies-ads-filter"
+            className="w-20 text-sm text-muted-foreground md:w-auto"
+          >
             {t('companies.adsFilterLabel')}
           </label>
-          <select
+          <NativeSelect
             id="companies-ads-filter"
-            className="select"
+            size="touch"
+            className="flex-1 md:flex-none"
             value={adsFilter}
             onChange={(event) =>
               onFiltersChange({ ads: (event.target.value || undefined) as CompaniesFilters['ads'] })
             }
           >
-            <option value="">{t('common.all')}</option>
-            <option value="open">{t('companies.adsFilterOpen')}</option>
-          </select>
+            <NativeSelectOption value="">{t('common.all')}</NativeSelectOption>
+            <NativeSelectOption value="open">{t('companies.adsFilterOpen')}</NativeSelectOption>
+          </NativeSelect>
         </div>
       </div>
 
-      <p role="status" className="text-muted-foreground">
-        {visibleGroups.length === 1
-          ? t('companies.countOne')
-          : t('companies.count', { n: visibleGroups.length })}
-      </p>
-
-      <ul className="stack stack-sm">
+      <ul className="mt-6 flex list-none flex-col border-b border-border ps-0 md:mt-8">
         {visibleGroups.map((g) => (
-          <li key={g.main.orgnr}>{renderRow(g)}</li>
+          <li key={g.main.orgnr} className="border-t border-border">
+            {renderRow(g)}
+          </li>
         ))}
       </ul>
+
+      {hasNextPage && (
+        <Button
+          variant="outline"
+          size="touch"
+          className="mt-6 self-start max-md:w-full"
+          disabled={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        >
+          {t('companies.showMore', {
+            n: Math.min(COMPANY_PAGE_SIZE, total - visibleGroups.length),
+          })}
+        </Button>
+      )}
     </div>
   )
 }

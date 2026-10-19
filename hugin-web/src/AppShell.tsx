@@ -1,11 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
+import { Globe, Moon, Sun } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AppFooter } from './components/AppFooter'
 import { FirstRunDialog } from './components/FirstRunDialog'
 import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { SyncWatcherProvider } from './components/SyncWatcher'
+import { Button } from './components/ui/button'
 import { KNOWN_CATEGORIES, useFocus } from './context/focus'
 import { useReadOnly } from './context/readOnly'
 import { ReturnFocusProvider } from './context/returnFocus'
@@ -155,36 +157,46 @@ export function AppShell() {
       <ReturnFocusProvider>
         <LiveRegionProvider>
           <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
-            <div className="app-shell">
-              <header className="topbar">
-                <div className="app-container cluster-between">
+            <div className="flex min-h-dvh flex-col">
+              <header className="border-b border-border font-sans">
+                {/* Phones: brand and the two toggles share the first row and the nav takes a full
+              row under them; the controls wrapper dissolves (contents) so flex order can seat
+              the toggles beside the brand while the DOM keeps nav before toggles for tab order. */}
+                <div className="mx-auto flex max-w-sheet flex-wrap items-center gap-x-3 px-4.5 pt-2.5 pb-1.5 md:h-16 md:flex-nowrap md:gap-x-10 md:px-12 md:py-0">
                   {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
                 the dashboard's last search too. Its name starts with the visible word, so
                 speech input ("click Hugin") still finds it. */}
                   <Link
                     to="/"
                     search={searchFor('/')}
-                    className="brand"
                     aria-label={t('brand.homeLabel')}
+                    className="flex min-h-11 items-center gap-2.5 rounded-lg text-lg font-bold text-foreground no-underline"
                   >
                     {/* Primary variant: the topbar mark renders at 2rem (32 px), the brand
                   pack's minimum for the primary mark. Below that, use micro. */}
-                    <HuginMark variant="primary" className="brand-mark" />
+                    <HuginMark variant="primary" className="size-8" />
                     Hugin
                   </Link>
-                  <div className="topbar-controls cluster cluster-sm">
-                    <nav aria-label={t('nav.ariaLabel')}>
-                      <ul className="nav-list">
+                  <div className="contents md:flex md:flex-1 md:items-center md:gap-10">
+                    <nav
+                      aria-label={t('nav.ariaLabel')}
+                      className="order-3 -mx-3 basis-full overflow-x-auto md:order-none md:mx-0 md:flex-1 md:basis-auto"
+                    >
+                      <ul className="flex list-none gap-1 ps-0">
                         {NAV.map((item) => (
                           <li key={item.to}>
                             <Link
                               to={item.to}
                               params={'params' in item ? item.params : {}}
                               search={searchFor(item.to)}
-                              className="nav-link"
+                              // 44 px tall: the touch-target floor (a11y spec).
+                              className="inline-flex min-h-11 items-center rounded-lg px-3 whitespace-nowrap text-muted-foreground no-underline hover:bg-muted hover:text-foreground"
                               // Search params (the dashboard's ?show=all) don't change which page this is.
                               activeOptions={{ exact: item.exact, includeSearch: false }}
-                              activeProps={{ 'aria-current': 'page' }}
+                              activeProps={{
+                                'aria-current': 'page',
+                                className: 'bg-muted font-medium text-foreground',
+                              }}
                             >
                               {t(item.labelKey)}
                             </Link>
@@ -194,60 +206,54 @@ export function AppShell() {
                     </nav>
                     {/* Both quick toggles are icons. The theme glyph shows what it switches TO (the
                   sun in dark mode); the globe cannot, so its label doubles as a tooltip.
-                  Settings has no copy of either (v3.6.1). The wrapper is what the phone layout
-                  hoists up beside the brand (main.css .topbar-toggles). */}
-                    <div className="topbar-toggles cluster cluster-sm">
-                      <button
-                        type="button"
-                        className="nav-link"
+                  Settings has no copy of either (v3.6.1). */}
+                    <div className="order-2 ml-auto flex gap-0.5 text-muted-foreground md:order-none md:ml-0">
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-11"
                         onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
                         aria-label={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
                         title={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
                       >
-                        <svg
-                          className="toggle-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.75"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                          focusable="false"
-                        >
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-                          <path d="M2 12h20" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="nav-link"
+                        <Globe aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-11"
                         onClick={toggleTheme}
                         aria-label={
                           theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')
                         }
                       >
-                        <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-                      </button>
+                        {theme === 'dark' ? (
+                          <Sun aria-hidden="true" />
+                        ) : (
+                          <Moon aria-hidden="true" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>
               </header>
               {readOnly && (
-                <section className="demo-banner" aria-label={t('demo.regionLabel')}>
-                  <div className="app-container">
-                    <p>
-                      {t('demo.banner')}{' '}
-                      <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                        {t('demo.repoLink')}
-                      </a>
-                    </p>
-                  </div>
+                <section aria-label={t('demo.regionLabel')} className="font-sans">
+                  <p className="mx-auto max-w-sheet px-4.5 py-2.5 text-small text-muted-foreground md:px-12">
+                    {t('demo.banner')}{' '}
+                    <a
+                      href={REPO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground underline decoration-input underline-offset-3 hover:decoration-current"
+                    >
+                      {t('demo.repoLink')}
+                    </a>
+                  </p>
                 </section>
               )}
-              <main className="app-container main-content stack stack-lg">
-                <h1 ref={h1Ref} tabIndex={-1} className="visually-hidden">
+              <main className="mx-auto w-full max-w-sheet flex-1 px-4.5 md:px-12 main-content stack stack-lg">
+                <h1 ref={h1Ref} tabIndex={-1} className="sr-only">
                   Hugin
                 </h1>
                 <Outlet />
