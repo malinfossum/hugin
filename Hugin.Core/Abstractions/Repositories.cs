@@ -1,3 +1,5 @@
+using Hugin.Core.Services;
+
 namespace Hugin.Core.Abstractions;
 
 public interface ICompanyRepository
@@ -9,6 +11,13 @@ public interface ICompanyRepository
     /// <summary>How many companies the store holds in <paramref name="municipalities"/> (null: all,
     /// and a company with no kommune always counts), without loading them.</summary>
     public Task<int> CountAsync(IReadOnlySet<string>? municipalities = null, CancellationToken ct = default);
+
+    /// <summary>The company list's rows to page, ordered by name: every company in a group (a
+    /// hovedenhet and its branches) where some member may pass <paramref name="query"/>'s coverage,
+    /// region and search, without loading the whole store. A superset: <see cref="CompanyListing.Page"/>
+    /// applies the exact rules, and gets the same page from these rows as from the whole store.</summary>
+    public Task<IReadOnlyList<Models.Company>> GetListCandidatesAsync(CompanyListQuery query,
+        CancellationToken ct = default);
 
     /// <summary>Branch units of one hovedenhet (<c>IsBranch &amp;&amp; ParentOrgnr == orgnr</c>),
     /// ordered by municipality number then name. Kommune-name ordering is a display-layer concern

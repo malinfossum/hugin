@@ -1,4 +1,4 @@
-import { cn } from 'cn'
+import { cn } from '@/lib/utils'
 import { useT } from '../i18n'
 import { googleSearchUrl } from '../lib/links'
 

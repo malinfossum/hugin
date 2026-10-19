@@ -2,9 +2,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { Toaster } from '../components/ui/toast'
 import { LanguageProvider } from '../i18n'
 import type { PipelineDto, TrackResponse } from '../lib/types'
-import { TestQueryProvider } from '../test-utils'
+import { TestQueryProvider, toastRegion } from '../test-utils'
 import { ApplicationsView } from './ApplicationsView'
 
 const SORT_STORAGE_KEY = 'hugin-soknader-sortering'
@@ -64,9 +65,11 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <TestQueryProvider>
       <LanguageProvider>
-        <LiveRegionProvider>
-          <ApplicationsView />
-        </LiveRegionProvider>
+        <Toaster>
+          <LiveRegionProvider>
+            <ApplicationsView />
+          </LiveRegionProvider>
+        </Toaster>
       </LanguageProvider>
     </TestQueryProvider>
   )
@@ -235,7 +238,7 @@ describe('ApplicationsView', () => {
       )
     })
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Lagret.')
     })
@@ -261,6 +264,26 @@ describe('ApplicationsView', () => {
 
     const warning = await screen.findByText(/⚠\s*Ingen NAV-annonse funnet for denne bedriften\./)
     expect(warning).toHaveAttribute('role', 'status')
+  })
+
+  it('leads with the count of companies in the pipeline', async () => {
+    renderView(
+      fakeServer([
+        entry({ orgnr: '1', companyName: 'A AS' }),
+        entry({ orgnr: '2', companyName: 'B AS' }),
+      ])
+    )
+
+    expect(await screen.findByText('2 bedrifter i Søknader')).toBeInTheDocument()
+  })
+
+  it('says where entries come from instead of drawing four empty columns', async () => {
+    renderView(fakeServer([]))
+
+    expect(await screen.findByText('Ingen bedrifter i Søknader ennå')).toBeInTheDocument()
+    expect(screen.getByText(/^Trykk Følg med på en annonse under Frister/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Følger med' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Sorter etter')).not.toBeInTheDocument()
   })
 
   it('renders a retry button on fetch failure', async () => {

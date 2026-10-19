@@ -7,7 +7,12 @@ export function formatDate(iso: string): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
 }
 
-export function formatDateTime(iso: string): string {
+/** dd.MM, for the marks on a time sheet's scale. */
+export function formatDayMonth(date: Date): string {
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}`
+}
+
+export function formatTime(iso: string): string {
   const d = new Date(iso)
-  return `${formatDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

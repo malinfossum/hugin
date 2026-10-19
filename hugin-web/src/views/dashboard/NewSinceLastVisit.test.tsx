@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
@@ -67,6 +68,7 @@ function newDto(overrides: Partial<NewDto> = {}): NewDto {
         isActive: true,
         linkedOrgnr: null,
         published: '2026-08-10T00:00:00Z',
+        firstSeen: '2026-08-10T00:00:00Z',
       },
     ],
     since: '2026-08-12T00:00:00Z',
@@ -92,6 +94,7 @@ function newAd(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-10T00:00:00Z',
+    firstSeen: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
@@ -99,6 +102,13 @@ function newAd(overrides: Partial<AdDto> = {}): AdDto {
 /** Place headings in DOM order, as their full text: visible count plus the screen-reader suffix. */
 const placeHeadingTexts = () =>
   screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
+
+/** Opens every place row: each one starts closed, its ads and companies unrendered. */
+async function openPlaces() {
+  const user = userEvent.setup()
+  const triggers = await screen.findAllByRole('button', { expanded: false })
+  for (const trigger of triggers) await user.click(trigger)
+}
 
 /** Fake server: GET /api/new returns the given dto (or 204 when null); POST /api/seen always 204. */
 function fakeServer(dto: NewDto | null) {
@@ -147,15 +157,18 @@ describe('NewSinceLastVisit', () => {
   it('groups new ads and companies together by kommune, ads first, branches marked', async () => {
     renderView(fakeServer(newDto()))
 
+    await openPlaces()
     const oslo = (
-      await screen.findByRole('heading', { level: 3, name: '0301, 1 annonse og 2 bedrifter' })
+      await screen.findByRole('heading', {
+        level: 3,
+        name: '0301, 1 annonse og 2 bedrifter',
+      })
     ).closest('div') as HTMLElement
     const items = within(oslo).getAllByRole('listitem')
-    expect(items.map((item) => item.firstChild?.textContent)).toEqual([
-      'Utvikler',
-      'Acme AS',
-      'Acme Avdeling',
-    ])
+    // Ads and companies alike are cards: the first line is the card's title.
+    const firstLine = (item: HTMLElement) =>
+      item.querySelector('[data-slot="card-title"]')?.textContent
+    expect(items.map(firstLine)).toEqual(['Utvikler', 'Acme AS', 'Acme Avdeling'])
     expect(within(items[0]).getByText('Ny annonse')).toBeInTheDocument()
     expect(within(items[1]).getByRole('link', { name: 'Acme AS' })).toBeInTheDocument()
     expect(within(items[2]).getByText('Avdeling')).toBeInTheDocument()
@@ -174,6 +187,7 @@ describe('NewSinceLastVisit', () => {
   it('links each new company to its own detail in the same tab, the branch tag outside the name', async () => {
     renderView(fakeServer(newDto()))
 
+    await openPlaces()
     const acme = await screen.findByRole('link', { name: 'Acme AS' })
     expect(acme).toHaveAttribute('href', '/companies/715787630')
     expect(acme).not.toHaveAttribute('target')
@@ -188,9 +202,47 @@ describe('NewSinceLastVisit', () => {
   it("does not carry the dashboard's ?show= into a company link", async () => {
     renderView(fakeServer(newDto()), '/?show=all')
 
+    await openPlaces()
     expect(await screen.findByRole('link', { name: 'Beta AS' })).toHaveAttribute(
       'href',
       '/companies/715787632'
+    )
+  })
+
+  it('starts with every place closed, and opens one from its row', async () => {
+    renderView(fakeServer(newDto()))
+
+    const oslo = await screen.findByRole('button', {
+      name: '0301, 1 annonse og 2 bedrifter',
+    })
+    expect(oslo).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: 'Utvikler' })).not.toBeInTheDocument()
+
+    await userEvent.setup().click(oslo)
+
+    expect(oslo).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Utvikler' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '4601, 1 bedrift' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+  })
+
+  it('keeps the open places when the dashboard is left and comes back', async () => {
+    const view = renderView(fakeServer(newDto()))
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '0301, 1 annonse og 2 bedrifter' }))
+    view.unmount()
+
+    renderView(fakeServer(newDto()))
+    expect(
+      await screen.findByRole('button', { name: '0301, 1 annonse og 2 bedrifter' })
+    ).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Acme AS' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '4601, 1 bedrift' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
     )
   })
 
@@ -214,37 +266,136 @@ describe('NewSinceLastVisit', () => {
           ads: [],
           companies: [
             { ...company, orgnr: '1', name: 'GROVAN TECH' },
-            { ...company, orgnr: '2', name: 'GROVAN TECH', isBranch: true, parentOrgnr: '1' },
+            {
+              ...company,
+              orgnr: '2',
+              name: 'GROVAN TECH',
+              isBranch: true,
+              parentOrgnr: '1',
+            },
           ],
         })
       )
     )
 
+    await openPlaces()
     const place = (
-      await screen.findByRole('heading', { level: 3, name: '0301, 2 bedrifter' })
+      await screen.findByRole('heading', {
+        level: 3,
+        name: '0301, 2 bedrifter',
+      })
     ).closest('div') as HTMLElement
     const items = within(place).getAllByRole('listitem')
     expect(items).toHaveLength(1)
     expect(items[0]).toHaveTextContent('Grovan Tech + avdeling')
   })
 
+  it('folds a branch listed before its parent into that parent', async () => {
+    const company = newDto().companies[0]
+    renderView(
+      fakeServer(
+        newDto({
+          ads: [],
+          companies: [
+            {
+              ...company,
+              orgnr: '2',
+              name: 'GROVAN TECH',
+              isBranch: true,
+              parentOrgnr: '1',
+            },
+            { ...company, orgnr: '1', name: 'GROVAN TECH' },
+          ],
+        })
+      )
+    )
+
+    await openPlaces()
+    const place = (
+      await screen.findByRole('heading', {
+        level: 3,
+        name: '0301, 2 bedrifter',
+      })
+    ).closest('div') as HTMLElement
+    const items = within(place).getAllByRole('listitem')
+    expect(items).toHaveLength(1)
+    expect(items[0]).toHaveTextContent('Grovan Tech + avdeling')
+  })
+
+  it('leaves a branch on its own row when the company sharing its name is not its parent', async () => {
+    const company = newDto().companies[0]
+    renderView(
+      fakeServer(
+        newDto({
+          ads: [],
+          companies: [
+            { ...company, orgnr: '1', name: 'GROVAN TECH' },
+            {
+              ...company,
+              orgnr: '3',
+              name: 'GROVAN TECH',
+              isBranch: true,
+              parentOrgnr: '9',
+            },
+          ],
+        })
+      )
+    )
+
+    await openPlaces()
+    const place = (
+      await screen.findByRole('heading', {
+        level: 3,
+        name: '0301, 2 bedrifter',
+      })
+    ).closest('div') as HTMLElement
+    const items = within(place).getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(items[0]).not.toHaveTextContent('avdeling')
+    expect(within(items[1]).getByText('Avdeling')).toBeInTheDocument()
+  })
+
   it('groups new ads by place with counts, in first-seen order, and an ad without a place under «Ukjent sted»', async () => {
     const dto = newDto({
       companies: [],
       ads: [
-        newAd({ feedId: 'g1', title: 'Utvikler Gjøvik', kommune: '3407', kommuneNavn: 'Gjøvik' }),
-        newAd({ feedId: 'h1', title: 'Utvikler Hamar', kommune: '3403', kommuneNavn: 'Hamar' }),
-        newAd({ feedId: 'g2', title: 'Tester Gjøvik', kommune: '3407', kommuneNavn: 'Gjøvik' }),
-        newAd({ feedId: 'u1', title: 'Utvikler uten sted', kommune: null, kommuneNavn: null }),
+        newAd({
+          feedId: 'g1',
+          title: 'Utvikler Gjøvik',
+          kommune: '3407',
+          kommuneNavn: 'Gjøvik',
+        }),
+        newAd({
+          feedId: 'h1',
+          title: 'Utvikler Hamar',
+          kommune: '3403',
+          kommuneNavn: 'Hamar',
+        }),
+        newAd({
+          feedId: 'g2',
+          title: 'Tester Gjøvik',
+          kommune: '3407',
+          kommuneNavn: 'Gjøvik',
+        }),
+        newAd({
+          feedId: 'u1',
+          title: 'Utvikler uten sted',
+          kommune: null,
+          kommuneNavn: null,
+        }),
       ],
     })
     renderView(fakeServer(dto))
 
-    const gjovik = await screen.findByRole('heading', { level: 3, name: 'Gjøvik, 2 annonser' })
+    await openPlaces()
+    const gjovik = await screen.findByRole('heading', {
+      level: 3,
+      name: 'Gjøvik, 2 annonser',
+    })
     expect(placeHeadingTexts()).toEqual([
-      'Gjøvik 2, 2 annonser',
-      'Hamar 1, 1 annonse',
-      'Ukjent sted 1, 1 annonse',
+      'Gjøvik2, 2 annonser',
+      'Hamar1, 1 annonse',
+      'Ukjent sted1, 1 annonse',
     ])
     const group = gjovik.closest('div') as HTMLElement
     expect(within(group).getByRole('link', { name: 'Utvikler Gjøvik' })).toHaveAttribute(
@@ -273,7 +424,11 @@ describe('NewSinceLastVisit', () => {
     })
     renderView(fakeServer(dto))
 
-    const heading = await screen.findByRole('heading', { level: 3, name: 'Ukjent sted, 1 bedrift' })
+    await openPlaces()
+    const heading = await screen.findByRole('heading', {
+      level: 3,
+      name: 'Ukjent sted, 1 bedrift',
+    })
     expect(
       within(heading.closest('div') as HTMLElement).getByText('Stedløs AS')
     ).toBeInTheDocument()
@@ -291,12 +446,18 @@ describe('NewSinceLastVisit', () => {
     renderView(fakeServer(dto))
 
     expect(
-      await screen.findByRole('heading', { level: 3, name: '0301, 2 companies' })
+      await screen.findByRole('heading', {
+        level: 3,
+        name: '0301, 2 companies',
+      })
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: '4601, 1 company' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Oslo, 2 ads' })).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Unknown place, 1 ad' })
+      screen.getByRole('heading', {
+        level: 3,
+        name: 'Unknown place, 1 ad',
+      })
     ).toBeInTheDocument()
   })
 
@@ -332,22 +493,49 @@ describe('NewSinceLastVisit', () => {
           isActive: true,
           linkedOrgnr: null,
           published: '2026-08-10T00:00:00Z',
+          firstSeen: '2026-08-10T00:00:00Z',
         },
       ],
     })
     renderView(fakeServer(dto))
 
-    expect(await screen.findByText('Nyfjell Spill AS')).toBeInTheDocument()
+    await openPlaces()
+    // The company's row and the ad's employer line.
+    expect(await screen.findAllByText('Nyfjell Spill AS')).toHaveLength(2)
     const adRow = (await screen.findByText('Utvikler')).closest('li')
     if (!adRow) throw new Error('row not found')
     expect(adRow).toHaveTextContent('Nyfjell Spill AS')
     expect(screen.queryByText('NYFJELL SPILL AS')).not.toBeInTheDocument()
   })
 
-  it('shows "(ingen nye)" when both lists are empty', async () => {
+  it('reads a closed ad as closed, not new, and links only an ad that has a link', async () => {
+    renderView(
+      fakeServer(
+        newDto({
+          companies: [],
+          ads: [
+            newAd({ feedId: 'o1', title: 'Åpen annonse' }),
+            newAd({ feedId: 'c1', title: 'Lukket annonse', isActive: false, sourceUrl: null }),
+          ],
+        })
+      )
+    )
+
+    await openPlaces()
+    const open = screen.getByRole('link', { name: 'Åpen annonse' }).closest('li') as HTMLElement
+    expect(within(open).getByText('Ny annonse')).toBeInTheDocument()
+    const closed = screen.getByText('Lukket annonse').closest('li') as HTMLElement
+    expect(within(closed).getByText('Utgått')).toBeInTheDocument()
+    expect(within(closed).queryByText('Ny annonse')).not.toBeInTheDocument()
+    expect(within(closed).queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('says nothing has arrived when both lists are empty', async () => {
     renderView(fakeServer(newDto({ companies: [], ads: [] })))
 
-    expect(await screen.findByText('(ingen nye)')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Ingenting har kommet siden du sist merket som sett.')
+    ).toBeInTheDocument()
   })
 
   it('renders a retry button on fetch failure', async () => {

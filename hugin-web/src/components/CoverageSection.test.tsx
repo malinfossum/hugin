@@ -8,6 +8,7 @@ import type { DiscoveryConfigDto } from '../lib/types'
 import { TestQueryProvider } from '../test-utils'
 import { CoverageSection } from './CoverageSection'
 import { LiveRegionProvider } from './LiveRegion'
+import { Toaster } from './ui/toast'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -52,9 +53,11 @@ describe('CoverageSection', () => {
     render(
       <TestQueryProvider client={client}>
         <LanguageProvider>
-          <LiveRegionProvider>
-            <CoverageSection />
-          </LiveRegionProvider>
+          <Toaster>
+            <LiveRegionProvider>
+              <CoverageSection />
+            </LiveRegionProvider>
+          </Toaster>
         </LanguageProvider>
       </TestQueryProvider>
     )

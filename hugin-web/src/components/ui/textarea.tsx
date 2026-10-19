@@ -1,5 +1,5 @@
-import { cn } from 'cn'
 import type * as React from 'react'
+import { cn } from '@/lib/utils'
 
 /** On the sheet fill with the input's padding, like Input and NativeSelect. */
 function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {

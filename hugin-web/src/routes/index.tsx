@@ -22,6 +22,7 @@ function DashboardRoute() {
         navigate({ search: next === 'all' ? { show: 'all' } : {}, replace: true })
       }
       onRequestCoverage={requestCoverage}
+      onOpenSettings={() => navigate({ to: '/settings' })}
     />
   )
 }

@@ -1,5 +1,13 @@
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { useT } from '../i18n'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog'
+import { Button } from './ui/button'
 
 interface Props {
   open: boolean
@@ -32,55 +40,45 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
-  const ref = useRef<HTMLDialogElement>(null)
-  // Now that a dialog can hold a form field (ResetSection's hard reset), showModal()'s default
+  // Now that a dialog can hold a form field (ResetSection's hard reset), the default initial
   // focus would land on the first focusable descendant (that field, or worse, the Eksport link
-  // ahead of it) instead of announcing the dialog itself. Mirrors FirstRunDialog's own
-  // tabIndex={-1} heading-ref pattern (Task 11 finding 4).
+  // ahead of it) instead of announcing the dialog itself (Task 11 finding 4).
   const headingRef = useRef<HTMLHeadingElement>(null)
   const t = useT()
-  // Latest `open` prop, so the native close handler can tell a user-initiated close
-  // (Escape, which fires while `open` is still true from the parent's point of view) apart
-  // from the close our own effect triggers after the parent already flipped `open` to
-  // false in response to onConfirm/onCancel. Without this, dialog.close() below fires
-  // a native 'close' event that would call onCancel a second time, even after confirm.
-  const openRef = useRef(open)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    openRef.current = open
-    if (open && !dialog.open) {
-      dialog.showModal()
-      headingRef.current?.focus()
-    }
-    if (!open && dialog.open) dialog.close()
-  }, [open])
-
-  const handleClose = () => {
-    if (openRef.current) onCancel()
-  }
 
   return (
-    <dialog ref={ref} className="modal stack" onClose={handleClose} aria-label={title}>
-      <h2 ref={headingRef} tabIndex={-1}>
-        {title}
-      </h2>
-      {children}
-      <div className="dialog-actions cluster cluster-sm">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          {t('common.cancel')}
-        </button>
-        <button
-          type="button"
-          className={`btn btn-${variant === 'danger' ? 'danger' : 'primary'}`}
-          disabled={confirmDisabled}
-          aria-describedby={confirmDescribedBy}
-          onClick={onConfirm}
-        >
-          {confirmLabel}
-        </button>
-      </div>
-    </dialog>
+    <AlertDialog
+      open={open}
+      // Only a close the dialog starts itself (Escape) reaches here: Cancel and confirm go
+      // through their own handlers, and the parent closing it is not a change event.
+      onOpenChange={(next) => {
+        if (!next) onCancel()
+      }}
+    >
+      <AlertDialogContent initialFocus={headingRef}>
+        <AlertDialogHeader>
+          <AlertDialogTitle ref={headingRef} tabIndex={-1}>
+            {title}
+          </AlertDialogTitle>
+        </AlertDialogHeader>
+        {children && (
+          <div className="flex flex-col gap-3 text-body-sm text-foreground">{children}</div>
+        )}
+        <AlertDialogFooter>
+          <Button variant="ghost" size="touch" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant={variant === 'danger' ? 'destructive' : 'default'}
+            size="touch"
+            disabled={confirmDisabled}
+            aria-describedby={confirmDescribedBy}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

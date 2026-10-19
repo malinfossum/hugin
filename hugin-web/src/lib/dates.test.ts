@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime } from './dates'
+import { formatDate, formatDayMonth, formatTime } from './dates'
 
 describe('formatDate', () => {
   it('renders dd.MM.yyyy from a local timestamp', () => {
@@ -10,8 +10,14 @@ describe('formatDate', () => {
   })
 })
 
-describe('formatDateTime', () => {
-  it('renders dd.MM.yyyy HH:mm', () => {
-    expect(formatDateTime('2026-08-23T14:05:00')).toBe('23.08.2026 14:05')
+describe('formatDayMonth', () => {
+  it('renders a padded dd.MM', () => {
+    expect(formatDayMonth(new Date(2026, 0, 5))).toBe('05.01')
+  })
+})
+
+describe('formatTime', () => {
+  it('renders HH:mm', () => {
+    expect(formatTime('2026-08-23T14:05:00')).toBe('14:05')
   })
 })

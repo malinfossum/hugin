@@ -80,6 +80,12 @@ function interpolate(template: string, params?: Record<string, string | number>)
   )
 }
 
+/** A count with the language's thousands separator: «69 721» in nb, «69,721» in en. */
+export function useFormatNumber(): (n: number) => string {
+  const { lang } = useContext(LanguageContext)
+  return useCallback((n: number) => new Intl.NumberFormat(LOCALES[lang]).format(n), [lang])
+}
+
 export type T = (key: TranslationKey, params?: Record<string, string | number>) => string
 
 export function useT(): T {

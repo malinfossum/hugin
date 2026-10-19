@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hugin.Tests.Api;
 
-public sealed record AdDtoProbe(string FeedId, string? PipelineStatus, int? DaysLeft, bool Hidden, bool IsActive);
+public sealed record AdDtoProbe(string FeedId, string? PipelineStatus, int? DaysLeft, bool Hidden, bool IsActive,
+    DateTimeOffset? Published = null, DateTimeOffset? FirstSeen = null);
 
 [TestFixture]
 public sealed class AdsEndpointTests
@@ -41,5 +42,25 @@ public sealed class AdsEndpointTests
         var all = await _client.GetFromJsonAsync<List<AdDtoProbe>>("/api/ads?hidden=true");
         Assert.That(all!.Count, Is.EqualTo(2));
         Assert.That(all.Single(a => a.FeedId == "a2").Hidden, Is.True);
+    }
+
+    [Test]
+    public async Task Ads_carry_when_hugin_first_saw_them_apart_from_when_nav_published_them()
+    {
+        // Published before the fetch: "new since last visit" goes by the fetch, so the client needs both.
+        var published = new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+        var seen = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+        using var factory = new ApiFactory();
+        using var client = factory.CreateApiClient();
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IAdRepository>().UpsertAsync(new FeedAd("a3", "Utvikler 3",
+                "Firma", "999888777", "3407", published, DateTimeOffset.UtcNow.AddDays(7), "https://x", true, "IT"), seen);
+        }
+
+        var ad = (await client.GetFromJsonAsync<List<AdDtoProbe>>("/api/ads"))!.Single();
+
+        Assert.That(ad.Published, Is.EqualTo(published));
+        Assert.That(ad.FirstSeen, Is.EqualTo(seen));
     }
 }

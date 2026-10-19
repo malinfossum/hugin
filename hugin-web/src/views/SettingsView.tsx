@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle, ArrowDown, ArrowUp, ExternalLink, Plus } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CoverageSection } from '../components/CoverageSection'
@@ -6,7 +7,11 @@ import { DisplayFilterSection } from '../components/DisplayFilterSection'
 import { FocusSection } from '../components/FocusSection'
 import { useAnnounce } from '../components/LiveRegion'
 import { ResetSection } from '../components/ResetSection'
+import { SettingsSection } from '../components/SettingsSection'
 import { UnsavedChangesGuard } from '../components/UnsavedChangesGuard'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { toast } from '../components/ui/toast'
 import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
 import { ApiError } from '../lib/api'
@@ -76,7 +81,7 @@ export function SettingsView() {
     // A successful mutation also clears any earlier action error, so a stale failure banner
     // doesn't outlive the fix.
     setActionError(null)
-    announce(t('settings.sourceAdded'))
+    toast.add({ type: 'success', title: t('settings.sourceAdded') })
   }
 
   const startEdit = (source: SourceDto) => {
@@ -101,7 +106,7 @@ export function SettingsView() {
     }
     cancelEdit()
     setActionError(null)
-    announce(t('settings.sourceSaved'))
+    toast.add({ type: 'success', title: t('settings.sourceSaved') })
   }
 
   const handleRemoveConfirm = async () => {
@@ -115,7 +120,7 @@ export function SettingsView() {
       setActionError(errorText(err))
       return
     }
-    announce(t('settings.sourceRemoved'))
+    toast.add({ type: 'success', title: t('settings.sourceRemoved') })
   }
 
   const move = async (index: number, direction: -1 | 1) => {
@@ -137,162 +142,9 @@ export function SettingsView() {
   }
 
   return (
-    <div className="settings-view settings-section">
-      <section aria-labelledby="settings-sources-heading" className="card settings-group">
-        <h2 id="settings-sources-heading">{t('settings.sourcesHeading')}</h2>
-        <p className="help">{t('settings.sourcesHint')}</p>
-
-        {listError && (
-          <p role="status" className="alert alert-danger cluster cluster-sm">
-            {listError}
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => {
-                setActionError(null)
-                refetch()
-              }}
-            >
-              {t('common.retry')}
-            </button>
-          </p>
-        )}
-
-        <ul className="stack stack-sm">
-          {sources.map((source, index) => (
-            <li key={source.id} className="panel stack stack-sm">
-              {editingId === source.id ? (
-                <form
-                  className="stack stack-sm"
-                  onSubmit={(event) => handleEditSubmit(source.id, event)}
-                >
-                  <div className="field">
-                    <label className="label" htmlFor={`edit-label-${source.id}`}>
-                      {t('settings.label')}
-                    </label>
-                    <input
-                      id={`edit-label-${source.id}`}
-                      className="input"
-                      type="text"
-                      value={editForm.label}
-                      onChange={(event) => setEditForm({ ...editForm, label: event.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="field">
-                    <label className="label" htmlFor={`edit-url-${source.id}`}>
-                      {t('settings.url')}
-                    </label>
-                    <input
-                      id={`edit-url-${source.id}`}
-                      className="input"
-                      type="url"
-                      value={editForm.url}
-                      onChange={(event) => setEditForm({ ...editForm, url: event.target.value })}
-                      required
-                    />
-                  </div>
-                  {editError && (
-                    <p role="status" className="alert alert-danger">
-                      {editError}
-                    </p>
-                  )}
-                  <div className="cluster cluster-sm">
-                    <button type="submit" className="btn btn-primary">
-                      {t('settings.save')}
-                    </button>
-                    <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="cluster cluster-sm cluster-between">
-                  <a href={source.url} target="_blank" rel="noopener noreferrer">
-                    {source.label}
-                  </a>
-                  {!readOnly && (
-                    <div className="cluster cluster-sm">
-                      <button
-                        type="button"
-                        className="btn btn-ghost icon-btn"
-                        aria-label={t('settings.moveUp')}
-                        disabled={index === 0}
-                        onClick={() => move(index, -1)}
-                      >
-                        <span aria-hidden="true">↑</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost icon-btn"
-                        aria-label={t('settings.moveDown')}
-                        disabled={index === sources.length - 1}
-                        onClick={() => move(index, 1)}
-                      >
-                        <span aria-hidden="true">↓</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => startEdit(source)}
-                      >
-                        {t('settings.edit')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => setRemoving(source)}
-                      >
-                        {t('settings.remove')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-
-        {!readOnly && (
-          <form className="stack stack-sm" onSubmit={handleAdd}>
-            <div className="field">
-              <label className="label" htmlFor="add-source-label">
-                {t('settings.label')}
-              </label>
-              <input
-                id="add-source-label"
-                className="input"
-                type="text"
-                value={addForm.label}
-                onChange={(event) => setAddForm({ ...addForm, label: event.target.value })}
-                required
-              />
-            </div>
-            <div className="field">
-              <label className="label" htmlFor="add-source-url">
-                {t('settings.url')}
-              </label>
-              <input
-                id="add-source-url"
-                className="input"
-                type="url"
-                value={addForm.url}
-                onChange={(event) => setAddForm({ ...addForm, url: event.target.value })}
-                required
-              />
-            </div>
-            {addError && (
-              <p role="status" className="alert alert-danger">
-                {addError}
-              </p>
-            )}
-            <button type="submit" className="btn btn-primary">
-              {t('settings.addSource')}
-            </button>
-          </form>
-        )}
-      </section>
-
+    <div className="flex flex-col pt-2 font-sans md:pt-6">
+      {/* In the order the data flows: what is fetched, what is kept, what is shown; then the
+      link-out sources, and resetting last. */}
       <CoverageSection
         onSaved={() => {
           setCoverageVersion((v) => v + 1)
@@ -305,6 +157,187 @@ export function SettingsView() {
       <FocusSection previewVersion={coverageVersion} />
 
       <DisplayFilterSection />
+
+      <SettingsSection
+        headingId="settings-sources-heading"
+        title={t('settings.sourcesHeading')}
+        hint={t('settings.sourcesHint')}
+      >
+        {listError && (
+          <p
+            role="status"
+            className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm text-foreground"
+          >
+            <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
+            {listError}
+            <Button
+              variant="link"
+              className="min-h-11"
+              onClick={() => {
+                setActionError(null)
+                refetch()
+              }}
+            >
+              {t('common.retry')}
+            </Button>
+          </p>
+        )}
+
+        <ul className="flex list-none flex-col border-b border-border ps-0">
+          {sources.map((source, index) => (
+            <li
+              key={source.id}
+              className="border-t border-border py-1.5 text-foreground first:border-t-0 first:pt-0"
+            >
+              {editingId === source.id ? (
+                <form
+                  className="flex flex-col gap-3 py-2"
+                  onSubmit={(event) => handleEditSubmit(source.id, event)}
+                >
+                  <div className="flex flex-col gap-3 md:flex-row">
+                    <div className="flex flex-col gap-1.5 md:w-56">
+                      <label
+                        htmlFor={`edit-label-${source.id}`}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {t('settings.label')}
+                      </label>
+                      <Input
+                        id={`edit-label-${source.id}`}
+                        type="text"
+                        value={editForm.label}
+                        onChange={(event) =>
+                          setEditForm({ ...editForm, label: event.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <label
+                        htmlFor={`edit-url-${source.id}`}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {t('settings.url')}
+                      </label>
+                      <Input
+                        id={`edit-url-${source.id}`}
+                        type="url"
+                        value={editForm.url}
+                        onChange={(event) => setEditForm({ ...editForm, url: event.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  {editError && (
+                    <p role="status" className="flex items-center gap-x-2 text-body-sm">
+                      <AlertTriangle
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-destructive"
+                      />
+                      {editError}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" size="touch">
+                      {t('settings.save')}
+                    </Button>
+                    <Button variant="ghost" size="touch" onClick={cancelEdit}>
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-x-4">
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1.5 font-medium text-foreground no-underline hover:underline"
+                  >
+                    {source.label}
+                    <ExternalLink aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                  </a>
+                  {!readOnly && (
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-11"
+                        aria-label={t('settings.moveUp')}
+                        disabled={index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        <ArrowUp aria-hidden="true" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-11"
+                        aria-label={t('settings.moveDown')}
+                        disabled={index === sources.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        <ArrowDown aria-hidden="true" />
+                      </Button>
+                      <Button variant="link" className="min-h-11" onClick={() => startEdit(source)}>
+                        {t('settings.edit')}
+                      </Button>
+                      <Button
+                        variant="link"
+                        className="min-h-11"
+                        onClick={() => setRemoving(source)}
+                      >
+                        {t('settings.remove')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        {!readOnly && (
+          <form className="flex flex-col gap-3" onSubmit={handleAdd}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <div className="flex flex-col gap-1.5 md:w-56">
+                <label htmlFor="add-source-label" className="text-sm text-muted-foreground">
+                  {t('settings.label')}
+                </label>
+                <Input
+                  id="add-source-label"
+                  type="text"
+                  value={addForm.label}
+                  onChange={(event) => setAddForm({ ...addForm, label: event.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label htmlFor="add-source-url" className="text-sm text-muted-foreground">
+                  {t('settings.url')}
+                </label>
+                <Input
+                  id="add-source-url"
+                  type="url"
+                  value={addForm.url}
+                  onChange={(event) => setAddForm({ ...addForm, url: event.target.value })}
+                  required
+                />
+              </div>
+              <Button type="submit" variant="outline" size="touch">
+                <Plus aria-hidden="true" />
+                {t('settings.addSource')}
+              </Button>
+            </div>
+            {addError && (
+              <p role="status" className="flex items-center gap-x-2 text-body-sm">
+                <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+                {addError}
+              </p>
+            )}
+          </form>
+        )}
+      </SettingsSection>
 
       <ResetSection />
 

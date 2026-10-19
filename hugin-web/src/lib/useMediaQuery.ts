@@ -14,3 +14,6 @@ export function useMediaQuery(query: string): boolean {
     () => false
   )
 }
+
+/** Below Tailwind's md breakpoint: the phone layout. */
+export const useNarrow = () => useMediaQuery('(max-width: 767px)')

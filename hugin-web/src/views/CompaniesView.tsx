@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { NativeSelect, NativeSelectOption } from '../components/ui/native-select'
 import { useFocus } from '../context/focus'
-import { useT } from '../i18n'
+import { useFormatNumber, useT } from '../i18n'
 import { displayCompanyName } from '../lib/companyName'
 import {
   COMPANY_PAGE_SIZE,
@@ -64,23 +64,11 @@ export function CompaniesView({
   const websiteFilter = filters.website ?? ''
   const adsFilter = filters.ads ?? ''
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const pendingFocusOrgnr = useRef<string | null>(null)
+  // The row a company was opened from, which focus returns to when its dialog closes. Null for
+  // a deep link, where the dialog falls back to its default.
+  const openedFrom = useRef<string | null>(null)
   const t = useT()
-
-  useEffect(() => {
-    if (selectedOrgnr !== null) return
-    const target = pendingFocusOrgnr.current
-    if (!target) return
-    pendingFocusOrgnr.current = null
-    // Safe to assume the ref is still mounted: filter inputs are unmounted while detail is
-    // open (not just hidden), so the row list never re-filters behind our back. The
-    // opening row is always present in rowRefs when we return to it. Branches no longer have
-    // their own list row (they live as tabs inside CompanyDetail), so the target is always a
-    // group's main or an orphan-standalone row, with no ancestor <details> to reopen anymore.
-    const el = rowRefs.current.get(target)
-    if (!el) return
-    el.focus()
-  }, [selectedOrgnr])
+  const formatNumber = useFormatNumber()
 
   const regions = focus?.regions ?? []
 
@@ -100,10 +88,23 @@ export function CompaniesView({
     website: websiteFilter,
     ads: adsFilter,
   }
-  const { data, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteQuery({ ...companyPagesQuery(params), placeholderData: keepPreviousData })
+  const {
+    data,
+    isError,
+    isPlaceholderData,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({ ...companyPagesQuery(params), placeholderData: keepPreviousData })
   const visibleGroups = data?.pages.flatMap((page) => page.groups) ?? []
   const total = data?.pages[0]?.total ?? 0
+  // Whether the answer on screen was filtered: the box runs ahead of the debounced query, and
+  // keepPreviousData holds the last answer while the next loads, so the empty state goes by the
+  // filters that answer was asked with.
+  const queryFiltered = querySearch !== '' || websiteFilter !== '' || adsFilter !== ''
+  const [filtered, setFiltered] = useState(queryFiltered)
+  if (!isPlaceholderData && filtered !== queryFiltered) setFiltered(queryFiltered)
   const error = isError ? t('companies.loadError') : null
 
   // Chip names come from the kommune register (fetched once per session), not the list.
@@ -113,8 +114,14 @@ export function CompaniesView({
     [register]
   )
 
+  const clearFilters = () => {
+    setSearchInput('')
+    lastPushedSearch.current = ''
+    onFiltersChange({ q: undefined, website: undefined, ads: undefined })
+  }
+
   const openDetail = (orgnr: string) => {
-    pendingFocusOrgnr.current = orgnr
+    openedFrom.current = orgnr
     onOpenCompany(orgnr)
   }
 
@@ -146,7 +153,10 @@ export function CompaniesView({
           )}
         </span>
         <span className="flex flex-wrap gap-x-3 text-sm text-muted-foreground md:contents">
-          <span className="md:flex-1">{c.kommuneNavn ?? c.kommune}</span>
+          {/* Map lettering (DESIGN.md): a kommune is a place on the map. */}
+          <span className="text-xs font-semibold tracking-widest text-contour uppercase md:flex-1">
+            {c.kommuneNavn ?? c.kommune}
+          </span>
           {openAds > 0 && (
             <span className="text-muted-foreground tabular-nums md:pe-3">
               {openAds === 1 ? t('companies.openAdsOne') : t('companies.openAds', { n: openAds })}
@@ -157,34 +167,52 @@ export function CompaniesView({
     )
   }
 
-  if (selectedOrgnr) {
-    return <CompanyDetail orgnr={selectedOrgnr} onClose={onCloseCompany} />
-  }
+  // The detail opens over the list rather than in its place, so the list keeps its scroll, its
+  // loaded pages and its filters while a company is open.
+  const detail = (
+    <CompanyDetail
+      orgnr={selectedOrgnr}
+      onClose={onCloseCompany}
+      finalFocus={() => {
+        const row = openedFrom.current ? rowRefs.current.get(openedFrom.current) : undefined
+        openedFrom.current = null
+        return row ?? true
+      }}
+    />
+  )
 
   if (error) {
     return (
-      <p
-        role="status"
-        className="mt-6 flex flex-wrap items-center gap-x-3 border-y border-border py-3 font-sans text-body-sm md:mt-10"
-      >
-        <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
-        {error}
-        <Button variant="link" className="min-h-11" onClick={() => refetch()}>
-          {t('common.retry')}
-        </Button>
-      </p>
+      <>
+        {detail}
+        <p
+          role="status"
+          className="mt-6 flex flex-wrap items-center gap-x-3 border-y border-border py-3 font-sans text-body-sm md:mt-10"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
+          {error}
+          <Button variant="link" className="min-h-11" onClick={() => refetch()}>
+            {t('common.retry')}
+          </Button>
+        </p>
+      </>
     )
   }
 
   return (
     <div className="flex flex-col pt-6 font-sans md:pt-10">
+      {detail}
       {/* The head: the count as the headline (it follows the filters, so it is the status a
       screen reader hears), then the display filter it is counted under. */}
       <p
         role="status"
-        className="font-heading text-2xl font-semibold text-foreground tabular-nums md:text-headline"
+        className="min-h-8 font-heading text-2xl font-semibold text-foreground tabular-nums md:min-h-10 md:text-headline"
       >
-        {total === 1 ? t('companies.countOne') : t('companies.count', { n: total })}
+        {/* Empty until the first page answers, so it never flashes «0 bedrifter». */}
+        {data &&
+          (total === 1
+            ? t('companies.countOne')
+            : t('companies.count', { n: formatNumber(total) }))}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
         <RegionChips regions={regions} kommuneNames={kommuneNames} />
@@ -261,7 +289,18 @@ export function CompaniesView({
         </div>
       </div>
 
-      <ul className="mt-6 flex list-none flex-col border-b border-border ps-0 md:mt-8">
+      {data && total === 0 && (
+        <p className="mt-6 flex flex-wrap items-center gap-x-3 border-t border-border pt-4 text-body-sm text-ink-tertiary md:mt-8">
+          {filtered ? t('companies.emptyFiltered') : t('companies.empty')}
+          {filtered && (
+            <Button variant="link" className="min-h-11" onClick={clearFilters}>
+              {t('companies.clearFilters')}
+            </Button>
+          )}
+        </p>
+      )}
+
+      <ul className="mt-6 flex list-none flex-col border-b border-border ps-0 empty:hidden md:mt-8">
         {visibleGroups.map((g) => (
           <li key={g.main.orgnr} className="border-t border-border">
             {renderRow(g)}
