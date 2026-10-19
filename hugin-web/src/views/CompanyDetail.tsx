@@ -37,7 +37,7 @@ function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
           <span className="text-strong">{ad.title}</span>
           {!ad.isActive && <span className="badge">{t('companies.expiredTag')}</span>}
           {publishedText(ad.published, t) && (
-            <span className="text-muted">{publishedText(ad.published, t)}</span>
+            <span className="text-muted-foreground">{publishedText(ad.published, t)}</span>
           )}
           <span className="help">
             {t('companies.deadlineLabel', {

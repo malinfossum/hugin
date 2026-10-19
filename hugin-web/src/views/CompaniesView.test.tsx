@@ -228,7 +228,7 @@ describe('CompaniesView', () => {
 
     await screen.findByText('Acme AS')
     const acme = screen.getByRole('button', { name: /Acme AS/ })
-    expect(within(acme).getByText('2 åpne annonser')).toHaveClass('text-muted')
+    expect(within(acme).getByText('2 åpne annonser')).toHaveClass('text-muted-foreground')
     expect(
       within(screen.getByRole('button', { name: /Gamma AS/ })).getByText('1 åpen annonse')
     ).toBeInTheDocument()

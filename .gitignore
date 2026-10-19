@@ -38,3 +38,9 @@ hugin-demo.zip
 
 # Local-only notes — my own working material, never published
 *.private.md
+
+# Impeccable design scratch (decision sketches, review captures, page state)
+.impeccable/hook.cache.json
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/review/

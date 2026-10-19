@@ -214,8 +214,8 @@ export function ApplicationsView() {
         return (
           <section key={section} aria-labelledby={headingId} className="card stack">
             <h2 id={headingId}>{sectionLabel(t, section)}</h2>
-            {section === 'active' && <p className="muted help">{t('applications.activeHint')}</p>}
-            {section === 'expired' && <p className="muted help">{t('applications.expiredHint')}</p>}
+            {section === 'active' && <p className="help">{t('applications.activeHint')}</p>}
+            {section === 'expired' && <p className="help">{t('applications.expiredHint')}</p>}
             <ul className="stack stack-sm">
               {sectionEntries.map((entry) => {
                 const missingWhy = entry.status !== 'active' && !entry.why
@@ -249,10 +249,14 @@ export function ApplicationsView() {
                               {t('applications.missingWhy')}
                             </span>
                           ) : (
-                            entry.why && <span className="text-muted">{entry.why}</span>
+                            entry.why && <span className="text-muted-foreground">{entry.why}</span>
                           )}
-                          {entry.note && <span className="text-muted">{entry.note}</span>}
-                          {entry.svar && <span className="text-muted">{entry.svar}</span>}
+                          {entry.note && (
+                            <span className="text-muted-foreground">{entry.note}</span>
+                          )}
+                          {entry.svar && (
+                            <span className="text-muted-foreground">{entry.svar}</span>
+                          )}
                           <span className="help">{formatDate(entry.updated)}</span>
                         </div>
                         {warning?.orgnr === entry.orgnr && (

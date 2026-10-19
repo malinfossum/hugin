@@ -1,0 +1,164 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Oxlint runs only the @shadcn/lint design-system rules. Biome stays the formatter and the
+  // general linter (`npm run lint` runs both), so Oxlint's built-in plugins and rules are off.
+  "plugins": [],
+  "categories": { "correctness": "off" },
+  "jsPlugins": ["@shadcn/lint"],
+  "ignorePatterns": ["design-system", "src/routeTree.gen.ts"],
+  "rules": {
+    "shadcn/no-restyle": ["error", { "allow": ["layout"] }],
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-arbitrary-values": "error",
+    "shadcn/no-inline-styles": "error",
+    "shadcn/no-unknown-classes": "error",
+    "shadcn/require-static-classes": "error"
+  },
+  "overrides": [
+    {
+      // Components own their appearance and may need structural values such as ring-[3px].
+      "files": ["src/components/ui/**"],
+      "rules": {
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    },
+    {
+      // Not migrated yet: these files still use the workbench design-system classes, which load
+      // from legacy.css outside the Tailwind theme, so the linter can't see them. The list is
+      // the migration tracker. A migrated file comes off it (and gets the strict rules); when it
+      // is empty, this override, legacy.css and design-system/ go. Don't add files to it.
+      "files": [
+        "src/AppShell.tsx",
+        "src/components/AppFooter.tsx",
+        "src/components/AreaPickerDialog.tsx",
+        "src/components/ConfirmDialog.tsx",
+        "src/components/CoverageFields.tsx",
+        "src/components/CoverageSection.tsx",
+        "src/components/DisplayFilterSection.tsx",
+        "src/components/FirstRunDialog.tsx",
+        "src/components/FocusSection.tsx",
+        "src/components/LiveRegion.tsx",
+        "src/components/RegionChips.tsx",
+        "src/components/ResetSection.tsx",
+        "src/views/ApplicationsView.tsx",
+        "src/views/CompaniesView.tsx",
+        "src/views/CompanyDetail.tsx",
+        "src/views/ExportView.tsx",
+        "src/views/SettingsView.tsx",
+        "src/views/dashboard/DashboardView.tsx",
+        "src/views/dashboard/DeadlineList.tsx",
+        "src/views/dashboard/NeedsAction.tsx",
+        "src/views/dashboard/NewSinceLastVisit.tsx",
+        "src/views/dashboard/SourcesCard.tsx",
+        "src/views/dashboard/SyncHeader.tsx"
+      ],
+      "rules": {
+        "shadcn/no-unknown-classes": [
+          "error",
+          {
+            // The DS and main.css classes these files use. "selec*" stands for the DS .select
+            // class: @shadcn/lint 0.2.1 reads a bare "select" entry only as Tailwind's select-*
+            // class group, so it never matches the literal class.
+            "allow": [
+              "alert",
+              "alert-danger",
+              "alert-success",
+              "alert-warning",
+              "app-footer",
+              "app-shell",
+              "applications-view",
+              "area-fylke",
+              "area-fylke-count",
+              "area-fylke-label",
+              "area-fylke-row",
+              "area-kommuner",
+              "area-picker",
+              "area-picker-body",
+              "badge",
+              "badge-accent",
+              "badge-warning",
+              "brand",
+              "brand-mark",
+              "btn",
+              "btn-danger",
+              "btn-ghost",
+              "btn-primary",
+              "btn-secondary",
+              "card",
+              "cluster",
+              "cluster-between",
+              "cluster-sm",
+              "companies-filters",
+              "companies-item",
+              "companies-lens",
+              "companies-row",
+              "companies-view",
+              "company-detail",
+              "company-detail-dl",
+              "coverage-group",
+              "coverage-kommune",
+              "coverage-kommuner",
+              "coverage-other",
+              "coverage-others",
+              "dashboard",
+              "deadline-list",
+              "demo-banner",
+              "dialog-actions",
+              "empty-hint",
+              "export-controls",
+              "export-markdown",
+              "export-view",
+              "field",
+              "focus-add-row",
+              "focus-chip",
+              "focus-chip-list",
+              "frist-category",
+              "frist-link",
+              "frist-meta",
+              "frist-row",
+              "help",
+              "icon-btn",
+              "input",
+              "label",
+              "main-content",
+              "modal",
+              "nav-link",
+              "nav-list",
+              "needs-action",
+              "new-since-last-visit",
+              "panel",
+              "panel-hover",
+              "region-chip",
+              "region-chip-list",
+              "reset-section",
+              "settings-group",
+              "settings-section",
+              "settings-view",
+              "sources-card",
+              "spinner",
+              "stack",
+              "stack-lg",
+              "stack-sm",
+              "sync-counts",
+              "sync-header",
+              "sync-times",
+              "tab",
+              "tab-list",
+              "textarea",
+              "toggle-icon",
+              "topbar",
+              "topbar-controls",
+              "topbar-toggles",
+              "visually-hidden",
+              "selec*"
+            ]
+          }
+        ],
+        // .text-strong is a DS utility, not a theme color.
+        "shadcn/no-raw-colors": ["error", { "allow": ["text-strong"] }]
+      }
+    }
+  ]
+}

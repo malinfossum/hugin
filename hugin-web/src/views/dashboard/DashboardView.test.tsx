@@ -114,7 +114,7 @@ function elementUnder(headingName: string) {
 function expectDescription(headingName: string, text: string) {
   const description = elementUnder(headingName)
   expect(description.tagName).toBe('P')
-  expect(description).toHaveClass('text-muted')
+  expect(description).toHaveClass('text-muted-foreground')
   expect(description).toHaveTextContent(text)
 }
 

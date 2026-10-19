@@ -44,7 +44,8 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
     onRemove?.(regions[index].fylke)
   }
 
-  if (regions.length === 0) return <p className="text-muted">{t('areas.wholeCountry')}</p>
+  if (regions.length === 0)
+    return <p className="text-muted-foreground">{t('areas.wholeCountry')}</p>
 
   return (
     <ul className="region-chip-list">
