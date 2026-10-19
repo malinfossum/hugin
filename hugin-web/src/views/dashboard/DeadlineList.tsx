@@ -207,7 +207,7 @@ export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
       <h2 id="deadlines-heading" ref={headingRef} tabIndex={-1}>
         {t('deadlines.heading')}
       </h2>
-      <p className="text-muted">{t('deadlines.description')}</p>
+      <p className="text-muted-foreground">{t('deadlines.description')}</p>
       <div className="field">
         <label className="label" htmlFor="deadlines-show">
           {t('deadlines.showLabel')}
@@ -251,16 +251,16 @@ export function DeadlineList({ show, onShowChange }: DeadlineListProps) {
               ) : (
                 <span>{ad.title}</span>
               )}
-              <span className="text-muted">
+              <span className="text-muted-foreground">
                 {ad.employer ? displayCompanyName(ad.employer) : ad.employer}
               </span>
             </div>
             <div className="frist-meta">
-              <span className="text-muted">{formatExpires(ad.expires)}</span>
+              <span className="text-muted-foreground">{formatExpires(ad.expires)}</span>
               <span className={daysLeftBadgeClass(ad.daysLeft)}>
                 {daysLeftText(ad.daysLeft, t)}
               </span>
-              <span className="frist-category text-muted">{ad.category}</span>
+              <span className="frist-category text-muted-foreground">{ad.category}</span>
             </div>
             <div className="cluster cluster-sm">
               {ad.pipelineStatus && (

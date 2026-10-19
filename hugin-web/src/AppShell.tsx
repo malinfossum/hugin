@@ -14,7 +14,8 @@ import { fromDiscoveryConfig, toFocusSeed } from './lib/coverage'
 import { REPO_URL } from './lib/links'
 import { useDismissFirstRun } from './lib/mutations'
 import { discoveryQuery, queryKeys } from './lib/queries'
-import './styles/main.css'
+import './styles/legacy.css'
+import './styles/index.css'
 
 const NAV = [
   { to: '/', exact: true, labelKey: 'nav.dashboard' },
@@ -156,7 +157,7 @@ export function AppShell() {
           <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
             <div className="app-shell">
               <header className="topbar">
-                <div className="container cluster-between">
+                <div className="app-container cluster-between">
                   {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
                 the dashboard's last search too. Its name starts with the visible word, so
                 speech input ("click Hugin") still finds it. */}
@@ -235,7 +236,7 @@ export function AppShell() {
               </header>
               {readOnly && (
                 <section className="demo-banner" aria-label={t('demo.regionLabel')}>
-                  <div className="container">
+                  <div className="app-container">
                     <p>
                       {t('demo.banner')}{' '}
                       <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
@@ -245,7 +246,7 @@ export function AppShell() {
                   </div>
                 </section>
               )}
-              <main className="container main-content stack stack-lg">
+              <main className="app-container main-content stack stack-lg">
                 <h1 ref={h1Ref} tabIndex={-1} className="visually-hidden">
                   Hugin
                 </h1>

@@ -39,7 +39,7 @@ function PlaceHeading({
   spokenCount: string
 }) {
   return (
-    <h4 className="text-muted">
+    <h4 className="text-muted-foreground">
       {place}
       <span aria-hidden="true"> · {count}</span>
       <span className="visually-hidden">, {spokenCount}</span>
@@ -108,7 +108,7 @@ export function NewSinceLastVisit() {
       <h2 id="new-since-heading" ref={headingRef} tabIndex={-1}>
         {t('newSince.heading')}
       </h2>
-      <p className="text-muted">{t('newSince.description')}</p>
+      <p className="text-muted-foreground">{t('newSince.description')}</p>
       {error && (
         <p role="status" className="alert alert-danger cluster cluster-sm">
           {error}

@@ -21,7 +21,7 @@ export function AppFooter() {
 
   return (
     <footer className="app-footer">
-      <p className="container cluster cluster-sm">
+      <p className="app-container cluster cluster-sm">
         {status?.version && <span>Hugin {status.version}</span>}
         <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
           GitHub

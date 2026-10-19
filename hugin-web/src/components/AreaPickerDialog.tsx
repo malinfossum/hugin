@@ -202,7 +202,7 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
                     />
                     {row.name}
                   </label>
-                  <span id={countId} className="text-muted area-fylke-count">
+                  <span id={countId} className="text-muted-foreground area-fylke-count">
                     {countText(row, region)}
                   </span>
                   <button
