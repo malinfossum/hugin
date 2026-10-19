@@ -3,10 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
+import { Toaster } from '../../components/ui/toast'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { TestQueryProvider } from '../../test-utils'
+import { TestQueryProvider, toastRegion } from '../../test-utils'
 import { DeadlineList, type Show } from './DeadlineList'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -33,6 +34,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-10T00:00:00Z',
+    firstSeen: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
@@ -100,9 +102,11 @@ function renderList(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <TestQueryProvider>
       <LanguageProvider>
-        <LiveRegionProvider>
-          <StatefulDeadlineList />
-        </LiveRegionProvider>
+        <Toaster>
+          <LiveRegionProvider>
+            <StatefulDeadlineList />
+          </LiveRegionProvider>
+        </Toaster>
       </LanguageProvider>
     </TestQueryProvider>
   )
@@ -114,11 +118,13 @@ function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   return render(
     <TestQueryProvider>
       <LanguageProvider>
-        <LiveRegionProvider>
-          <FocusProvider>
-            <StatefulDeadlineList />
-          </FocusProvider>
-        </LiveRegionProvider>
+        <Toaster>
+          <LiveRegionProvider>
+            <FocusProvider>
+              <StatefulDeadlineList />
+            </FocusProvider>
+          </LiveRegionProvider>
+        </Toaster>
       </LanguageProvider>
     </TestQueryProvider>
   )
@@ -138,6 +144,90 @@ describe('DeadlineList', () => {
     expect(within(row).queryByText('Aktiv')).not.toBeInTheDocument()
   })
 
+  it('keeps the row actions reachable by keyboard when the title is not a link', async () => {
+    const user = userEvent.setup()
+    renderList(fakeServer([ad({ feedId: 'a1', title: 'Uten lenke', sourceUrl: null })]))
+
+    await screen.findByText('Uten lenke')
+    await user.tab() // the Show select
+    await user.tab()
+    // Revealed by focus-within, never visibility:hidden, which would take them out of the tab order.
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Følg med' }))
+    expect(document.activeElement?.parentElement).not.toHaveClass('invisible')
+  })
+
+  it('gives every row its published date as text, not only as the dot on the scale', async () => {
+    renderList(
+      fakeServer([ad({ feedId: 'a1', title: 'Datert', published: '2026-08-10T00:00:00Z' })])
+    )
+
+    const row = (await screen.findByText('Datert')).closest('li') as HTMLElement
+    expect(within(row).getByText('publisert 10.08.2026')).toBeInTheDocument()
+  })
+
+  it('marks an ad new by when Hugin fetched it, as the new-since count does, not by when NAV published it', async () => {
+    const ads = fakeServer([
+      ad({
+        feedId: 'a1',
+        title: 'Hentet etter merket',
+        published: '2026-08-10T09:00:00Z',
+        firstSeen: '2026-08-10T12:00:00Z',
+      }),
+      ad({
+        feedId: 'a2',
+        title: 'Hentet før merket',
+        published: '2026-08-10T08:00:00Z',
+        firstSeen: '2026-08-10T08:30:00Z',
+      }),
+    ])
+    const status = { reviewMark: '2026-08-10T10:00:00Z' }
+    renderList(
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === '/api/status' ? Promise.resolve(jsonResponse(status)) : ads(input, init)
+      )
+    )
+
+    const fetched = (await screen.findByText('Hentet etter merket')).closest('li') as HTMLElement
+    expect(await within(fetched).findByText('Ny')).toBeInTheDocument()
+    const earlier = screen.getByText('Hentet før merket').closest('li') as HTMLElement
+    expect(within(earlier).queryByText('Ny')).not.toBeInTheDocument()
+  })
+
+  it('keys the new line, the wash and the seen line only once there is a seen mark', async () => {
+    const keys = [
+      'Kommet siden du sist merket som sett',
+      'Siden du sist merket som sett',
+      'Sett-merket',
+    ]
+    const withStatus = (status: object) => {
+      const ads = fakeServer([ad({ feedId: 'a1', title: 'Annonse' })])
+      return vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === '/api/status' ? Promise.resolve(jsonResponse(status)) : ads(input, init)
+      )
+    }
+
+    const { unmount } = renderList(withStatus({ reviewMark: null }))
+    await screen.findByText('Annonse')
+    expect(screen.getByText('Frist innen 7 dager')).toBeVisible()
+    for (const key of keys) expect(screen.queryByText(key)).not.toBeInTheDocument()
+    unmount()
+
+    renderList(withStatus({ reviewMark: '2026-08-10T10:00:00Z' }))
+    await screen.findByText('Annonse')
+    for (const key of keys) expect(await screen.findByText(key)).toBeVisible()
+  })
+
+  it('names the empty state in a sentence and leaves out the legend when there are no ads', async () => {
+    renderList(fakeServer([]))
+
+    expect(
+      await screen.findByText(
+        'Ingen åpne annonser i dekningen din akkurat nå. Nye kommer hit etter en synk.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByText('Frist innen 7 dager')).not.toBeVisible()
+  })
+
   it('renders rows in API order and shows "ingen frist" for a null-expires row', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Første', daysLeft: 2, expires: '2026-08-21T00:00:00Z' }),
@@ -154,20 +244,21 @@ describe('DeadlineList', () => {
     expect(within(rows[2]).getByText('ingen frist')).toBeInTheDocument()
   })
 
-  it('applies urgency classes and always prints the number', async () => {
+  it('marks a frist within 7 days in rust (its one job) and always prints the number', async () => {
     const ads = [
-      ad({ feedId: 'a1', title: 'Rød', daysLeft: 2 }),
-      ad({ feedId: 'a2', title: 'Gul', daysLeft: 5 }),
-      ad({ feedId: 'a3', title: 'Ingen', daysLeft: 12 }),
+      ad({ feedId: 'a1', title: 'Snart', daysLeft: 2 }),
+      ad({ feedId: 'a2', title: 'Innen uka', daysLeft: 7 }),
+      ad({ feedId: 'a3', title: 'Senere', daysLeft: 12 }),
     ]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('2 dager')).toHaveClass('frist-rod')
-    expect(within(rows[1]).getByText('5 dager')).toHaveClass('frist-gul')
-    const ingenSpan = within(rows[2]).getByText('12 dager')
-    expect(ingenSpan).not.toHaveClass('frist-rod')
-    expect(ingenSpan).not.toHaveClass('frist-gul')
+    expect(within(rows[0]).getByText('2 dager')).toHaveClass('text-rust')
+    expect(within(rows[1]).getByText('7 dager')).toHaveClass('text-rust')
+    expect(within(rows[2]).getByText('12 dager')).not.toHaveClass('text-rust')
+    // Never colour alone: the closing figure is also set heavier.
+    expect(within(rows[0]).getByText('2 dager')).toHaveClass('font-semibold')
+    expect(within(rows[2]).getByText('12 dager')).not.toHaveClass('font-semibold')
   })
 
   it('renders the singular day badge for daysLeft === 1', async () => {
@@ -178,20 +269,20 @@ describe('DeadlineList', () => {
     expect(screen.queryByText('1 dager')).toBeNull()
   })
 
-  it('shows "utløpt" with frist-rod for an overdue (negative daysLeft) row', async () => {
+  it('shows "utløpt" in rust for an overdue (negative daysLeft) row', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', daysLeft: -2 })]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('utløpt')).toHaveClass('frist-rod')
+    expect(within(rows[0]).getByText('utløpt')).toHaveClass('text-rust')
   })
 
-  it('shows "i dag" with frist-rod for a due-today (daysLeft 0) row', async () => {
+  it('shows "i dag" in rust for a due-today (daysLeft 0) row', async () => {
     const ads = [ad({ feedId: 'a1', title: 'I dag', daysLeft: 0 })]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('i dag')).toHaveClass('frist-rod')
+    expect(within(rows[0]).getByText('i dag')).toHaveClass('text-rust')
   })
 
   it('hides a row on Skjul, POSTs the hide endpoint, moves focus to the next row and announces', async () => {
@@ -308,7 +399,7 @@ describe('DeadlineList', () => {
       )
     })
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Du følger nå med på Nyfjell Spill AS under Søknader.')
     })
@@ -333,7 +424,7 @@ describe('DeadlineList', () => {
 
     await user.click(within(rows[0]).getByRole('button', { name: 'Følg med' }))
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Du følger nå med på Nyfjell Spill AS under Søknader.')
     })
@@ -518,6 +609,20 @@ describe('DeadlineList', () => {
         expect(fetchMock).toHaveBeenCalled()
       })
       expect(screen.queryByText('Oslo-jobb')).not.toBeInTheDocument()
+    })
+
+    it('says so when the display filter hides every open ad, instead of drawing an empty sheet', async () => {
+      seedFocus()
+      const ads = [
+        ad({ feedId: 'a1', kommune: '0301', category: 'IT / Utvikling', pipelineStatus: null }),
+        ad({ feedId: 'a2', kommune: '0301', category: 'IT / Utvikling', pipelineStatus: null }),
+      ]
+      renderListWithFocus(fakeServer(ads))
+
+      expect(
+        await screen.findByText('Ingen av de 2 åpne annonsene passer visningsfilteret.')
+      ).toBeInTheDocument()
+      expect(screen.getByText('Frist innen 7 dager')).not.toBeVisible()
     })
 
     it('still shows a tracked ad outside the focus region (bypass protects pipeline deadlines)', async () => {

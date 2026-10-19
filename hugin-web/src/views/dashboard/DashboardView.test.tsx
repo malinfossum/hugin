@@ -30,6 +30,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-10T00:00:00Z',
+    firstSeen: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
@@ -97,13 +98,13 @@ function renderDashboard(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
-/** The card headings in DOM order. A closed ConfirmDialog still renders its own h2 inside a
- * <dialog>, so headings inside a dialog are not cards and are skipped. */
+/** The dashboard's headline: what arrived since the review mark (here: nothing). The date is
+ * left open so the test doesn't depend on the machine's time zone. */
+const DELTA = /^Ingenting nytt siden \d{2}\.\d{2}\.\d{4}\.$/
+
+/** The card headings in DOM order. A closed dialog renders nothing, so every h2 is a card's. */
 const headingTexts = () =>
-  screen
-    .getAllByRole('heading', { level: 2 })
-    .filter((heading) => !heading.closest('dialog'))
-    .map((heading) => heading.textContent)
+  screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)
 
 /** The element directly under a card's h2: where the description must sit. */
 function elementUnder(headingName: string) {
@@ -114,7 +115,7 @@ function elementUnder(headingName: string) {
 function expectDescription(headingName: string, text: string) {
   const description = elementUnder(headingName)
   expect(description.tagName).toBe('P')
-  expect(description).toHaveClass('text-muted')
+  expect(description).toHaveClass('text-muted-foreground')
   expect(description).toHaveTextContent(text)
 }
 
@@ -133,33 +134,29 @@ afterEach(() => {
 describe('DashboardView', () => {
   it('orders the cards action first, sources last', async () => {
     renderDashboard(fakeServer([WATCHED_SOON]))
-    await screen.findByRole('heading', { level: 2, name: 'Trenger handling' })
+    await screen.findByRole('heading', { level: 2, name: 'Trenger handling.' })
+    await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(headingTexts()).toEqual([
-      'Synkronisering',
-      'Trenger handling',
-      'Frister',
-      'Nytt siden sist',
-      'Kilder',
-    ])
+    const [delta, ...cards] = headingTexts()
+    expect(delta).toMatch(DELTA)
+    expect(cards).toEqual(['Trenger handling.', 'Frister', 'Nytt siden sist', 'Kilder'])
   })
 
   it('puts Frister directly under the sync strip when nothing needs action', async () => {
     renderDashboard(fakeServer([UNTRACKED]))
     await screen.findByText('Løs annonse')
+    await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(headingTexts()).toEqual(['Synkronisering', 'Frister', 'Nytt siden sist', 'Kilder'])
+    const [delta, ...cards] = headingTexts()
+    expect(delta).toMatch(DELTA)
+    expect(cards).toEqual(['Frister', 'Nytt siden sist', 'Kilder'])
   })
 
-  it('gives every card a muted description directly under its heading', async () => {
+  it('gives every card but the needs-action sentence a muted description under its heading', async () => {
     renderDashboard(fakeServer([WATCHED_SOON]))
-    await screen.findByRole('heading', { level: 2, name: 'Trenger handling' })
+    await screen.findByRole('heading', { level: 2, name: 'Trenger handling.' })
 
-    expectDescription(
-      'Trenger handling',
-      'Annonser fra bedrifter du følger med på, med frist innen 7 dager eller allerede utløpt.'
-    )
-    expectDescription('Frister', 'Åpne annonser i området ditt, nærmeste frist først.')
+    expectDescription('Frister', 'Hver åpne annonse, fra dagen den kom til fristen.')
     expectDescription(
       'Nytt siden sist',
       'Bedrifter og annonser som har kommet til siden du sist trykket «Merk som sett».'
@@ -170,13 +167,9 @@ describe('DashboardView', () => {
   it('reads the descriptions in English', async () => {
     window.localStorage.setItem('hugin-lang', 'en')
     renderDashboard(fakeServer([WATCHED_SOON]))
-    await screen.findByRole('heading', { level: 2, name: 'Needs action' })
+    await screen.findByRole('heading', { level: 2, name: 'Needs action.' })
 
-    expectDescription(
-      'Needs action',
-      "Ads from companies you're watching that close within 7 days or have already closed."
-    )
-    expectDescription('Deadlines', 'Open ads in your area, closest deadline first.')
+    expectDescription('Deadlines', 'Each open ad, from the day it appeared to its frist.')
     expectDescription(
       'New since last visit',
       'Companies and ads added since you last pressed "Mark as seen".'
@@ -197,10 +190,10 @@ describe('DashboardView', () => {
     )
   })
 
-  it('gives the sync strip no description', async () => {
+  it('heads the sync strip with the delta, the sync times directly under it', async () => {
     renderDashboard(fakeServer([]))
-    await screen.findByRole('heading', { level: 2, name: 'Synkronisering' })
+    const headline = await screen.findByRole('heading', { level: 2, name: DELTA })
 
-    expect(elementUnder('Synkronisering').tagName).toBe('DL')
+    expect(headline.nextElementSibling?.querySelector('dl')).not.toBeNull()
   })
 })

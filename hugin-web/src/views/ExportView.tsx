@@ -1,5 +1,10 @@
+import { AlertTriangle, Copy, Download } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAnnounce } from '../components/LiveRegion'
+import { cn } from '@/lib/utils'
+import { Button, buttonVariants } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { NativeSelect, NativeSelectOption } from '../components/ui/native-select'
+import { toast } from '../components/ui/toast'
 import { type TranslationKey, useT } from '../i18n'
 import { api } from '../lib/api'
 
@@ -35,7 +40,6 @@ export function ExportView() {
   const [entries, setEntries] = useState<Entries>('default')
   const [preview, setPreview] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const announce = useAnnounce()
   const t = useT()
   const requestSeq = useRef(0)
 
@@ -67,56 +71,66 @@ export function ExportView() {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(preview)
-      announce(t('export.copiedAnnounce'))
+      toast.add({ type: 'success', title: t('export.copiedAnnounce') })
     } catch {
-      announce(t('export.copyFailedAnnounce'))
+      toast.add({ type: 'error', title: t('export.copyFailedAnnounce'), priority: 'high' })
     }
   }
 
   if (error) {
     return (
-      <p role="status" className="alert alert-danger cluster cluster-sm">
+      <p
+        role="status"
+        className="mt-6 flex flex-wrap items-center gap-x-3 border-y border-border py-3 font-sans text-body-sm md:mt-10"
+      >
+        <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
         {error}
-        <button type="button" className="btn btn-ghost" onClick={load}>
+        <Button variant="link" className="min-h-11" onClick={load}>
           {t('common.retry')}
-        </button>
+        </Button>
       </p>
     )
   }
 
   return (
-    <div className="export-view stack">
-      <div className="export-controls cluster">
-        <div className="field">
-          <label className="label" htmlFor="export-scope">
+    <div className="flex flex-col pt-6 font-sans md:pt-10">
+      {/* The page head (DESIGN.md): the view's name in the headline size, its context under it. */}
+      <h2 className="font-heading text-2xl font-semibold text-foreground md:text-headline">
+        {t('export.heading')}
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">{t('export.context')}</p>
+      <div className="mt-7 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="export-scope" className="text-sm text-muted-foreground">
             {t('export.scope')}
           </label>
-          <select
+          <NativeSelect
             id="export-scope"
-            className="select"
+            size="touch"
+            className="w-full md:w-40"
             value={scope}
             onChange={(event) => setScope(event.target.value as Scope)}
           >
-            <option value="" disabled>
+            <NativeSelectOption value="" disabled>
               {t('export.scopeChoose')}
-            </option>
+            </NativeSelectOption>
             {SCOPE_KEYS.map((s) => (
-              <option key={s.value} value={s.value}>
+              <NativeSelectOption key={s.value} value={s.value}>
                 {t(s.labelKey)}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         {scope === 'category' && (
-          <div className="field">
-            <label className="label" htmlFor="export-category">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="export-category" className="text-sm text-muted-foreground">
               {t('export.category')}
             </label>
-            <input
+            <Input
               id="export-category"
-              className="input"
               type="text"
+              className="md:w-56"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
               placeholder={t('export.categoryPlaceholder')}
@@ -124,64 +138,80 @@ export function ExportView() {
           </div>
         )}
 
-        <div className="field">
-          <label className="label" htmlFor="export-format">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="export-format" className="text-sm text-muted-foreground">
             {t('export.format')}
           </label>
-          <select
+          <NativeSelect
             id="export-format"
-            className="select"
+            size="touch"
+            className="w-full md:w-auto"
             value={format}
             onChange={(event) => setFormat(event.target.value as Format)}
           >
             {FORMAT_KEYS.map((f) => (
-              <option key={f.value} value={f.value}>
+              <NativeSelectOption key={f.value} value={f.value}>
                 {t(f.labelKey)}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         {scope === 'all' && (
-          <div className="field">
-            <label className="label" htmlFor="export-entries">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="export-entries" className="text-sm text-muted-foreground">
               {t('export.entriesLabel')}
             </label>
-            <select
+            <NativeSelect
               id="export-entries"
-              className="select"
+              size="touch"
+              className="w-full md:w-auto"
               value={entries}
               onChange={(event) => setEntries(event.target.value as Entries)}
             >
-              <option value="default">{t('export.entriesDefault')}</option>
-              <option value="all">{t('export.entriesAll')}</option>
-            </select>
+              <NativeSelectOption value="default">{t('export.entriesDefault')}</NativeSelectOption>
+              <NativeSelectOption value="all">{t('export.entriesAll')}</NativeSelectOption>
+            </NativeSelect>
           </div>
         )}
 
-        <div className="cluster cluster-sm">
+        <div className="flex gap-2 md:ms-auto">
+          {/* A link styled as the primary button: the export is a file the browser downloads. */}
           <a
-            className="btn btn-primary"
+            className={cn(
+              buttonVariants({ size: 'touch' }),
+              'flex-1 no-underline aria-disabled:pointer-events-none aria-disabled:opacity-50 md:flex-none'
+            )}
             href={ready ? url : undefined}
             aria-disabled={!ready}
             download
           >
+            <Download aria-hidden="true" />
             {t('export.download')}
           </a>
-          <button type="button" className="btn btn-ghost" onClick={handleCopy} disabled={!ready}>
+          <Button
+            variant="outline"
+            size="touch"
+            className="flex-1 md:flex-none"
+            onClick={handleCopy}
+            disabled={!ready}
+          >
+            <Copy aria-hidden="true" />
             {t('export.copy')}
-          </button>
+          </Button>
         </div>
       </div>
 
       {!ready ? (
-        <p className="text-muted">
+        <p className="mt-6 text-body-sm text-muted-foreground">
           {scope === '' ? t('export.chooseScopeHint') : t('export.enterCategoryHint')}
         </p>
       ) : (
-        <div className="panel">
-          <pre className="export-markdown">{preview}</pre>
-        </div>
+        // The preview sits on the sheet between hairlines, in a monospace face so the file's
+        // own layout (markdown, columns, JSON) reads as it will be saved.
+        <pre className="mt-6 overflow-x-auto border-y border-border py-5 font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+          {preview}
+        </pre>
       )}
     </div>
   )

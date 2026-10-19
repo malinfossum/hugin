@@ -1,12 +1,5 @@
-import {
-  type KeyboardEvent,
-  type SyntheticEvent,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { ChevronDown } from 'lucide-react'
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useT } from '../i18n'
 import { FYLKER, fylkeOf } from '../lib/fylker'
 import {
@@ -20,6 +13,9 @@ import {
 } from '../lib/regions'
 import type { KommuneDto } from '../lib/types'
 import { useAnnounce } from './LiveRegion'
+import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog'
+import { Input } from './ui/input'
 
 interface Props {
   open: boolean
@@ -50,7 +46,6 @@ export function AreaPickerDialog(props: Props) {
 }
 
 function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [draft, setDraft] = useState<Region[]>(() => value)
   const [query, setQuery] = useState('')
@@ -59,13 +54,11 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
   const announce = useAnnounce()
   const idPrefix = useId()
 
-  // showModal on mount, heading takes focus; on unmount focus goes back to whatever had it
-  // when the dialog opened (the «Velg områder …» button). Browsers do the latter themselves
-  // for a dialog closed with close(), but this panel unmounts instead, so do it by hand.
+  // The heading takes focus on open (initialFocus below); on unmount focus goes back to
+  // whatever had it when the dialog opened (the «Velg områder …» button). This panel unmounts
+  // rather than closing, so that is done by hand.
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    dialogRef.current?.showModal()
-    headingRef.current?.focus()
     return () => opener?.focus()
   }, [])
 
@@ -106,24 +99,14 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
     if (searching) announce(t('areas.hits', { n: hitCount }))
   }, [searching, hitCount, announce, t])
 
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== 'Escape') return
-    event.preventDefault() // no native cancel on top of this
-    onCancel()
-  }
-
   // Chrome clears type="search" on Esc and the keydown would still reach the dialog, throwing
   // the draft away. With a query: clear it here and stop. Without one, Esc cancels as usual.
+  // onOpenChange below holds the same line for an Esc the dialog sees first.
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Escape' || query === '') return
     event.preventDefault()
     event.stopPropagation()
     setQuery('')
-  }
-
-  const handleNativeCancel = (event: SyntheticEvent<HTMLDialogElement>) => {
-    event.preventDefault()
-    onCancel()
   }
 
   const toggleExpanded = (fylke: string) =>
@@ -145,120 +128,143 @@ function AreaPickerPanel({ value, kommuner, onApply, onCancel }: Props) {
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      className="modal area-picker"
-      aria-labelledby={`${idPrefix}-title`}
-      onKeyDown={handleDialogKeyDown}
-      onCancel={handleNativeCancel}
+    <Dialog
+      open
+      // Like a native modal, only Cancel, Apply and Esc close it, never a click on the backdrop.
+      disablePointerDismissal
+      onOpenChange={(next, details) => {
+        if (next) return
+        if (details.reason === 'escape-key' && query !== '') {
+          setQuery('')
+          return
+        }
+        onCancel()
+      }}
     >
-      <h2 id={`${idPrefix}-title`} ref={headingRef} tabIndex={-1}>
-        {t('areas.dialogTitle')}
-      </h2>
+      <DialogContent initialFocus={headingRef} finalFocus={false} className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle ref={headingRef} tabIndex={-1}>
+            {t('areas.dialogTitle')}
+          </DialogTitle>
+        </DialogHeader>
 
-      <div className="field">
-        <label className="label" htmlFor={`${idPrefix}-search`}>
-          {t('areas.searchLabel')}
-        </label>
-        <input
-          id={`${idPrefix}-search`}
-          className="input"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleSearchKeyDown}
-        />
-      </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${idPrefix}-search`} className="text-sm text-muted-foreground">
+            {t('areas.searchLabel')}
+          </label>
+          <Input
+            id={`${idPrefix}-search`}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+        </div>
 
-      {kommuner === null && <p className="help">{t('coverage.kommunerUnavailable')}</p>}
+        {kommuner === null && (
+          <p className="text-small text-muted-foreground">{t('coverage.kommunerUnavailable')}</p>
+        )}
 
-      <ul className="area-picker-body stack stack-sm">
-        {rows
-          .filter((row) => row.visible)
-          .map((row) => {
-            const region = regionFor(draft, row.fylke)
-            const whole = region !== undefined && region.kommuner.length === 0
-            const mixed = region !== undefined && region.kommuner.length > 0
-            const boxId = `${idPrefix}-${row.fylke}`
-            const countId = `${boxId}-count`
-            const listId = `${boxId}-list`
-            return (
-              <li key={row.fylke} className="area-fylke">
-                <div className="area-fylke-row">
-                  <label className="area-fylke-label" htmlFor={boxId}>
-                    <input
-                      id={boxId}
-                      type="checkbox"
-                      checked={whole}
-                      aria-describedby={countId}
-                      ref={(el) => {
-                        if (el) el.indeterminate = mixed
-                      }}
-                      onChange={() =>
-                        setDraft(
-                          whole ? untickFylke(draft, row.fylke) : tickFylke(draft, row.fylke)
-                        )
-                      }
-                    />
-                    {row.name}
-                  </label>
-                  <span id={countId} className="text-muted area-fylke-count">
-                    {countText(row, region)}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost icon-btn"
-                    aria-expanded={row.isExpanded}
-                    aria-controls={listId}
-                    aria-label={t(row.isExpanded ? 'areas.hideKommuner' : 'areas.showKommuner', {
-                      fylke: row.name,
-                    })}
-                    disabled={!listReady || searching}
-                    onClick={() => toggleExpanded(row.fylke)}
-                  >
-                    <span aria-hidden="true">{row.isExpanded ? '▴' : '▾'}</span>
-                  </button>
-                </div>
-                {row.isExpanded && listReady && (
-                  <div id={listId} className="area-kommuner">
-                    {row.listed.map((k) => {
-                      const ticked = region?.kommuner.includes(k.number) ?? false
-                      return (
-                        <label key={k.number} className="coverage-kommune">
-                          <input
-                            type="checkbox"
-                            checked={ticked}
-                            onChange={() =>
-                              setDraft(
-                                ticked
-                                  ? untickKommune(draft, k.number)
-                                  : tickKommune(draft, k.number)
-                              )
-                            }
-                          />
-                          {k.name}
-                        </label>
-                      )
-                    })}
+        {/* Only the fylke list scrolls: the search box above and the footer below stay put. */}
+        <ul className="-mx-1 flex min-h-0 flex-1 list-none flex-col overflow-y-auto px-1">
+          {rows
+            .filter((row) => row.visible)
+            .map((row) => {
+              const region = regionFor(draft, row.fylke)
+              const whole = region !== undefined && region.kommuner.length === 0
+              const mixed = region !== undefined && region.kommuner.length > 0
+              const boxId = `${idPrefix}-${row.fylke}`
+              const countId = `${boxId}-count`
+              const listId = `${boxId}-list`
+              return (
+                <li key={row.fylke} className="border-t border-border first:border-t-0">
+                  <div className="flex min-h-11 items-center gap-2">
+                    <label
+                      className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 text-body-sm font-medium text-foreground"
+                      htmlFor={boxId}
+                    >
+                      <input
+                        id={boxId}
+                        type="checkbox"
+                        className="size-4.5"
+                        checked={whole}
+                        aria-describedby={countId}
+                        ref={(el) => {
+                          if (el) el.indeterminate = mixed
+                        }}
+                        onChange={() =>
+                          setDraft(
+                            whole ? untickFylke(draft, row.fylke) : tickFylke(draft, row.fylke)
+                          )
+                        }
+                      />
+                      {row.name}
+                    </label>
+                    <span id={countId} className="text-sm text-muted-foreground tabular-nums">
+                      {countText(row, region)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-lg"
+                      className="size-11"
+                      aria-expanded={row.isExpanded}
+                      aria-controls={listId}
+                      aria-label={t(row.isExpanded ? 'areas.hideKommuner' : 'areas.showKommuner', {
+                        fylke: row.name,
+                      })}
+                      disabled={!listReady || searching}
+                      onClick={() => toggleExpanded(row.fylke)}
+                    >
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={row.isExpanded ? 'rotate-180' : undefined}
+                      />
+                    </Button>
                   </div>
-                )}
-              </li>
-            )
-          })}
-      </ul>
+                  {row.isExpanded && listReady && (
+                    <div
+                      id={listId}
+                      className="grid grid-cols-1 gap-x-4 pb-2 ps-7 sm:grid-cols-2 md:grid-cols-3"
+                    >
+                      {row.listed.map((k) => {
+                        const ticked = region?.kommuner.includes(k.number) ?? false
+                        return (
+                          <label
+                            key={k.number}
+                            className="flex min-h-11 items-center gap-2.5 text-body-sm text-foreground"
+                          >
+                            <input
+                              type="checkbox"
+                              className="size-4.5"
+                              checked={ticked}
+                              onChange={() =>
+                                setDraft(
+                                  ticked
+                                    ? untickKommune(draft, k.number)
+                                    : tickKommune(draft, k.number)
+                                )
+                              }
+                            />
+                            {k.name}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+        </ul>
 
-      <div className="dialog-actions cluster cluster-sm">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          {t('common.cancel')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => onApply(normalizeRegions(draft))}
-        >
-          {t('areas.apply')}
-        </button>
-      </div>
-    </dialog>
+        <DialogFooter>
+          <Button variant="ghost" size="touch" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button size="touch" onClick={() => onApply(normalizeRegions(draft))}>
+            {t('areas.apply')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

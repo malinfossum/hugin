@@ -1,6 +1,6 @@
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from './context/focus'
@@ -32,6 +32,14 @@ function fakeServer(state: ServerState) {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
     if (method !== 'GET') return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+    if (url.startsWith('/api/companies?')) {
+      return Promise.resolve(
+        jsonResponse({
+          total: 1,
+          groups: [{ main: { orgnr: '715787630', name: state.companyName }, branches: [] }],
+        })
+      )
+    }
     switch (url) {
       case '/api/status':
         return Promise.resolve(
@@ -57,8 +65,6 @@ function fakeServer(state: ServerState) {
             nav: null,
           })
         )
-      case '/api/companies':
-        return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: state.companyName }]))
       case '/api/companies/715787630':
         return Promise.resolve(
           jsonResponse({
@@ -153,6 +159,9 @@ describe('AppShell sync completion', () => {
     client.setQueryData(queryKeys.adsList(false), [])
     client.setQueryData(queryKeys.new, null)
 
+    // The detail is a modal dialog: the nav behind it is reached once it is closed.
+    await user.click(screen.getByRole('button', { name: 'Lukk' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/companies'))
     await user.click(screen.getByRole('link', { name: 'Søknader' }))
     expect(router.state.location.pathname).toBe('/applications')
 
@@ -167,18 +176,20 @@ describe('AppShell sync completion', () => {
     await act(() => client.refetchQueries({ queryKey: queryKeys.syncStatus }))
 
     // None of these is on screen, so each stays marked stale until a view needs it again.
-    await waitFor(() => expect(client.getQueryState(queryKeys.companies)?.isInvalidated).toBe(true))
-    for (const key of [
-      queryKeys.adsList(false),
-      queryKeys.new,
-      queryKeys.companies,
-      queryKeys.company('715787630'),
-    ]) {
+    // The company list is paged: every page query lives under queryKeys.companies.
+    const companyLists = () => client.getQueryCache().findAll({ queryKey: queryKeys.companies })
+    await waitFor(() =>
+      expect(companyLists().length > 0 && companyLists().every((q) => q.state.isInvalidated)).toBe(
+        true
+      )
+    )
+    for (const key of [queryKeys.adsList(false), queryKeys.new, queryKeys.company('715787630')]) {
       expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
     }
 
-    // Back on the detail, within the minute it would otherwise have stayed fresh.
-    act(() => router.history.back())
+    // Back on the detail (past the list its close left), within the minute it would otherwise
+    // have stayed fresh.
+    act(() => router.history.go(-2))
     expect(await screen.findByRole('heading', { name: 'Acme Ny AS' })).toBeInTheDocument()
   })
 })
@@ -194,10 +205,10 @@ describe('AppShell unsaved-changes guard', () => {
     await user.type(await screen.findByLabelText('Etikett'), 'Ny kilde')
     await user.click(screen.getByRole('link', { name: 'Søknader' }))
 
-    const dialog = await screen.findByRole('dialog', { name: QUESTION })
+    const dialog = await screen.findByRole('alertdialog', { name: QUESTION })
     await user.click(within(dialog).getByRole('button', { name: 'Avbryt' }))
 
-    expect(screen.queryByRole('dialog', { name: QUESTION })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog', { name: QUESTION })).not.toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/settings')
     expect(screen.getByLabelText('Etikett')).toHaveValue('Ny kilde')
   })
@@ -209,7 +220,7 @@ describe('AppShell unsaved-changes guard', () => {
 
     await user.type(await screen.findByLabelText('Etikett'), 'Ny kilde')
     await user.click(screen.getByRole('link', { name: 'Søknader' }))
-    const dialog = await screen.findByRole('dialog', { name: QUESTION })
+    const dialog = await screen.findByRole('alertdialog', { name: QUESTION })
     await user.click(within(dialog).getByRole('button', { name: 'Forlat uten å lagre' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
@@ -227,7 +238,21 @@ describe('AppShell unsaved-changes guard', () => {
     await user.click(screen.getByRole('link', { name: 'Søknader' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/applications'))
-    expect(screen.queryByRole('dialog', { name: QUESTION })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog', { name: QUESTION })).not.toBeInTheDocument()
+  })
+})
+
+describe('AppShell page title', () => {
+  it('names the view in the document title, and follows the language', async () => {
+    vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await waitFor(() => expect(document.title).toBe('Hugin'))
+    await user.click(await screen.findByRole('link', { name: 'Bedrifter' }))
+    await waitFor(() => expect(document.title).toBe('Bedrifter · Hugin'))
+    await user.click(screen.getByRole('button', { name: 'Switch to English' }))
+    await waitFor(() => expect(document.title).toBe('Companies · Hugin'))
   })
 })
 
@@ -275,13 +300,21 @@ describe('AppShell logo', () => {
   })
 })
 
+/** Opens the places in «Nytt siden sist» (each starts closed) and returns a new company's link. */
+async function newCompanyLink(user: ReturnType<typeof userEvent.setup>, name = 'Acme AS') {
+  const section = await screen.findByRole('region', { name: 'Nytt siden sist' })
+  for (const place of await within(section).findAllByRole('button', { expanded: false }))
+    await user.click(place)
+  return screen.findByRole('link', { name })
+}
+
 describe('AppShell opening a company detail', () => {
   it('from «Nytt siden sist», focus moves to the company heading', async () => {
     vi.stubGlobal('fetch', fakeServer({ companyName: 'Acme AS', syncRunning: false }))
     const user = userEvent.setup()
     renderApp('/')
 
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
 
     const heading = await screen.findByRole('heading', { level: 2, name: 'Acme AS' })
     await waitFor(() => expect(heading).toHaveFocus())
@@ -305,10 +338,10 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
 
-    const link = await screen.findByRole('link', { name: 'Acme AS' })
+    const link = await newCompanyLink(user)
     await user.click(link)
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     // Back, not a new entry: the dashboard's own entry is current again.
@@ -324,7 +357,7 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
 
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
     act(() => router.history.back())
 
@@ -338,11 +371,14 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { client, router } = renderApp('/')
 
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
-    // fireEvent, not user.click: a click that does not move focus (as in Safari), so the
-    // entry-index rule is what keeps restore from focusing the old link, not "focus has moved".
-    fireEvent.click(screen.getByRole('link', { name: 'Dashbord' }))
+    // The detail is a modal dialog, so the nav sits behind it. A new entry for the dashboard
+    // stands in for any way there that is not Back. Focus does not move, so the entry-index rule
+    // is what keeps restore from focusing the old link, not "focus has moved".
+    act(() => {
+      router.navigate({ to: '/' })
+    })
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     const link = await screen.findByRole('link', { name: 'Acme AS' })
@@ -359,7 +395,7 @@ describe('AppShell closing a company detail', () => {
 
     await user.click(await screen.findByRole('button', { name: /Acme AS/ }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies'))
     expect(router.history.location.state.__TSR_index).toBe(0)
@@ -371,7 +407,7 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { router } = renderApp('/companies/715787630')
 
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies'))
     expect(await screen.findByRole('button', { name: /Acme AS/ })).toBeInTheDocument()
@@ -383,11 +419,11 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
 
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
     // Marked seen in another tab meanwhile: the cache still has the company, the server not.
     state.newEmpty = true
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     await waitFor(() =>
@@ -402,11 +438,11 @@ describe('AppShell closing a company detail', () => {
     const user = userEvent.setup()
     const { router } = renderApp('/')
 
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
     // The cache still has the digest, so the card remounts with data and the refetch then fails.
     state.newFails = true
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     await waitFor(() =>
@@ -421,9 +457,9 @@ describe('AppShell closing a company detail', () => {
     const { router } = renderApp('/applications')
 
     await user.click(await screen.findByRole('link', { name: 'Dashbord' }))
-    await user.click(await screen.findByRole('link', { name: 'Acme AS' }))
+    await user.click(await newCompanyLink(user))
     await waitFor(() => expect(router.state.location.pathname).toBe('/companies/715787630'))
-    const back = await screen.findByRole('button', { name: 'Tilbake' })
+    const back = await screen.findByRole('button', { name: 'Lukk' })
     // Both clicks land before the router has rendered the first Back.
     act(() => {
       back.click()

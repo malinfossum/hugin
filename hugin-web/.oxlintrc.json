@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Oxlint runs only the @shadcn/lint design-system rules. Biome stays the formatter and the
+  // general linter (`npm run lint` runs both), so Oxlint's built-in plugins and rules are off.
+  "plugins": [],
+  "categories": { "correctness": "off" },
+  "jsPlugins": ["@shadcn/lint"],
+  "ignorePatterns": ["src/routeTree.gen.ts"],
+  "rules": {
+    "shadcn/no-restyle": ["error", { "allow": ["layout"] }],
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-arbitrary-values": "error",
+    "shadcn/no-inline-styles": "error",
+    "shadcn/no-unknown-classes": "error",
+    "shadcn/require-static-classes": "error"
+  },
+  "overrides": [
+    {
+      // Components own their appearance and may need structural values such as ring-[3px].
+      "files": ["src/components/ui/**"],
+      "rules": {
+        "shadcn/no-restyle": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    }
+  ]
+}

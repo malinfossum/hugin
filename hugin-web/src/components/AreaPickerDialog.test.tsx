@@ -61,10 +61,10 @@ describe('AreaPickerDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('lists every fylke in FYLKER order with a named tick box and disclosure, heading focused', () => {
+  it('lists every fylke in FYLKER order with a named tick box and disclosure, heading focused', async () => {
     renderDialog()
     const dialog = screen.getByRole('dialog', { name: 'Velg områder' })
-    expect(screen.getByRole('heading', { name: 'Velg områder' })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Velg områder' })).toHaveFocus())
     const boxes = within(dialog).getAllByRole('checkbox')
     expect(boxes).toHaveLength(FYLKER.size)
     // The label wraps only the input and the fylke name, so its text IS the name.
@@ -162,7 +162,8 @@ describe('AreaPickerDialog', () => {
     await user.type(screen.getByLabelText('Søk fylke eller kommune'), 'ham')
 
     expect(
-      screen.getAllByRole('listitem').filter((li) => li.classList.contains('area-fylke'))
+      // One disclosure per fylke row.
+      screen.getAllByRole('button', { name: /^(Vis|Skjul) kommuner i / })
     ).toHaveLength(1)
     expect(fylkeBox('Innlandet')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: 'Vestfold' })).not.toBeInTheDocument()
@@ -185,7 +186,8 @@ describe('AreaPickerDialog', () => {
     await user.type(screen.getByLabelText('Søk fylke eller kommune'), '   ')
 
     expect(
-      screen.getAllByRole('listitem').filter((li) => li.classList.contains('area-fylke'))
+      // One disclosure per fylke row.
+      screen.getAllByRole('button', { name: /^(Vis|Skjul) kommuner i / })
     ).toHaveLength(FYLKER.size)
     expect(liveRegion()?.textContent).toBe('')
   })
@@ -328,7 +330,7 @@ describe('AreaPickerDialog', () => {
         />
       </LiveRegionProvider>
     )
-    expect(screen.getByRole('heading', { name: 'Velg områder' })).toHaveFocus()
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Velg områder' })).toHaveFocus())
 
     rerender(
       <LiveRegionProvider>

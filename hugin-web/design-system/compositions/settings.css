@@ -1,8 +1,0 @@
-.settings-section {
-	display: grid;
-	gap: var(--space-5);
-}
-.settings-group {
-	display: grid;
-	gap: var(--space-4);
-}

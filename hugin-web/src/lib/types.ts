@@ -19,6 +19,9 @@ export interface AdDto {
   hidden: boolean
   isActive: boolean
   published: string | null
+  /** When Hugin first fetched the ad. "New since last visit" is measured by this, not by
+   * published: NAV can publish an ad hours before a sync brings it in. */
+  firstSeen: string
   /** Manual link to the pipeline entry the ad belongs to (sister-company case); wins over the
    * automatic orgnr / registry-root match. */
   linkedOrgnr: string | null
@@ -85,7 +88,10 @@ export interface StatusDto {
   nav: SourceStateDto | null
   reviewMark: string | null
   activeAds: number
+  /** In the current coverage. */
   companies: number
+  /** Every company in the store, which is what a full reset deletes. */
+  storedCompanies: number
   pipelineEntries: number
   readOnly: boolean
   /** True when municipalities, fylker or allOfNorway is non-empty, false on a fresh install
@@ -110,6 +116,18 @@ export interface SyncRunStatus {
   finishedUtc: string | null
   brreg: SourceResultDto | null
   nav: SourceResultDto | null
+}
+
+/** A hovedenhet and its branches: one row in the Companies view. */
+export interface CompanyGroupDto {
+  main: CompanyDto
+  branches: CompanyDto[]
+}
+
+/** One page of `/api/companies?limit=…`; `total` counts every matching group. */
+export interface CompanyPageDto {
+  total: number
+  groups: CompanyGroupDto[]
 }
 
 export interface KommuneDto {

@@ -1,17 +1,18 @@
+import type { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, type Ref, type RefObject, useEffect, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
 import { CompanyLink } from '../components/CompanyLink'
+import { Button } from '../components/ui/button'
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog'
 import { type T, useT } from '../i18n'
 import { ApiError } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
-import { formatDate } from '../lib/dates'
 import { companyQuery } from '../lib/queries'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
-
-function publishedText(published: string | null, t: T): string | null {
-  return published ? t('companies.published', { date: formatDate(published) }) : null
-}
+import type { CompanyDetailDto, CompanyDto } from '../lib/types'
+import { AdHistory } from './AdHistory'
 
 interface UnitTab {
   orgnr: string
@@ -27,31 +28,13 @@ function branchTabLabel(branch: CompanyDto, branches: CompanyDto[]): string {
   return sharedByCount > 1 ? displayCompanyName(branch.name) : branch.kommuneNavn
 }
 
-function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
-  if (ads.length === 0) return <p className="empty-hint">{t('companies.noAds')}</p>
-
+/** The unit's register facts as one wrapping line of label-over-value pairs between hairlines. */
+function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <ul className="stack stack-sm">
-      {ads.map((ad) => (
-        <li key={ad.feedId} className="panel stack stack-sm">
-          <span className="text-strong">{ad.title}</span>
-          {!ad.isActive && <span className="badge">{t('companies.expiredTag')}</span>}
-          {publishedText(ad.published, t) && (
-            <span className="text-muted">{publishedText(ad.published, t)}</span>
-          )}
-          <span className="help">
-            {t('companies.deadlineLabel', {
-              date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
-            })}
-          </span>
-          {ad.sourceUrl && (
-            <a href={ad.sourceUrl} target="_blank" rel="noopener noreferrer">
-              {t('companies.seeAdAtNav')}
-            </a>
-          )}
-        </li>
-      ))}
-    </ul>
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="font-medium break-words text-foreground tabular-nums">{children}</dd>
+    </div>
   )
 }
 
@@ -62,39 +45,42 @@ function UnitBody({
 }: {
   detail: CompanyDetailDto
   t: T
-  headingRef: RefObject<HTMLHeadingElement | null>
+  headingRef: Ref<HTMLHeadingElement>
 }) {
   return (
     <>
-      <h2 ref={headingRef} tabIndex={-1}>
-        {displayCompanyName(detail.company.name)}
-        {detail.company.isBranch && ` ${t('common.branchTag')}`}
-      </h2>
-      <dl className="company-detail-dl">
-        <dt>{t('companies.orgnr')}</dt>
-        <dd>{detail.company.orgnr}</dd>
-        <dt>{t('companies.kommune')}</dt>
-        <dd>{detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}</dd>
-        <dt>{t('companies.nace')}</dt>
-        <dd>{detail.company.naceCode ?? t('companies.notGiven')}</dd>
+      {/* The dialog's name: the unit on screen, so a branch tab renames it. The end padding
+      keeps a long name clear of the close button. */}
+      <div className="pe-10">
+        <DialogTitle ref={headingRef} tabIndex={-1}>
+          {displayCompanyName(detail.company.name)}
+          {detail.company.isBranch && ` ${t('common.branchTag')}`}
+        </DialogTitle>
+      </div>
+      <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-4 border-y border-border py-4">
+        <Fact label={t('companies.orgnr')}>{detail.company.orgnr}</Fact>
+        <Fact label={t('companies.kommune')}>
+          {detail.company.kommuneNavn ?? detail.company.kommune ?? t('companies.notGiven')}
+        </Fact>
+        <Fact label={t('companies.nace')}>
+          {detail.company.naceCode ?? t('companies.notGiven')}
+        </Fact>
         {detail.company.isBranch && detail.company.parentOrgnr && (
-          <>
-            <dt>{t('companies.parentCompany')}</dt>
-            <dd>{detail.company.parentOrgnr}</dd>
-          </>
+          <Fact label={t('companies.parentCompany')}>{detail.company.parentOrgnr}</Fact>
         )}
-        <dt>{t('companies.websiteRow')}</dt>
-        <dd>
+        <Fact label={t('companies.websiteRow')}>
           <CompanyLink
             name={displayCompanyName(detail.company.name)}
             kommuneNavn={detail.company.kommuneNavn}
             website={detail.company.website}
           />
-        </dd>
+        </Fact>
       </dl>
 
-      <h3>{t('companies.adHistory')}</h3>
-      <AdHistory ads={detail.ads} t={t} />
+      <h3 className="mt-10 mb-3 font-heading text-xl font-semibold text-foreground">
+        {t('companies.adHistory')}
+      </h3>
+      <AdHistory ads={detail.ads} />
     </>
   )
 }
@@ -108,14 +94,62 @@ function TabPanel({ selectedOrgnr, children }: { selectedOrgnr: string; children
       role="tabpanel"
       id="unit-tabpanel"
       aria-labelledby={`unit-tab-${selectedOrgnr}`}
-      className="stack"
+      className="flex flex-col"
     >
       {children}
     </div>
   )
 }
 
-export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {
+/** A company's detail as a dialog over the list. `orgnr` null closes it; the last company stays
+ * on screen while the dialog animates out. */
+export function CompanyDetail({
+  orgnr,
+  onClose,
+  finalFocus,
+}: {
+  orgnr: string | null
+  onClose: () => void
+  /** Where focus goes once the dialog has closed (the dialog popup's `finalFocus`). */
+  finalFocus?: DialogPrimitive.Popup.Props['finalFocus']
+}) {
+  const [shownOrgnr, setShownOrgnr] = useState(orgnr)
+  if (orgnr !== null && orgnr !== shownOrgnr) setShownOrgnr(orgnr)
+  const t = useT()
+  const popupRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  return (
+    <Dialog
+      open={orgnr !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      onOpenChangeComplete={(open) => {
+        if (!open) setShownOrgnr(null)
+      }}
+    >
+      <DialogContent
+        closeLabel={t('common.close')}
+        // The company's name rather than the first link or tab in the dialog; while it is still
+        // loading, the popup itself, and the name takes over once it arrives (CompanyBody).
+        ref={popupRef}
+        initialFocus={() => headingRef.current ?? popupRef.current}
+        finalFocus={finalFocus}
+        className="sm:max-w-3xl"
+      >
+        {shownOrgnr && <CompanyBody orgnr={shownOrgnr} headingRef={headingRef} />}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function CompanyBody({
+  orgnr,
+  headingRef,
+}: {
+  orgnr: string
+  headingRef: RefObject<HTMLHeadingElement | null>
+}) {
   // The tab selection is remembered together with the root it belongs to, so opening a different
   // company falls back to that company's own unit without an effect (and without one render
   // fetching the previous company's tab). The selection is also reset during render when the
@@ -135,20 +169,22 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       : t('companies.detailLoadError')
     : null
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Once per company the name takes focus, so a keyboard or screen reader user lands on what
+  // they opened rather than on the first link in the dialog. Not when focus is already on
+  // something inside it: a tab switch keeps focus on its tab. The data can answer before the
+  // dialog has moved focus in, so focus still on the row behind it counts as not yet inside.
+  // An error hides the body, so the heading is missing; the one-shot waits for a successful retry
+  // (`error` is a dependency so the retry runs this again).
   const focusedFor = useRef<string | null>(null)
-  // Opening a company replaces the page under the focused row or link, so focus would fall to
-  // <body>. Move it to the company heading once per opened company, when its data has rendered.
-  // Switching branch tabs keeps focus on the tab, so this runs only when `orgnr` changes. The
-  // router restores the page's scroll position; focusing must not move it.
   useEffect(() => {
     if (!detail || error || focusedFor.current === orgnr) return
-    // An error hides the body, so the heading is missing; keep the one-shot for a successful
-    // retry (`error` is a dependency so the retry runs this again).
-    if (!headingRef.current) return
+    const heading = headingRef.current
+    if (!heading) return
     focusedFor.current = orgnr
-    headingRef.current.focus({ preventScroll: true })
-  }, [orgnr, detail, error])
+    const popup = heading.closest('[role="dialog"]')
+    const active = document.activeElement
+    if (!popup?.contains(active) || active === popup) heading.focus()
+  }, [detail, error, orgnr, headingRef])
 
   const selectUnit = (unitOrgnr: string) => setSelection({ root: orgnr, unit: unitOrgnr })
 
@@ -171,19 +207,16 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
   }
 
   return (
-    <div className="company-detail card stack">
-      <button type="button" className="btn btn-ghost" onClick={onClose}>
-        {t('common.back')}
-      </button>
+    <div className="flex flex-col">
+      {/* Until the unit answers, the dialog still needs a name. */}
+      {!detail && <DialogTitle className="sr-only">{t('nav.companies')}</DialogTitle>}
 
       {tabs.length > 0 && (
-        // Design-system tabs component (`.tab-list`/`.tab`) for the accent-underline styling;
-        // `cluster cluster-sm` layered on for its flex-wrap. The strip wraps rather than
-        // scrolling when it doesn't fit a narrow (375px) screen.
+        // The units as underline tabs on a hairline; the strip wraps on a narrow screen.
         <div
           role="tablist"
           aria-label={t('companies.unitTabs')}
-          className="tab-list cluster cluster-sm"
+          className="-mt-1 mb-6 flex flex-wrap gap-x-1 border-b border-border pe-10"
         >
           {tabs.map((tab, index) => {
             const selected = tab.orgnr === selectedOrgnr
@@ -196,7 +229,12 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
                 aria-selected={selected}
                 aria-controls="unit-tabpanel"
                 tabIndex={selected ? 0 : -1}
-                className="tab"
+                className={cn(
+                  '-mb-px min-h-11 rounded-t-lg border-0 border-b-2 bg-transparent px-3 text-body-sm hover:bg-muted hover:text-foreground',
+                  selected
+                    ? 'border-foreground font-medium text-foreground'
+                    : 'border-transparent text-muted-foreground'
+                )}
                 ref={(el) => {
                   if (el) tabRefs.current.set(tab.orgnr, el)
                   else tabRefs.current.delete(tab.orgnr)
@@ -212,11 +250,15 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       )}
 
       {error && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 pe-10 text-body-sm"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
           {error}
-          <button type="button" className="btn btn-ghost" onClick={() => unitQuery.refetch()}>
+          <Button variant="link" className="min-h-11" onClick={() => unitQuery.refetch()}>
             {t('common.retry')}
-          </button>
+          </Button>
         </p>
       )}
 
@@ -227,7 +269,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </TabPanel>
         ) : (
-          <div className="stack">
+          <div className="flex flex-col">
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </div>
         ))}

@@ -1,19 +1,23 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Check, RotateCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useFocus } from '../context/focus'
 import { useReadOnly } from '../context/readOnly'
-import { useT } from '../i18n'
+import { useFormatNumber, useT } from '../i18n'
 import { ApiError, api } from '../lib/api'
 import { queryKeys, statusQuery } from '../lib/queries'
 import type { ResetResultDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
-import { useAnnounce } from './LiveRegion'
+import { SettingsSection } from './SettingsSection'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { toast } from './ui/toast'
 
 /** The exact word the hard reset's confirm field must match. Spec-locked, and deliberately not
  * translated: a typed-confirmation phrase names the destructive action, not the UI language. */
 const CONFIRM_WORD = 'NULLSTILL'
 
-/** Settings → Nullstilling (spec v3.5 Part D): the last section, danger-styled, hidden entirely
+/** Settings → Nullstilling (spec v3.5 Part D): the last section, its buttons in danger, hidden entirely
  * in read-only mode. Two levels behind POST /api/reset. "scope" just clears the discovery
  * config (so the first-run dialog can ask again), "all" also wipes the database after a
  * VACUUM INTO snapshot. Both are refused with 409 while a sync runs; that must surface as a
@@ -35,7 +39,7 @@ export function ResetSection() {
     text: string
   } | null>(null)
   const t = useT()
-  const announce = useAnnounce()
+  const formatNumber = useFormatNumber()
   const { readOnly } = useReadOnly()
   const { resetFocus } = useFocus()
   const reloadButtonRef = useRef<HTMLButtonElement>(null)
@@ -66,7 +70,7 @@ export function ResetSection() {
     queryClient.invalidateQueries({ queryKey: queryKeys.discovery })
     queryClient.invalidateQueries({ queryKey: queryKeys.status })
     setSaving(false)
-    announce(t('reset.scopeDone'))
+    toast.add({ type: 'success', title: t('reset.scopeDone') })
   }
 
   const handleHardConfirm = async () => {
@@ -103,51 +107,68 @@ export function ResetSection() {
   if (readOnly) return null
 
   return (
-    <section aria-labelledby="reset-heading" className="card settings-group stack reset-section">
-      <h2 id="reset-heading">{t('reset.heading')}</h2>
-      <p className="help">{t('reset.hint')}</p>
-
+    <SettingsSection headingId="reset-heading" title={t('reset.heading')} hint={t('reset.hint')}>
       {scopeError && (
-        <p role="alert" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="alert"
+          className="flex items-center gap-x-3 border-y border-border py-3 text-body-sm"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
           {scopeError}
         </p>
       )}
       {hardMessage && (
         <p
           role={hardMessage.kind === 'error' ? 'alert' : 'status'}
-          className={`alert ${hardMessage.kind === 'error' ? 'alert-danger' : 'alert-success'} cluster cluster-sm`}
+          className="flex items-center gap-x-3 border-y border-border py-3 text-body-sm"
         >
+          {hardMessage.kind === 'error' ? (
+            <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+          ) : (
+            <Check aria-hidden="true" className="size-4 shrink-0" />
+          )}
           {hardMessage.text}
         </p>
       )}
       {hardMessage?.kind === 'success' && (
-        <button
+        <Button
           ref={reloadButtonRef}
-          type="button"
-          className="btn btn-primary"
+          size="touch"
+          className="self-start"
           onClick={() => window.location.reload()}
         >
+          <RotateCw aria-hidden="true" />
           {t('reset.hardReload')}
-        </button>
+        </Button>
       )}
 
-      <div className="cluster cluster-sm">
-        <button
-          type="button"
-          className="btn btn-danger"
-          onClick={() => setScopeOpen(true)}
-          disabled={saving}
-        >
-          {t('reset.scopeButton')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-danger"
-          onClick={() => setHardOpen(true)}
-          disabled={saving}
-        >
-          {t('reset.hardButton')}
-        </button>
+      {/* The two levels apart, each with what it keeps beside it, so the smaller one is not
+      mistaken for the larger. */}
+      <div className="flex flex-col">
+        <div className="flex flex-col gap-x-4 gap-y-2 pb-4 md:flex-row md:items-center">
+          <Button
+            variant="destructive"
+            size="touch"
+            className="self-start md:self-auto"
+            onClick={() => setScopeOpen(true)}
+            disabled={saving}
+          >
+            {t('reset.scopeButton')}
+          </Button>
+          <p className="text-sm text-muted-foreground">{t('reset.scopeSummary')}</p>
+        </div>
+        <div className="flex flex-col gap-x-4 gap-y-2 border-t border-border pt-4 md:flex-row md:items-center">
+          <Button
+            variant="destructive"
+            size="touch"
+            className="self-start md:self-auto"
+            onClick={() => setHardOpen(true)}
+            disabled={saving}
+          >
+            {t('reset.hardButton')}
+          </Button>
+          <p className="text-sm text-muted-foreground">{t('reset.hardSummary')}</p>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -178,28 +199,37 @@ export function ResetSection() {
         {status && (
           <p>
             {t('reset.hardCounts', {
-              companies: String(status.companies),
-              activeAds: String(status.activeAds),
-              pipelineEntries: String(status.pipelineEntries),
+              companies: formatNumber(status.storedCompanies),
+              activeAds: formatNumber(status.activeAds),
+              pipelineEntries: formatNumber(status.pipelineEntries),
             })}
           </p>
         )}
         <p>
-          <a href="/export">{t('nav.export')}</a>
+          {t('reset.exportFirst')}{' '}
+          <a
+            href="/export"
+            className="text-foreground underline decoration-input underline-offset-3 hover:decoration-current"
+          >
+            {t('reset.exportFirstLink')}
+          </a>
         </p>
-        <div className="field">
-          <label id="reset-confirm-word-label" className="label" htmlFor="reset-confirm-word">
+        <div className="flex flex-col gap-1.5">
+          <label
+            id="reset-confirm-word-label"
+            htmlFor="reset-confirm-word"
+            className="text-sm text-muted-foreground"
+          >
             {t('reset.confirmLabel')}
           </label>
-          <input
+          <Input
             id="reset-confirm-word"
-            className="input"
             type="text"
             value={confirmText}
             onChange={(event) => setConfirmText(event.target.value)}
           />
         </div>
       </ConfirmDialog>
-    </section>
+    </SettingsSection>
   )
 }

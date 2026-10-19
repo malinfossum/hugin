@@ -1,6 +1,8 @@
+import { renderHook } from '@testing-library/react'
+import { createElement, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { en } from './en'
-import { detectLang } from './index'
+import { detectLang, LanguageProvider, useFormatNumber } from './index'
 import { nb } from './nb'
 
 describe('i18n key parity', () => {
@@ -79,5 +81,22 @@ describe('«aktiv» means an open ad, nothing else', () => {
 
   it.each(watchingKeys)('en %s does not say active', (key) => {
     expect(en[key]).not.toMatch(/\bactive/i)
+  })
+})
+
+describe('useFormatNumber', () => {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(LanguageProvider, null, children)
+
+  it('groups thousands the Norwegian way in nb', () => {
+    window.localStorage.setItem('hugin-lang', 'nb')
+    const { result } = renderHook(() => useFormatNumber(), { wrapper })
+    expect(result.current(69721)).toBe('69\u00a0721')
+  })
+
+  it('groups thousands with a comma in en', () => {
+    window.localStorage.setItem('hugin-lang', 'en')
+    const { result } = renderHook(() => useFormatNumber(), { wrapper })
+    expect(result.current(69721)).toBe('69,721')
   })
 })

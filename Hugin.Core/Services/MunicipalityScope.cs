@@ -16,6 +16,10 @@ public sealed class MunicipalityScope
     public required IReadOnlySet<string> AllowedNumbers { get; init; }
     public required bool AllOfNorway { get; init; }
 
+    /// <summary>The kommuner a list may show, or null when every kommune counts: all of Norway,
+    /// or no coverage chosen yet.</summary>
+    public IReadOnlySet<string>? Coverage => AllOfNorway || AllowedNumbers.Count == 0 ? null : AllowedNumbers;
+
     public static MunicipalityScope Build(HuginConfig config, IReadOnlyDictionary<string, string> kommuneRegister)
     {
         var nameToNumber = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

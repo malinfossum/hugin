@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hugin.Infrastructure.Data;
@@ -9,11 +10,64 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
     public async Task<Company?> GetAsync(string orgnr, CancellationToken ct = default) =>
         await db.Companies.FindAsync([orgnr], ct);
 
+    // Read-only: every caller lists or counts, so the (possibly tens of thousands of) rows skip
+    // change tracking.
     public async Task<IReadOnlyList<Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
         await db.Companies
+            .AsNoTracking()
             .Where(c => municipalityNumber == null || c.MunicipalityNumber == municipalityNumber)
             .OrderBy(c => c.Name)
             .ToListAsync(ct);
+
+    public Task<int> CountAsync(IReadOnlySet<string>? municipalities = null, CancellationToken ct = default) =>
+        municipalities is null
+            ? db.Companies.CountAsync(ct)
+            : db.Companies.CountAsync(c => c.MunicipalityNumber == null || municipalities.Contains(c.MunicipalityNumber), ct);
+
+    public async Task<IReadOnlyList<Company>> GetListCandidatesAsync(CompanyListQuery query,
+        CancellationToken ct = default)
+    {
+        // Coverage and region are the same tests CompanyListing makes; the search is looser (below).
+        var matched = db.Companies.AsQueryable();
+        if (query.Coverage is { } coverage)
+        {
+            var allowed = coverage.ToList();
+            matched = matched.Where(c => c.MunicipalityNumber == null || allowed.Contains(c.MunicipalityNumber));
+        }
+        if (query.Fylker.Count > 0 || query.Kommuner.Count > 0)
+        {
+            var fylker = query.Fylker.ToList();
+            var kommuner = query.Kommuner.ToList();
+            matched = matched.Where(c => c.MunicipalityNumber == null
+                || fylker.Contains(c.MunicipalityNumber.Substring(0, 2)) || kommuner.Contains(c.MunicipalityNumber));
+        }
+        if (SearchPattern(query.Search) is { } pattern)
+            matched = matched.Where(c => EF.Functions.Like(c.Name, pattern, "\\"));
+
+        // A group is keyed by its hovedenhet: a match brings in itself and its branches, and a
+        // matching branch brings in its parent and siblings, so every group the page can list is whole.
+        var keys = matched.Select(c => c.Orgnr)
+            .Concat(matched.Where(c => c.ParentOrgnr != null).Select(c => c.ParentOrgnr!));
+        return await db.Companies
+            .AsNoTracking()
+            .Where(c => keys.Contains(c.Orgnr) || (c.ParentOrgnr != null && keys.Contains(c.ParentOrgnr)))
+            .OrderBy(c => c.Name)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>SQLite's LIKE folds case for ASCII only, so a letter beyond it (ø, æ, å) matches
+    /// any one character here and CompanyListing makes the exact, case-blind comparison.</summary>
+    private static string? SearchPattern(string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return null;
+        var pattern = new System.Text.StringBuilder("%");
+        foreach (var ch in search.Trim().ToLowerInvariant())
+        {
+            if (ch is '%' or '_' or '\\') pattern.Append('\\').Append(ch);
+            else pattern.Append(char.IsAscii(ch) ? ch : '_');
+        }
+        return pattern.Append('%').ToString();
+    }
 
     public async Task<IReadOnlyList<Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         await db.Companies.Where(c => c.FirstSeen > after).OrderBy(c => c.Name).ToListAsync(ct);

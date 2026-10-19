@@ -20,14 +20,14 @@ public static class PlaceName
 public sealed record AdDto(string FeedId, string Title, string? Employer, string? EmployerOrgnr,
     string? Kommune, string? KommuneNavn, DateTimeOffset? Expires, int? DaysLeft, string? Category,
     string? SourceUrl, string? PipelineStatus, bool Hidden, bool IsActive, DateTimeOffset? Published,
-    string? LinkedOrgnr)
+    DateTimeOffset FirstSeen, string? LinkedOrgnr)
 {
     // AdOverview only ever holds active ads.
     public static AdDto From(AdOverview a, HuginConfig config, IReadOnlyDictionary<string, string> kommuner) =>
         new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
             a.MunicipalityNumber, PlaceName.Resolve(a.MunicipalityNumber, config, kommuner), a.Expires, a.DaysLeft,
             a.Category, a.SourceUrl, a.PipelineStatus is { } s ? StatusSlug.ToSlug(s) : null, a.Hidden,
-            IsActive: true, a.Published, a.LinkedOrgnr);
+            IsActive: true, a.Published, a.FirstSeen, a.LinkedOrgnr);
 
     // The new-list and company history are review lists, not the deadline view: no pipeline
     // join, no days-left countdown. IsActive is the live rule (Ad.IsOpenAt), not the stored flag.
@@ -35,7 +35,7 @@ public sealed record AdDto(string FeedId, string Title, string? Employer, string
         new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
             a.MunicipalityNumber, PlaceName.Resolve(a.MunicipalityNumber, config, kommuner), a.Expires,
             DaysLeft: null, a.Category, a.SourceUrl, PipelineStatus: null, a.Hidden, a.IsOpenAt(now),
-            a.Published, a.LinkedOrgnr);
+            a.Published, a.FirstSeen, a.LinkedOrgnr);
 }
 
 public sealed record NewDto(IReadOnlyList<CompanyDto> Companies, IReadOnlyList<AdDto> Ads,
@@ -55,8 +55,14 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
     // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this
     // feature existed. A checked-and-reachable site prefers the variant that actually answered
     // (WebsiteResolved), which may differ from the register's own https-prefixed value.
-    private static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
+    internal static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
 }
+
+/// <summary>A hovedenhet and the branches listed under it: one row in the Companies view.</summary>
+public sealed record CompanyGroupDto(CompanyDto Main, IReadOnlyList<CompanyDto> Branches);
+
+/// <summary>One page of /api/companies?limit=…; <see cref="Total"/> counts every matching group.</summary>
+public sealed record CompanyPageDto(int Total, IReadOnlyList<CompanyGroupDto> Groups);
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads, IReadOnlyList<CompanyDto> Branches);
 
@@ -78,8 +84,11 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
+/// <summary><see cref="Companies"/> counts the current coverage; <see cref="StoredCompanies"/> counts
+/// every company in the store, which is what a full reset deletes.</summary>
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured, string Version);
+    int ActiveAds, int Companies, int StoredCompanies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured,
+    string Version);
 
 public sealed record SourceDto(int Id, string Label, string Url, int Position)
 {

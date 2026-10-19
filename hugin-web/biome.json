@@ -7,15 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!dist",
-      "!node_modules",
-      "!**/*.min.js",
-      "!design-system",
-      "!public",
-      "!src/routeTree.gen.ts"
-    ]
+    "includes": ["**", "!dist", "!node_modules", "!**/*.min.js", "!public", "!src/routeTree.gen.ts"]
   },
   "formatter": {
     "enabled": true,
@@ -29,7 +21,17 @@
       "react": "recommended"
     },
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "cn": "Import cn from @/lib/utils, which knows the theme's type steps."
+            }
+          }
+        }
+      }
     }
   },
   "javascript": {
@@ -42,6 +44,9 @@
   "css": {
     "formatter": {
       "enabled": true
+    },
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "assist": {
@@ -51,5 +56,26 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/lib/utils.ts"],
+      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+    },
+    {
+      "includes": ["src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "noLabelWithoutControl": "off"
+          },
+          "suspicious": {
+            "noDoubleEquals": "off",
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    }
+  ]
 }

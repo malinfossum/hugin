@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import { type FormEvent, useCallback, useRef, useState } from 'react'
 import { useReadOnly } from '../context/readOnly'
 import { type T, useT } from '../i18n'
@@ -8,7 +9,12 @@ import { focusConfigQuery, queryKeys, recommendedCodesQuery } from '../lib/queri
 import type { FocusConfigDto, NacePreviewDto } from '../lib/types'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useAnnounce } from './LiveRegion'
+import { RemovableChip } from './RemovableChip'
+import { SettingsSection } from './SettingsSection'
 import { UnsavedChangesGuard } from './UnsavedChangesGuard'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { toast } from './ui/toast'
 
 // Same shape the API validates with, kept in sync deliberately, so the field can reject a typo
 // without a round-trip.
@@ -227,7 +233,7 @@ export function FocusSection({ previewVersion = 0 }: Props) {
     }
     if (!codesChanged) {
       setSaving(false)
-      announce(t('focus.savedNoSync'))
+      toast.add({ type: 'success', title: t('focus.savedNoSync') })
       return
     }
     // Mirrors CoverageSection's three-way split (started / already busy / failed to start).
@@ -240,28 +246,20 @@ export function FocusSection({ previewVersion = 0 }: Props) {
         err instanceof ApiError && err.status === 409 ? 'busy' : 'failed'
     )
     setSaving(false)
-    announce(
-      t(
-        sync === 'busy'
-          ? 'coverage.savedSyncBusy'
-          : sync === 'failed'
-            ? 'coverage.savedSyncFailed'
-            : 'coverage.saved'
-      )
-    )
+    if (sync === 'busy') toast.add({ type: 'info', title: t('coverage.savedSyncBusy') })
+    else if (sync === 'failed') toast.add({ type: 'warning', title: t('coverage.savedSyncFailed') })
+    else toast.add({ type: 'success', title: t('coverage.saved') })
   }
 
   const handleBackfillConfirm = async () => {
     setBackfillOpen(false)
     try {
       await startSync.mutateAsync({ full: true })
-      announce(t('focus.backfillStarted'))
+      toast.add({ type: 'success', title: t('focus.backfillStarted') })
     } catch (err) {
-      announce(
-        t(
-          err instanceof ApiError && err.status === 409 ? 'sync.alreadyRunning' : 'sync.startFailed'
-        )
-      )
+      if (err instanceof ApiError && err.status === 409)
+        toast.add({ type: 'info', title: t('sync.alreadyRunning') })
+      else toast.add({ type: 'error', title: t('sync.startFailed'), priority: 'high' })
     }
   }
 
@@ -271,51 +269,57 @@ export function FocusSection({ previewVersion = 0 }: Props) {
   const coveredWarning = related ? coveredMessage(codeInputTrimmed, related, t) : null
 
   return (
-    <section aria-labelledby="focus-config-heading" className="card settings-group stack">
-      <h2 id="focus-config-heading">{t('focus.heading')}</h2>
-      <p className="help">{t('focus.hint')}</p>
-
+    <SettingsSection
+      headingId="focus-config-heading"
+      title={t('focus.heading')}
+      hint={t('focus.hint')}
+    >
       {(loadFailed || saveError) && (
-        <p role="status" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm text-foreground"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
           {loadFailed ? t('focus.loadError') : saveError}
           {!draft && (
-            <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
+            <Button variant="link" className="min-h-11" onClick={() => refetch()}>
               {t('common.retry')}
-            </button>
+            </Button>
           )}
         </p>
       )}
 
       {draft && (
         <>
-          <fieldset className="stack" disabled={readOnly} aria-label={t('focus.heading')}>
-            <fieldset className="stack stack-sm">
-              <legend>{t('focus.bransjerLegend')}</legend>
-              <ul className="focus-chip-list">
+          <fieldset
+            className="m-0 flex min-w-0 flex-col gap-8 border-0 p-0"
+            disabled={readOnly}
+            aria-label={t('focus.heading')}
+          >
+            <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+              <legend className="mb-2 p-0 text-sm font-medium text-foreground">
+                {t('focus.bransjerLegend')}
+              </legend>
+              <ul className="flex list-none flex-wrap gap-2 ps-0">
                 {draft.naeringskoder.map((code) => (
-                  <li key={code} className="focus-chip badge">
-                    <span>{code}</span>
-                    <button
-                      type="button"
-                      className="btn btn-ghost icon-btn"
-                      aria-label={t('focus.removeCode', { code })}
-                      onClick={() => removeCode(code)}
-                    >
-                      <span aria-hidden="true">✕</span>
-                    </button>
-                  </li>
+                  <RemovableChip
+                    key={code}
+                    removeLabel={t('focus.removeCode', { code })}
+                    onRemove={() => removeCode(code)}
+                  >
+                    <span className="tabular-nums">{code}</span>
+                  </RemovableChip>
                 ))}
               </ul>
 
-              <form className="cluster cluster-sm focus-add-row" onSubmit={handleAddCode}>
-                <div className="field">
-                  <label className="label" htmlFor="focus-add-code">
+              <form className="flex flex-wrap items-end gap-2" onSubmit={handleAddCode}>
+                <div className="flex w-full flex-col gap-1.5 sm:w-40">
+                  <label htmlFor="focus-add-code" className="text-sm text-muted-foreground">
                     {t('focus.addCode')}
                   </label>
-                  <input
+                  <Input
                     id="focus-add-code"
                     ref={addCodeRef}
-                    className="input"
                     type="text"
                     value={codeInput}
                     onChange={(event) => {
@@ -324,88 +328,78 @@ export function FocusSection({ previewVersion = 0 }: Props) {
                     }}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => preview(codeInputTrimmed)}
-                >
+                <Button variant="outline" size="touch" onClick={() => preview(codeInputTrimmed)}>
                   {t('focus.previewButton')}
-                </button>
-                <button type="submit" className="btn btn-ghost">
+                </Button>
+                <Button type="submit" variant="outline" size="touch">
                   {t('focus.addCodeToList')}
-                </button>
+                </Button>
               </form>
-              {coveredWarning && <p className="help">{coveredWarning}</p>}
+              {coveredWarning && (
+                <p className="text-small text-muted-foreground">{coveredWarning}</p>
+              )}
               {previewText && (
-                <p role="status" className="help">
+                <p role="status" className="text-body-sm text-foreground">
                   {previewText}
                 </p>
               )}
 
-              <button type="button" className="btn btn-ghost" onClick={handleAddRecommended}>
+              <Button
+                variant="outline"
+                size="touch"
+                className="self-start"
+                onClick={handleAddRecommended}
+              >
                 {t('focus.recommended')}
-              </button>
+              </Button>
             </fieldset>
 
-            <fieldset className="stack stack-sm">
-              <legend>{t('focus.keywordsLegend')}</legend>
-              <p className="help">{t('focus.keywordsHint')}</p>
-              <ul className="focus-chip-list">
+            <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
+              <legend className="mb-1 p-0 text-sm font-medium text-foreground">
+                {t('focus.keywordsLegend')}
+              </legend>
+              <p className="text-small text-muted-foreground">{t('focus.keywordsHint')}</p>
+              <ul className="flex list-none flex-wrap gap-2 ps-0">
                 {draft.keywords.map((keyword) => (
-                  <li key={keyword} className="focus-chip badge">
-                    <span>{keyword}</span>
-                    <button
-                      type="button"
-                      className="btn btn-ghost icon-btn"
-                      aria-label={t('focus.removeKeyword', { keyword })}
-                      onClick={() => removeKeyword(keyword)}
-                    >
-                      <span aria-hidden="true">✕</span>
-                    </button>
-                  </li>
+                  <RemovableChip
+                    key={keyword}
+                    removeLabel={t('focus.removeKeyword', { keyword })}
+                    onRemove={() => removeKeyword(keyword)}
+                  >
+                    {keyword}
+                  </RemovableChip>
                 ))}
               </ul>
 
-              <form className="cluster cluster-sm focus-add-row" onSubmit={handleAddKeyword}>
-                <div className="field">
-                  <label className="label" htmlFor="focus-add-keyword">
+              <form className="flex flex-wrap items-end gap-2" onSubmit={handleAddKeyword}>
+                <div className="flex w-full flex-col gap-1.5 sm:w-64">
+                  <label htmlFor="focus-add-keyword" className="text-sm text-muted-foreground">
                     {t('focus.addKeyword')}
                   </label>
-                  <input
+                  <Input
                     id="focus-add-keyword"
                     ref={addKeywordRef}
-                    className="input"
                     type="text"
                     value={keywordInput}
                     onChange={(event) => setKeywordInput(event.target.value)}
                   />
                 </div>
-                <button type="submit" className="btn btn-ghost">
+                <Button type="submit" variant="outline" size="touch">
                   {t('focus.addKeywordToList')}
-                </button>
+                </Button>
               </form>
             </fieldset>
           </fieldset>
 
           {!readOnly && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {t('focus.save')}
-            </button>
-          )}
-
-          {!readOnly && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setBackfillOpen(true)}
-            >
-              {t('focus.backfillButton')}
-            </button>
+            <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+              <Button size="touch" onClick={handleSave} disabled={saving}>
+                {t('focus.save')}
+              </Button>
+              <Button variant="outline" size="touch" onClick={() => setBackfillOpen(true)}>
+                {t('focus.backfillButton')}
+              </Button>
+            </div>
           )}
         </>
       )}
@@ -421,6 +415,6 @@ export function FocusSection({ previewVersion = 0 }: Props) {
       </ConfirmDialog>
 
       <UnsavedChangesGuard dirty={dirty} />
-    </section>
+    </SettingsSection>
   )
 }

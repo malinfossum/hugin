@@ -31,6 +31,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-10T00:00:00Z',
+    firstSeen: '2026-08-10T00:00:00Z',
     ...overrides,
   }
 }
@@ -81,22 +82,24 @@ describe('NeedsAction', () => {
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Skal med/)
-    expect(item).toHaveTextContent('følger med, ikke søkt · frist om 3 dager')
+    expect(item).toHaveTextContent(
+      'Skal med hos Acme AS har frist 25.08.2026, om 3 dager. Du følger med, men har ikke søkt.'
+    )
 
     const today = screen.getByText(/Frist i dag/)
-    expect(today).toHaveTextContent('følger med, ikke søkt · frist i dag')
+    expect(today).toHaveTextContent('Frist i dag hos Acme AS har frist i dag.')
 
     expect(screen.queryByText(/Feil status/)).not.toBeInTheDocument()
     expect(screen.queryByText(/For langt unna/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Ingen frist/)).not.toBeInTheDocument()
   })
 
-  it('shows "frist utløpt" for an overdue (negative daysLeft) active entry', async () => {
+  it('says when an overdue (negative daysLeft) active entry closed', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'active', daysLeft: -1 })]
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
-    expect(item).toHaveTextContent('følger med, ikke søkt · frist utløpt')
+    expect(item).toHaveTextContent('Forfalt hos Acme AS hadde frist 25.08.2026.')
   })
 
   it('renders nothing when there are no near-frist active entries', async () => {
@@ -168,5 +171,26 @@ describe('NeedsAction', () => {
 
       expect(await screen.findByText(/Oslo-jobb, sporet/)).toBeInTheDocument()
     })
+  })
+
+  it("«Vis i frister» moves focus to the ad's row in the deadlines", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', mockFetch([ad({ feedId: 'a1', pipelineStatus: 'active', daysLeft: 3 })]))
+    render(
+      <TestQueryProvider>
+        <LanguageProvider>
+          <NeedsAction />
+          <ul>
+            <li id="deadline-a1" tabIndex={-1}>
+              Raden
+            </li>
+          </ul>
+        </LanguageProvider>
+      </TestQueryProvider>
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Vis i frister' }))
+    expect(document.activeElement).toBe(screen.getByText('Raden'))
+    expect(screen.getByText('Raden')).toHaveAttribute('data-lit')
   })
 })

@@ -2,10 +2,11 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { Toaster } from '../components/ui/toast'
 import { FocusProvider, loadFocus, saveFocus } from '../context/focus'
 import { LanguageProvider, useLang } from '../i18n'
 import type { DiscoveryConfigDto, KommuneDto, SourceDto } from '../lib/types'
-import { TestQueryProvider } from '../test-utils'
+import { TestQueryProvider, toastRegion } from '../test-utils'
 import { SourcesCard } from './dashboard/SourcesCard'
 import { SettingsView } from './SettingsView'
 
@@ -182,12 +183,14 @@ function renderView(
   const utils = render(
     <TestQueryProvider>
       <LanguageProvider>
-        <LiveRegionProvider>
-          <FocusProvider>
-            {props.withLangSwitch && <LangSwitch />}
-            <SettingsView />
-          </FocusProvider>
-        </LiveRegionProvider>
+        <Toaster>
+          <LiveRegionProvider>
+            <FocusProvider>
+              {props.withLangSwitch && <LangSwitch />}
+              <SettingsView />
+            </FocusProvider>
+          </LiveRegionProvider>
+        </Toaster>
       </LanguageProvider>
     </TestQueryProvider>
   )
@@ -223,19 +226,22 @@ describe('SettingsView', () => {
   it('a source added here also appears in the dashboard card, via the shared query cache', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', fakeServer([]).fetchMock)
-    const { container } = render(
+    render(
       <TestQueryProvider>
         <LanguageProvider>
-          <LiveRegionProvider>
-            <FocusProvider>
-              <SourcesCard />
-              <SettingsView />
-            </FocusProvider>
-          </LiveRegionProvider>
+          <Toaster>
+            <LiveRegionProvider>
+              <FocusProvider>
+                <SourcesCard />
+                <SettingsView />
+              </FocusProvider>
+            </LiveRegionProvider>
+          </Toaster>
         </LanguageProvider>
       </TestQueryProvider>
     )
-    const card = container.querySelector('.sources-card') as HTMLElement
+    // Settings has its own «Kilder» section; the dashboard's sources line is rendered first.
+    const card = screen.getAllByRole('region', { name: 'Kilder' })[0]
 
     await screen.findByRole('button', { name: 'Legg til lenke' })
     await user.type(screen.getByLabelText('Etikett'), 'Vitae')
@@ -311,7 +317,7 @@ describe('SettingsView', () => {
 
     expect(await screen.findByText('Fjerne «FINN»?')).toBeInTheDocument()
 
-    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    const dialog = screen.getByRole('alertdialog', { name: 'Fjerne «FINN»?' })
     await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
 
     await waitFor(() => {
@@ -340,7 +346,7 @@ describe('SettingsView', () => {
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Fjern' }))
-    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    const dialog = screen.getByRole('alertdialog', { name: 'Fjerne «FINN»?' })
     await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
     expect(await screen.findByText('Kunne ikke fjerne')).toBeInTheDocument()
 
@@ -436,7 +442,7 @@ describe('SettingsView', () => {
     await user.click(screen.getByRole('button', { name: 'Legg til lenke' }))
 
     await screen.findByText('Vitae')
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kilde lagt til.')
     })
@@ -455,7 +461,7 @@ describe('SettingsView', () => {
     await user.click(within(editForm).getByRole('button', { name: 'Lagre' }))
 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Lagre' })).toBeNull())
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kilde lagret.')
     })
@@ -468,11 +474,11 @@ describe('SettingsView', () => {
 
     await screen.findByText('FINN')
     await user.click(screen.getByRole('button', { name: 'Fjern' }))
-    const dialog = screen.getByRole('dialog', { name: 'Fjerne «FINN»?' })
+    const dialog = screen.getByRole('alertdialog', { name: 'Fjerne «FINN»?' })
     await user.click(within(dialog).getByRole('button', { name: 'Fjern' }))
 
     await waitFor(() => expect(screen.queryByText('FINN')).not.toBeInTheDocument())
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kilde fjernet.')
     })
@@ -522,7 +528,7 @@ describe('SettingsView', () => {
     await screen.findByRole('heading', { name: 'Visningsfilter' })
     await user.click(screen.getByRole('button', { name: 'Vis oppstartsvalget igjen' }))
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await waitFor(() => {
       expect(liveRegion).toHaveTextContent('Oppstartsvalget vises ved neste start.')
     })
@@ -570,7 +576,7 @@ describe('SettingsView', () => {
     await user.click(within(section).getByRole('button', { name: 'Fjern Innlandet' }))
 
     const liveRegion = document.querySelector('[aria-live="polite"]')
-    await waitFor(() => expect(liveRegion).toHaveTextContent('Fokus oppdatert.'))
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Visningsfilter oppdatert.'))
     expect(loadFocus()).toEqual({
       regions: [{ fylke: '39', kommuner: [] }],
       categories: ['Utvikling'],
@@ -596,7 +602,7 @@ describe('SettingsView', () => {
       expect(screen.queryByRole('dialog', { name: 'Velg områder' })).not.toBeInTheDocument()
     )
     const liveRegion = document.querySelector('[aria-live="polite"]')
-    await waitFor(() => expect(liveRegion).toHaveTextContent('Fokus oppdatert.'))
+    await waitFor(() => expect(liveRegion).toHaveTextContent('Visningsfilter oppdatert.'))
     expect(loadFocus()).toEqual({
       regions: [{ fylke: '34', kommuner: ['3405'] }],
       categories: ['Utvikling'],

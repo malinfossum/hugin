@@ -35,6 +35,8 @@ function fakeServer(
     kommunerDown?: boolean
     kommunerPending?: boolean
     scopePending?: boolean
+    scopeDown?: boolean
+    scope?: typeof innlandetConfig
   } = {}
 ) {
   const calls: { url: string; method: string; body?: unknown }[] = []
@@ -44,7 +46,8 @@ function fakeServer(
     calls.push({ url, method, body: init?.body ? JSON.parse(init.body as string) : undefined })
     if (url === '/api/config/discovery' && method === 'GET') {
       if (opts.scopePending) return new Promise<Response>(() => {})
-      return Promise.resolve(jsonResponse(innlandetConfig))
+      if (opts.scopeDown) return Promise.resolve(jsonResponse({ title: 'Nede' }, 500))
+      return Promise.resolve(jsonResponse(opts.scope ?? innlandetConfig))
     }
     if (url === '/api/kommuner') {
       if (opts.kommunerPending) return new Promise<Response>(() => {})
@@ -217,8 +220,8 @@ describe('FirstRunDialog v2', () => {
   })
 
   it('Start stays disabled while the current scope is still loading', async () => {
-    // The draft defaults to all of Norway until the scope arrives; Start before that would
-    // write a nationwide scope the user never chose.
+    // Until the scope arrives nothing has been chosen; Start before that would write a scope
+    // the user never picked.
     fakeServer({ scopePending: true })
     render(
       <TestQueryProvider>
@@ -231,7 +234,67 @@ describe('FirstRunDialog v2', () => {
     expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
   })
 
-  it('calls onDismiss (nothing else) on a native close, e.g. Escape', async () => {
+  it('opens on a placeholder after a reset: all of Norway is never preselected', async () => {
+    // An empty scope reads as all of Norway in the draft, the slowest sync there is; Start on
+    // it unchanged would fetch the whole country.
+    const user = userEvent.setup()
+    const calls = fakeServer({ scope: { municipalities: [], fylker: [], allOfNorway: false } })
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
+    const select = await screen.findByLabelText('Fylke')
+    await waitFor(() =>
+      expect(within(select).getByRole('option', { selected: true })).toHaveTextContent(
+        'Velg fylke …'
+      )
+    )
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
+
+    await user.selectOptions(select, 'Hele landet')
+    expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT')).toBe(true))
+    expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({
+      municipalityNumbers: [],
+      fylker: [],
+      allOfNorway: true,
+    })
+  })
+
+  it('a saved all-of-Norway scope opens as that choice, ready to start', async () => {
+    fakeServer({ scope: { municipalities: [], fylker: [], allOfNorway: true } })
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled())
+    expect(
+      within(screen.getByLabelText('Fylke')).getByRole('option', { selected: true })
+    ).toHaveTextContent('Hele landet')
+  })
+
+  it('asks for a region when the current scope could not be read', async () => {
+    fakeServer({ scopeDown: true })
+    render(
+      <TestQueryProvider>
+        <FirstRunDialog open onSaveFocus={() => {}} onDone={() => {}} onDismiss={() => {}} />
+      </TestQueryProvider>
+    )
+    const select = await screen.findByLabelText('Fylke')
+    await waitFor(() =>
+      expect(within(select).getByRole('option', { selected: true })).toHaveTextContent(
+        'Velg fylke …'
+      )
+    )
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
+  })
+
+  it('calls onDismiss (nothing else) on Escape', async () => {
+    const user = userEvent.setup()
     const calls = fakeServer()
     const onDismiss = vi.fn()
     const onSaveFocus = vi.fn()
@@ -242,7 +305,7 @@ describe('FirstRunDialog v2', () => {
     )
     await screen.findByRole('group', { name: 'Kommuner i Innlandet' })
 
-    screen.getByRole('dialog').dispatchEvent(new Event('close'))
+    await user.keyboard('{Escape}')
 
     expect(onDismiss).toHaveBeenCalledTimes(1)
     expect(onSaveFocus).not.toHaveBeenCalled()
