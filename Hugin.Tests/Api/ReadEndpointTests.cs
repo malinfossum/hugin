@@ -15,6 +15,8 @@ public sealed record PipelineDtoProbe(string Orgnr, string CompanyName, string S
 public sealed record StatusDtoProbe(object? Brreg, object? Nav, DateTimeOffset? ReviewMark, int ActiveAds,
     int Companies, int PipelineEntries);
 public sealed record StatusVersionProbe(string? Version);
+public sealed record CompanyGroupProbe(CompanyDtoProbe Main, List<CompanyDtoProbe> Branches);
+public sealed record CompanyPageProbe(int Total, List<CompanyGroupProbe> Groups);
 public sealed record PlacedAdProbe(string FeedId, string? KommuneNavn);
 public sealed record NewPlacesProbe(List<CompanyDtoProbe> Companies, List<PlacedAdProbe> Ads);
 public sealed record PlacedCompanyDetailProbe(CompanyDtoProbe Company, List<PlacedAdProbe> Ads);
@@ -82,6 +84,50 @@ public sealed class ReadEndpointTests
 
         var companies = await response.Content.ReadFromJsonAsync<List<CompanyDtoProbe>>();
         Assert.That(companies!.Single(c => c.Orgnr == "999888777").KommuneNavn, Is.EqualTo("Gjøvik"));
+    }
+
+    [Test]
+    public async Task Companies_page_filters_groups_and_pages_on_the_server()
+    {
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("100000001", "ALFA UTVIKLING AS", "3403", "62.100", null, false, null), now);
+            await repo.UpsertAsync(new RegisterCompany("100000002", "ALFA UTVIKLING AS", "3407", "62.100", "100000001", true, null), now);
+            await repo.UpsertAsync(new RegisterCompany("100000003", "BETA UTVIKLING AS", "3405", "62.100", null, false, null), now);
+            await repo.UpsertAsync(new RegisterCompany("100000004", "GAMMA DATA AS", "0301", "62.100", null, false, null), now);
+        }
+
+        var page = await _client.GetFromJsonAsync<CompanyPageProbe>(
+            "/api/companies?fylker=34&q=utvikling&limit=1&offset=0");
+
+        Assert.That(page!.Total, Is.EqualTo(2), "Alfa (with its branch) and Beta are in Innlandet and match");
+        Assert.That(page.Groups.Single().Main.Orgnr, Is.EqualTo("100000001"));
+        Assert.That(page.Groups.Single().Branches.Select(b => b.Orgnr), Is.EqualTo(new[] { "100000002" }));
+    }
+
+    [Test]
+    public async Task Companies_page_and_status_count_keep_to_the_coverage_while_the_full_list_keeps_everything()
+    {
+        // Coverage narrowed to Gjøvik after an earlier, wider sync left an Oslo company behind.
+        File.WriteAllText(_factory.ConfigPath, """{ "municipalities": [{ "name": "Gjøvik", "number": "3407" }] }""");
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+            await repo.UpsertAsync(new RegisterCompany("100000001", "GJØVIK DATA AS", "3407", "62.100", null, false, null), now);
+            await repo.UpsertAsync(new RegisterCompany("100000002", "OSLO DATA AS", "0301", "62.100", null, false, null), now);
+        }
+
+        var page = await _client.GetFromJsonAsync<CompanyPageProbe>("/api/companies?limit=100");
+        var status = await _client.GetFromJsonAsync<StatusDtoProbe>("/api/status");
+        var all = await _client.GetFromJsonAsync<List<CompanyDtoProbe>>("/api/companies");
+
+        Assert.That(page!.Groups.Select(g => g.Main.Orgnr), Is.EqualTo(new[] { "100000001" }));
+        Assert.That(page.Total, Is.EqualTo(1));
+        Assert.That(status!.Companies, Is.EqualTo(1));
+        Assert.That(all!, Has.Count.EqualTo(2), "the unpaged machine interface still returns the whole store");
     }
 
     [Test]

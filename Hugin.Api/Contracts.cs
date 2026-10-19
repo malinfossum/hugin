@@ -55,8 +55,14 @@ public sealed record CompanyDto(string Orgnr, string Name, string? Kommune, stri
     // link than a dead one. Unchecked (WebsiteOk == null) still renders, same as before this
     // feature existed. A checked-and-reachable site prefers the variant that actually answered
     // (WebsiteResolved), which may differ from the register's own https-prefixed value.
-    private static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
+    internal static string? ResolveWebsite(Company c) => c.WebsiteOk == false ? null : c.WebsiteResolved ?? c.Website;
 }
+
+/// <summary>A hovedenhet and the branches listed under it: one row in the Companies view.</summary>
+public sealed record CompanyGroupDto(CompanyDto Main, IReadOnlyList<CompanyDto> Branches);
+
+/// <summary>One page of /api/companies?limit=…; <see cref="Total"/> counts every matching group.</summary>
+public sealed record CompanyPageDto(int Total, IReadOnlyList<CompanyGroupDto> Groups);
 
 public sealed record CompanyDetailDto(CompanyDto Company, IReadOnlyList<AdDto> Ads, IReadOnlyList<CompanyDto> Branches);
 

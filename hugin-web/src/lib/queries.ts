@@ -1,9 +1,9 @@
-import { queryOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { api } from './api'
 import type {
   AdDto,
   CompanyDetailDto,
-  CompanyDto,
+  CompanyPageDto,
   DiscoveryConfigDto,
   FocusConfigDto,
   KommuneDto,
@@ -89,10 +89,41 @@ export const syncStatusQuery = () =>
     refetchIntervalInBackground: true,
   })
 
-export const companiesQuery = () =>
-  queryOptions({
-    queryKey: queryKeys.companies,
-    queryFn: () => api.get<CompanyDto[]>('/api/companies'),
+/** What the Companies view asks the server for: the display-filter region as whole fylker and
+ * single kommuner, plus the list's own filters. */
+export interface CompanyListParams {
+  fylker: string[]
+  kommuner: string[]
+  q: string
+  website: '' | 'has' | 'none'
+  ads: '' | 'open'
+}
+
+export const COMPANY_PAGE_SIZE = 100
+
+export function companyListSearch(params: CompanyListParams, offset: number): string {
+  const search = new URLSearchParams({ limit: String(COMPANY_PAGE_SIZE), offset: String(offset) })
+  if (params.fylker.length > 0) search.set('fylker', params.fylker.join(','))
+  if (params.kommuner.length > 0) search.set('kommuner', params.kommuner.join(','))
+  if (params.q) search.set('q', params.q)
+  if (params.website) search.set('website', params.website)
+  if (params.ads) search.set('ads', params.ads)
+  return search.toString()
+}
+
+/** The company list, a page at a time, filtered and grouped on the server: with coverage across
+ * Norway the register holds tens of thousands of companies, too many to download and render.
+ * Under queryKeys.companies, so a finished sync invalidates every page. */
+export const companyPagesQuery = (params: CompanyListParams) =>
+  infiniteQueryOptions({
+    queryKey: [...queryKeys.companies, 'pages', params] as const,
+    queryFn: ({ pageParam }) =>
+      api.get<CompanyPageDto>(`/api/companies?${companyListSearch(params, pageParam)}`),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((n, page) => n + page.groups.length, 0)
+      return loaded < last.total ? loaded : undefined
+    },
   })
 
 /** The kommune register: fixed for the life of the server, so fetched once per session. */

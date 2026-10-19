@@ -6,6 +6,10 @@ public interface ICompanyRepository
 
     public Task<IReadOnlyList<Models.Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default);
 
+    /// <summary>How many companies the store holds in <paramref name="municipalities"/> (null: all,
+    /// and a company with no kommune always counts), without loading them.</summary>
+    public Task<int> CountAsync(IReadOnlySet<string>? municipalities = null, CancellationToken ct = default);
+
     /// <summary>Branch units of one hovedenhet (<c>IsBranch &amp;&amp; ParentOrgnr == orgnr</c>),
     /// ordered by municipality number then name. Kommune-name ordering is a display-layer concern
     /// (the endpoint resolves that name the same way it does for every other company).</summary>

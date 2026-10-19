@@ -9,11 +9,19 @@ public sealed class EfCompanyRepository(HuginDbContext db) : ICompanyRepository
     public async Task<Company?> GetAsync(string orgnr, CancellationToken ct = default) =>
         await db.Companies.FindAsync([orgnr], ct);
 
+    // Read-only: every caller lists or counts, so the (possibly tens of thousands of) rows skip
+    // change tracking.
     public async Task<IReadOnlyList<Company>> GetAllAsync(string? municipalityNumber = null, CancellationToken ct = default) =>
         await db.Companies
+            .AsNoTracking()
             .Where(c => municipalityNumber == null || c.MunicipalityNumber == municipalityNumber)
             .OrderBy(c => c.Name)
             .ToListAsync(ct);
+
+    public Task<int> CountAsync(IReadOnlySet<string>? municipalities = null, CancellationToken ct = default) =>
+        municipalities is null
+            ? db.Companies.CountAsync(ct)
+            : db.Companies.CountAsync(c => c.MunicipalityNumber == null || municipalities.Contains(c.MunicipalityNumber), ct);
 
     public async Task<IReadOnlyList<Company>> GetFirstSeenAfterAsync(DateTimeOffset after, CancellationToken ct = default) =>
         await db.Companies.Where(c => c.FirstSeen > after).OrderBy(c => c.Name).ToListAsync(ct);

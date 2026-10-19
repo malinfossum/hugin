@@ -3,6 +3,7 @@ using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
 using Hugin.Core.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Hugin.Api.Endpoints;
 
@@ -33,13 +34,29 @@ public static class ReadEndpoints
                 items.Since, asOf));
         });
 
+        // Without `limit`: the whole list, as before (the localhost API doubles as a machine
+        // interface). With it: one page of the Companies view, filtered and grouped here so the
+        // browser never downloads the whole register (~70k rows with coverage across Norway).
         app.MapGet("/api/companies", async (ICompanyRepository companies, IAdRepository ads, HuginConfig config,
-            IKommuneRepository kommuneRepo, IClock clock, string? kommune) =>
+            IKommuneRepository kommuneRepo, IConfigSource configSource, IClock clock, string? kommune, string? fylker,
+            [FromQuery(Name = "kommuner")] string? lensKommuner, string? q, string? website,
+            [FromQuery(Name = "ads")] string? adsFilter, int? limit, int? offset) =>
         {
             var kommuner = await kommuneRepo.GetAllAsync();
             var openAds = await ads.CountOpenByEmployerAsync(clock.UtcNow);
-            return Results.Ok((await companies.GetAllAsync(kommune))
-                .Select(c => CompanyDto.From(c, config, kommuner, openAds)));
+            var all = await companies.GetAllAsync(kommune);
+            if (limit is null) return Results.Ok(all.Select(c => CompanyDto.From(c, config, kommuner, openAds)));
+
+            // The coverage as configured now (Settings can change it at runtime).
+            var coverage = MunicipalityScope.Build(configSource.Load(), kommuner).Coverage;
+            var query = new CompanyListQuery(Csv(fylker), Csv(lensKommuner), q,
+                website switch { "has" => WebsiteFilter.Has, "none" => WebsiteFilter.None, _ => WebsiteFilter.Any },
+                adsFilter == "open", Math.Max(0, offset ?? 0), Math.Clamp(limit.Value, 1, 500), coverage);
+            var page = CompanyListing.Page(all, query, openAds, c => CompanyDto.ResolveWebsite(c) is not null);
+            return Results.Ok(new CompanyPageDto(page.Total, page.Groups
+                .Select(g => new CompanyGroupDto(CompanyDto.From(g.Main, config, kommuner, openAds),
+                    g.Branches.Select(b => CompanyDto.From(b, config, kommuner, openAds)).ToList()))
+                .ToList()));
         });
 
         app.MapGet("/api/companies/{orgnr}", async (ICompanyRepository companies, IAdRepository ads,
@@ -103,8 +120,9 @@ public static class ReadEndpoints
 
         app.MapGet("/api/status", async (ISyncStateRepository syncState, IReviewMarkRepository mark,
             IAdRepository ads, ICompanyRepository companies, IPipelineRepository pipeline, IClock clock,
-            PublicModeOptions mode, IConfigSource configSource) =>
+            PublicModeOptions mode, IConfigSource configSource, IKommuneRepository kommuneRepo) =>
         {
+            var config = configSource.Load();
             var brreg = await syncState.GetAsync("brreg");
             var nav = await syncState.GetAsync("nav");
             return Results.Ok(new StatusDto(
@@ -112,11 +130,11 @@ public static class ReadEndpoints
                 nav?.LastSyncUtc is { } navSync ? new SourceStateDto(navSync) : null,
                 await mark.GetAsync(),
                 (await ads.GetActiveAsync(clock.UtcNow)).Count,
-                (await companies.GetAllAsync()).Count,
+                // Companies in the coverage: the store keeps those from a wider coverage chosen earlier.
+                await companies.CountAsync(MunicipalityScope.Build(config, await kommuneRepo.GetAllAsync()).Coverage),
                 (await pipeline.GetAllAsync()).Count,
                 mode.Enabled,
-                configSource.Load() is { } cfg
-                    && (cfg.Municipalities.Count > 0 || cfg.Fylker.Count > 0 || cfg.AllOfNorway),
+                config.Municipalities.Count > 0 || config.Fylker.Count > 0 || config.AllOfNorway,
                 Version));
         });
     }
@@ -136,4 +154,10 @@ public static class ReadEndpoints
         "json" => ExtractFormat.Json,
         _ => null,
     };
+
+    /// <summary>A comma-separated query value as a set; absent or blank is empty.</summary>
+    private static HashSet<string> Csv(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? []
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
 }

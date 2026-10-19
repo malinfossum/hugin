@@ -1,9 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { SyncWatcherProvider } from '../../components/SyncWatcher'
 import { LanguageProvider } from '../../i18n'
-import type { StatusDto, SyncRunStatus } from '../../lib/types'
+import { queryKeys } from '../../lib/queries'
+import { makeQueryClient } from '../../lib/queryClient'
+import type { AdDto, NewDto, StatusDto, SyncRunStatus } from '../../lib/types'
 import { TestQueryProvider } from '../../test-utils'
 import { SyncHeader } from './SyncHeader'
 
@@ -359,5 +362,152 @@ describe('SyncHeader', () => {
     expect(liveRegion).toHaveTextContent(
       'Ingen dekning valgt. Velg fylke, kommune eller hele landet.'
     )
+  })
+})
+
+describe('SyncHeader: Mark as seen', () => {
+  // The popover and userEvent need real timers; the poll tests above run on fake ones.
+  beforeEach(() => {
+    vi.useRealTimers()
+  })
+
+  function newAd(overrides: Partial<AdDto> = {}): AdDto {
+    return {
+      feedId: 'a1',
+      title: 'Utvikler',
+      employer: 'Acme AS',
+      employerOrgnr: '715787630',
+      kommune: '0301',
+      kommuneNavn: null,
+      expires: null,
+      daysLeft: null,
+      category: 'IT',
+      sourceUrl: null,
+      pipelineStatus: null,
+      hidden: false,
+      isActive: true,
+      linkedOrgnr: null,
+      published: '2026-08-10T00:00:00Z',
+      ...overrides,
+    }
+  }
+
+  function newDto(overrides: Partial<NewDto> = {}): NewDto {
+    return {
+      companies: [],
+      ads: [newAd()],
+      since: '2026-08-12T00:00:00Z',
+      asOf: '2026-08-19T09:30:00Z',
+      ...overrides,
+    }
+  }
+
+  /** Status and sync as in the tests above; GET /api/new answers `delta()`, POST /api/seen 204. */
+  function seenServer(delta: () => NewDto) {
+    return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      const method = init?.method ?? 'GET'
+      if (url === '/api/status') return Promise.resolve(jsonResponse(statusDto()))
+      if (url === '/api/sync/status') return Promise.resolve(jsonResponse(syncStatus()))
+      if (url === '/api/new') return Promise.resolve(jsonResponse(delta()))
+      if (url === '/api/seen' && method === 'POST') {
+        return Promise.resolve(new Response(null, { status: 204 }))
+      }
+      return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+    })
+  }
+
+  function renderSeen(fetchMock: ReturnType<typeof vi.fn>, client = makeQueryClient()) {
+    vi.stubGlobal('fetch', fetchMock)
+    render(
+      <TestQueryProvider client={client}>
+        <LanguageProvider>
+          <LiveRegionProvider>
+            <SyncWatcherProvider onSyncCompleted={vi.fn()}>
+              <SyncHeader onRequestCoverage={vi.fn()} />
+            </SyncWatcherProvider>
+          </LiveRegionProvider>
+        </LanguageProvider>
+      </TestQueryProvider>
+    )
+    return client
+  }
+
+  const seenPosts = (fetchMock: ReturnType<typeof vi.fn>) =>
+    fetchMock.mock.calls.filter(([u]) => u === '/api/seen').map(([, i]) => (i as RequestInit).body)
+
+  it('POSTs the exact asOf of the shown delta when confirmed in the popover', async () => {
+    const user = userEvent.setup()
+    const fetchMock = seenServer(() => newDto({ asOf: '2026-08-19T09:30:00Z' }))
+    renderSeen(fetchMock)
+
+    await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
+    const popover = await screen.findByRole('dialog')
+    await user.click(within(popover).getByRole('button', { name: 'Merk som sett' }))
+
+    await waitFor(() =>
+      expect(seenPosts(fetchMock)).toEqual([JSON.stringify({ asOf: '2026-08-19T09:30:00Z' })])
+    )
+  })
+
+  it('POSTs nothing when the popover is cancelled', async () => {
+    const user = userEvent.setup()
+    const fetchMock = seenServer(() => newDto())
+    renderSeen(fetchMock)
+
+    await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
+    const popover = await screen.findByRole('dialog')
+    await user.click(within(popover).getByRole('button', { name: 'Avbryt' }))
+
+    expect(seenPosts(fetchMock)).toEqual([])
+  })
+
+  it('announces "Merket som sett." and moves focus to the headline after confirming', async () => {
+    const user = userEvent.setup()
+    renderSeen(seenServer(() => newDto()))
+
+    await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
+    const popover = await screen.findByRole('dialog')
+    await user.click(within(popover).getByRole('button', { name: 'Merk som sett' }))
+
+    const headline = screen.getByRole('heading', { level: 2 })
+    await waitFor(() => expect(document.activeElement).toBe(headline))
+    await waitFor(() =>
+      expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent('Merket som sett.')
+    )
+  })
+
+  it('posts the asOf shown when the popover opened, not a newer one from a refetch while it was open (regression)', async () => {
+    const user = userEvent.setup()
+    let current = newDto({ asOf: '2026-08-19T09:30:00Z' })
+    const fetchMock = seenServer(() => current)
+    const client = renderSeen(fetchMock)
+
+    await user.click(await screen.findByRole('button', { name: 'Merk som sett' }))
+    await screen.findByRole('dialog')
+
+    // A sync finishes while the popover is open: /api/new now has a newer asOf and one more ad.
+    current = newDto({
+      asOf: '2026-08-19T10:15:00Z',
+      ads: [newAd(), newAd({ feedId: 'a2', title: 'Ny annonse fra runde to' })],
+    })
+    await act(() => client.invalidateQueries({ queryKey: queryKeys.new }))
+    // The headline only reads «2 nye annonser» once the refetch has applied.
+    await screen.findByRole('heading', { level: 2, name: /^2 nye annonser/ })
+
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Merk som sett' })
+    )
+
+    await waitFor(() =>
+      expect(seenPosts(fetchMock)).toEqual([JSON.stringify({ asOf: '2026-08-19T09:30:00Z' })])
+    )
+  })
+
+  it('offers no Mark as seen when nothing is new', async () => {
+    renderSeen(seenServer(() => newDto({ ads: [], companies: [] })))
+
+    await screen.findByRole('heading', { level: 2, name: /^Ingenting nytt siden/ })
+    expect(screen.queryByRole('button', { name: 'Merk som sett' })).not.toBeInTheDocument()
   })
 })

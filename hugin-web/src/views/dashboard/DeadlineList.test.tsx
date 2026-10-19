@@ -154,20 +154,18 @@ describe('DeadlineList', () => {
     expect(within(rows[2]).getByText('ingen frist')).toBeInTheDocument()
   })
 
-  it('applies urgency classes and always prints the number', async () => {
+  it('marks a frist within 7 days in rust (its one job) and always prints the number', async () => {
     const ads = [
-      ad({ feedId: 'a1', title: 'Rød', daysLeft: 2 }),
-      ad({ feedId: 'a2', title: 'Gul', daysLeft: 5 }),
-      ad({ feedId: 'a3', title: 'Ingen', daysLeft: 12 }),
+      ad({ feedId: 'a1', title: 'Snart', daysLeft: 2 }),
+      ad({ feedId: 'a2', title: 'Innen uka', daysLeft: 7 }),
+      ad({ feedId: 'a3', title: 'Senere', daysLeft: 12 }),
     ]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('2 dager')).toHaveClass('frist-rod')
-    expect(within(rows[1]).getByText('5 dager')).toHaveClass('frist-gul')
-    const ingenSpan = within(rows[2]).getByText('12 dager')
-    expect(ingenSpan).not.toHaveClass('frist-rod')
-    expect(ingenSpan).not.toHaveClass('frist-gul')
+    expect(within(rows[0]).getByText('2 dager')).toHaveClass('text-rust')
+    expect(within(rows[1]).getByText('7 dager')).toHaveClass('text-rust')
+    expect(within(rows[2]).getByText('12 dager')).not.toHaveClass('text-rust')
   })
 
   it('renders the singular day badge for daysLeft === 1', async () => {
@@ -178,20 +176,20 @@ describe('DeadlineList', () => {
     expect(screen.queryByText('1 dager')).toBeNull()
   })
 
-  it('shows "utløpt" with frist-rod for an overdue (negative daysLeft) row', async () => {
+  it('shows "utløpt" in rust for an overdue (negative daysLeft) row', async () => {
     const ads = [ad({ feedId: 'a1', title: 'Forfalt', daysLeft: -2 })]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('utløpt')).toHaveClass('frist-rod')
+    expect(within(rows[0]).getByText('utløpt')).toHaveClass('text-rust')
   })
 
-  it('shows "i dag" with frist-rod for a due-today (daysLeft 0) row', async () => {
+  it('shows "i dag" in rust for a due-today (daysLeft 0) row', async () => {
     const ads = [ad({ feedId: 'a1', title: 'I dag', daysLeft: 0 })]
     renderList(fakeServer(ads))
 
     const rows = await screen.findAllByRole('listitem')
-    expect(within(rows[0]).getByText('i dag')).toHaveClass('frist-rod')
+    expect(within(rows[0]).getByText('i dag')).toHaveClass('text-rust')
   })
 
   it('hides a row on Skjul, POSTs the hide endpoint, moves focus to the next row and announces', async () => {

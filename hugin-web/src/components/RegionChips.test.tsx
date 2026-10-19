@@ -78,7 +78,7 @@ describe('RegionChips', () => {
       'aria-hidden',
       'true'
     )
-    expect(within(chip).getByText(full)).toHaveClass('visually-hidden')
+    expect(within(chip).getByText(full)).toHaveClass('sr-only')
   })
 
   it('shows exactly four kommuner without collapsing', () => {

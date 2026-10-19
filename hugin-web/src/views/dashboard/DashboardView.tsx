@@ -14,7 +14,7 @@ interface DashboardViewProps {
 
 export function DashboardView({ show, onShowChange, onRequestCoverage }: DashboardViewProps) {
   return (
-    <div className="dashboard stack stack-lg">
+    <div className="flex flex-col gap-8">
       <SyncHeader onRequestCoverage={onRequestCoverage} />
       <NeedsAction />
       <DeadlineList show={show} onShowChange={onShowChange} />

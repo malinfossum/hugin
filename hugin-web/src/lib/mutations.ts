@@ -101,7 +101,12 @@ export function useMarkSeen() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (asOf: string) => api.post('/api/seen', { asOf }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.new }),
+    // The review mark lives in /api/status too (the deadline sheet's seen line reads it).
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.new }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.status }),
+      ]),
   })
 }
 
