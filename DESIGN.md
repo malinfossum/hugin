@@ -6,7 +6,7 @@ colors:
   sheet: "#fbfbf9"
   wash: "#eeede8"
   rule: "#e2e1db"
-  rule-strong: "#c9c6bb"
+  rule-strong: "#8a877d"
   ink: "#22262a"
   ink-secondary: "#555a5f"
   ink-tertiary: "#686c71"
@@ -21,7 +21,7 @@ colors:
   sheet-dark: "#1c1f1d"
   wash-dark: "#232624"
   rule-dark: "#2c302d"
-  rule-strong-dark: "#454a46"
+  rule-strong-dark: "#6c716d"
   ink-dark: "#e8e7e2"
   ink-secondary-dark: "#b0b0a8"
   ink-tertiary-dark: "#9a9a92"
@@ -197,7 +197,7 @@ A muted survey-map palette: neutral warm greys and ink, with four desaturated ma
 - **Sheet** (`sheet`): one step lighter; controls (buttons, select) and the floating confirm popover sit on it.
 - **Wash** (`wash`): hover and current-state fill for nav links, icon buttons, buttons and deadline rows.
 - **Hairline** (`rule`): every section and row divider.
-- **Strong Hairline** (`rule-strong`): control borders, link underlines at rest, a not-new past lifeline, the scrollbar thumb.
+- **Strong Hairline** (`rule-strong`): control borders, link underlines at rest, a not-new past lifeline, the scrollbar thumb. At least 3:1 against paper, sheet and wash in both themes, the contrast a control's edge needs.
 - **Ink Secondary** (`ink-secondary`): meta lines, captions, row subtitles, row actions, nav at rest; the scale bar's segments in light.
 - **Ink Tertiary** (`ink-tertiary`): scale-bar date figures, "since" labels, empty-state text, the start-dot outline; the scale bar's segments in dark. Every text pairing measured clears 4.5:1 on paper and wash in both themes (lowest: ink-tertiary on wash, 4.51:1).
 

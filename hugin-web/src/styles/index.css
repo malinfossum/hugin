@@ -19,7 +19,8 @@
   --sheet: #fbfbf9;
   --wash: #eeede8;
   --rule: #e2e1db;
-  --rule-strong: #c9c6bb;
+  /* Control borders need 3:1 against paper, sheet and wash (WCAG 1.4.11). */
+  --rule-strong: #8a877d;
   --ink: #22262a;
   --ink-secondary: #555a5f;
   --ink-tertiary: #686c71;
@@ -37,7 +38,7 @@
   --sheet: #1c1f1d;
   --wash: #232624;
   --rule: #2c302d;
-  --rule-strong: #454a46;
+  --rule-strong: #6c716d;
   --ink: #e8e7e2;
   --ink-secondary: #b0b0a8;
   --ink-tertiary: #9a9a92;
