@@ -24,6 +24,7 @@ function statusDto(overrides: Partial<StatusDto> = {}): StatusDto {
     nav: { lastSyncUtc: '2026-08-18T10:05:00Z' },
     reviewMark: null,
     activeAds: 3,
+    storedAds: 3,
     companies: 5,
     storedCompanies: 5,
     pipelineEntries: 2,

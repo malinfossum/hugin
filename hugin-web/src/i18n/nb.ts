@@ -370,7 +370,7 @@ export const nb = {
   'reset.hardConfirmTitle': 'Slette alt og starte på nytt?',
   'reset.hardConfirmIntro':
     'Pipelinen din slettes, og bedrifter og annonser kommer tilbake ved neste synk. Dette kan ikke angres fra Hugin, men en sikkerhetskopi av databasen lagres først, og hvor den ligger vises når nullstillingen er ferdig.',
-  'reset.hardCounts': '{companies} bedrifter, {activeAds} annonser, {pipelineEntries} i Søknader.',
+  'reset.hardCounts': '{companies} bedrifter, {ads} annonser, {pipelineEntries} i Søknader.',
   'reset.hardConfirmButton': 'Slett alt',
   'reset.exportFirst': 'Vil du ha pipelinen som fil først?',
   'reset.exportFirstLink': 'Gå til Eksport',

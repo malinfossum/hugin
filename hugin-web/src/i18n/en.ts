@@ -360,7 +360,7 @@ export const en = {
   'reset.hardConfirmTitle': 'Delete everything and start over?',
   'reset.hardConfirmIntro':
     'Your pipeline is deleted, and companies and ads come back on the next sync. This cannot be undone from Hugin, but a backup of the database is saved first and its location shown when the reset is done.',
-  'reset.hardCounts': '{companies} companies, {activeAds} ads, {pipelineEntries} in Applications.',
+  'reset.hardCounts': '{companies} companies, {ads} ads, {pipelineEntries} in Applications.',
   'reset.hardConfirmButton': 'Delete everything',
   'reset.exportFirst': 'Want your pipeline as a file first?',
   'reset.exportFirstLink': 'Go to Export',

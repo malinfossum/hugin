@@ -200,7 +200,7 @@ export function ResetSection() {
           <p>
             {t('reset.hardCounts', {
               companies: formatNumber(status.storedCompanies),
-              activeAds: formatNumber(status.activeAds),
+              ads: formatNumber(status.storedAds),
               pipelineEntries: formatNumber(status.pipelineEntries),
             })}
           </p>

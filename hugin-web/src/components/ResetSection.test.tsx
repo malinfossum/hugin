@@ -20,6 +20,7 @@ const STATUS: StatusDto = {
   nav: null,
   reviewMark: null,
   activeAds: 283,
+  storedAds: 1904,
   companies: 412,
   storedCompanies: 8037,
   pipelineEntries: 13,
@@ -117,13 +118,13 @@ describe('ResetSection', () => {
     expect(confirm).toBeEnabled()
   })
 
-  it('counts every company in the store, not only those in the current coverage', async () => {
+  it('counts every company and ad in the store, not only the coverage and the open ads', async () => {
     const user = userEvent.setup()
     renderSection(fakeServer().fetchMock)
 
     await user.click(screen.getByRole('button', { name: 'Slett alle data' }))
 
-    expect(await screen.findByText(/^8\s037 bedrifter, 283 annonser/)).toBeInTheDocument()
+    expect(await screen.findByText(/^8\s037 bedrifter, 1\s904 annonser/)).toBeInTheDocument()
   })
 
   it('rejects anything short of the exact word', async () => {

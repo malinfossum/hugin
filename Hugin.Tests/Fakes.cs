@@ -356,6 +356,8 @@ internal sealed class FakeAdRepository : IAdRepository
 
     public Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Ad>>(Store.Values.ToList());
+
+    public Task<int> CountAsync(CancellationToken ct = default) => Task.FromResult(Store.Count);
 }
 
 internal sealed class FakePipelineRepository : IPipelineRepository

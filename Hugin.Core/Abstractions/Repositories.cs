@@ -94,6 +94,9 @@ public interface IAdRepository
     /// <summary>Every stored ad: open, expired and hidden alike. No ordering promised.</summary>
     public Task<IReadOnlyList<Models.Ad>> GetAllAsync(CancellationToken ct = default);
 
+    /// <summary>How many ads are stored, open, expired and hidden alike, without loading them.</summary>
+    public Task<int> CountAsync(CancellationToken ct = default);
+
     /// <summary>Demo seeder only: inserts the ad as given, or overwrites every feed-shaped field
     /// on an existing one, FirstSeen included, so seeded dates roll. Unlike
     /// <see cref="UpsertAsync"/> nothing falls back to the old value. Hidden and LinkedOrgnr are

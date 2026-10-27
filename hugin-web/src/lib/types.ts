@@ -88,6 +88,8 @@ export interface StatusDto {
   nav: SourceStateDto | null
   reviewMark: string | null
   activeAds: number
+  /** Every ad in the store, expired ones included, which is what a full reset deletes. */
+  storedAds: number
   /** In the current coverage. */
   companies: number
   /** Every company in the store, which is what a full reset deletes. */

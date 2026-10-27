@@ -84,11 +84,12 @@ public sealed record TrackResponse(PipelineDto Entry, string? Warning);
 
 public sealed record SourceStateDto(DateTimeOffset LastSyncUtc);
 
-/// <summary><see cref="Companies"/> counts the current coverage; <see cref="StoredCompanies"/> counts
-/// every company in the store, which is what a full reset deletes.</summary>
+/// <summary><see cref="ActiveAds"/> counts the open ads and <see cref="Companies"/> the current coverage;
+/// <see cref="StoredAds"/> and <see cref="StoredCompanies"/> count everything in the store, which is what
+/// a full reset deletes.</summary>
 public sealed record StatusDto(SourceStateDto? Brreg, SourceStateDto? Nav, DateTimeOffset? ReviewMark,
-    int ActiveAds, int Companies, int StoredCompanies, int PipelineEntries, bool ReadOnly, bool ScopeConfigured,
-    string Version);
+    int ActiveAds, int StoredAds, int Companies, int StoredCompanies, int PipelineEntries, bool ReadOnly,
+    bool ScopeConfigured, string Version);
 
 public sealed record SourceDto(int Id, string Label, string Url, int Position)
 {

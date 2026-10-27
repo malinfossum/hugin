@@ -132,6 +132,7 @@ public static class ReadEndpoints
                 nav?.LastSyncUtc is { } navSync ? new SourceStateDto(navSync) : null,
                 await mark.GetAsync(),
                 (await ads.GetActiveAsync(clock.UtcNow)).Count,
+                await ads.CountAsync(),
                 // Companies in the coverage: the store keeps those from a wider coverage chosen earlier.
                 await companies.CountAsync(MunicipalityScope.Build(config, await kommuneRepo.GetAllAsync()).Coverage),
                 await companies.CountAsync(),

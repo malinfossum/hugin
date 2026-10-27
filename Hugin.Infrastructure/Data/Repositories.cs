@@ -287,6 +287,8 @@ public sealed class EfAdRepository(HuginDbContext db) : IAdRepository
     public async Task<IReadOnlyList<Ad>> GetAllAsync(CancellationToken ct = default) =>
         await db.Ads.ToListAsync(ct);
 
+    public Task<int> CountAsync(CancellationToken ct = default) => db.Ads.CountAsync(ct);
+
     public async Task PutSeededAsync(Ad ad, CancellationToken ct = default)
     {
         if (await db.Ads.FindAsync([ad.FeedId], ct) is { } existing)
