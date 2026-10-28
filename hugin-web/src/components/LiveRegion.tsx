@@ -1,4 +1,12 @@
-import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from 'react'
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 const AnnounceContext = createContext<(message: string) => void>(() => {})
 export const useAnnounce = () => useContext(AnnounceContext)
@@ -12,6 +20,9 @@ export function LiveRegionProvider({ children }: { children: ReactNode }) {
     clearTimeout(clearTimer.current)
     clearTimer.current = setTimeout(() => setMessage(next), 50)
   }, [])
+
+  // A pending announcement dies with the region, so its update never lands after unmount.
+  useEffect(() => () => clearTimeout(clearTimer.current), [])
 
   return (
     <AnnounceContext.Provider value={announce}>
