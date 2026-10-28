@@ -373,7 +373,10 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                         ad.title
                       )}
                     </span>
-                    <span className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
+                    {/* At least one line tall even when it has nothing to show (no employer, place,
+                    badge or status): the title link's padding reaches into it and must not
+                    reach the actions under it. */}
+                    <span className="flex min-h-lh flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
                       {isNew && (
                         <span className="font-semibold text-forest">{t('deadlines.newBadge')}</span>
                       )}

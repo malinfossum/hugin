@@ -16,5 +16,6 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /** Below Tailwind's md breakpoint: the phone layout. Written as "not md" so the query stays
- * mobile-first (min-width only) and still means exactly what md: means in the CSS. */
-export const useNarrow = () => useMediaQuery('not all and (min-width: 768px)')
+ * mobile-first (min-width only), and in rem like md itself, so it still agrees with the CSS when
+ * the browser's default font size is not 16 px. */
+export const useNarrow = () => useMediaQuery('not all and (min-width: 48rem)')
