@@ -111,11 +111,27 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* The DS .container, renamed: Tailwind's own `container` utility (breakpoint max-widths) would
-   win over it from the utilities layer. Same definition, reading the same DS spacing tokens. */
-@utility app-container {
-  width: min(100% - (var(--container-padding) * 2), var(--content-width));
-  margin-inline: auto;
+/* Time-scale geometry (lib/timeScale.ts). Positions are data, so an element carries them as
+   custom properties (--x, --w, in percent of the scale) and these place it. */
+@utility at-x {
+  left: var(--x);
+}
+@utility span-x {
+  left: var(--x);
+  width: var(--w);
+}
+/* A lifeline that began before the window fades in from the scale's left edge. */
+@utility fade-in-start {
+  mask-image: linear-gradient(to right, transparent, #000 2.5rem);
+}
+/* A link inside running text keeps the 44 px hit box but takes only one line of space: an
+   inline-level box's margin box sets the line's height, its border box the hit area. The box
+   overlaps the text around it, which is not interactive. */
+@utility inline-target {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  margin-block: calc((1lh - 44px) / 2);
 }
 
 @layer base {

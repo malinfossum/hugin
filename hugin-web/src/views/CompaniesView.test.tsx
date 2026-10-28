@@ -6,7 +6,13 @@ import { LiveRegionProvider } from '../components/LiveRegion'
 import { FocusProvider, saveFocus, useFocus } from '../context/focus'
 import { LanguageProvider } from '../i18n'
 import { formatDate } from '../lib/dates'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
+import type {
+  AdDto,
+  CompanyDetailDto,
+  CompanyDto,
+  CompanyGroupDto,
+  CompanyPageDto,
+} from '../lib/types'
 import { TestQueryProvider } from '../test-utils'
 import { type CompaniesFilters, CompaniesView } from './CompaniesView'
 
@@ -91,14 +97,65 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
   }
 }
 
-/** Fake server: GET /api/companies; GET /api/companies/{orgnr} -> detail or 404. */
+/** Stand-in for the server's CompanyListing (Hugin.Core): the same grouping and filter rules,
+ * answering one page. The view no longer filters; these tests check that it asks for the right
+ * page and renders what comes back. */
+function companyPage(companies: CompanyDto[], url: URL): CompanyPageDto {
+  const params = url.searchParams
+  const set = (key: string) => new Set((params.get(key) ?? '').split(',').filter(Boolean))
+  const fylker = set('fylker')
+  const kommuner = set('kommuner')
+  const q = (params.get('q') ?? '').trim().toLowerCase()
+  const website = params.get('website')
+  const openOnly = params.get('ads') === 'open'
+  const offset = Number(params.get('offset') ?? 0)
+  const limit = Number(params.get('limit') ?? 100)
+
+  const inRegion = (kommune: string | null) =>
+    (fylker.size === 0 && kommuner.size === 0) ||
+    kommune === null ||
+    fylker.has(kommune.slice(0, 2)) ||
+    kommuner.has(kommune)
+  const matches = (c: CompanyDto) =>
+    inRegion(c.kommune) &&
+    (!q || c.name.toLowerCase().includes(q)) &&
+    (website === 'has' ? !!c.website : website === 'none' ? !c.website : true)
+
+  const byOrgnr = new Map(companies.map((c) => [c.orgnr, c]))
+  const groups = new Map<string, CompanyGroupDto>()
+  const mains: CompanyDto[] = []
+  for (const c of companies) {
+    const parent = c.parentOrgnr ? byOrgnr.get(c.parentOrgnr) : undefined
+    if (parent && parent.orgnr !== c.orgnr && !parent.isBranch) continue
+    mains.push(c)
+    groups.set(c.orgnr, { main: c, branches: [] })
+  }
+  for (const c of companies) {
+    const parent = c.parentOrgnr ? byOrgnr.get(c.parentOrgnr) : undefined
+    if (parent && parent.orgnr !== c.orgnr && !parent.isBranch)
+      groups.get(parent.orgnr)?.branches.push(c)
+  }
+  const openAds = (g: CompanyGroupDto) => g.branches.reduce((n, b) => n + b.openAds, g.main.openAds)
+  const visible = mains
+    .map((m) => groups.get(m.orgnr) as CompanyGroupDto)
+    .filter((g) => (matches(g.main) || g.branches.some(matches)) && (!openOnly || openAds(g) > 0))
+  return { total: visible.length, groups: visible.slice(offset, offset + limit) }
+}
+
+/** Fake server: GET /api/companies?… (one page); GET /api/companies/{orgnr} -> detail or 404;
+ * GET /api/kommuner -> the names the fixtures carry. */
 function fakeServer(companies: CompanyDto[], details: Record<string, CompanyDetailDto>) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
-    const url = typeof input === 'string' ? input : input.toString()
-    if (url === '/api/companies') {
-      return Promise.resolve(jsonResponse(companies))
+    const url = new URL(typeof input === 'string' ? input : input.toString(), 'http://hugin.test')
+    if (url.pathname === '/api/companies') {
+      return Promise.resolve(jsonResponse(companyPage(companies, url)))
     }
-    const detailMatch = url.match(/^\/api\/companies\/(.+)$/)
+    if (url.pathname === '/api/kommuner') {
+      const names = new Map<string, string>()
+      for (const c of companies) if (c.kommune && c.kommuneNavn) names.set(c.kommune, c.kommuneNavn)
+      return Promise.resolve(jsonResponse([...names].map(([number, name]) => ({ number, name }))))
+    }
+    const detailMatch = url.pathname.match(/^\/api\/companies\/(.+)$/)
     if (detailMatch) {
       const detail = details[detailMatch[1]]
       if (!detail) {
@@ -108,7 +165,7 @@ function fakeServer(companies: CompanyDto[], details: Record<string, CompanyDeta
       }
       return Promise.resolve(jsonResponse(detail))
     }
-    return Promise.reject(new Error(`unhandled request ${url}`))
+    return Promise.reject(new Error(`unhandled request ${url.pathname}`))
   })
   return fetchMock
 }
@@ -145,8 +202,9 @@ describe('CompaniesView', () => {
     const search = screen.getByRole('searchbox', { name: 'Søk' })
     await userEvent.setup().type(search, 'ac')
 
+    // The search reaches the server once typing pauses.
+    await waitFor(() => expect(screen.queryByText('Beta Software')).not.toBeInTheDocument())
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
-    expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
     expect(screen.getByText('1 bedrift')).toBeInTheDocument()
   })
 
@@ -292,7 +350,7 @@ describe('CompaniesView', () => {
 
     await user.type(screen.getByRole('searchbox', { name: 'Søk' }), 'acme')
 
-    expect(result).toHaveTextContent(/^1 bedrift$/)
+    await waitFor(() => expect(result).toHaveTextContent(/^1 bedrift$/))
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.queryByText('Acme Labs')).not.toBeInTheDocument()
     expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
@@ -466,9 +524,7 @@ describe('CompaniesView', () => {
 
     // One group per hovedenhet/standalone (2), not one row per unit (3). No branch row hides
     // inside a nested list either.
-    const outerList = container.querySelector('.companies-view > ul')
-    if (!outerList) throw new Error('outer companies list not found')
-    expect(outerList.children).toHaveLength(2)
+    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(2)
     expect(
       screen.queryByText('Nyfjell Spill AS Avdeling Oslo', { exact: false })
     ).not.toBeInTheDocument()
@@ -500,14 +556,12 @@ describe('CompaniesView', () => {
         kommuneNavn: 'Oslo',
       }),
     ]
-    const { container } = renderView(fakeServer(companies, {}))
+    renderView(fakeServer(companies, {}))
 
     await screen.findByText('Nyfjell Spill AS')
 
     // A's group (with B nested, invisible in the list) + C's standalone row: 2 groups, not 3.
-    const outerList = container.querySelector('.companies-view > ul')
-    if (!outerList) throw new Error('outer companies list not found')
-    expect(outerList.children).toHaveLength(2)
+    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(2)
 
     // C falls back to a standalone row, since its "parent" B is itself a branch.
     expect(screen.getByText('Nyfjell Spill AS Avdeling Oslo Sentrum')).toBeInTheDocument()
@@ -546,16 +600,14 @@ describe('CompaniesView', () => {
       company({ orgnr: 'mellomstor', name: 'Mellomstor AS' }),
       company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
     ]
-    const { container } = renderView(fakeServer(companies, {}))
+    renderView(fakeServer(companies, {}))
 
     await screen.findByText('Nyfjell Spill AS')
 
-    const outerList = container.querySelector('.companies-view > ul')
-    if (!outerList) throw new Error('outer companies list not found')
-    const rowNames = Array.from(outerList.querySelectorAll('.companies-row strong')).map(
-      (el) => el.textContent
-    )
-    expect(rowNames).toEqual(['Mellomstor AS', 'Nyfjell Spill AS'])
+    const rows = within(screen.getByRole('list')).getAllByRole('button')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent(/^Mellomstor AS/)
+    expect(rows[1]).toHaveTextContent(/^Nyfjell Spill AS/)
   })
 
   it('Tilbake from a branch tab returns to the list and refocuses the main row', async () => {
@@ -750,7 +802,7 @@ describe('CompaniesView', () => {
     expect(screen.getByText('Beta Software')).toBeInTheDocument()
   })
 
-  it('shows the display filter as read-only chips named from the loaded companies, with a link to Settings', async () => {
+  it('shows the display filter as read-only chips named from the kommune register, with a link to Settings', async () => {
     saveFocus({ regions: [{ fylke: '34', kommuner: ['3403'] }], categories: [] })
     const onOpenSettings = vi.fn()
     const user = userEvent.setup()

@@ -32,6 +32,14 @@ function fakeServer(state: ServerState) {
     const url = typeof input === 'string' ? input : input.toString()
     const method = init?.method ?? 'GET'
     if (method !== 'GET') return Promise.reject(new Error(`unhandled request ${method} ${url}`))
+    if (url.startsWith('/api/companies?')) {
+      return Promise.resolve(
+        jsonResponse({
+          total: 1,
+          groups: [{ main: { orgnr: '715787630', name: state.companyName }, branches: [] }],
+        })
+      )
+    }
     switch (url) {
       case '/api/status':
         return Promise.resolve(
@@ -57,8 +65,6 @@ function fakeServer(state: ServerState) {
             nav: null,
           })
         )
-      case '/api/companies':
-        return Promise.resolve(jsonResponse([{ orgnr: '715787630', name: state.companyName }]))
       case '/api/companies/715787630':
         return Promise.resolve(
           jsonResponse({
@@ -167,13 +173,14 @@ describe('AppShell sync completion', () => {
     await act(() => client.refetchQueries({ queryKey: queryKeys.syncStatus }))
 
     // None of these is on screen, so each stays marked stale until a view needs it again.
-    await waitFor(() => expect(client.getQueryState(queryKeys.companies)?.isInvalidated).toBe(true))
-    for (const key of [
-      queryKeys.adsList(false),
-      queryKeys.new,
-      queryKeys.companies,
-      queryKeys.company('715787630'),
-    ]) {
+    // The company list is paged: every page query lives under queryKeys.companies.
+    const companyLists = () => client.getQueryCache().findAll({ queryKey: queryKeys.companies })
+    await waitFor(() =>
+      expect(companyLists().length > 0 && companyLists().every((q) => q.state.isInvalidated)).toBe(
+        true
+      )
+    )
+    for (const key of [queryKeys.adsList(false), queryKeys.new, queryKeys.company('715787630')]) {
       expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true)
     }
 
