@@ -50,7 +50,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
   return (
     <header className="sync-header card stack">
       <h2 className="visually-hidden">{t('sync.heading')}</h2>
-      <dl className="sync-times cluster text-muted">
+      <dl className="sync-times cluster text-muted-foreground">
         <div>
           <dt>{t('sync.brregLabel')}</dt>
           <dd>{formatLastSync(status?.brreg, t)}</dd>
@@ -60,7 +60,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
           <dd>{formatLastSync(status?.nav, t)}</dd>
         </div>
       </dl>
-      <p className="sync-counts text-muted">
+      <p className="sync-counts text-muted-foreground">
         {t('sync.counts', {
           activeAds: status?.activeAds ?? 0,
           companies: status?.companies ?? 0,

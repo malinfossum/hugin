@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hugin · Dashboard (topographic)</title>
+<style>
+/* Map sheet: warm-grey paper, ink, and the map's own colours doing real jobs.
+   Contour brown = time and the seen mark. Forest = new. Lake = applied. Rust = closing. */
+:root, [data-theme="light"] {
+  --paper: #f6f6f3;
+  --sheet: #fbfbf9;
+  --wash: #eeede8;
+  --rule: #e2e1db;
+  --rule-2: #c9c6bb;
+  --ink: #22262a;
+  --ink-2: #555a5f;
+  --ink-3: #686c71;
+  --contour: #76593c;
+  --forest: #4a6b46;
+  --forest-wash: rgb(74 107 70 / 0.15);
+  --lake: #2f6a8f;
+  --rust: #a24b16;
+  --rust-wash: rgb(162 75 22 / 0.07);
+  --select: rgb(47 106 143 / 0.18);
+  --shadow: 0 10px 28px rgb(34 38 42 / 0.12), 0 2px 6px rgb(34 38 42 / 0.06);
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --paper: #171918;
+  --sheet: #1c1f1d;
+  --wash: #232624;
+  --rule: #2c302d;
+  --rule-2: #454a46;
+  --ink: #e8e7e2;
+  --ink-2: #b0b0a8;
+  --ink-3: #9a9a92;
+  --contour: #c9a882;
+  --forest: #97c290;
+  --forest-wash: rgb(151 194 144 / 0.12);
+  --lake: #8bbadb;
+  --rust: #e6935f;
+  --rust-wash: rgb(230 147 95 / 0.08);
+  --select: rgb(139 186 219 / 0.25);
+  --shadow: 0 10px 28px rgb(0 0 0 / 0.4), 0 2px 6px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scrollbar-color: var(--rule-2) var(--paper); }
+body { background: var(--paper); color: var(--ink); font: 400 16px/1.5 "Hanken Grotesk", system-ui, sans-serif; -webkit-font-smoothing: antialiased; caret-color: var(--lake); accent-color: var(--lake); }
+::selection { background: var(--select); color: var(--ink); }
+a { color: inherit; text-decoration-color: var(--rule-2); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-color: currentColor; }
+:focus-visible { outline: 2px solid var(--lake); outline-offset: 2px; border-radius: 3px; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 48px; }
+.sc { text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; font-weight: 600; }
+.scale, .end, .meta, .place h3 span, .since { font-variant-numeric: tabular-nums; }
+
+.top { border-bottom: 1px solid var(--rule); }
+.top .wrap { height: 64px; display: flex; align-items: center; gap: 40px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; }
+.brand svg { width: 32px; height: 32px; color: var(--ink); }
+.nav { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.nav a { padding: 6px 12px; border-radius: 6px; color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.nav a:hover { color: var(--ink); background: var(--wash); }
+.nav a[aria-current] { color: var(--ink); background: var(--wash); font-weight: 500; }
+.tools { display: flex; gap: 2px; }
+.icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-2); }
+.icon-btn:hover { color: var(--ink); background: var(--wash); }
+.demo { color: var(--ink-2); font-size: 13px; padding-block: 10px; }
+.demo a { color: var(--ink); }
+
+.head { display: grid; grid-template-columns: 1fr auto; gap: 10px 40px; align-items: end; padding-top: 40px; }
+.head h1 { font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; max-width: 26ch; }
+.head h1 em { font-style: normal; color: var(--forest); }
+.meta { grid-column: 1; color: var(--ink-2); font-size: 14px; }
+.meta b { color: var(--ink); font-weight: 500; }
+.actions { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 10px; position: relative; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--rule-2); background: var(--sheet); font-weight: 500; font-size: 15px; white-space: nowrap; }
+.btn:hover { background: var(--wash); }
+.btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn.primary:hover { background: var(--ink); opacity: 0.86; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.confirm { position: absolute; right: 0; top: 48px; width: 310px; z-index: 5; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; box-shadow: var(--shadow); font-size: 15px; }
+.confirm[hidden] { display: none; }
+.confirm p { margin-bottom: 14px; }
+.confirm .row { display: flex; gap: 8px; justify-content: flex-end; }
+
+.needs { margin-top: 28px; padding: 12px 0; border-block: 1px solid var(--rule); display: flex; gap: 12px; align-items: baseline; font-size: 15px; }
+.needs b { color: var(--rust); font-weight: 600; }
+.needs button { margin-left: auto; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; white-space: nowrap; font-size: 14px; }
+
+/* Deadlines: one sheet, lifelines drawn at contour weight. */
+.board { margin-top: 36px; }
+.board-head { display: flex; align-items: baseline; gap: 16px; }
+.board-head h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.board-head p { color: var(--ink-2); font-size: 15px; }
+.board-head label { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
+select { font: 500 14px "Hanken Grotesk", system-ui, sans-serif; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule-2); border-radius: 6px; height: 36px; padding: 0 10px; }
+.grid { position: relative; display: grid; grid-template-columns: 360px 1fr; margin-top: 18px; }
+/* The scale bar: alternating week segments, like the scale on a map sheet. */
+.scale { position: relative; height: 54px; }
+.scale .bar { position: absolute; bottom: 22px; height: 4px; border: 1px solid var(--ink-2); }
+.scale .bar.on { background: var(--ink-2); }
+[data-theme="dark"] .scale .bar { border-color: var(--ink-3); }
+[data-theme="dark"] .scale .bar.on { background: var(--ink-3); }
+.scale .d { position: absolute; bottom: 2px; transform: translateX(-50%); font-size: 12px; color: var(--ink-3); }
+.scale .m { position: absolute; top: 2px; color: var(--contour); }
+.scale .lab { display: none; position: absolute; top: 0; font-size: 12px; white-space: nowrap; }
+.scale .lab.today { font-weight: 600; transform: translateX(6px); }
+.scale .lab.seen { color: var(--contour); transform: translateX(calc(-100% - 6px)); }
+.row { display: contents; }
+.row > div { border-top: 1px solid var(--rule); min-height: 70px; }
+.title { padding: 14px 20px 14px 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
+.title .t { font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title .t a { text-decoration: none; }
+.title .t a:hover { text-decoration: underline; }
+.title .s { font-size: 14px; color: var(--ink-2); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; line-height: 1.3; }
+.state { font-weight: 600; }
+.state.watching { color: var(--ink); }
+.state.applied { color: var(--lake); }
+.state.new { color: var(--forest); }
+.title .acts { display: flex; gap: 14px; font-size: 13px; visibility: hidden; opacity: 0; transition: opacity .15s; }
+.title .acts button { min-height: 24px; padding-block: 3px; color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.title .acts button:hover { color: var(--ink); }
+.row:hover .acts, .row:focus-within .acts { visibility: visible; opacity: 1; }
+.row:hover > div, .row.lit > div { background: var(--wash); }
+.row:hover .title, .row.lit .title { box-shadow: -12px 0 0 var(--wash); }
+.life { position: relative; padding: 14px 0; }
+.life i { position: absolute; top: 50%; }
+.life .past { height: 0; border-top: 1px solid var(--rule-2); }
+.life .past.isnew { border-top: 1.5px solid var(--forest); }
+.life .past.clip { -webkit-mask-image: linear-gradient(to right, transparent, #000 40px); mask-image: linear-gradient(to right, transparent, #000 40px); }
+.life .start { width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; border: 1px solid var(--ink-3); background: var(--paper); }
+.life .start.isnew { background: var(--forest); border-color: var(--forest); }
+.life .future { height: 0; border-top: 2px solid var(--contour); margin-top: -1px; }
+.life .future.closing { border-top-color: var(--rust); }
+.life .future.applied { border-top-color: var(--lake); }
+.life .tip { width: 2px; height: 12px; margin: -6px 0 0 -1px; background: var(--contour); }
+.life .tip.closing { background: var(--rust); }
+.life .tip.applied { background: var(--lake); }
+.life .since { top: calc(50% - 22px); left: 0; font-size: 12px; color: var(--ink-3); font-style: normal; }
+.life .end { position: absolute; top: 50%; transform: translateY(-50%); padding-left: 12px; white-space: nowrap; font-size: 14px; line-height: 1.2; color: var(--ink-2); }
+.life .end b { color: var(--ink); font-weight: 600; }
+.life .end.closing b, .life .end.closing { color: var(--rust); }
+.life .end.flip { padding: 0; transform: translate(-100%, calc(-100% - 8px)); }
+.overlay { position: absolute; pointer-events: none; }
+.zone { position: absolute; top: 0; bottom: 0; background: var(--forest-wash); transition: left .7s cubic-bezier(.16,1,.3,1), width .7s cubic-bezier(.16,1,.3,1), opacity .7s; }
+.mark { position: absolute; top: var(--reach, 0px); bottom: 0; width: 0; transition: left .7s cubic-bezier(.16,1,.3,1); }
+.mark span { position: absolute; bottom: -26px; font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; line-height: 1.2; }
+.mark.today { border-left: 1px solid var(--ink); }
+.mark.today span { left: 7px; font-weight: 600; }
+.mark.seen { border-left: 1px dashed var(--contour); }
+.mark.seen span { right: 7px; color: var(--contour); }
+.rm { display: none; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 26px; margin-top: 30px; padding: 14px 0 0; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
+.key span { display: inline-flex; align-items: center; gap: 8px; }
+.key i { display: inline-block; width: 20px; height: 0; border-top: 2px solid; }
+.key i.wash { height: 12px; border: 0; background: var(--forest-wash); }
+
+/* Arrivals: kommune names set like map labels. */
+.arrivals { margin-top: 56px; display: grid; grid-template-columns: 360px 1fr; gap: 0; }
+.arrivals .lead { padding-right: 32px; }
+.arrivals h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.arrivals .lead p { color: var(--ink-2); font-size: 15px; margin-top: 4px; text-wrap: pretty; }
+.places { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; transition: opacity .6s; }
+.place h3 { color: var(--contour); display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 6px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; }
+.place h3 span { font-size: 14px; color: var(--ink-2); font-variant: normal; letter-spacing: 0; font-weight: 500; }
+.place ul { list-style: none; display: grid; gap: 10px; }
+.place li { line-height: 1.35; }
+.place li a { text-decoration: none; font-weight: 500; }
+.place li a:hover { text-decoration: underline; }
+.place li .nw { white-space: nowrap; color: var(--ink-2); font-size: 13px; }
+.place li small { display: block; color: var(--ink-2); font-size: 13px; }
+.place li .ad { display: inline; color: var(--forest); font-weight: 600; font-size: 13px; }
+.place li.lit a { color: var(--forest); }
+.place .none { color: var(--ink-3); font-size: 15px; }
+.cleared .places { opacity: 0.45; }
+
+.foot { margin-top: 64px; border-top: 1px solid var(--rule); }
+.foot .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; padding-top: 18px; padding-bottom: 36px; font-size: 14px; color: var(--ink-2); }
+.foot a { color: var(--ink); text-decoration: none; display: inline-flex; gap: 4px; align-items: center; }
+.foot a:hover { text-decoration: underline; }
+.foot a svg { width: 12px; height: 12px; color: var(--ink-3); }
+.foot .v { margin-left: auto; }
+
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 280px 1fr; }
+  .arrivals { grid-template-columns: 1fr; gap: 18px; }
+  .arrivals .lead { padding: 0; }
+  .places { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 760px) {
+  .wrap { padding: 0 18px; }
+  .top .wrap { height: auto; flex-wrap: wrap; gap: 10px; padding-top: 12px; padding-bottom: 6px; }
+  .nav { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 12px; }
+  .tools { margin-left: auto; }
+  .head { grid-template-columns: 1fr; padding-top: 26px; }
+  .head h1 { font-size: 26px; }
+  .actions { grid-column: 1; grid-row: auto; }
+  .actions .btn { flex: 1; justify-content: center; height: 46px; }
+  .confirm { left: 0; width: auto; }
+  .needs { flex-direction: column; gap: 6px; }
+  .arrivals { grid-template-columns: 1fr; }
+  .arrivals .lead { padding: 0 0 14px; }
+  .needs button { margin-left: 0; }
+  .board-head { flex-wrap: wrap; }
+  .board-head label { margin-left: 0; width: 100%; }
+  .board-head select { flex: 1; height: 46px; }
+  .grid { grid-template-columns: 1fr; }
+  .row > div { min-height: 0; }
+  .title { padding: 16px 0 2px; }
+  .title .t { white-space: normal; }
+  .life { border-top: 0 !important; height: 40px; padding: 0; }
+  .row:hover .title, .row.lit .title { box-shadow: none; }
+  .overlay { display: none; }
+  .rm { display: block; position: absolute; top: 8px; bottom: 8px; width: 0; }
+  .rm.today { border-left: 1px solid var(--ink); }
+  .rm.seen { border-left: 1px dashed var(--contour); }
+  .scale .d.alt { display: none; }
+  .scale .lab { display: block; }
+  .scale .m { top: 36px; }
+  .scale { height: 84px; }
+  .scale .lab.seen { transform: translateX(-4px); top: 0; }
+  .scale .lab.today { top: 18px; transform: translateX(-4px); }
+  .places { grid-template-columns: 1fr; gap: 22px; }
+  .foot .v { margin-left: 0; }
+}
+@media (hover: none) { .title .acts { visibility: visible; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .zone, .mark, .places { transition: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+</svg>
+
+<header class="top"><div class="wrap">
+  <a class="brand" href="#" aria-label="Hugin, dashboard"><svg viewBox="0 0 100 100" fill="currentColor" aria-hidden="true"><path id="mark"/></svg>Hugin</a>
+  <nav class="nav" aria-label="Main"><a href="#" aria-current="page">Dashboard</a><a href="#">Applications</a><a href="#">Companies</a><a href="#">Export</a><a href="#">Settings</a></nav>
+  <div class="tools">
+    <button class="icon-btn" type="button" aria-label="Språk: norsk"><svg class="i"><use href="#i-globe"/></svg></button>
+    <button class="icon-btn" type="button" id="theme" aria-label="Switch to dark theme"><svg class="i"><use href="#i-moon"/></svg></button>
+  </div>
+</div></header>
+<div class="wrap demo">Read-only demo. Fictional job ads and companies for Innlandet. No tracking, no cookies. <a href="https://github.com/malinfossum/hugin">Source code on GitHub</a></div>
+
+<main class="wrap">
+  <section class="head" aria-labelledby="delta">
+    <h1 id="delta"></h1>
+    <p class="meta">Synced today at <b>08:16</b> from NAV and Brønnøysundregisteret · <b>5</b> open ads · <b>1,078</b> companies · <b>3</b> in Applications</p>
+    <div class="actions">
+      <button class="btn" type="button"><svg class="i"><use href="#i-refresh"/></svg>Sync now</button>
+      <button class="btn primary" type="button" id="seen-btn" aria-expanded="false" aria-controls="confirm"><svg class="i"><use href="#i-check"/></svg>Mark as seen</button>
+      <div class="confirm" id="confirm" role="dialog" aria-label="Move the seen mark" hidden>
+        <p>The seen mark moves to now, and everything new becomes seen. This can't be undone.</p>
+        <div class="row"><button class="btn" type="button" id="cancel">Cancel</button><button class="btn primary" type="button" id="move">Move the mark</button></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="needs"><span><b>Needs action.</b> Fullstackutvikler (.NET/React) at Mjøskode AS closes Tuesday 20 October, in 3 days. You're watching it but haven't applied.</span><button type="button" data-lite="demo-100000001">Show in deadlines</button></p>
+
+  <section class="board" aria-labelledby="dl-h">
+    <div class="board-head">
+      <h2 id="dl-h">Deadlines</h2>
+      <p>Each open ad, from the day it appeared to its frist.</p>
+      <label>Show <select><option>Active deadlines</option><option>Including hidden</option></select></label>
+    </div>
+    <div class="grid" id="board"><div></div><div class="scale" id="scale" aria-hidden="true"></div></div>
+    <div class="key" aria-hidden="true">
+      <span><i style="border-color:var(--forest)"></i>Appeared since you last marked seen</span>
+      <span><i style="border-color:var(--rust)"></i>Closes within 7 days</span>
+      <span><i style="border-color:var(--lake)"></i>Applied</span>
+      <span><i style="border-color:var(--contour)"></i>Open</span>
+      <span><i class="wash"></i>Since you last marked seen</span>
+      <span><i style="border-top:1px dashed var(--contour);width:0;height:14px;border-left:1px dashed var(--contour);border-top:0"></i>Seen mark</span>
+    </div>
+  </section>
+
+  <section class="arrivals" id="arrivals" aria-labelledby="arr-h">
+    <div class="lead"><h2 id="arr-h"></h2><p>New companies and ads in your area, by kommune.</p></div>
+    <div class="places" id="places"></div>
+  </section>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <span>Sources</span>
+  <a href="https://www.brreg.no">Brønnøysundregisteret<svg class="i"><use href="#i-ext"/></svg></a>
+  <a href="https://arbeidsplassen.nav.no">NAV<svg class="i"><use href="#i-ext"/></svg></a>
+  <a href="https://www.finn.no/job">FINN<svg class="i"><use href="#i-ext"/></svg></a>
+  <a href="https://www.linkedin.com/jobs/">LinkedIn<svg class="i"><use href="#i-ext"/></svg></a>
+  <a href="https://www.proff.no">Proff<svg class="i"><use href="#i-ext"/></svg></a>
+  <span class="v">Hugin v3.9.0</span>
+</div></footer>
+
+<script>
+// Fictional sample data in the shape of the hosted demo's API, 16.10.2026, dates in local (Oslo) time.
+const NOW = '2026-10-16', SEEN = '2026-10-09';
+const ADS = [
+  { id: 'demo-100000001', title: 'Fullstackutvikler (.NET/React)', employer: 'Mjøskode AS', kommune: 'Hamar', published: '2026-10-06', frist: '2026-10-20', daysLeft: 3, status: 'watching', url: null },
+  { id: 'demo-100000003', title: 'Utvikler innen maskinlæring og dataplattform for laboratorie- og diagnostikksystemer', employer: 'Kvernlab AS', kommune: 'Hamar', published: '2026-10-02', frist: '2026-11-05', daysLeft: 19, status: null, url: 'https://arbeidsplassen.nav.no/' },
+  { id: 'demo-100000002', title: 'Backendutvikler (C#)', employer: 'Tindebit AS', kommune: 'Lillehammer', published: '2026-10-14', frist: '2026-11-07', daysLeft: 21, status: 'applied', url: null },
+  { id: 'demo-100000004', title: 'Senior backendutvikler', employer: 'Vardelogikk AS', kommune: 'Hamar', published: '2026-06-23', frist: '2026-11-30', daysLeft: 45, status: null, url: 'https://arbeidsplassen.nav.no/' },
+  { id: 'demo-100000005', title: 'Spillutvikler/arkitekt', employer: 'Vardelogikk AS', kommune: 'Hamar', published: '2025-11-26', frist: '2026-11-30', daysLeft: 45, status: null, url: 'https://arbeidsplassen.nav.no/' },
+];
+const NACE = { '62.100': 'Computer programming', '62.200': 'IT consultancy' };
+const NEW_COMPANIES = [
+  { name: 'Fjellbit Tech', kommune: 'Ringsaker', branch: false, nace: '62.100' },
+  { name: 'Fjellbit Tech', kommune: 'Ringsaker', branch: true, nace: '62.100' },
+  { name: 'Myrlys AS', kommune: 'Hamar', branch: false, nace: '62.200' },
+  { name: 'Skumringsdata AS', kommune: 'Hamar', branch: true, nace: '62.100' },
+  { name: 'Kari Nordmann', kommune: 'Gjøvik', branch: false, nace: '62.100' },
+];
+const PLACES = ['Gjøvik', 'Hamar', 'Lillehammer', 'Ringsaker'];
+const MARK = 'M18 88 L13 73 L18 72 L14 62 L19 60 C17 49 19 36 24 26 C31 12 47 11 59 18 C63 21 66 25 69 29 C78 31 88 33 94 37 C97 39 98 42 97 45 L93 44 C85 43 78 44 72 46 C65 48 61 52 59 58 C57 65 60 71 66 75 L61 73 L66 80 L59 77 L63 85 L56 81 L61 91 C46 88 32 88 18 88 Z M45 34 C50 31 57 32 63 36 C58 41 50 42 46 38 C45 37 44 36 45 34 Z';
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const day = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5;
+const iso = d => new Date(d * 864e5).toISOString().slice(0, 10);
+const fmt = s => s.slice(8, 10) + '.' + s.slice(5, 7);
+const narrow = () => matchMedia('(max-width: 760px)').matches;
+// One fixed scale. Phones get a tighter window so a day keeps some width.
+const win = () => narrow() ? [day('2026-10-05'), day('2026-12-07')] : [day('2026-09-21'), day('2026-12-14')];
+let START, END;
+const x = s => Math.max(0, Math.min(100, (day(s) - START) / (END - START) * 100));
+let seen = SEEN;
+$('mark').setAttribute('d', MARK);
+
+function headline() {
+  const ads = ADS.filter(a => a.published > seen).length, cos = seen === SEEN ? NEW_COMPANIES.length : 0;
+  const parts = [];
+  if (ads) parts.push(`<em>${ads}</em> new ${ads === 1 ? 'ad' : 'ads'}`);
+  if (cos) parts.push(`<em>${cos}</em> new ${cos === 1 ? 'company' : 'companies'}`);
+  $('delta').innerHTML = parts.length ? `${parts.join(' and ')} in Innlandet since Friday 9 October.` : 'Nothing new in Innlandet since you marked seen this morning.';
+  $('arr-h').textContent = seen === SEEN ? 'Arrived since 9 October' : 'Arrived since this morning';
+}
+
+function scale() {
+  let h = '', on = true;
+  for (let d = START; d < END; d++) {
+    const dt = new Date(d * 864e5), s = iso(d);
+    if (dt.getUTCDay() === 1) {
+      const w = Math.min(7, END - d);
+      h += `<span class="bar${on ? ' on' : ''}" style="left:${x(s)}%;width:${w / (END - START) * 100}%"></span><span class="d${on ? '' : ' alt'}" style="left:${x(s)}%${x(s) < 4 ? ';transform:none' : ''}">${fmt(s)}</span>`;
+      on = !on;
+    }
+    if (d === START && (Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 1) / 864e5 - START) >= 14) h += `<span class="m sc" style="left:0">${dt.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })}</span>`;
+    if (dt.getUTCDate() === 1) h += `<span class="m sc" style="${x(s) > 78 ? 'right:0' : `left:${x(s)}%`}">${dt.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })}</span>`;
+  }
+  h += `<span class="lab seen" style="left:${x(seen)}%">${seen === SEEN ? 'Seen 9 Oct' : ''}</span><span class="lab today" style="left:${x(NOW)}%">Today ${fmt(NOW)}</span>`;
+  $('scale').innerHTML = h;
+}
+
+function board() {
+  [START, END] = win();
+  scale();
+  const rows = ADS.slice().sort((a, b) => a.frist.localeCompare(b.frist)).map(a => {
+    const isNew = a.published > seen, tone = a.daysLeft <= 7 ? 'closing' : a.status === 'applied' ? 'applied' : '';
+    const clip = day(a.published) < START, flip = x(a.frist) > (narrow() ? 66 : 84);
+    const state = (isNew ? '<span class="state new">New</span>' : '') +
+      (a.status === 'watching' ? '<span class="state watching">Watching</span>' : a.status === 'applied' ? '<span class="state applied">Applied</span>' : '');
+    const t = a.url ? `<a href="${a.url}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title);
+    const acts = (a.status ? '' : '<button type="button">Watch</button><button type="button">Link to company</button>') + '<button type="button">Hide</button>';
+    const since = a.published.slice(0, 4) !== NOW.slice(0, 4) ? new Date(day(a.published) * 864e5).toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : fmt(a.published);
+    return `<div class="row" data-id="${a.id}">
+      <div class="title"><span class="t" title="${esc(a.title)}">${t}</span><span class="s">${state}<span class="who">${esc(a.employer)} · ${a.kommune}</span></span><span class="acts">${acts}</span></div>
+      <div class="life" aria-label="Appeared ${fmt(a.published)}, frist ${fmt(a.frist)}, ${a.daysLeft} days left">
+        <i class="past${isNew ? ' isnew' : ''}${clip ? ' clip' : ''}" style="left:${x(a.published)}%;width:${x(NOW) - x(a.published)}%"></i>
+        ${clip ? `<i class="since">since ${since}</i>` : `<i class="start${isNew ? ' isnew' : ''}" style="left:${x(a.published)}%"></i>`}
+        <i class="rm seen" style="left:${x(seen)}%"></i><i class="rm today" style="left:${x(NOW)}%"></i>
+        <i class="future ${tone}" style="left:${x(NOW)}%;width:${x(a.frist) - x(NOW)}%"></i><i class="tip ${tone}" style="left:${x(a.frist)}%"></i>
+        <span class="end ${tone}${flip ? ' flip' : ''}" style="left:${x(a.frist)}%"><b>${fmt(a.frist)}</b> · ${a.daysLeft} days</span>
+      </div></div>`;
+  }).join('');
+  const b = $('board');
+  b.querySelectorAll('.row, .overlay').forEach(n => n.remove());
+  b.insertAdjacentHTML('beforeend', rows);
+  const sc = $('scale'), first = b.querySelector('.life'), last = [...b.querySelectorAll('.life')].pop(), g = b.getBoundingClientRect();
+  const o = document.createElement('div');
+  o.className = 'overlay';
+  const reach = sc.offsetHeight - 22;
+  Object.assign(o.style, { left: sc.offsetLeft + 'px', width: sc.offsetWidth + 'px', top: first.offsetTop + 'px', height: last.offsetTop + last.offsetHeight - first.offsetTop + 'px' });
+  o.style.setProperty('--reach', -reach + 'px');
+  o.innerHTML = `<div class="zone" style="left:${x(seen)}%;width:${Math.max(0, x(NOW) - x(seen))}%"></div>
+    <div class="mark seen" style="left:${x(seen)}%"><span>Seen ${seen === SEEN ? '9 Oct' : 'today'}</span></div>
+    <div class="mark today" style="left:${x(NOW)}%"><span>Today ${fmt(NOW)}</span></div>`;
+  b.appendChild(o);
+}
+
+function arrivals() {
+  $('arrivals').classList.toggle('cleared', seen !== SEEN);
+  $('places').innerHTML = PLACES.map(p => {
+    const ads = ADS.filter(a => a.kommune === p && a.published > SEEN), cos = NEW_COMPANIES.filter(c => c.kommune === p);
+    const n = ads.length + cos.length;
+    const merged = cos.filter(c => !(c.branch && cos.some(m => !m.branch && m.name === c.name)));
+    const items = ads.map(a => `<li data-lite="${a.id}"><a href="#">${esc(a.title)}</a><small><span class="ad">New ad</span> · ${esc(a.employer)} · frist ${fmt(a.frist)}</small></li>`).join('') +
+      merged.map(c => {
+        const branches = cos.filter(b => b.branch && b.name === c.name && !c.branch).length;
+        const extra = c.branch ? 'Branch · ' : '';
+        const tail = '', plus = branches ? ` <span class="nw">+ ${branches === 1 ? 'branch' : branches + ' branches'}</span>` : '';
+        return `<li><a href="#">${esc(c.name)}</a>${plus}<small title="Industry code ${c.nace}">${extra}${NACE[c.nace]}${tail}</small></li>`;
+      }).join('');
+    return `<div class="place"><h3 class="sc">${p}<span>${n || ''}</span></h3>${n ? `<ul>${items}</ul>` : '<p class="none">Nothing new</p>'}</div>`;
+  }).join('');
+}
+
+function lite(id, on) { document.querySelectorAll(`.row[data-id="${id}"], li[data-lite="${id}"]`).forEach(n => n.classList.toggle('lit', on)); }
+document.addEventListener('mouseover', e => { const t = e.target.closest('li[data-lite], .row'); if (t) lite(t.dataset.lite || t.dataset.id, true); });
+document.addEventListener('mouseout', e => { const t = e.target.closest('li[data-lite], .row'); if (t) lite(t.dataset.lite || t.dataset.id, false); });
+document.querySelector('.needs button').addEventListener('click', e => {
+  const id = e.currentTarget.dataset.lite;
+  document.querySelector(`.row[data-id="${id}"] .title`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  lite(id, true); setTimeout(() => lite(id, false), 1800);
+});
+
+const box = $('confirm'), btn = $('seen-btn');
+btn.addEventListener('click', () => { box.hidden = !box.hidden; btn.setAttribute('aria-expanded', String(!box.hidden)); if (!box.hidden) $('move').focus(); });
+$('cancel').addEventListener('click', () => { box.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.focus(); });
+const closeConfirm = () => { if (!box.hidden) { box.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.focus(); } };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm(); });
+document.addEventListener('pointerdown', e => { if (!box.hidden && !box.contains(e.target) && e.target !== btn && !btn.contains(e.target)) closeConfirm(); });
+$('move').addEventListener('click', () => {
+  box.hidden = true; btn.setAttribute('aria-expanded', 'false');
+  const o = document.querySelector('.overlay');
+  o.querySelector('.mark.seen').style.left = x(NOW) + '%';
+  o.querySelector('.mark.seen span').textContent = 'Seen today';
+  Object.assign(o.querySelector('.zone').style, { left: x(NOW) + '%', width: '0%', opacity: '0' });
+  setTimeout(() => { seen = NOW; headline(); board(); arrivals(); btn.disabled = true; }, 700);
+});
+
+$('theme').addEventListener('click', () => {
+  const el = document.documentElement, dark = el.dataset.theme === 'light';
+  el.dataset.theme = dark ? 'dark' : 'light';
+  $('theme').setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  $('theme').innerHTML = `<svg class="i"><use href="#i-${dark ? 'sun' : 'moon'}"/></svg>`;
+});
+if (new URLSearchParams(location.search).get('theme') === 'dark') $('theme').click();
+
+headline(); board(); arrivals();
+addEventListener('resize', board);
+</script>
+</body>
+</html>
