@@ -2,7 +2,7 @@
 
 A summary of what Hugin is, how it works, how it is built and where it stands.
 
-**Last updated:** 28.10.2026 · **Version:** v4.0.2 · **Status:** finished and in daily use
+**Last updated:** 28.10.2026 · **Version:** v4.0.5 · **Status:** finished and in daily use
 
 ---
 
@@ -101,8 +101,8 @@ is built mobile-first and checked from 320 px phones up to desktop.
 
 ## Status
 
-Hugin is finished at v4.0.2 and in daily use. Twenty-one tagged releases, 392 commits between
-18 August and 28 October 2026, and 1,015 tests all passing: 525 on the backend, 490 on the
+Hugin is finished at v4.0.5 and in daily use. Twenty-four tagged releases, 402 commits between
+18 August and 28 October 2026, and 1,017 tests all passing: 525 on the backend, 492 on the
 frontend. v4.0.0 was a full visual redesign by an outside contributor; the patches after it
 made every view work on narrow screens. Every version has a specification written up front, under `docs/specs/`.
 
