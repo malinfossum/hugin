@@ -18,7 +18,7 @@ Do not use the micro mark at large display sizes. Do not force the primary mark 
 | Token | Value | Purpose |
 | --- | --- | --- |
 | Ground | `#080909` | Cool near-black brand surface ("ember on slate", 2026-08-31) |
-| Ember | `#D66A30` | Primary dark-theme mark/accent — the only warm element |
+| Ember | `#D66A30` | Primary dark-theme mark/accent, the only warm element |
 | Light-theme ember | `#9E3E16` | Accessible mark/accent on light surfaces |
 | Ivory | `#FBF7EF` | Primary text on dark surfaces |
 | Muted | `#C7C7BE` | Supporting text |

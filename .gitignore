@@ -19,22 +19,22 @@ publish-single/
 Thumbs.db
 .DS_Store
 
-# Hugin local state — never commit (contains real outreach history)
+# Hugin local state: never commit (contains real outreach history)
 hugin.json
 *.db
 # Reset snapshots, e.g. hugin.db.reset-20260909-120000.bak
 hugin.db*
 
-# Frontend build output — rebuilt from hugin-web
+# Frontend build output, rebuilt from hugin-web
 Hugin.Api/wwwroot/
 hugin-web/node_modules/
 
 # superpowers SDD scratch (ledger, briefs, review packages)
 .superpowers/
 
-# Demo publish output (Linux) — rebuilt from publish-demo.ps1
+# Demo publish output (Linux), rebuilt from publish-demo.ps1
 publish-linux/
 hugin-demo.zip
 
-# Local-only notes — my own working material, never published
+# Local-only notes: my own working material, never published
 *.private.md
