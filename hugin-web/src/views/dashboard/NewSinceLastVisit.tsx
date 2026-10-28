@@ -22,10 +22,10 @@ interface Place {
   name: string
   ads: AdDto[]
   /** Companies, with a branch folded into its parent (parentOrgnr) when it shares the parent's
-   * name and place. */
+   * name and place. One entry is one card, and the count reports cards: a folded branch reads as
+   * «+ avdeling» on its parent's card, so counting it too made the number disagree with the
+   * cards under it. */
   companies: { company: CompanyDto; branches: number }[]
-  /** Every new register entry here, branches included: what the count reports. */
-  companyCount: number
 }
 
 /** Groups the new ads and companies by place (kommune name, else number, else unknown), in
@@ -37,16 +37,14 @@ function groupByPlace(data: NewDto, unknownPlace: string): Place[] {
     const key = name ?? unknownPlace
     let place = places.get(key)
     if (!place) {
-      place = { name: key, ads: [], companies: [], companyCount: 0 }
+      place = { name: key, ads: [], companies: [] }
       places.set(key, place)
     }
     return place
   }
   for (const ad of data.ads) placeFor(ad.kommuneNavn ?? ad.kommune).ads.push(ad)
   for (const company of data.companies) {
-    const place = placeFor(company.kommuneNavn ?? company.kommune)
-    place.companyCount++
-    place.companies.push({ company, branches: 0 })
+    placeFor(company.kommuneNavn ?? company.kommune).companies.push({ company, branches: 0 })
   }
   // Folded after grouping: the server orders by name, so a branch can come before its parent.
   for (const place of places.values()) {
@@ -75,11 +73,11 @@ function spokenCount(place: Place, t: T): string {
         ? t('newSince.placeAdsOne')
         : t('newSince.placeAds', { n: place.ads.length })
   const companies =
-    place.companyCount === 0
+    place.companies.length === 0
       ? null
-      : place.companyCount === 1
+      : place.companies.length === 1
         ? t('newSince.placeCompaniesOne')
-        : t('newSince.placeCompanies', { n: place.companyCount })
+        : t('newSince.placeCompanies', { n: place.companies.length })
   if (ads && companies) return t('newSince.placeAdsAndCompanies', { ads, companies })
   return ads ?? companies ?? ''
 }
@@ -281,7 +279,7 @@ export function NewSinceLastVisit() {
                       aria-hidden="true"
                       className="ms-3 font-medium text-muted-foreground tabular-nums"
                     >
-                      {place.ads.length + place.companyCount}
+                      {place.ads.length + place.companies.length}
                     </span>
                     <span className="sr-only">, {spokenCount(place, t)}</span>
                   </AccordionTrigger>

@@ -282,7 +282,7 @@ describe('NewSinceLastVisit', () => {
     const place = (
       await screen.findByRole('heading', {
         level: 3,
-        name: '0301, 2 bedrifter',
+        name: '0301, 1 bedrift',
       })
     ).closest('div') as HTMLElement
     const items = within(place).getAllByRole('listitem')
@@ -314,7 +314,7 @@ describe('NewSinceLastVisit', () => {
     const place = (
       await screen.findByRole('heading', {
         level: 3,
-        name: '0301, 2 bedrifter',
+        name: '0301, 1 bedrift',
       })
     ).closest('div') as HTMLElement
     const items = within(place).getAllByRole('listitem')

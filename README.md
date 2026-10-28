@@ -8,7 +8,7 @@ Named after Odin's raven of thought, who flies out each morning and returns with
 
 ## Stack
 
-C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a React + TypeScript frontend (Vite, Vitest). Layered: `Hugin.Core` (pure domain, no I/O) · `Hugin.Infrastructure` (database, HTTP clients, config) · `Hugin.Console` and `Hugin.Api` (thin hosts) · `Hugin.Tests`.
+C# / .NET 10, EF Core with SQLite, NUnit; the dashboard is ASP.NET Core with a React + TypeScript frontend (Vite, Tailwind CSS, shadcn/ui, TanStack Router and Query, Vitest). Layered: `Hugin.Core` (pure domain, no I/O) · `Hugin.Infrastructure` (database, HTTP clients, config) · `Hugin.Console` and `Hugin.Api` (thin hosts) · `Hugin.Tests`.
 
 ## Quick start
 
@@ -29,7 +29,7 @@ Browse active ads, the company inventory (one row per company, branches as tabs 
 
 ## Demo
 
-A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App Service (free tier: the first visit after idle takes a few seconds). Real job ads and companies from NAV and Brreg for Innlandet, a seeded example pipeline, no personal data, no tracking. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
+A read-only showcase runs at https://hugin-demo.azurewebsites.net on Azure App Service (free tier: the first visit after idle takes a few seconds). Real job ads and companies from NAV and Brreg for Innlandet, an example pipeline of fictional firms, no personal data, no tracking. Built mobile-first, so it works on a phone. Built with `publish-demo.ps1`; deployment notes in `docs/specs/2026-09-03-hugin-demo-deployment.md`.
 
 [`docs/project-note.md`](docs/project-note.md) is a plain-language summary of what Hugin is, how it works, how it is built and where it stands.
 
