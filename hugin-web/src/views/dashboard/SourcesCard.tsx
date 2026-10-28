@@ -30,7 +30,7 @@ export function SourcesCard() {
             href="https://www.brreg.no"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 text-foreground no-underline hover:underline"
           >
             {t('sync.brregLabel')}
             <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />
@@ -41,7 +41,7 @@ export function SourcesCard() {
             href="https://arbeidsplassen.nav.no/stillinger"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 text-foreground no-underline hover:underline"
           >
             {t('sync.navLabel')}
             <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />
@@ -53,7 +53,7 @@ export function SourcesCard() {
               href={s.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 text-foreground no-underline hover:underline"
             >
               {sourceLabel(s.url, s.label)}
               <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />

@@ -34,7 +34,7 @@ export function AppFooter() {
           href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className={cn('inline-flex min-h-11 items-center', LINK)}
+          className={cn('inline-flex min-h-11 min-w-11 items-center justify-center', LINK)}
         >
           GitHub
         </a>

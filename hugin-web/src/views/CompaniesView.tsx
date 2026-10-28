@@ -312,7 +312,7 @@ export function CompaniesView({
         <Button
           variant="outline"
           size="touch"
-          className="mt-6 self-start max-md:w-full"
+          className="mt-6 w-full self-start md:w-auto"
           disabled={isFetchingNextPage}
           onClick={() => fetchNextPage()}
         >

@@ -166,10 +166,10 @@ export function AppShell() {
             <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
               <div className="flex min-h-dvh flex-col">
                 <header className="border-b border-border font-sans">
-                  {/* Phones: brand and the two toggles share the first row and the nav takes a full
-              row under them; the controls wrapper dissolves (contents) so flex order can seat
+                  {/* Below lg: brand and the two toggles share the first row and the nav takes a full
+              row under them (at 768 px one row needs 27 px more than the window has); the controls wrapper dissolves (contents) so flex order can seat
               the toggles beside the brand while the DOM keeps nav before toggles for tab order. */}
-                  <div className="mx-auto flex max-w-sheet flex-wrap items-center gap-x-3 px-4.5 pt-2.5 pb-1.5 md:h-16 md:flex-nowrap md:gap-x-10 md:px-12 md:py-0">
+                  <div className="mx-auto flex max-w-sheet flex-wrap items-center gap-x-3 px-4.5 pt-2.5 pb-1.5 md:px-12 lg:h-16 lg:flex-nowrap lg:gap-x-10 lg:py-0">
                     {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
                 the dashboard's last search too. Its name starts with the visible word, so
                 speech input ("click Hugin") still finds it. */}
@@ -184,10 +184,10 @@ export function AppShell() {
                       <HuginMark variant="primary" className="size-8" />
                       Hugin
                     </Link>
-                    <div className="contents md:flex md:flex-1 md:items-center md:gap-10">
+                    <div className="contents lg:flex lg:min-w-0 lg:flex-1 lg:items-center lg:gap-10">
                       <nav
                         aria-label={t('nav.ariaLabel')}
-                        className="order-3 -mx-3 basis-full overflow-x-auto md:order-none md:mx-0 md:flex-1 md:basis-auto"
+                        className="order-3 -mx-3 basis-full overflow-x-auto lg:order-none lg:mx-0 lg:flex-1 lg:basis-auto"
                       >
                         <ul className="flex list-none gap-1 ps-0">
                           {NAV.map((item) => (
@@ -216,7 +216,7 @@ export function AppShell() {
                       {/* Both quick toggles are icons. The theme glyph shows what it switches TO (the
                   sun in dark mode); the globe cannot, so its label doubles as a tooltip.
                   Settings has no copy of either (v3.6.1). */}
-                      <div className="order-2 ml-auto flex gap-0.5 text-muted-foreground md:order-none md:ml-0">
+                      <div className="order-2 ml-auto flex gap-0.5 text-muted-foreground lg:order-none lg:ml-0">
                         <Button
                           variant="ghost"
                           size="icon-lg"

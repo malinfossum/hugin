@@ -336,7 +336,7 @@ export function ApplicationsView() {
                             <Button
                               variant="link"
                               size="xs"
-                              className="-ms-2 min-h-11 self-start"
+                              className="-ms-2 min-h-11 min-w-11 self-start"
                               onClick={() => startEdit(entry)}
                             >
                               {t('applications.edit')}
