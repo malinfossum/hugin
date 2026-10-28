@@ -1,20 +1,18 @@
+import type { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { useQuery } from '@tanstack/react-query'
-import { cn } from 'cn'
-import { AlertTriangle, ArrowLeft, ExternalLink } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, type Ref, type RefObject, useEffect, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
 import { CompanyLink } from '../components/CompanyLink'
 import { Button } from '../components/ui/button'
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog'
 import { type T, useT } from '../i18n'
 import { ApiError } from '../lib/api'
 import { displayCompanyName } from '../lib/companyName'
-import { formatDate } from '../lib/dates'
 import { companyQuery } from '../lib/queries'
-import type { AdDto, CompanyDetailDto, CompanyDto } from '../lib/types'
-
-function publishedText(published: string | null, t: T): string | null {
-  return published ? t('companies.published', { date: formatDate(published) }) : null
-}
+import type { CompanyDetailDto, CompanyDto } from '../lib/types'
+import { AdHistory } from './AdHistory'
 
 interface UnitTab {
   orgnr: string
@@ -28,55 +26,6 @@ function branchTabLabel(branch: CompanyDto, branches: CompanyDto[]): string {
   if (!branch.kommuneNavn) return displayCompanyName(branch.name)
   const sharedByCount = branches.filter((b) => b.kommuneNavn === branch.kommuneNavn).length
   return sharedByCount > 1 ? displayCompanyName(branch.name) : branch.kommuneNavn
-}
-
-/** The ad history as sheet rows: title, then a subline of its state and dates. An expired ad's
- * title drops to ink-secondary, so it never reads as active (PRODUCT.md: truth over completeness). */
-function AdHistory({ ads, t }: { ads: AdDto[]; t: T }) {
-  if (ads.length === 0)
-    return <p className="text-body-sm text-muted-foreground">{t('companies.noAds')}</p>
-
-  return (
-    <ul className="flex list-none flex-col border-b border-border ps-0">
-      {ads.map((ad) => (
-        <li
-          key={ad.feedId}
-          className="flex flex-col gap-x-6 gap-y-0.5 border-t border-border py-3 md:flex-row md:items-center"
-        >
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span
-              className={cn(
-                'font-medium',
-                ad.isActive ? 'text-foreground' : 'text-muted-foreground'
-              )}
-            >
-              {ad.title}
-            </span>
-            <span className="flex flex-wrap gap-x-3 text-sm text-muted-foreground tabular-nums">
-              {!ad.isActive && <span className="font-semibold">{t('companies.expiredTag')}</span>}
-              {publishedText(ad.published, t) && <span>{publishedText(ad.published, t)}</span>}
-              <span>
-                {t('companies.deadlineLabel', {
-                  date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
-                })}
-              </span>
-            </span>
-          </div>
-          {ad.sourceUrl && (
-            <a
-              href={ad.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm text-foreground underline decoration-input underline-offset-3 hover:decoration-current md:self-center"
-            >
-              {t('companies.seeAdAtNav')}
-              <ExternalLink aria-hidden="true" className="size-3.5 text-muted-foreground" />
-            </a>
-          )}
-        </li>
-      ))}
-    </ul>
-  )
 }
 
 /** The unit's register facts as one wrapping line of label-over-value pairs between hairlines. */
@@ -96,18 +45,18 @@ function UnitBody({
 }: {
   detail: CompanyDetailDto
   t: T
-  headingRef: RefObject<HTMLHeadingElement | null>
+  headingRef: Ref<HTMLHeadingElement>
 }) {
   return (
     <>
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        className="font-heading text-2xl font-semibold text-balance text-foreground md:text-headline"
-      >
-        {displayCompanyName(detail.company.name)}
-        {detail.company.isBranch && ` ${t('common.branchTag')}`}
-      </h2>
+      {/* The dialog's name: the unit on screen, so a branch tab renames it. The end padding
+      keeps a long name clear of the close button. */}
+      <div className="pe-10">
+        <DialogTitle ref={headingRef} tabIndex={-1}>
+          {displayCompanyName(detail.company.name)}
+          {detail.company.isBranch && ` ${t('common.branchTag')}`}
+        </DialogTitle>
+      </div>
       <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-4 border-y border-border py-4">
         <Fact label={t('companies.orgnr')}>{detail.company.orgnr}</Fact>
         <Fact label={t('companies.kommune')}>
@@ -131,7 +80,7 @@ function UnitBody({
       <h3 className="mt-10 mb-3 font-heading text-xl font-semibold text-foreground">
         {t('companies.adHistory')}
       </h3>
-      <AdHistory ads={detail.ads} t={t} />
+      <AdHistory ads={detail.ads} />
     </>
   )
 }
@@ -152,7 +101,55 @@ function TabPanel({ selectedOrgnr, children }: { selectedOrgnr: string; children
   )
 }
 
-export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () => void }) {
+/** A company's detail as a dialog over the list. `orgnr` null closes it; the last company stays
+ * on screen while the dialog animates out. */
+export function CompanyDetail({
+  orgnr,
+  onClose,
+  finalFocus,
+}: {
+  orgnr: string | null
+  onClose: () => void
+  /** Where focus goes once the dialog has closed (the dialog popup's `finalFocus`). */
+  finalFocus?: DialogPrimitive.Popup.Props['finalFocus']
+}) {
+  const [shownOrgnr, setShownOrgnr] = useState(orgnr)
+  if (orgnr !== null && orgnr !== shownOrgnr) setShownOrgnr(orgnr)
+  const t = useT()
+  const popupRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  return (
+    <Dialog
+      open={orgnr !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      onOpenChangeComplete={(open) => {
+        if (!open) setShownOrgnr(null)
+      }}
+    >
+      <DialogContent
+        closeLabel={t('common.close')}
+        // The company's name rather than the first link or tab in the dialog; while it is still
+        // loading, the popup itself, and the name takes over once it arrives (CompanyBody).
+        ref={popupRef}
+        initialFocus={() => headingRef.current ?? popupRef.current}
+        finalFocus={finalFocus}
+        className="sm:max-w-3xl"
+      >
+        {shownOrgnr && <CompanyBody orgnr={shownOrgnr} headingRef={headingRef} />}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function CompanyBody({
+  orgnr,
+  headingRef,
+}: {
+  orgnr: string
+  headingRef: RefObject<HTMLHeadingElement | null>
+}) {
   // The tab selection is remembered together with the root it belongs to, so opening a different
   // company falls back to that company's own unit without an effect (and without one render
   // fetching the previous company's tab). The selection is also reset during render when the
@@ -172,20 +169,22 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       : t('companies.detailLoadError')
     : null
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Once per company the name takes focus, so a keyboard or screen reader user lands on what
+  // they opened rather than on the first link in the dialog. Not when focus is already on
+  // something inside it: a tab switch keeps focus on its tab. The data can answer before the
+  // dialog has moved focus in, so focus still on the row behind it counts as not yet inside.
+  // An error hides the body, so the heading is missing; the one-shot waits for a successful retry
+  // (`error` is a dependency so the retry runs this again).
   const focusedFor = useRef<string | null>(null)
-  // Opening a company replaces the page under the focused row or link, so focus would fall to
-  // <body>. Move it to the company heading once per opened company, when its data has rendered.
-  // Switching branch tabs keeps focus on the tab, so this runs only when `orgnr` changes. The
-  // router restores the page's scroll position; focusing must not move it.
   useEffect(() => {
     if (!detail || error || focusedFor.current === orgnr) return
-    // An error hides the body, so the heading is missing; keep the one-shot for a successful
-    // retry (`error` is a dependency so the retry runs this again).
-    if (!headingRef.current) return
+    const heading = headingRef.current
+    if (!heading) return
     focusedFor.current = orgnr
-    headingRef.current.focus({ preventScroll: true })
-  }, [orgnr, detail, error])
+    const popup = heading.closest('[role="dialog"]')
+    const active = document.activeElement
+    if (!popup?.contains(active) || active === popup) heading.focus()
+  }, [detail, error, orgnr, headingRef])
 
   const selectUnit = (unitOrgnr: string) => setSelection({ root: orgnr, unit: unitOrgnr })
 
@@ -208,18 +207,16 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
   }
 
   return (
-    <div className="flex flex-col pt-4 font-sans md:pt-8">
-      <Button variant="link" className="-ms-2.5 min-h-11 self-start" onClick={onClose}>
-        <ArrowLeft aria-hidden="true" />
-        {t('common.back')}
-      </Button>
+    <div className="flex flex-col">
+      {/* Until the unit answers, the dialog still needs a name. */}
+      {!detail && <DialogTitle className="sr-only">{t('nav.companies')}</DialogTitle>}
 
       {tabs.length > 0 && (
         // The units as underline tabs on a hairline; the strip wraps on a narrow screen.
         <div
           role="tablist"
           aria-label={t('companies.unitTabs')}
-          className="mt-4 mb-6 flex flex-wrap gap-x-1 border-b border-border"
+          className="-mt-1 mb-6 flex flex-wrap gap-x-1 border-b border-border pe-10"
         >
           {tabs.map((tab, index) => {
             const selected = tab.orgnr === selectedOrgnr
@@ -255,7 +252,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
       {error && (
         <p
           role="status"
-          className="mt-4 flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm"
+          className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 pe-10 text-body-sm"
         >
           <AlertTriangle aria-hidden="true" className="size-4 text-destructive" />
           {error}
@@ -272,7 +269,7 @@ export function CompanyDetail({ orgnr, onClose }: { orgnr: string; onClose: () =
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </TabPanel>
         ) : (
-          <div className="mt-4 flex flex-col">
+          <div className="flex flex-col">
             <UnitBody detail={detail} t={t} headingRef={headingRef} />
           </div>
         ))}

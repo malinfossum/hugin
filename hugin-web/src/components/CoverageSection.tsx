@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle } from 'lucide-react'
 import { useState } from 'react'
 import { useReadOnly } from '../context/readOnly'
 import { useT } from '../i18n'
@@ -12,8 +13,10 @@ import {
 import { discoveryQuery, kommunerQuery, queryKeys } from '../lib/queries'
 import type { DiscoveryConfigDto } from '../lib/types'
 import { CoverageFields } from './CoverageFields'
-import { useAnnounce } from './LiveRegion'
+import { SettingsSection } from './SettingsSection'
 import { UnsavedChangesGuard } from './UnsavedChangesGuard'
+import { Button } from './ui/button'
+import { toast } from './ui/toast'
 
 interface CoverageSectionProps {
   /** Fires once the PUT succeeds, before the follow-up sync is even attempted. The scope
@@ -50,7 +53,6 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const t = useT()
-  const announce = useAnnounce()
   const { readOnly } = useReadOnly()
 
   // The kommune list is best-effort (null → fylke-only cascade) and Save waits for it to
@@ -86,36 +88,39 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
         err instanceof ApiError && err.status === 409 ? 'busy' : 'failed'
     )
     setSaving(false)
-    announce(
-      t(
-        sync === 'busy'
-          ? 'coverage.savedSyncBusy'
-          : sync === 'failed'
-            ? 'coverage.savedSyncFailed'
-            : 'coverage.saved'
-      )
-    )
+    if (sync === 'busy') toast.add({ type: 'info', title: t('coverage.savedSyncBusy') })
+    else if (sync === 'failed') toast.add({ type: 'warning', title: t('coverage.savedSyncFailed') })
+    else toast.add({ type: 'success', title: t('coverage.saved') })
   }
 
   return (
-    <section aria-labelledby="settings-coverage-heading" className="card settings-group stack">
-      <h2 id="settings-coverage-heading">{t('coverage.heading')}</h2>
-      <p className="help">{t('coverage.hint')}</p>
-
+    <SettingsSection
+      headingId="settings-coverage-heading"
+      title={t('coverage.heading')}
+      hint={t('coverage.hint')}
+    >
       {(loadFailed || saveError) && (
-        <p role="alert" className="alert alert-danger cluster cluster-sm">
+        <p
+          role="alert"
+          className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm text-foreground"
+        >
+          <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
           {loadFailed ? t('coverage.loadError') : saveError}
           {!coverage && (
-            <button type="button" className="btn btn-ghost" onClick={() => refetch()}>
+            <Button variant="link" className="min-h-11" onClick={() => refetch()}>
               {t('common.retry')}
-            </button>
+            </Button>
           )}
         </p>
       )}
 
       {coverage && (
         <>
-          <fieldset className="stack" disabled={readOnly} aria-label={t('coverage.heading')}>
+          <fieldset
+            className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0"
+            disabled={readOnly}
+            aria-label={t('coverage.heading')}
+          >
             <CoverageFields
               idPrefix="settings-coverage"
               draft={coverage}
@@ -124,19 +129,19 @@ export function CoverageSection({ onSaved }: CoverageSectionProps) {
             />
           </fieldset>
           {!readOnly && (
-            <button
-              type="button"
-              className="btn btn-primary"
+            <Button
+              size="touch"
+              className="self-start"
               onClick={handleSave}
               disabled={saving || kommuner === undefined}
             >
               {t('coverage.save')}
-            </button>
+            </Button>
           )}
         </>
       )}
 
       <UnsavedChangesGuard dirty={dirty} />
-    </section>
+    </SettingsSection>
   )
 }

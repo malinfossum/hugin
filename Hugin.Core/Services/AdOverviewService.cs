@@ -5,7 +5,8 @@ namespace Hugin.Core.Services;
 
 public sealed record AdOverview(string FeedId, string Title, string? EmployerName, string? EmployerOrgnr,
     string? MunicipalityNumber, DateTimeOffset? Expires, int? DaysLeft, string? Category,
-    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden, DateTimeOffset? Published, string? LinkedOrgnr = null);
+    string? SourceUrl, PipelineStatus? PipelineStatus, bool Hidden, DateTimeOffset? Published, DateTimeOffset FirstSeen,
+    string? LinkedOrgnr = null);
 
 /// <summary>
 /// One pipeline entry with the ads it is linked to summarised: <see cref="AdsExpired"/> is true
@@ -46,7 +47,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
             results.Add(new AdOverview(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
                 a.MunicipalityNumber, a.Expires,
                 a.Expires is { } e ? (e.UtcDateTime.Date - today).Days : null,
-                a.Category, a.SourceUrl, status, a.Hidden, a.Published, a.LinkedOrgnr));
+                a.Category, a.SourceUrl, status, a.Hidden, a.Published, a.FirstSeen, a.LinkedOrgnr));
         }
 
         return results

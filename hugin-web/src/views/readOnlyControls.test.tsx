@@ -127,7 +127,8 @@ describe('read-only mode hides write controls', () => {
   it('NewSinceLastVisit has no «Merk som sett»', async () => {
     vi.stubGlobal('fetch', demoServer())
     wrap(<NewSinceLastVisit />)
-    await screen.findByText('Utvikler')
+    // The places start closed: a place row means the digest has rendered.
+    await screen.findAllByRole('button', { expanded: false })
     expect(screen.queryByRole('button', { name: 'Merk som sett' })).not.toBeInTheDocument()
   })
 

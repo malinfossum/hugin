@@ -2,7 +2,9 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../components/LiveRegion'
+import { Toaster } from '../components/ui/toast'
 import { LanguageProvider } from '../i18n'
+import { toastRegion } from '../test-utils'
 import { ExportView } from './ExportView'
 
 const BODY_WITH_SCRIPT = '# Rapport\n\n- Acme AS: <script>alert(1)</script>\n'
@@ -28,9 +30,11 @@ function renderView(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
   return render(
     <LanguageProvider>
-      <LiveRegionProvider>
-        <ExportView />
-      </LiveRegionProvider>
+      <Toaster>
+        <LiveRegionProvider>
+          <ExportView />
+        </LiveRegionProvider>
+      </Toaster>
     </LanguageProvider>
   )
 }
@@ -221,7 +225,7 @@ describe('ExportView', () => {
 
     expect(writeText).toHaveBeenCalledWith(BODY_WITH_SCRIPT)
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await vi.waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kopiert til utklippstavlen.')
     })
@@ -274,7 +278,7 @@ describe('ExportView', () => {
     await screen.findByText(/Acme AS/, { selector: 'pre' })
     await user.click(screen.getByRole('button', { name: 'Kopier' }))
 
-    const liveRegion = document.querySelector('[aria-live="polite"]')
+    const liveRegion = toastRegion()
     await vi.waitFor(() => {
       expect(liveRegion).toHaveTextContent('Kunne ikke kopiere. Merk teksten manuelt.')
     })

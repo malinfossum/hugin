@@ -22,6 +22,4 @@ After making changes, run `npm run lint` and fix all errors. It runs Biome (form
 
 ## Notes
 
-Styling is moving from the workbench design system to Tailwind v4 + shadcn/ui (Base UI). New UI uses shadcn components from `src/components/ui` (add one with `npx shadcn@latest add <name>` in the commit that first uses it) and the theme in `src/styles/index.css`, which carries the tokens from `DESIGN.md` (repo root).
-
-`design-system/` is a read-only mirror synced from the workbench repo and is excluded from Biome formatting. It and `src/styles/main.css` load from `src/styles/legacy.css` into a `legacy` cascade layer, below Tailwind's utilities. The files that still use its classes are listed in the last override in `.oxlintrc.json`; migrate a file, then take it off that list. When the list is empty, the override, `legacy.css` and `design-system/` go.
+Styling is Tailwind v4 + shadcn/ui (Base UI). UI uses shadcn components from `src/components/ui` (add one with `npx shadcn@latest add <name>` in the commit that first uses it) and the theme in `src/styles/index.css`, which carries the tokens from `DESIGN.md` (repo root). Several components are adapted to it, such as Button's 44px `touch` size and the dialogs' floating layer. When the CLI offers to overwrite one of them as a dependency (it does for `button.tsx`), keep Hugin's version.

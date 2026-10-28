@@ -8,6 +8,7 @@ import { HuginMark } from './components/HuginMark'
 import { LiveRegionProvider } from './components/LiveRegion'
 import { SyncWatcherProvider } from './components/SyncWatcher'
 import { Button } from './components/ui/button'
+import { Toaster } from './components/ui/toast'
 import { KNOWN_CATEGORIES, useFocus } from './context/focus'
 import { useReadOnly } from './context/readOnly'
 import { ReturnFocusProvider } from './context/returnFocus'
@@ -16,7 +17,6 @@ import { fromDiscoveryConfig, toFocusSeed } from './lib/coverage'
 import { REPO_URL } from './lib/links'
 import { useDismissFirstRun } from './lib/mutations'
 import { discoveryQuery, queryKeys } from './lib/queries'
-import './styles/legacy.css'
 import './styles/index.css'
 
 const NAV = [
@@ -105,6 +105,13 @@ export function AppShell() {
   }, [queryClient])
   const t = useT()
   const [lang, setLang] = useLang()
+  // The tab and the screen reader's page name follow the view: «Bedrifter · Hugin». The
+  // dashboard is the app's home, so it keeps the plain name.
+  const page = NAV.find((item) => item.to === routeId)
+  const documentTitle = page && page.to !== '/' ? `${t(page.labelKey)} · Hugin` : 'Hugin'
+  useEffect(() => {
+    document.title = documentTitle
+  }, [documentTitle])
   const [theme, setTheme] = useState<'dark' | 'light'>(() =>
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   )
@@ -142,11 +149,10 @@ export function AppShell() {
     }
   }, [readOnly, focus, setFocus, queryClient])
 
-  // FirstRunDialog is a native <dialog>. While it's open+modal, everything outside it is
-  // inert, so focusing the h1 from onSave/onDismiss while the dialog is still open is a no-op.
-  // Instead watch the dialog-open boolean's true->false transition: child effects run before
-  // parent effects, so FirstRunDialog has already called dialog.close() by the time this fires,
-  // for both the Start (onSave) and Esc (onDismiss) paths alike.
+  // While FirstRunDialog is open everything outside it is inert, so focusing the h1 from
+  // onSave/onDismiss would be a no-op. Instead watch the dialog-open boolean's true->false
+  // transition, for both the Start (onSave) and Esc (onDismiss) paths alike; the dialog hands
+  // focus back to nobody itself (finalFocus off), so this is the one place it lands.
   useEffect(() => {
     if (prevFocusDialogOpen.current && !focusDialogOpen) h1Ref.current?.focus()
     prevFocusDialogOpen.current = focusDialogOpen
@@ -155,130 +161,134 @@ export function AppShell() {
   return (
     <ShellContext.Provider value={{ requestCoverage: () => setFocusPromptDismissed(false) }}>
       <ReturnFocusProvider>
-        <LiveRegionProvider>
-          <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
-            <div className="flex min-h-dvh flex-col">
-              <header className="border-b border-border font-sans">
-                {/* Phones: brand and the two toggles share the first row and the nav takes a full
+        <Toaster label={t('toast.region')} closeLabel={t('toast.close')}>
+          <LiveRegionProvider>
+            <SyncWatcherProvider onSyncCompleted={onSyncCompleted}>
+              <div className="flex min-h-dvh flex-col">
+                <header className="border-b border-border font-sans">
+                  {/* Phones: brand and the two toggles share the first row and the nav takes a full
               row under them; the controls wrapper dissolves (contents) so flex order can seat
               the toggles beside the brand while the DOM keeps nav before toggles for tab order. */}
-                <div className="mx-auto flex max-w-sheet flex-wrap items-center gap-x-3 px-4.5 pt-2.5 pb-1.5 md:h-16 md:flex-nowrap md:gap-x-10 md:px-12 md:py-0">
-                  {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
+                  <div className="mx-auto flex max-w-sheet flex-wrap items-center gap-x-3 px-4.5 pt-2.5 pb-1.5 md:h-16 md:flex-nowrap md:gap-x-10 md:px-12 md:py-0">
+                    {/* The same navigation as the «Dashbord» nav item (spec v3.8 B1), so it carries
                 the dashboard's last search too. Its name starts with the visible word, so
                 speech input ("click Hugin") still finds it. */}
-                  <Link
-                    to="/"
-                    search={searchFor('/')}
-                    aria-label={t('brand.homeLabel')}
-                    className="flex min-h-11 items-center gap-2.5 rounded-lg text-lg font-bold text-foreground no-underline"
-                  >
-                    {/* Primary variant: the topbar mark renders at 2rem (32 px), the brand
-                  pack's minimum for the primary mark. Below that, use micro. */}
-                    <HuginMark variant="primary" className="size-8" />
-                    Hugin
-                  </Link>
-                  <div className="contents md:flex md:flex-1 md:items-center md:gap-10">
-                    <nav
-                      aria-label={t('nav.ariaLabel')}
-                      className="order-3 -mx-3 basis-full overflow-x-auto md:order-none md:mx-0 md:flex-1 md:basis-auto"
+                    <Link
+                      to="/"
+                      search={searchFor('/')}
+                      aria-label={t('brand.homeLabel')}
+                      className="flex min-h-11 items-center gap-2.5 rounded-lg text-lg font-bold text-foreground no-underline"
                     >
-                      <ul className="flex list-none gap-1 ps-0">
-                        {NAV.map((item) => (
-                          <li key={item.to}>
-                            <Link
-                              to={item.to}
-                              params={'params' in item ? item.params : {}}
-                              search={searchFor(item.to)}
-                              // 44 px tall: the touch-target floor (a11y spec).
-                              className="inline-flex min-h-11 items-center rounded-lg px-3 whitespace-nowrap text-muted-foreground no-underline hover:bg-muted hover:text-foreground"
-                              // Search params (the dashboard's ?show=all) don't change which page this is.
-                              activeOptions={{ exact: item.exact, includeSearch: false }}
-                              activeProps={{
-                                'aria-current': 'page',
-                                className: 'bg-muted font-medium text-foreground',
-                              }}
-                            >
-                              {t(item.labelKey)}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </nav>
-                    {/* Both quick toggles are icons. The theme glyph shows what it switches TO (the
+                      {/* Primary variant: the topbar mark renders at 2rem (32 px), the brand
+                  pack's minimum for the primary mark. Below that, use micro. */}
+                      <HuginMark variant="primary" className="size-8" />
+                      Hugin
+                    </Link>
+                    <div className="contents md:flex md:flex-1 md:items-center md:gap-10">
+                      <nav
+                        aria-label={t('nav.ariaLabel')}
+                        className="order-3 -mx-3 basis-full overflow-x-auto md:order-none md:mx-0 md:flex-1 md:basis-auto"
+                      >
+                        <ul className="flex list-none gap-1 ps-0">
+                          {NAV.map((item) => (
+                            <li key={item.to}>
+                              <Link
+                                to={item.to}
+                                params={'params' in item ? item.params : {}}
+                                search={searchFor(item.to)}
+                                // 44 px tall: the touch-target floor (a11y spec). The focus outline
+                                // sits inside the link: the nav scrolls sideways, so an outline
+                                // outside it is clipped at the top and bottom.
+                                className="inline-flex min-h-11 items-center rounded-lg px-3 whitespace-nowrap text-muted-foreground no-underline -outline-offset-2 hover:bg-muted hover:text-foreground"
+                                // Search params (the dashboard's ?show=all) don't change which page this is.
+                                activeOptions={{ exact: item.exact, includeSearch: false }}
+                                activeProps={{
+                                  'aria-current': 'page',
+                                  className: 'bg-muted font-medium text-foreground',
+                                }}
+                              >
+                                {t(item.labelKey)}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </nav>
+                      {/* Both quick toggles are icons. The theme glyph shows what it switches TO (the
                   sun in dark mode); the globe cannot, so its label doubles as a tooltip.
                   Settings has no copy of either (v3.6.1). */}
-                    <div className="order-2 ml-auto flex gap-0.5 text-muted-foreground md:order-none md:ml-0">
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        className="size-11"
-                        onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
-                        aria-label={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
-                        title={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
-                      >
-                        <Globe aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        className="size-11"
-                        onClick={toggleTheme}
-                        aria-label={
-                          theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')
-                        }
-                      >
-                        {theme === 'dark' ? (
-                          <Sun aria-hidden="true" />
-                        ) : (
-                          <Moon aria-hidden="true" />
-                        )}
-                      </Button>
+                      <div className="order-2 ml-auto flex gap-0.5 text-muted-foreground md:order-none md:ml-0">
+                        <Button
+                          variant="ghost"
+                          size="icon-lg"
+                          className="size-11"
+                          onClick={() => setLang(lang === 'nb' ? 'en' : 'nb')}
+                          aria-label={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
+                          title={lang === 'nb' ? t('lang.switchToEn') : t('lang.switchToNb')}
+                        >
+                          <Globe aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-lg"
+                          className="size-11"
+                          onClick={toggleTheme}
+                          aria-label={
+                            theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')
+                          }
+                        >
+                          {theme === 'dark' ? (
+                            <Sun aria-hidden="true" />
+                          ) : (
+                            <Moon aria-hidden="true" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </header>
-              {readOnly && (
-                <section aria-label={t('demo.regionLabel')} className="font-sans">
-                  <p className="mx-auto max-w-sheet px-4.5 py-2.5 text-small text-muted-foreground md:px-12">
-                    {t('demo.banner')}{' '}
-                    <a
-                      href={REPO_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-foreground underline decoration-input underline-offset-3 hover:decoration-current"
-                    >
-                      {t('demo.repoLink')}
-                    </a>
-                  </p>
-                </section>
-              )}
-              <main className="mx-auto w-full max-w-sheet flex-1 px-4.5 md:px-12 main-content stack stack-lg">
-                <h1 ref={h1Ref} tabIndex={-1} className="sr-only">
-                  Hugin
-                </h1>
-                <Outlet />
-              </main>
-              <AppFooter />
-            </div>
-            <FirstRunDialog
-              open={focusDialogOpen}
-              onSaveFocus={(f, options) => setFocus(f, options)}
-              onDone={() => {
-                setFirstRunDone(true)
-                // The scope was just written server-side: flip the live value now rather than
-                // waiting for a reload to re-fetch /api/status, or `scopeConfigured === false` (still
-                // the boot-time snapshot) would keep this same condition true and reopen the dialog
-                // right after it closes (Task 11 finding 1).
-                markScopeConfigured()
-              }}
-              onDismiss={() => {
-                setFocusPromptDismissed(true)
-                // Fire and forget: a failed release only means the held boot sync waits for the next launch.
-                dismissFirstRun.mutate()
-              }}
-            />
-          </SyncWatcherProvider>
-        </LiveRegionProvider>
+                </header>
+                {readOnly && (
+                  <section aria-label={t('demo.regionLabel')} className="font-sans">
+                    <p className="mx-auto max-w-sheet px-4.5 py-2.5 text-small text-muted-foreground md:px-12">
+                      {t('demo.banner')}{' '}
+                      <a
+                        href={REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-foreground underline decoration-input underline-offset-3 hover:decoration-current"
+                      >
+                        {t('demo.repoLink')}
+                      </a>
+                    </p>
+                  </section>
+                )}
+                <main className="mx-auto w-full max-w-sheet flex-1 px-4.5 pt-4 pb-16 md:px-12 md:pt-5 lg:pt-6">
+                  <h1 ref={h1Ref} tabIndex={-1} className="sr-only">
+                    Hugin
+                  </h1>
+                  <Outlet />
+                </main>
+                <AppFooter />
+              </div>
+              <FirstRunDialog
+                open={focusDialogOpen}
+                onSaveFocus={(f, options) => setFocus(f, options)}
+                onDone={() => {
+                  setFirstRunDone(true)
+                  // The scope was just written server-side: flip the live value now rather than
+                  // waiting for a reload to re-fetch /api/status, or `scopeConfigured === false` (still
+                  // the boot-time snapshot) would keep this same condition true and reopen the dialog
+                  // right after it closes (Task 11 finding 1).
+                  markScopeConfigured()
+                }}
+                onDismiss={() => {
+                  setFocusPromptDismissed(true)
+                  // Fire and forget: a failed release only means the held boot sync waits for the next launch.
+                  dismissFirstRun.mutate()
+                }}
+              />
+            </SyncWatcherProvider>
+          </LiveRegionProvider>
+        </Toaster>
       </ReturnFocusProvider>
     </ShellContext.Provider>
   )

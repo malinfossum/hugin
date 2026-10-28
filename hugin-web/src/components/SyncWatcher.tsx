@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useContext, useEffect, useRef } from 're
 import { useT } from '../i18n'
 import { queryKeys, syncStatusQuery } from '../lib/queries'
 import { getFailureMessage, isNoCoverageFailure } from '../lib/syncResult'
-import { useAnnounce } from './LiveRegion'
+import { toast } from './ui/toast'
 
 interface SyncWatcherActions {
   /** Called once a POST /api/sync has been accepted (or answered 409), so a sync that starts and
@@ -18,17 +18,16 @@ export function useSyncWatcher(): SyncWatcherActions {
 }
 
 interface SyncWatcherProviderProps {
-  /** Runs once per finished sync, after the announce. */
+  /** Runs once per finished sync, after the toast. */
   onSyncCompleted: () => void
   children: ReactNode
 }
 
-/** Owns the sync-status poll and its completion cycle (announce, refresh). Mounted by the shell,
+/** Owns the sync-status poll and its completion cycle (toast, refresh). Mounted by the shell,
  * not the dashboard, so a sync started there still finishes its cycle while another view shows. */
 export function SyncWatcherProvider({ onSyncCompleted, children }: SyncWatcherProviderProps) {
   const queryClient = useQueryClient()
   const { data: sync = null, dataUpdatedAt } = useQuery(syncStatusQuery())
-  const announce = useAnnounce()
   const t = useT()
   const wasRunning = useRef(false)
   const handledPoll = useRef(0)
@@ -43,16 +42,16 @@ export function SyncWatcherProvider({ onSyncCompleted, children }: SyncWatcherPr
     handledPoll.current = dataUpdatedAt
     if (wasRunning.current && !sync.running) {
       wasRunning.current = false
-      announce(
-        isNoCoverageFailure(sync)
-          ? t('dashboard.noCoverageAnnounce')
-          : (getFailureMessage(sync, t) ?? t('sync.done'))
-      )
+      const failure = getFailureMessage(sync, t)
+      if (isNoCoverageFailure(sync))
+        toast.add({ type: 'warning', title: t('dashboard.noCoverageAnnounce') })
+      else if (failure) toast.add({ type: 'error', title: failure, priority: 'high' })
+      else toast.add({ type: 'success', title: t('sync.done') })
       queryClient.invalidateQueries({ queryKey: queryKeys.status })
       onSyncCompleted()
     }
     if (sync.running) wasRunning.current = true
-  }, [dataUpdatedAt, announce, queryClient, onSyncCompleted, t])
+  }, [dataUpdatedAt, queryClient, onSyncCompleted, t])
 
   return (
     <SyncWatcherContext.Provider

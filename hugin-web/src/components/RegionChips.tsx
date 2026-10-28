@@ -1,9 +1,8 @@
-import { X } from 'lucide-react'
 import { type RefObject, useEffect, useRef } from 'react'
 import { useT } from '../i18n'
 import { fylkeName } from '../lib/fylker'
 import type { Region } from '../lib/regions'
-import { Button } from './ui/button'
+import { RemovableChip } from './RemovableChip'
 
 interface Props {
   regions: Region[]
@@ -19,6 +18,17 @@ interface Props {
 /** Above this many kommuner a chip shows the first SHOWN plus «+n». */
 const COLLAPSE_ABOVE = 4
 const SHOWN_WHEN_COLLAPSED = 3
+
+/** A region's text. A collapsed one shows the short form and gives screen readers the full one. */
+function RegionLabel({ full, short }: { full: string; short: string | null }) {
+  if (short === null) return <span>{full}</span>
+  return (
+    <span>
+      <span aria-hidden="true">{short}</span>
+      <span className="sr-only">{full}</span>
+    </span>
+  )
+}
 
 /** The Visningsfilter summary (spec v3.6 B2): one chip per region, «Innlandet: Hamar, Gjøvik»
  * or «Vestfold: hele fylket», «Hele Norge» when there are none. The ✕ that had focus unmounts
@@ -50,7 +60,7 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
     return <p className="text-sm text-muted-foreground">{t('areas.wholeCountry')}</p>
 
   // Read-only, a chip is plain text: on the sheet only controls get a border. With ✕ it is a
-  // control, so it takes the select's shape, and the ✕ inside keeps the 44px floor.
+  // RemovableChip.
   return (
     <ul className="flex list-none flex-wrap items-center gap-x-5 gap-y-2 ps-0 text-sm text-foreground">
       {regions.map((region, index) => {
@@ -61,39 +71,26 @@ export function RegionChips({ regions, kommuneNames, onRemove, fallbackFocusRef 
         const full = `${fylke}: ${names.length === 0 ? t('areas.wholeFylke') : names.join(', ')}`
         const collapsed = names.length > COLLAPSE_ABOVE
         const short = `${fylke}: ${names.slice(0, SHOWN_WHEN_COLLAPSED).join(', ')} ${t('areas.more', { n: names.length - SHOWN_WHEN_COLLAPSED })}`
-        return (
+        return onRemove ? (
+          <RemovableChip
+            key={region.fylke}
+            title={collapsed ? full : undefined}
+            removeLabel={t('areas.remove', { fylke })}
+            removeRef={(el) => {
+              if (el) removeRefs.current.set(region.fylke, el)
+              else removeRefs.current.delete(region.fylke)
+            }}
+            onRemove={() => remove(index)}
+          >
+            <RegionLabel full={full} short={collapsed ? short : null} />
+          </RemovableChip>
+        ) : (
           <li
             key={region.fylke}
-            className={
-              onRemove
-                ? 'inline-flex h-11 items-center rounded-lg border border-input bg-card ps-3 font-medium text-foreground'
-                : 'font-medium text-foreground'
-            }
+            className="font-medium text-foreground"
             title={collapsed ? full : undefined}
           >
-            {collapsed ? (
-              <>
-                <span aria-hidden="true">{short}</span>
-                <span className="sr-only">{full}</span>
-              </>
-            ) : (
-              <span>{full}</span>
-            )}
-            {onRemove && (
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                className="size-11"
-                aria-label={t('areas.remove', { fylke })}
-                ref={(el) => {
-                  if (el) removeRefs.current.set(region.fylke, el)
-                  else removeRefs.current.delete(region.fylke)
-                }}
-                onClick={() => remove(index)}
-              >
-                <X aria-hidden="true" />
-              </Button>
-            )}
+            <RegionLabel full={full} short={collapsed ? short : null} />
           </li>
         )
       })}

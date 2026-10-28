@@ -47,6 +47,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-12T00:00:00Z',
+    firstSeen: '2026-08-12T00:00:00Z',
     ...overrides,
   }
 }
@@ -86,6 +87,28 @@ afterEach(() => {
 })
 
 describe('CompanyDetail', () => {
+  it('draws the ad history on a sheet with its legend, the dates also in each row', async () => {
+    const { fetchMock } = fakeServer({
+      '777777777': {
+        company: company(),
+        ads: [
+          ad({ feedId: 'a1', title: 'Utvikler nå', published: '2026-08-12T00:00:00Z' }),
+          ad({ feedId: 'a2', title: 'Gammel', isActive: false, published: '2025-03-02T00:00:00Z' }),
+        ],
+        branches: [],
+      },
+    })
+    renderDetail(fetchMock)
+
+    const open = (await screen.findByText('Utvikler nå')).closest('li') as HTMLElement
+    expect(within(open).getByText('publisert 12.08.2026')).toBeInTheDocument()
+    const old = screen.getByText('Gammel').closest('li') as HTMLElement
+    expect(within(old).getByText('Utgått')).toBeInTheDocument()
+    expect(screen.getByText('Tiden annonsen har ligget ute')).toBeInTheDocument()
+    // The scale holds the whole history: the old ad's year is lettered on the bar.
+    expect(screen.getByText('2025')).toBeInTheDocument()
+  })
+
   it('renders no tablist when the unit has no branches', async () => {
     const details: Record<string, CompanyDetailDto> = {
       '777777777': { company: company(), ads: [], branches: [] },

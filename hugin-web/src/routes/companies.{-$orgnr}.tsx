@@ -22,7 +22,7 @@ function CompaniesRoute() {
   // False on the first entry of a visit (a cold load of a shared /companies/<orgnr>), where Back
   // would leave the app.
   const canGoBack = useCanGoBack()
-  // One close per opened company. Enter held down on Tilbake repeats the click before the router
+  // One close per opened company. Enter held down on the close button repeats the click before the router
   // has rendered the first Back, and a second Back would go one page too far, out of the app
   // from the first page of a visit.
   const closing = useRef(false)

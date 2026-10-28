@@ -44,15 +44,17 @@ public static class ReadEndpoints
         {
             var kommuner = await kommuneRepo.GetAllAsync();
             var openAds = await ads.CountOpenByEmployerAsync(clock.UtcNow);
-            var all = await companies.GetAllAsync(kommune);
-            if (limit is null) return Results.Ok(all.Select(c => CompanyDto.From(c, config, kommuner, openAds)));
+            if (limit is null)
+                return Results.Ok((await companies.GetAllAsync(kommune)).Select(c => CompanyDto.From(c, config, kommuner, openAds)));
 
             // The coverage as configured now (Settings can change it at runtime).
             var coverage = MunicipalityScope.Build(configSource.Load(), kommuner).Coverage;
             var query = new CompanyListQuery(Csv(fylker), Csv(lensKommuner), q,
                 website switch { "has" => WebsiteFilter.Has, "none" => WebsiteFilter.None, _ => WebsiteFilter.Any },
                 adsFilter == "open", Math.Max(0, offset ?? 0), Math.Clamp(limit.Value, 1, 500), coverage);
-            var page = CompanyListing.Page(all, query, openAds, c => CompanyDto.ResolveWebsite(c) is not null);
+            // The browser never sends `kommune` with a page; a machine caller that does keeps the old rows.
+            var rows = kommune is null ? await companies.GetListCandidatesAsync(query) : await companies.GetAllAsync(kommune);
+            var page = CompanyListing.Page(rows, query, openAds, c => CompanyDto.ResolveWebsite(c) is not null);
             return Results.Ok(new CompanyPageDto(page.Total, page.Groups
                 .Select(g => new CompanyGroupDto(CompanyDto.From(g.Main, config, kommuner, openAds),
                     g.Branches.Select(b => CompanyDto.From(b, config, kommuner, openAds)).ToList()))
@@ -130,8 +132,10 @@ public static class ReadEndpoints
                 nav?.LastSyncUtc is { } navSync ? new SourceStateDto(navSync) : null,
                 await mark.GetAsync(),
                 (await ads.GetActiveAsync(clock.UtcNow)).Count,
+                await ads.CountAsync(),
                 // Companies in the coverage: the store keeps those from a wider coverage chosen earlier.
                 await companies.CountAsync(MunicipalityScope.Build(config, await kommuneRepo.GetAllAsync()).Coverage),
+                await companies.CountAsync(),
                 (await pipeline.GetAllAsync()).Count,
                 mode.Enabled,
                 config.Municipalities.Count > 0 || config.Fylker.Count > 0 || config.AllOfNorway,

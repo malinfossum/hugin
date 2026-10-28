@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 function jsonResponse(body: unknown) {
@@ -106,13 +106,21 @@ afterEach(() => {
   window.history.replaceState(null, '', '/')
   // App now reads FocusProvider's stored focus (localStorage 'hugin-focus') to decide whether
   // to render FirstRunDialog. Clear it so a later test's App doesn't inherit a prior test's
-  // saved (or absent) choice. Existing tests above run with no stored focus, so the dialog
-  // renders behind them; that's expected (see the App-level tests below) and doesn't disturb
-  // these assertions since jsdom's <dialog> polyfill has no real modal focus trap.
+  // saved (or absent) choice.
   window.localStorage.removeItem('hugin-focus')
 })
 
 describe('App', () => {
+  // These tests are about the shell, not the first-run dialog: a stored focus keeps it shut, since
+  // an open modal hides the rest of the app from the accessibility tree. The ones about the dialog
+  // clear it again.
+  beforeEach(() => {
+    window.localStorage.setItem(
+      'hugin-focus',
+      JSON.stringify({ v: 1, fylke: null, kommune: null, categories: [] })
+    )
+  })
+
   it('renders five nav links with Dashbord active by default', async () => {
     vi.stubGlobal('fetch', fakeServer())
     render(<App />)
@@ -305,15 +313,16 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(await screen.findByRole('link', { name: 'Bedrifter' })).toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'Acme AS' })).toBeInTheDocument()
+    // Behind the modal dialog, so out of the accessibility tree for now.
+    expect(screen.getByRole('link', { name: 'Bedrifter', hidden: true })).toHaveAttribute(
       'aria-current',
       'page'
     )
-    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
     expect(window.location.pathname).toBe('/companies/715787630')
   })
 
-  it('the Bedrifter nav link leads from a company detail back to the list, filters kept', async () => {
+  it('closing a company dialog leads back to the list, filters kept', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
@@ -338,12 +347,12 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: 'Bedrifter' }))
+    expect(await screen.findByRole('dialog', { name: 'Acme AS' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Lukk' }))
 
     await waitFor(() => expect(window.location.pathname).toBe('/companies'))
     expect(window.location.search).toBe('?q=Acme')
-    expect(screen.queryByRole('heading', { name: 'Acme AS' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('read-only: shows the demo banner and never opens the first-run dialog', async () => {
@@ -373,6 +382,7 @@ describe('App', () => {
   })
 
   it('read-only: seeds the focus from the server scope instead of asking', async () => {
+    window.localStorage.removeItem('hugin-focus')
     const fetchMock = fakeServer({
       readOnly: true,
       companies: [
@@ -401,6 +411,7 @@ describe('App', () => {
   })
 
   it('keeps the first-run dialog closed until /api/status has answered, then opens it locally', async () => {
+    window.localStorage.removeItem('hugin-focus')
     vi.stubGlobal('fetch', fakeServer({ readOnly: false }))
     render(<App />)
     // Synchronous first render: status still pending → no dialog yet.
@@ -480,10 +491,8 @@ describe('App first-run focus dialog', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<App />)
 
-    const dialog = await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
-    act(() => {
-      dialog.dispatchEvent(new Event('close'))
-    })
+    await screen.findByRole('dialog', { name: 'Hva vil du følge?' })
+    await userEvent.setup().keyboard('{Escape}')
 
     expect(screen.queryByRole('dialog', { name: 'Hva vil du følge?' })).not.toBeInTheDocument()
     // Dismissing is session-only. Nothing gets persisted, so a fresh mount (next launch)

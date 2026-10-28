@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 using Hugin.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -702,4 +703,71 @@ public class RepositoryTests
         Assert.That(ad.Hidden, Is.True);
         Assert.That(ad.LinkedOrgnr, Is.EqualTo("100000002"));
     }
+
+    [Test]
+    public async Task List_candidates_page_the_same_as_the_whole_store_while_loading_less()
+    {
+        var repo = new EfCompanyRepository(_db);
+        RegisterCompany[] store =
+        [
+            new("1", "GJØVIK DATA AS", "3407", null, null, false, "https://gjovikdata.no"),
+            new("2", "GJØVIK DATA AS", "0301", null, "1", true, null),          // branch outside coverage
+            new("3", "OSLO DATA AS", "0301", null, null, false, null),
+            new("4", "OSLO DATA AS AVD HAMAR", "3403", null, "3", true, null),  // matching branch, parent outside
+            new("5", "FORELDRELØS AVD", "3407", null, "99", true, null),        // parent not in the store
+            new("6", "UNDER UNDER AS", "3407", null, "2", true, null),          // parent is itself a branch
+            new("7", "UTEN KOMMUNE AS", null, null, null, false, null),
+            new("8", "100% RENT_VANN AS", "3405", null, null, false, null),
+            new("9", "ÆRLIG ØKONOMI AS", "4601", null, null, false, null),
+            new("10", "ÆRLIG ØKONOMI AS AVD GJØVIK", "3407", null, "9", true, null),
+            new("11", "BERGEN BYGG AS", "4601", null, null, false, null),
+        ];
+        foreach (var company in store) await repo.UpsertAsync(company, T1);
+        var all = await repo.GetAllAsync();
+        var openAds = new Dictionary<string, int> { ["4"] = 1, ["11"] = 2 };
+        HashSet<string> gjovik = ["3407"], innlandet = ["3403", "3405", "3407"];
+
+        CompanyListQuery[] queries =
+        [
+            Query(),
+            Query(coverage: gjovik),
+            Query(coverage: innlandet),
+            Query(fylker: ["34"]),
+            Query(kommuner: ["0301"]),
+            Query(fylker: ["46"], kommuner: ["3403"], coverage: innlandet),
+            Query(search: "gjøvik"),
+            Query(search: "  Data "),
+            Query(search: "avd hamar", coverage: gjovik),
+            Query(search: "ærlig"),
+            Query(search: "100%"),
+            Query(search: "t_v"),
+            Query(search: "rent_vann"),
+            Query(search: "zzz"),
+            Query(website: WebsiteFilter.Has, coverage: innlandet),
+            Query(website: WebsiteFilter.None, search: "as"),
+            Query(openAdsOnly: true, coverage: innlandet),
+            Query(coverage: innlandet, offset: 1, limit: 2),
+        ];
+        foreach (var query in queries)
+        {
+            var candidates = await repo.GetListCandidatesAsync(query);
+            Assert.That(Shape(CompanyListing.Page(candidates, query, openAds, c => c.Website is not null)),
+                Is.EqualTo(Shape(CompanyListing.Page(all, query, openAds, c => c.Website is not null))),
+                $"{string.Join(',', query.Coverage ?? new HashSet<string>())} / {string.Join(',', query.Fylker)} / "
+                + $"{string.Join(',', query.Kommuner)} / {query.Search} / {query.Website} / {query.OpenAdsOnly}");
+        }
+
+        var narrowed = await repo.GetListCandidatesAsync(Query(coverage: gjovik, search: "gjøvik"));
+        Assert.That(narrowed.Select(c => c.Orgnr), Is.EquivalentTo(new[] { "1", "2", "9", "10" }),
+            "the Gjøvik matches and their whole groups, nothing else");
+    }
+
+    private static CompanyListQuery Query(IReadOnlySet<string>? coverage = null, string[]? fylker = null,
+        string[]? kommuner = null, string? search = null, WebsiteFilter website = WebsiteFilter.Any,
+        bool openAdsOnly = false, int offset = 0, int limit = 100) =>
+        new(fylker ?? [], kommuner ?? [], search, website, openAdsOnly, offset, limit, coverage);
+
+    private static string Shape(CompanyPage page) =>
+        $"{page.Total}: " + string.Join(" | ", page.Groups.Select(g =>
+            string.Join(",", [g.Main.Orgnr, .. g.Branches.Select(b => b.Orgnr)])));
 }

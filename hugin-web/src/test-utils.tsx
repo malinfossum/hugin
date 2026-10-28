@@ -63,3 +63,7 @@ export function TestRouter({
     </RoutedContent.Provider>
   )
 }
+
+/** Where a toast lands: the Base UI viewport the Toaster portals to the end of <body>. The
+ * LiveRegionProvider's own region stays the first [aria-live="polite"] in the document. */
+export const toastRegion = () => document.querySelector('[data-slot="toast-viewport"]')

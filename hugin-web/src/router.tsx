@@ -11,12 +11,14 @@ export function createAppRouter(options: { history?: RouterHistory } = {}) {
     // Restores each page's scroll position, replacing the hand-kept map.
     scrollRestoration: true,
     // Keyed per path, not per history entry (the default), so a page reached again through the
-    // nav returns to where it was left, not only one reached by Back/Forward. The company list
-    // and a company's detail have different paths, so each keeps its own position. Search params
-    // are left out: typing a filter on the list doesn't make it a different page. The position
-    // is restored right after the view renders, so a view whose data is still loading (its cache
-    // entry was garbage-collected) is too short to scroll and lands at the top instead.
-    getScrollRestorationKey: (location) => location.pathname,
+    // nav returns to where it was left, not only one reached by Back/Forward. A company's detail
+    // is a dialog over the company list, so its path shares the list's key: opening or closing
+    // one leaves the list where it was. Search params are left out: typing a filter on the list
+    // doesn't make it a different page. The position is restored right after the view renders,
+    // so a view whose data is still loading (its cache entry was garbage-collected) is too short
+    // to scroll and lands at the top instead.
+    getScrollRestorationKey: (location) =>
+      location.pathname.replace(/^\/companies\/.+$/, '/companies'),
   })
 }
 

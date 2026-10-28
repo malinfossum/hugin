@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { MapPin } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { KNOWN_CATEGORIES, useFocus } from '../context/focus'
 import { useT } from '../i18n'
@@ -7,6 +8,9 @@ import type { Region } from '../lib/regions'
 import { AreaPickerDialog } from './AreaPickerDialog'
 import { useAnnounce } from './LiveRegion'
 import { RegionChips } from './RegionChips'
+import { SettingsSection } from './SettingsSection'
+import { Button } from './ui/button'
+import { toast } from './ui/toast'
 
 /** Stable empty list for a null focus, so the picker's `value` identity does not change on
  * every render. */
@@ -47,36 +51,45 @@ export function DisplayFilterSection() {
 
   const handleReset = () => {
     resetFocus()
-    announce(t('settings.focusResetDone'))
+    toast.add({ type: 'success', title: t('settings.focusResetDone') })
   }
 
   return (
-    <section aria-labelledby="settings-focus-heading" className="card settings-group stack">
-      <h2 id="settings-focus-heading">{t('settings.focusHeading')}</h2>
-      <p className="help">{t('settings.focusHint')}</p>
-
+    <SettingsSection
+      headingId="settings-focus-heading"
+      title={t('settings.focusHeading')}
+      hint={t('settings.focusHint')}
+    >
       <RegionChips
         regions={regions}
         kommuneNames={kommuneNames}
         onRemove={(fylke) => applyRegions(regions.filter((r) => r.fylke !== fylke))}
         fallbackFocusRef={chooseRef}
       />
-      <button
-        type="button"
-        className="btn btn-ghost"
+      <Button
+        variant="outline"
+        size="touch"
+        className="self-start"
         ref={chooseRef}
         onClick={() => setPickerOpen(true)}
       >
+        <MapPin aria-hidden="true" />
         {t('areas.choose')}
-      </button>
+      </Button>
 
-      <fieldset className="stack stack-sm">
-        <legend>{t('focus.categoriesLegend')}</legend>
-        <p className="help">{t('focus.categoriesHint')}</p>
+      <fieldset className="m-0 mt-4 flex min-w-0 flex-col border-0 p-0">
+        <legend className="mb-1 p-0 text-sm font-medium text-foreground">
+          {t('focus.categoriesLegend')}
+        </legend>
+        <p className="text-small text-muted-foreground">{t('focus.categoriesHint')}</p>
         {KNOWN_CATEGORIES.map((category) => (
-          <label key={category} className="cluster cluster-sm">
+          <label
+            key={category}
+            className="flex min-h-11 items-center gap-2.5 text-body-sm text-foreground"
+          >
             <input
               type="checkbox"
+              className="size-4.5"
               checked={categories.includes(category)}
               onChange={() => toggleCategory(category)}
             />
@@ -85,9 +98,9 @@ export function DisplayFilterSection() {
         ))}
       </fieldset>
 
-      <button type="button" className="btn btn-ghost" onClick={handleReset}>
+      <Button variant="link" className="-ms-2.5 min-h-11 self-start" onClick={handleReset}>
         {t('settings.focusReset')}
-      </button>
+      </Button>
 
       <AreaPickerDialog
         open={pickerOpen}
@@ -99,6 +112,6 @@ export function DisplayFilterSection() {
         }}
         onCancel={() => setPickerOpen(false)}
       />
-    </section>
+    </SettingsSection>
   )
 }

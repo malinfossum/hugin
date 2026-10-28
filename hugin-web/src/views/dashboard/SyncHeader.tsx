@@ -11,35 +11,62 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '../../components/ui/popover'
+import { toast } from '../../components/ui/toast'
 import { useReadOnly } from '../../context/readOnly'
-import { type T, useT } from '../../i18n'
+import { type T, useFormatNumber, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
-import { formatDate, formatDateTime } from '../../lib/dates'
+import { formatDate, formatTime } from '../../lib/dates'
 import { useMarkSeen, useStartSync } from '../../lib/mutations'
 import { newQuery, statusQuery, syncStatusQuery } from '../../lib/queries'
 import { getFailureMessage, isNoCoverageFailure } from '../../lib/syncResult'
+import { dayNumber } from '../../lib/timeScale'
 import type { NewDto, SourceStateDto } from '../../lib/types'
 
+/** «i dag kl. 08:16», «i går kl. 17:40», else the date: when a source last synced, in words. */
+function syncedWhen(iso: string, t: T): string {
+  const time = formatTime(iso)
+  const daysAgo = dayNumber(new Date()) - dayNumber(new Date(iso))
+  if (daysAgo === 0) return t('sync.whenToday', { time })
+  if (daysAgo === 1) return t('sync.whenYesterday', { time })
+  return t('sync.whenDate', { date: formatDate(iso), time })
+}
+
 function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
-  return source ? formatDateTime(source.lastSyncUtc) : t('sync.never')
+  return source ? syncedWhen(source.lastSyncUtc, t) : t('sync.never')
+}
+
+/** Both registers synced in the same run (the same minute): one phrase says it for both. */
+function syncedTogether(status: { brreg: SourceStateDto | null; nav: SourceStateDto | null }) {
+  const { brreg, nav } = status
+  if (!brreg || !nav) return null
+  const minute = (iso: string) => Math.floor(Date.parse(iso) / 60_000)
+  return minute(brreg.lastSyncUtc) === minute(nav.lastSyncUtc) ? brreg.lastSyncUtc : null
 }
 
 /** The delta, as the dashboard's headline: what arrived since the last "Mark as seen". The
  * counts are set in forest (DESIGN.md: forest is new), the words around them in ink. */
-function DeltaHeadline({ delta, t }: { delta: NewDto; t: T }) {
+function DeltaHeadline({
+  delta,
+  t,
+  formatNumber,
+}: {
+  delta: NewDto
+  t: T
+  formatNumber: (n: number) => string
+}) {
   const since = formatDate(delta.since)
   const ads = delta.ads.length
   const companies = delta.companies.length
   if (ads === 0 && companies === 0) return <>{t('sync.deltaNone', { date: since })}</>
   const ad = ads > 0 && (
     <>
-      <span className="text-forest">{ads}</span>{' '}
+      <span className="text-forest">{formatNumber(ads)}</span>{' '}
       {t(ads === 1 ? 'sync.deltaAdOne' : 'sync.deltaAds')}
     </>
   )
   const company = companies > 0 && (
     <>
-      <span className="text-forest">{companies}</span>{' '}
+      <span className="text-forest">{formatNumber(companies)}</span>{' '}
       {t(companies === 1 ? 'sync.deltaCompanyOne' : 'sync.deltaCompanies')}
     </>
   )
@@ -67,6 +94,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
   const { data: delta } = useQuery(newQuery())
   const announce = useAnnounce()
   const t = useT()
+  const formatNumber = useFormatNumber()
   const { readOnly } = useReadOnly()
   const { markSyncStarted } = useSyncWatcher()
   const startSyncMutation = useStartSync()
@@ -97,15 +125,17 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
   }
 
   const startSync = async () => {
+    // A sync brings a new delta, so a failed mark of the old one no longer applies.
+    setMarkError(null)
     try {
       await startSyncMutation.mutateAsync({})
       markSyncStarted()
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        announce(t('sync.alreadyRunning'))
+        toast.add({ type: 'info', title: t('sync.alreadyRunning') })
         markSyncStarted()
       } else {
-        announce(t('sync.startFailed'))
+        toast.add({ type: 'error', title: t('sync.startFailed'), priority: 'high' })
       }
     }
   }
@@ -127,7 +157,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
               tabIndex={-1}
               className="max-w-xl font-heading text-2xl font-semibold text-balance md:text-headline"
             >
-              <DeltaHeadline delta={delta} t={t} />
+              <DeltaHeadline delta={delta} t={t} formatNumber={formatNumber} />
             </h2>
           ) : (
             <h2 id="sync-heading" ref={headingRef} tabIndex={-1} className="sr-only">
@@ -135,21 +165,29 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
             </h2>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground tabular-nums">
-            <dl className="flex flex-wrap gap-x-4 gap-y-1">
-              <div className="flex gap-1.5">
-                <dt>{t('sync.brregLabel')}</dt>
-                <dd className="font-medium text-foreground">{formatLastSync(status?.brreg, t)}</dd>
-              </div>
-              <div className="flex gap-1.5">
-                <dt>{t('sync.navLabel')}</dt>
-                <dd className="font-medium text-foreground">{formatLastSync(status?.nav, t)}</dd>
-              </div>
-            </dl>
+            {status && syncedTogether(status) ? (
+              <p>
+                {t('sync.syncedBoth', { when: syncedWhen(syncedTogether(status) as string, t) })}
+              </p>
+            ) : (
+              <dl className="flex flex-wrap gap-x-4 gap-y-1">
+                <div className="flex gap-1.5">
+                  <dt>{t('sync.brregLabel')}</dt>
+                  <dd className="font-medium text-foreground">
+                    {formatLastSync(status?.brreg, t)}
+                  </dd>
+                </div>
+                <div className="flex gap-1.5">
+                  <dt>{t('sync.navLabel')}</dt>
+                  <dd className="font-medium text-foreground">{formatLastSync(status?.nav, t)}</dd>
+                </div>
+              </dl>
+            )}
             <p>
               {t('sync.counts', {
-                activeAds: status?.activeAds ?? 0,
-                companies: status?.companies ?? 0,
-                pipelineEntries: status?.pipelineEntries ?? 0,
+                activeAds: formatNumber(status?.activeAds ?? 0),
+                companies: formatNumber(status?.companies ?? 0),
+                pipelineEntries: formatNumber(status?.pipelineEntries ?? 0),
               })}
             </p>
           </div>
@@ -173,7 +211,10 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
               <Popover
                 open={confirmOpen}
                 onOpenChange={(open) => {
-                  if (open && delta) reviewedAsOf.current = delta.asOf
+                  if (open && delta) {
+                    reviewedAsOf.current = delta.asOf
+                    setMarkError(null)
+                  }
                   if (!open) reviewedAsOf.current = null
                   setConfirmOpen(open)
                 }}
@@ -190,7 +231,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
                       {t('common.cancel')}
                     </Button>
                     <Button size="touch" onClick={confirmMarkSeen}>
-                      {t('newSince.markSeen')}
+                      {t('newSince.confirmButton')}
                     </Button>
                   </div>
                 </PopoverContent>
@@ -223,7 +264,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
           </Button>
         </p>
       )}
-      {markError && (
+      {markError && hasNew && (
         <p
           role="status"
           className="flex items-center gap-x-3 border-y border-border py-3 text-body-sm"
@@ -235,10 +276,15 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
       {failureMessage && (
         <p
           role="status"
-          className="flex items-center gap-x-3 border-y border-border py-3 text-body-sm"
+          className="flex flex-wrap items-center gap-x-3 border-y border-border py-3 text-body-sm"
         >
           <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
           {failureMessage}
+          {!readOnly && (
+            <Button variant="link" className="min-h-11" onClick={startSync}>
+              {t('common.retry')}
+            </Button>
+          )}
         </p>
       )}
     </section>

@@ -1,7 +1,4 @@
-/* Tailwind + shadcn entry. The workbench design system and Hugin's overrides on it load from
-   legacy.css into a `legacy` cascade layer between Tailwind's base and its utilities, so a view
-   can move to shadcn one element at a time while the rest keeps its old look. The layer and
-   design-system/ go away once the last view is migrated. */
+/* Tailwind + shadcn entry: the theme, its tokens and the base rules (DESIGN.md). */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -13,8 +10,10 @@
 
 /* The topographic sheet (DESIGN.md): paper, ink and four map colours, one job each. Contour is
    time and map lettering, forest is new, lake is applied (and focus/selection), rust is closing
-   within 7 days. Dark is the same sheet at night. */
+   within 7 days, danger is errors and what cannot be undone. Dark is the same sheet at night. */
 :root {
+  /* Native controls (checkboxes, select menus, scrollbars) follow the theme. */
+  color-scheme: light;
   --paper: #f6f6f3;
   --sheet: #fbfbf9;
   --wash: #eeede8;
@@ -30,10 +29,12 @@
   --lake: #2f6a8f;
   --rust: #a24b16;
   --rust-wash: rgb(162 75 22 / 0.07);
+  --danger: #b3261e;
   --select: rgb(47 106 143 / 0.18);
   --radius: 0.375rem;
 }
 [data-theme="dark"] {
+  color-scheme: dark;
   --paper: #171918;
   --sheet: #1c1f1d;
   --wash: #232624;
@@ -48,12 +49,12 @@
   --lake: #8bbadb;
   --rust: #e6935f;
   --rust-wash: rgb(230 147 95 / 0.08);
+  --danger: #f28b82;
   --select: rgb(139 186 219 / 0.25);
 }
 
 /* The shadcn roles, mapped as DESIGN.md sets out. Plain @theme (not inline) emits --color-* on
-   :root; components that need a raw color var read those, because the DS still owns --accent,
-   --secondary and --border with different meanings while legacy views remain. */
+   :root, where components that need a raw color var read them. */
 @theme {
   --color-background: var(--paper);
   --color-foreground: var(--ink);
@@ -69,8 +70,7 @@
   --color-muted-foreground: var(--ink-secondary);
   --color-accent: var(--wash);
   --color-accent-foreground: var(--ink);
-  /* DESIGN.md has no destructive role yet (rust's one job is closing). Decide it when the reset
-     section migrates; until then it reads the DS danger color. */
+  /* Danger's one job (DESIGN.md): errors and actions that cannot be undone. */
   --color-destructive: var(--danger);
   --color-border: var(--rule);
   --color-input: var(--rule-strong);
@@ -150,5 +150,22 @@
   ::selection {
     background: var(--select);
     color: var(--ink);
+  }
+  /* DESIGN.md's focus: a 2px lake outline 2px off every focusable element. Components that draw
+     their own ring (outline-none plus a ring utility) keep theirs, since utilities win. */
+  :focus-visible {
+    outline: 2px solid var(--lake);
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion must beat every component's own animation and transition, whatever their
+   specificity, so this is one of the few places !important is the right tool. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: see above */
+    transition: none !important;
   }
 }

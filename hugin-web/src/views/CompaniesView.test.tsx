@@ -93,6 +93,7 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     isActive: true,
     linkedOrgnr: null,
     published: '2026-08-12T00:00:00Z',
+    firstSeen: '2026-08-12T00:00:00Z',
     ...overrides,
   }
 }
@@ -206,6 +207,41 @@ describe('CompaniesView', () => {
     await waitFor(() => expect(screen.queryByText('Beta Software')).not.toBeInTheDocument())
     expect(screen.getByText('Acme AS')).toBeInTheDocument()
     expect(screen.getByText('1 bedrift')).toBeInTheDocument()
+  })
+
+  it('a search with no match says so and offers to clear it', async () => {
+    const companies = [company({ orgnr: '1', name: 'Acme AS' })]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const search = screen.getByRole('searchbox', { name: 'Søk' })
+    await user.type(search, 'zzqxj')
+
+    expect(await screen.findByText('Ingen bedrifter passer søket og filtrene.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Tøm søk og filtre' }))
+
+    expect(await screen.findByText('Acme AS')).toBeInTheDocument()
+    expect(search).toHaveValue('')
+  })
+
+  it('keeps the no-match sentence while a cleared search is still on its way', async () => {
+    const companies = [company({ orgnr: '1', name: 'Acme AS' })]
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, {}))
+
+    await screen.findByText('Acme AS')
+    const search = screen.getByRole('searchbox', { name: 'Søk' })
+    await user.type(search, 'zzqxj')
+    await screen.findByText('Ingen bedrifter passer søket og filtrene.')
+
+    await user.clear(search)
+    // The empty answer on screen is still the search's, until the unfiltered one arrives.
+    expect(screen.getByText('Ingen bedrifter passer søket og filtrene.')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Ingen bedrifter her ennå. De kommer med en synk av dekningen din.')
+    ).not.toBeInTheDocument()
+    expect(await screen.findByText('Acme AS')).toBeInTheDocument()
   })
 
   it('shows the singular count for a single loaded company with no filters applied', async () => {
@@ -386,7 +422,7 @@ describe('CompaniesView', () => {
     await screen.findByText('Acme AS')
     await user.selectOptions(screen.getByLabelText('Annonser'), 'Med åpen annonse')
     await user.click(screen.getByRole('button', { name: /Acme AS/ }))
-    await user.click(await screen.findByRole('button', { name: 'Tilbake' }))
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     const row = await screen.findByRole('button', { name: /Acme AS/ })
     await waitFor(() => expect(document.activeElement).toBe(row))
@@ -394,7 +430,7 @@ describe('CompaniesView', () => {
     expect(screen.queryByText('Beta Software')).not.toBeInTheDocument()
   })
 
-  it('clicking a row fetches detail and shows Annonsehistorikk with [utgått] on inactive ads', async () => {
+  it('clicking a row fetches detail and shows Annonsehistorikk with «Utgått» on inactive ads', async () => {
     const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
       '715787630': {
@@ -422,8 +458,8 @@ describe('CompaniesView', () => {
     const activeRow = screen.getByText('Aktiv annonse').closest('li')
     const expiredRow = screen.getByText('Utgått annonse').closest('li')
     if (!activeRow || !expiredRow) throw new Error('row not found')
-    expect(within(activeRow).queryByText('[utgått]')).not.toBeInTheDocument()
-    expect(within(expiredRow).getByText('[utgått]')).toBeInTheDocument()
+    expect(within(activeRow).queryByText('Utgått')).not.toBeInTheDocument()
+    expect(within(expiredRow).getByText('Utgått')).toBeInTheDocument()
     const expectedPublished = formatDate('2026-08-01T00:00:00Z')
     expect(within(activeRow).getByText(`publisert ${expectedPublished}`)).toBeInTheDocument()
     expect(within(expiredRow).queryByText(/publisert/)).not.toBeInTheDocument()
@@ -455,9 +491,9 @@ describe('CompaniesView', () => {
     await screen.findByText('Acme AS')
     await user.click(screen.getByRole('button', { name: /Acme AS/ }))
 
-    await screen.findByRole('heading', { name: 'Acme AS' })
-    expect(screen.getByText('Nettside')).toBeInTheDocument()
-    const link = screen.getByRole('link', { name: 'https://acme.example' })
+    const dialog = await screen.findByRole('dialog', { name: 'Acme AS' })
+    expect(within(dialog).getByText('Nettside')).toBeInTheDocument()
+    const link = within(dialog).getByRole('link', { name: 'https://acme.example' })
     expect(link).toHaveAttribute('href', 'https://acme.example')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
@@ -610,7 +646,7 @@ describe('CompaniesView', () => {
     expect(rows[1]).toHaveTextContent(/^Nyfjell Spill AS/)
   })
 
-  it('Tilbake from a branch tab returns to the list and refocuses the main row', async () => {
+  it('closing the dialog from a branch tab refocuses the main row', async () => {
     const companies = [
       company({ orgnr: '777777777', name: 'NYFJELL SPILL AS', kommuneNavn: 'Hamar' }),
       company({
@@ -638,8 +674,7 @@ describe('CompaniesView', () => {
       await screen.findByRole('heading', { name: /Nyfjell Spill AS Avdeling Oslo/ })
     ).toBeInTheDocument()
 
-    const back = await screen.findByRole('button', { name: 'Tilbake' })
-    await user.click(back)
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     const reopenedRow = await screen.findByRole('button', { name: /Nyfjell Spill AS/ })
     await waitFor(() => {
@@ -647,7 +682,21 @@ describe('CompaniesView', () => {
     })
   })
 
-  it('Tilbake returns to the list and focus lands back on the opening row', async () => {
+  it('opening a company moves focus to its name, not the page body', async () => {
+    const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '715787630': { company: companies[0], ads: [], branches: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await user.click(await screen.findByRole('button', { name: /Acme AS/ }))
+
+    const heading = await screen.findByRole('heading', { name: 'Acme AS' })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+  })
+
+  it('closing the dialog returns focus to the row that opened it', async () => {
     const companies = [
       company({ orgnr: '715787630', name: 'Acme AS' }),
       company({ orgnr: '999888777', name: 'Beta Software' }),
@@ -662,8 +711,7 @@ describe('CompaniesView', () => {
     const row = screen.getByRole('button', { name: /Acme AS/ })
     await user.click(row)
 
-    const back = await screen.findByRole('button', { name: 'Tilbake' })
-    await user.click(back)
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     const reopenedRow = await screen.findByRole('button', { name: /Acme AS/ })
     await waitFor(() => {
@@ -671,7 +719,23 @@ describe('CompaniesView', () => {
     })
   })
 
-  it('deep-links straight into a detail when selectedOrgnr is set on mount (route-driven, no click)', async () => {
+  it('Escape closes the dialog and returns focus to the opening row', async () => {
+    const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
+    const details: Record<string, CompanyDetailDto> = {
+      '715787630': { company: companies[0], ads: [], branches: [] },
+    }
+    const user = userEvent.setup()
+    renderView(fakeServer(companies, details))
+
+    await user.click(await screen.findByRole('button', { name: /Acme AS/ }))
+    await screen.findByRole('dialog', { name: 'Acme AS' })
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Acme AS/ }))
+  })
+
+  it('deep-links straight into a detail dialog over the list when selectedOrgnr is set on mount (route-driven, no click)', async () => {
     const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
       '715787630': { company: companies[0], ads: [], branches: [] },
@@ -695,11 +759,11 @@ describe('CompaniesView', () => {
       </TestQueryProvider>
     )
 
-    expect(await screen.findByRole('heading', { name: 'Acme AS' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Søk')).not.toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Acme AS' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Søk')).toBeInTheDocument()
   })
 
-  it('calls onCloseCompany (not internal state) when Tilbake is clicked', async () => {
+  it('calls onCloseCompany (not internal state) when the dialog is closed', async () => {
     const companies = [company({ orgnr: '715787630', name: 'Acme AS' })]
     const details: Record<string, CompanyDetailDto> = {
       '715787630': { company: companies[0], ads: [], branches: [] },
@@ -725,8 +789,7 @@ describe('CompaniesView', () => {
       </TestQueryProvider>
     )
 
-    const back = await screen.findByRole('button', { name: 'Tilbake' })
-    await user.click(back)
+    await user.click(await screen.findByRole('button', { name: 'Lukk' }))
 
     expect(onCloseCompany).toHaveBeenCalledTimes(1)
   })

@@ -16,7 +16,7 @@ export function SourcesCard() {
   return (
     <section
       aria-labelledby="sources-heading"
-      className="mt-12 flex flex-col gap-2 border-t border-border pt-4.5 pb-4 font-sans text-sm md:flex-row md:flex-wrap md:items-baseline md:gap-x-6"
+      className="mt-12 flex flex-col gap-2 border-t border-border pt-3 pb-2 font-sans text-sm md:flex-row md:flex-wrap md:items-center md:gap-x-6"
     >
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h2 id="sources-heading" className="font-sans text-sm font-medium">
@@ -24,13 +24,13 @@ export function SourcesCard() {
         </h2>
         <p className="text-small text-muted-foreground">{t('sources.description')}</p>
       </div>
-      <ul className="flex list-none flex-wrap gap-x-5.5 gap-y-1 ps-0">
+      <ul className="flex list-none flex-wrap gap-x-5.5 ps-0">
         <li>
           <a
             href="https://www.brreg.no"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-foreground no-underline hover:underline"
+            className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
           >
             {t('sync.brregLabel')}
             <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />
@@ -41,7 +41,7 @@ export function SourcesCard() {
             href="https://arbeidsplassen.nav.no/stillinger"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-foreground no-underline hover:underline"
+            className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
           >
             {t('sync.navLabel')}
             <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />
@@ -53,7 +53,7 @@ export function SourcesCard() {
               href={s.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-foreground no-underline hover:underline"
+              className="inline-flex min-h-11 items-center gap-1 text-foreground no-underline hover:underline"
             >
               {sourceLabel(s.url, s.label)}
               <ExternalLink aria-hidden="true" className="size-3 text-ink-tertiary" />
