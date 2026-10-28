@@ -1,5 +1,10 @@
 import { cn } from '@/lib/utils'
-import { LifelineFuture, PhoneTodayLine, ScaleBand } from '../components/TimeSheet'
+import {
+  LifelineFuture,
+  PHONE_LABEL_CHIP,
+  PhoneTodayLine,
+  ScaleBand,
+} from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
 import { formatDate, formatDayMonth } from '../lib/dates'
 import { daysLeftText, isClosing, labelFlips, lifelineTone, pct } from '../lib/lifeline'
@@ -102,9 +107,11 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                 className="flex flex-col border-t border-border md:min-h-17.5 md:flex-row"
               >
                 <div className="flex min-w-0 flex-col justify-center gap-0.5 pt-3 pb-1 md:w-90 md:shrink-0 md:py-3 md:pe-5">
+                  {/* A 44 px target in the title's own room, as in DeadlineList. */}
                   <span
                     className={cn(
-                      'font-medium md:truncate',
+                      'font-medium',
+                      ad.sourceUrl ? '-my-3' : 'md:truncate',
                       ad.isActive ? 'text-foreground' : 'text-muted-foreground'
                     )}
                   >
@@ -113,7 +120,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                         href={ad.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-inherit no-underline hover:underline"
+                        className="relative block w-fit max-w-full py-3 text-inherit no-underline hover:underline md:truncate"
                       >
                         {ad.title}
                       </a>
@@ -164,7 +171,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                       className={cn(
                         'at-x absolute text-sm whitespace-nowrap tabular-nums',
                         flip
-                          ? 'bottom-1/2 mb-2 -translate-x-full'
+                          ? cn('bottom-1/2 mb-2 -translate-x-full', PHONE_LABEL_CHIP.popover)
                           : 'top-1/2 -translate-y-1/2 ps-3',
                         isClosing(daysLeft) ? 'font-semibold text-rust' : 'text-muted-foreground'
                       )}
@@ -181,7 +188,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
         {/* Today's line over the lifeline column, reaching up through the scale bar. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 left-90 max-md:hidden"
+          className="pointer-events-none absolute inset-y-0 right-0 left-90 hidden md:block"
         >
           <div
             className="at-x absolute -top-7 bottom-0 border-l border-foreground"

@@ -24,7 +24,12 @@ export function CompanyLink({
 
   if (website) {
     return (
-      <a href={website} target="_blank" rel="noopener noreferrer" className={cn(LINK, className)}>
+      <a
+        href={website}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn('inline-target', LINK, className)}
+      >
         {website}
       </a>
     )
@@ -37,7 +42,7 @@ export function CompanyLink({
         href={googleSearchUrl(name, kommuneNavn)}
         target="_blank"
         rel="noopener noreferrer"
-        className={LINK}
+        className={cn('inline-target', LINK)}
       >
         {t('companies.googleSearch')}
       </a>

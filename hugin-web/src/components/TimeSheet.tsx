@@ -53,6 +53,17 @@ export function LifelineFuture({
   )
 }
 
+/** Below md, today's line and the seen line run through each lifeline's own box, so a label they
+ * can cross sits on a chip of the surface colour and the line stops behind the text. A ring, not
+ * padding, so the text stays where it was. From md the shared overlay draws the marks and the
+ * label is left bare: a chip there would cut a box out of the seen wash. Full class strings, so
+ * Tailwind finds them. */
+export const PHONE_LABEL_CHIP = {
+  // The dashboard rows light up (hover, data-lit), so the chip follows the row.
+  page: 'z-10 rounded-xs bg-background ring-3 ring-background group-hover:bg-muted group-hover:ring-muted group-data-lit:bg-muted group-data-lit:ring-muted md:z-auto md:bg-transparent md:ring-0 md:group-hover:bg-transparent md:group-data-lit:bg-transparent',
+  popover: 'z-10 rounded-xs bg-popover ring-3 ring-popover md:z-auto md:bg-transparent md:ring-0',
+} as const
+
 /** Today's line on one lifeline. Phones have no shared overlay, so each line carries its own. */
 export function PhoneTodayLine({ x }: { x: number }) {
   return (

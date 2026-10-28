@@ -3,7 +3,12 @@ import { AlertTriangle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAnnounce } from '../../components/LiveRegion'
-import { LifelineFuture, PhoneTodayLine, ScaleBand } from '../../components/TimeSheet'
+import {
+  LifelineFuture,
+  PHONE_LABEL_CHIP,
+  PhoneTodayLine,
+  ScaleBand,
+} from '../../components/TimeSheet'
 import { UnsavedChangesGuard } from '../../components/UnsavedChangesGuard'
 import { Button } from '../../components/ui/button'
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select'
@@ -270,7 +275,9 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
         </p>
       )}
 
-      {/* The scale bar: alternating whole weeks under the month names, Monday dates under it. */}
+      {/* The scale bar: alternating whole weeks under the month names, Monday dates under it.
+      Every other date until lg: at md the scale column is only about 300 px wide and twelve
+      dates run into each other. */}
       <div aria-hidden="true" hidden={!drawn} className="mt-5 flex">
         <div className="hidden shrink-0 md:block md:w-90" />
         <div className="relative h-21 flex-1 md:h-14">
@@ -317,7 +324,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                 className={cn(
                   'at-x absolute bottom-0 text-xs text-ink-tertiary tabular-nums',
                   week.x > 4 && '-translate-x-1/2',
-                  i % 2 === 1 && 'max-md:hidden'
+                  i % 2 === 1 && 'hidden lg:block'
                 )}
                 style={{ '--x': pct(week.x) }}
               >
@@ -349,13 +356,16 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
               >
                 <div className="flex flex-col md:flex-row">
                   <div className="flex min-w-0 flex-col justify-center gap-0.5 pt-4 pb-1 md:w-90 md:shrink-0 md:py-3.5 md:pe-5">
-                    <span className="font-medium md:truncate">
+                    {/* A linked title is a 44 px target that takes no extra room: the link's
+                    padding is handed back by the negative margin, and it sits above the line
+                    under it (relative) so that padding still takes the tap. */}
+                    <span className={cn('font-medium', ad.sourceUrl ? '-my-3' : 'md:truncate')}>
                       {ad.sourceUrl ? (
                         <a
                           href={ad.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-foreground no-underline hover:underline"
+                          className="relative block w-fit max-w-full py-3 text-foreground no-underline hover:underline md:truncate"
                         >
                           {ad.title}
                         </a>
@@ -363,7 +373,10 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                         ad.title
                       )}
                     </span>
-                    <span className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
+                    {/* At least one line tall even when it has nothing to show (no employer, place,
+                    badge or status): the title link's padding reaches into it and must not
+                    reach the actions under it. */}
+                    <span className="flex min-h-lh flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
                       {isNew && (
                         <span className="font-semibold text-forest">{t('deadlines.newBadge')}</span>
                       )}
@@ -400,7 +413,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                           <Button
                             variant="link"
                             size="xs"
-                            className="min-h-11"
+                            className="min-h-11 min-w-11"
                             onClick={() => handleUnlink(ad.feedId)}
                           >
                             {t('deadlines.unlink')}
@@ -410,7 +423,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                           <Button
                             variant="link"
                             size="xs"
-                            className="min-h-11"
+                            className="min-h-11 min-w-11"
                             onClick={() => handleTrack(ad)}
                           >
                             {t('deadlines.track')}
@@ -420,7 +433,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                           <Button
                             variant="link"
                             size="xs"
-                            className="min-h-11"
+                            className="min-h-11 min-w-11"
                             ref={(el) => {
                               if (el) linkRefs.current.set(ad.feedId, el)
                               else linkRefs.current.delete(ad.feedId)
@@ -434,7 +447,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                           <Button
                             variant="link"
                             size="xs"
-                            className="min-h-11"
+                            className="min-h-11 min-w-11"
                             onClick={() => handleAngreSkjul(ad.feedId)}
                           >
                             {t('deadlines.undoHide')}
@@ -443,7 +456,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                           <Button
                             variant="link"
                             size="xs"
-                            className="min-h-11"
+                            className="min-h-11 min-w-11"
                             ref={(el) => {
                               if (el) skjulRefs.current.set(ad.feedId, el)
                               else skjulRefs.current.delete(ad.feedId)
@@ -480,7 +493,10 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                       published && (
                         <span
                           aria-hidden="true"
-                          className="absolute bottom-1/2 left-0 mb-1.5 text-xs text-muted-foreground tabular-nums"
+                          className={cn(
+                            'absolute bottom-1/2 left-0 mb-1.5 text-xs text-muted-foreground tabular-nums',
+                            PHONE_LABEL_CHIP.page
+                          )}
                         >
                           {t('deadlines.since', { date: formatDate(ad.published as string) })}
                         </span>
@@ -510,7 +526,9 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                     <span
                       className={cn(
                         'at-x absolute text-sm whitespace-nowrap text-muted-foreground tabular-nums',
-                        flip ? 'bottom-1/2 mb-2 -translate-x-full' : 'top-1/2 -translate-y-1/2 ps-3'
+                        flip
+                          ? cn('bottom-1/2 mb-2 -translate-x-full', PHONE_LABEL_CHIP.page)
+                          : 'top-1/2 -translate-y-1/2 ps-3'
                       )}
                       style={{ '--x': pct(at(end)) }}
                     >
@@ -582,7 +600,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
         Mark as seen slides the seen line up to today and the wash closes behind it. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 left-90 max-md:hidden"
+          className="pointer-events-none absolute inset-y-0 right-0 left-90 hidden md:block"
         >
           {seen !== null && (
             <>

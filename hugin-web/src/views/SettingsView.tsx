@@ -194,8 +194,10 @@ export function SettingsView() {
                   className="flex flex-col gap-3 py-2"
                   onSubmit={(event) => handleEditSubmit(source.id, event)}
                 >
-                  <div className="flex flex-col gap-3 md:flex-row">
-                    <div className="flex flex-col gap-1.5 md:w-56">
+                  {/* Side by side only from lg: at md the controls column is about 300 px and
+                  the URL field would shrink to a sliver. */}
+                  <div className="flex flex-col gap-3 lg:flex-row">
+                    <div className="flex flex-col gap-1.5 lg:w-56">
                       <label
                         htmlFor={`edit-label-${source.id}`}
                         className="text-sm text-muted-foreground"
@@ -299,8 +301,9 @@ export function SettingsView() {
 
         {!readOnly && (
           <form className="flex flex-col gap-3" onSubmit={handleAdd}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <div className="flex flex-col gap-1.5 md:w-56">
+            {/* As in the edit form: one row from lg, where the URL field has room. */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+              <div className="flex flex-col gap-1.5 lg:w-56">
                 <label htmlFor="add-source-label" className="text-sm text-muted-foreground">
                   {t('settings.label')}
                 </label>
