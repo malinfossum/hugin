@@ -1,8 +1,8 @@
-# Project note — Hugin
+# Project note: Hugin
 
 A summary of what Hugin is, how it works, how it is built and where it stands.
 
-**Last updated:** 11.10.2026 · **Version:** v3.9.0 · **Status:** finished and in daily use
+**Last updated:** 28.10.2026 · **Version:** v4.0.2 · **Status:** finished and in daily use
 
 ---
 
@@ -13,19 +13,19 @@ every morning, shows what is new in your region, and keeps track of who you have
 It runs locally on your own machine, and the data never leaves it.
 
 The name comes from Odin's raven of thought, who flies out each morning and returns with
-tidings — while his sibling Munin remembers.
+tidings, while his sibling Munin remembers.
 
 ## Background
 
 Job hunting meant opening the same five sites every morning and trying to remember what I had
 already seen. The data is public: NAV publishes an open job-ad feed, and Brønnøysundregistrene
 publishes every registered company. Rather than checking by hand, I let a program do the
-morning round and show only the difference — what is new since last time.
+morning round and show only the difference: what is new since last time.
 
 ## How a morning run works
 
-You start a sync. Hugin reads the focus profile — which municipalities, which industry codes,
-which keywords — and fetches new job ads from NAV's feed. The employers are looked up in
+You start a sync. Hugin reads the focus profile (which municipalities, which industry codes,
+which keywords) and fetches new job ads from NAV's feed. The employers are looked up in
 Brønnøysundregistrene.
 
 The ads are then filtered: municipality is a hard gate, keywords narrow the title, and NAV's
@@ -33,28 +33,29 @@ own occupation categories drop coincidental matches. Whatever survives is stored
 
 Finally, only what has not been shown before is presented. You star the interesting ones, set a
 company to *applied*, export a shortlist and mark the batch as seen. The next morning Hugin
-starts from that mark — a timestamp in the database for the last time someone said "I have seen
+starts from that mark: a timestamp in the database for the last time someone said "I have seen
 this".
 
 ## Stack
 
 The backend is C# on .NET 10, with EF Core over SQLite, tested with NUnit. The frontend is
-React 19 with TypeScript, built with Vite and tested with Vitest.
+React 19 with TypeScript, built with Vite and tested with Vitest. The interface uses Tailwind CSS
+and shadcn/ui components, with TanStack Router for the URLs and TanStack Query for the data.
 
 The whole application ships as a single self-contained `.exe`. You double-click it, the browser
-opens on localhost, and there is nothing to install — no .NET runtime, no database server.
+opens on localhost, and there is nothing to install: no .NET runtime, no database server.
 
 ## Architecture
 
 Four projects, with dependencies pointing inward only:
 
-- **Hugin.Core** — the pure domain. Models, filters, sync logic and services. No database, no
+- **Hugin.Core**: the pure domain. Models, filters, sync logic and services. No database, no
   HTTP, no file system; only interfaces that other layers implement.
-- **Hugin.Infrastructure** — the implementations. The EF Core context and migrations, the HTTP
+- **Hugin.Infrastructure**: the implementations. The EF Core context and migrations, the HTTP
   clients for Brreg and NAV, and reading the configuration file.
-- **Hugin.Console** and **Hugin.Api** — two thin hosts over the same core. One is a
+- **Hugin.Console** and **Hugin.Api**: two thin hosts over the same core. One is a
   command-line tool, one is a web server. Neither contains business logic.
-- **Hugin.Tests** — the test project, which is larger than the four production projects
+- **Hugin.Tests**: the test project, which is larger than the four production projects
   combined.
 
 ## The API
@@ -65,8 +66,9 @@ SQLite file the command line uses. The CLI and the dashboard are therefore two f
 program, not two programs synchronising with each other.
 
 **Every view is a real URL.** `/companies/912345678` can be bookmarked, reloaded and shared,
-and browser back and forward work. The router is hand-written — around thirty lines, parse and
-format as pure functions — rather than a routing library for five routes.
+and browser back and forward work. The routes are typed with TanStack Router, so a link to a
+page that does not exist fails at build time. An outside contributor brought it in to replace
+the hand-written router the app started with.
 
 **Localhost is not a security boundary.** Any web page can send requests to
 `http://localhost:5111`, and DNS rebinding can read the response back. Hugin therefore checks
@@ -84,35 +86,38 @@ is not.
 **Expired ads are a requirement, not a nicety.** NAV's API terms state that a republished ad
 must be removed as soon as it becomes inactive. An ad past its deadline is therefore never
 presented as active: every sync runs a local expiry sweep, and a company whose ads have all
-expired moves to an *Expired* section — and back again if a new ad appears. The demo filters
+expired moves to an *Expired* section, and back again if a new ad appears. The demo filters
 out closed ads entirely.
 
 ## Demo
 
 A read-only version runs on Azure App Service:
 [hugin-demo.azurewebsites.net](https://hugin-demo.azurewebsites.net). It shows real ads and
-companies from Innlandet with a seeded example pipeline, no personal data and no tracking. It
+companies from Innlandet with an example pipeline of fictional firms, no personal data and no
+tracking. It
 is the same binary as everything else, started with a `--public` flag that refuses all writes.
-The first load after a period of inactivity takes a few seconds — it runs on the free tier.
+The first load after a period of inactivity takes a few seconds: it runs on the free tier. It
+is built mobile-first and checked from 320 px phones up to desktop.
 
 ## Status
 
-Hugin is finished at v3.9.0 and in daily use. Seventeen tagged releases, 355 commits between
-18 August and 11 October 2026, and 915 tests all passing: 503 on the backend, 412 on the
-frontend. Every version has a specification written up front, under `docs/specs/`.
+Hugin is finished at v4.0.2 and in daily use. Twenty-one tagged releases, 392 commits between
+18 August and 28 October 2026, and 1,015 tests all passing: 525 on the backend, 490 on the
+frontend. v4.0.0 was a full visual redesign by an outside contributor; the patches after it
+made every view work on narrow screens. Every version has a specification written up front, under `docs/specs/`.
 
 The aim was never to build a product, but to avoid the manual morning round. It is still built
-properly — layered, tested and documented — because the project had to hold up to being looked
+properly (layered, tested and documented) because the project had to hold up to being looked
 at.
 
 ## Common questions
 
 | Question | Answer |
 |---|---|
-| Why not a framework like Next? | This is a local application, not a website. React plus two dependencies in total; everything else is the standard library. |
+| Why not a framework like Next? | This is a local application, not a website. A single-page React app served by the same process as the API is all it needs. |
 | Why SQLite? | One user, one file, zero setup. The database sits beside the exe and backs itself up before every migration. |
 | Why both a CLI and a web dashboard? | The command line came first and is still the fastest morning check. The dashboard is an extra host over the same core and the same database, not a rewrite. |
-| How large is the codebase? | Around 7,500 lines of C# production code, 8,700 lines of test code and 14,700 lines of frontend. |
+| How large is the codebase? | Around 7,800 lines of C# production code (Core, Infrastructure, Console and Api, migrations included), 9,100 lines of C# tests, 9,400 lines of frontend code and 10,300 lines of frontend tests. |
 | Does it pull from finn.no? | No. Neither finn.no nor proff.no permits scraping, so they are listed as link-outs under Sources in the app and clicked by hand. |
 | Who can use it? | Anyone. MIT licence, pre-built exes under Releases, and it asks which part of Norway to cover the first time it starts. |
 
@@ -120,15 +125,15 @@ at.
 
 Feedback is welcome, particularly on these points:
 
-1. **The interface** — layout, hierarchy, typography and colour. Does the dashboard tell you
-   the most important thing first? The backend has had tests and reviews; the frontend has in
-   practice only had my own taste, so this is where another pair of eyes is worth the most.
-2. **The information architecture** — five views: dashboard, companies, applications, export
+1. **The interface**: layout, hierarchy, typography and colour. Does the dashboard tell you
+   the most important thing first? The redesign came from an outside contributor, but beyond the
+   two of us few people have used it yet, so this is where more eyes are worth the most.
+2. **The information architecture**: five views: dashboard, companies, applications, export
    and settings. Is that the right split?
-3. **The architecture** — is the layering clean enough, or overcomplicated for a
+3. **The architecture**: is the layering clean enough, or overcomplicated for a
    single-user application?
 
-The code is open under the MIT licence, and pull requests are welcome — especially on design.
+The code is open under the MIT licence, and pull requests are welcome, especially on design.
 I hope the tool can be useful to more people than me: the market is the same for everyone
 looking for developer work in Norway, and the registries are open to all.
 
