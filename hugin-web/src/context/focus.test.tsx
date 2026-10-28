@@ -22,6 +22,12 @@ const hamarAndVestfold: Focus = {
   categories: ['Utvikling'],
 }
 
+/** Reads the focus context with no Provider above it. */
+function FocusConsumer() {
+  const { focus } = useFocus()
+  return <div>{focus === null ? 'no-focus' : 'has-focus'}</div>
+}
+
 const store = (record: unknown) => window.localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
 const stored = () => JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null')
 
@@ -304,11 +310,7 @@ describe('FocusProvider / useFocus', () => {
   })
 
   it('exposes the default no-op context value when rendered without a Provider', () => {
-    function Consumer() {
-      const { focus } = useFocus()
-      return <div>{focus === null ? 'no-focus' : 'has-focus'}</div>
-    }
-    render(<Consumer />)
+    render(<FocusConsumer />)
     expect(screen.getByText('no-focus')).toBeInTheDocument()
   })
 })
