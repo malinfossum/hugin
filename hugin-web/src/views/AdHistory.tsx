@@ -1,5 +1,10 @@
 import { cn } from '@/lib/utils'
-import { LifelineFuture, PhoneTodayLine, ScaleBand } from '../components/TimeSheet'
+import {
+  LifelineFuture,
+  PHONE_LABEL_CHIP,
+  PhoneTodayLine,
+  ScaleBand,
+} from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
 import { formatDate, formatDayMonth } from '../lib/dates'
 import { daysLeftText, isClosing, labelFlips, lifelineTone, pct } from '../lib/lifeline'
@@ -166,7 +171,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                       className={cn(
                         'at-x absolute text-sm whitespace-nowrap tabular-nums',
                         flip
-                          ? 'bottom-1/2 mb-2 -translate-x-full'
+                          ? cn('bottom-1/2 mb-2 -translate-x-full', PHONE_LABEL_CHIP.popover)
                           : 'top-1/2 -translate-y-1/2 ps-3',
                         isClosing(daysLeft) ? 'font-semibold text-rust' : 'text-muted-foreground'
                       )}

@@ -3,7 +3,12 @@ import { AlertTriangle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAnnounce } from '../../components/LiveRegion'
-import { LifelineFuture, PhoneTodayLine, ScaleBand } from '../../components/TimeSheet'
+import {
+  LifelineFuture,
+  PHONE_LABEL_CHIP,
+  PhoneTodayLine,
+  ScaleBand,
+} from '../../components/TimeSheet'
 import { UnsavedChangesGuard } from '../../components/UnsavedChangesGuard'
 import { Button } from '../../components/ui/button'
 import { NativeSelect, NativeSelectOption } from '../../components/ui/native-select'
@@ -485,7 +490,10 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                       published && (
                         <span
                           aria-hidden="true"
-                          className="absolute bottom-1/2 left-0 mb-1.5 text-xs text-muted-foreground tabular-nums"
+                          className={cn(
+                            'absolute bottom-1/2 left-0 mb-1.5 text-xs text-muted-foreground tabular-nums',
+                            PHONE_LABEL_CHIP.page
+                          )}
                         >
                           {t('deadlines.since', { date: formatDate(ad.published as string) })}
                         </span>
@@ -515,7 +523,9 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                     <span
                       className={cn(
                         'at-x absolute text-sm whitespace-nowrap text-muted-foreground tabular-nums',
-                        flip ? 'bottom-1/2 mb-2 -translate-x-full' : 'top-1/2 -translate-y-1/2 ps-3'
+                        flip
+                          ? cn('bottom-1/2 mb-2 -translate-x-full', PHONE_LABEL_CHIP.page)
+                          : 'top-1/2 -translate-y-1/2 ps-3'
                       )}
                       style={{ '--x': pct(at(end)) }}
                     >
