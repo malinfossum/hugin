@@ -456,8 +456,10 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                       </span>
                     )}
                   </div>
-                  {/* The lifeline: from the day the ad appeared to its frist, on the shared scale. */}
-                  <div className="relative mb-2 h-10 flex-1 md:mb-0 md:h-auto md:min-h-17.5">
+                  {/* The lifeline: from the day the ad appeared to its frist, on the shared scale.
+                  Below md the row is a column, where flex-1 would zero this box's height and hang
+                  its labels over the lines above, so it only flexes from md. */}
+                  <div className="relative mb-2 h-14 md:mb-0 md:h-auto md:min-h-17.5 md:flex-1">
                     <span
                       aria-hidden="true"
                       className={cn(

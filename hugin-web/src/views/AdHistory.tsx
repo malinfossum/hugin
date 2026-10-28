@@ -135,8 +135,9 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                     </span>
                   </span>
                 </div>
-                {/* The lifeline, on the history's one scale. */}
-                <div aria-hidden="true" className="relative mb-2 h-10 flex-1 md:mb-0 md:h-auto">
+                {/* The lifeline, on the history's one scale. It only flexes from md, as in
+                DeadlineList: in the phone column flex-1 would zero its height. */}
+                <div aria-hidden="true" className="relative mb-2 h-14 md:mb-0 md:h-auto md:flex-1">
                   <span
                     className="span-x absolute top-1/2 border-t border-ink-tertiary"
                     style={{
