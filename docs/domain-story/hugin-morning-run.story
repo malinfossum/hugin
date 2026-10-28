@@ -1,4 +1,4 @@
-title: Hugin — a morning run
+title: "Hugin: a morning run"
 scope: fine-grained, as-is, digitalized
 info: One sync on a weekday morning: Hugin pulls ads and employers, I review, star, track, export and mark the batch as seen.
 actors: Malin=Person, Hugin=System, NAV=System, Brønnøysundregistrene=System

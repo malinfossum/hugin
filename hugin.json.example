@@ -22,7 +22,7 @@
   "categories": ["IT"],
   "navToken": null,
   "linkouts": [
-    { "label": "FINN — utvikler", "url": "<your finn.no saved search URL>" },
-    { "label": "LinkedIn — entry level", "url": "<your LinkedIn saved search URL>" }
+    { "label": "FINN · utvikler", "url": "<your finn.no saved search URL>" },
+    { "label": "LinkedIn · entry level", "url": "<your LinkedIn saved search URL>" }
   ]
 }
