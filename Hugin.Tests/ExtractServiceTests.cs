@@ -50,12 +50,13 @@ public class ExtractServiceTests
         FakePipelineRepository? pipeline = null,
         FakeReviewMarkRepository? reviewMark = null,
         FakeKommuneRepository? kommuner = null,
-        HuginConfig? config = null)
+        HuginConfig? config = null,
+        DateTimeOffset? now = null)
     {
         companies ??= new FakeCompanyRepository();
         ads ??= new FakeAdRepository();
         pipeline ??= new FakePipelineRepository();
-        var clock = new FakeClock(Now);
+        var clock = new FakeClock(now ?? Now);
         return new ExtractService(companies, ads, reviewMark ?? new FakeReviewMarkRepository(),
             kommuner ?? new FakeKommuneRepository(), config ?? new HuginConfig(), clock,
             new AdOverviewService(ads, pipeline, clock, companies));
@@ -372,5 +373,37 @@ public class ExtractServiceTests
 
         var json = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Json, category: "IT");
         Assert.That(json.Content, Does.Contain("2026-11-24T00:30:00+01:00"));
+    }
+
+    [Test]
+    public async Task Tracker_date_is_the_Norwegian_date()
+    {
+        // 23:30 UTC on 23.11 is 00:30 on 24.11 in Norway, the day I actually updated the entry.
+        var companies = new FakeCompanyRepository();
+        companies.Store["1"] = Company("1", "Sent AS");
+        var pipeline = new FakePipelineRepository();
+        pipeline.Store.Add(Entry("1", PipelineStatus.Applied,
+            updated: new DateTimeOffset(2026, 11, 23, 23, 30, 0, TimeSpan.Zero)));
+        var service = BuildService(companies: companies, pipeline: pipeline);
+
+        var md = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Md);
+        var txt = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Txt);
+        var json = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Json);
+
+        Assert.That(md.Content, Does.Contain("| 2026-11-24 | Sent AS |"));
+        Assert.That(txt.Content, Does.Contain("2026-11-24  Sent AS"));
+        using var doc = JsonDocument.Parse(json.Content);
+        var updated = doc.RootElement.GetProperty("tracker")[0].GetProperty("updated").GetString();
+        Assert.That(updated, Is.EqualTo("2026-11-24T00:30:00+01:00"));
+    }
+
+    [Test]
+    public async Task Filename_carries_the_Norwegian_date()
+    {
+        var service = BuildService(now: new DateTimeOffset(2026, 11, 23, 23, 30, 0, TimeSpan.Zero));
+
+        var md = await service.ExtractAsync(ExtractScope.All, ExtractFormat.Md);
+
+        Assert.That(md.FileName, Is.EqualTo("hugin-all-20261124.md"));
     }
 }

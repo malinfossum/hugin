@@ -150,7 +150,7 @@ internal static class ExtractRenderer
 
         foreach (var r in rows)
         {
-            var dato = r.Updated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var dato = NorwegianDate.Of(r.Updated).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             var grunn = string.IsNullOrWhiteSpace(r.Why) ? MissingWhyMarker : r.Why;
 
             sb.AppendLine(md

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Models;
@@ -96,7 +97,9 @@ public sealed class ExtractService(
             _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
         };
 
-        return new ExtractResult(content, $"hugin-{ScopeSlug(scope)}-{now:yyyyMMdd}.{Extension(format)}",
+        // The file is named for the Norwegian date I pulled it on, not the UTC one.
+        var date = NorwegianDate.Of(now).ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        return new ExtractResult(content, $"hugin-{ScopeSlug(scope)}-{date}.{Extension(format)}",
             ContentType(format));
     }
 
@@ -115,7 +118,10 @@ public sealed class ExtractService(
             .OrderBy(e => e.Updated))
         {
             var company = await companies.GetAsync(entry.Orgnr, ct);
-            rows.Add(new ExtractTrackerRow(entry.Updated, company?.Name ?? entry.Orgnr, company?.Website,
+            // At the Norwegian offset, like the frist in ToAdRow, so the JSON date is the day I
+            // updated the entry in Norway.
+            rows.Add(new ExtractTrackerRow(TimeZoneInfo.ConvertTime(entry.Updated, NorwegianDate.Zone),
+                company?.Name ?? entry.Orgnr, company?.Website,
                 entry.Why, entry.SvarText));
         }
 
