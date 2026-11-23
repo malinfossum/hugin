@@ -5,7 +5,7 @@ import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
 import { displayCompanyName } from '../../lib/companyName'
 import { dayOf, formatDate } from '../../lib/dates'
-import { daysLeftFrom, deadlineRowId, isClosing } from '../../lib/lifeline'
+import { deadlineRowId, isClosing } from '../../lib/lifeline'
 import { adsQuery } from '../../lib/queries'
 import { useToday } from '../../lib/today'
 import type { AdDto } from '../../lib/types'
@@ -15,8 +15,7 @@ function sentence(ad: AdDto, daysLeft: number, t: T): string {
   const name = ad.employer
     ? t('needsAction.adAt', { title: ad.title, employer: displayCompanyName(ad.employer) })
     : ad.title
-  const date =
-    dayOf(ad.expires) !== null ? formatDate(ad.expires as string) : t('companies.notGiven')
+  const date = formatDate(ad.expires as string)
   const closes =
     daysLeft < 0
       ? t('needsAction.closed', { ad: name, date })
@@ -50,10 +49,13 @@ export function NeedsAction() {
   // Days left from the frist and the shared Norwegian today, as DeadlineList counts them, so the
   // sentence and the row it points to name the same count after midnight too.
   const today = useToday()
+  // The sentence names the frist, so an ad without a readable one is left to its deadline row.
   const needsAction = ads.flatMap((ad) => {
-    const daysLeft = daysLeftFrom(dayOf(ad.expires), today, ad.daysLeft)
+    const expires = dayOf(ad.expires)
+    if (expires === null) return []
+    const daysLeft = expires - today
     return adMatchesFocus(ad, focus) && ad.pipelineStatus === 'active' && isClosing(daysLeft)
-      ? [{ ad, daysLeft: daysLeft as number }]
+      ? [{ ad, daysLeft }]
       : []
   })
 

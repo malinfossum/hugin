@@ -138,6 +138,23 @@ describe('NeedsAction', () => {
     )
   })
 
+  it('leaves an ad whose frist does not read to its deadline row, rather than name no date', async () => {
+    const fetchMock = mockFetch([
+      ad({
+        feedId: 'a1',
+        title: 'Uleselig',
+        pipelineStatus: 'active',
+        daysLeft: 3,
+        expires: 'garbage',
+      }),
+    ])
+    const { container } = renderNeedsAction(fetchMock)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(screen.queryByText(/Uleselig/)).not.toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('says when an overdue (negative daysLeft) active entry closed', async () => {
     const ads = [
       ad({

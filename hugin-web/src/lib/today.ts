@@ -34,8 +34,18 @@ function subscribe(listener: () => void) {
   }
 }
 
-// With no view subscribed there is nothing to keep in step, so a first render reads the clock.
-const snapshot = () => (listeners.size === 0 ? dayNumber(new Date()) : today)
+// With no view subscribed the cached day may be stale, so a first render reads the clock. React
+// reads the snapshot more than once per render and every read must agree, so the clock is read
+// at most once a second and the reads in between get the cached day.
+let readAt = 0
+function snapshot() {
+  const now = Date.now()
+  if (listeners.size === 0 && now - readAt > 1000) {
+    today = dayNumber(new Date(now))
+    readAt = now
+  }
+  return today
+}
 
 /** Today's Norwegian date as a day number (see dayNumber), the same in every view that reads it
  * and moved to the next day in all of them at once. */

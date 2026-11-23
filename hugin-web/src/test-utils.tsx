@@ -70,7 +70,7 @@ export function TestRouter({
  * LiveRegionProvider's own region stays the first [aria-live="polite"] in the document. */
 export const toastRegion = () => document.querySelector('[data-slot="toast-viewport"]')
 
-/** Noon on the Norwegian day this test file loaded, about 11:00 or 10:00 UTC. */
+/** 11:00 UTC on the Norwegian day this test file loaded: noon in winter, 13:00 in summer. */
 const PINNED_NOON = new Date(dateOfDay(dayNumber(new Date())).getTime() + 11 * 3_600_000)
 
 /** Starts the clock at noon on the day the file loaded and lets it run from there. A suite that
