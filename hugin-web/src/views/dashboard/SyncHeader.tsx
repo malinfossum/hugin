@@ -15,11 +15,10 @@ import { toast } from '../../components/ui/toast'
 import { useReadOnly } from '../../context/readOnly'
 import { type T, useFormatNumber, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
-import { formatDate, formatTime } from '../../lib/dates'
+import { dayNumber, formatDate, formatTime } from '../../lib/dates'
 import { useMarkSeen, useStartSync } from '../../lib/mutations'
 import { newQuery, statusQuery, syncStatusQuery } from '../../lib/queries'
 import { getFailureMessage, isNoCoverageFailure } from '../../lib/syncResult'
-import { dayNumber } from '../../lib/timeScale'
 import type { NewDto, SourceStateDto } from '../../lib/types'
 
 /** «i dag kl. 08:16», «i går kl. 17:40», else the date: when a source last synced, in words. */

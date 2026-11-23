@@ -18,7 +18,7 @@ import { useReadOnly } from '../../context/readOnly'
 import { localeFor, useLang, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
-import { formatDate, formatDayMonth } from '../../lib/dates'
+import { dayNumber, formatDate, formatDayMonth, monthName } from '../../lib/dates'
 import {
   daysLeftText,
   deadlineRowId,
@@ -30,7 +30,7 @@ import {
 import { useSavePipelineEntry, useSetAdHidden, useSetAdLink } from '../../lib/mutations'
 import { pipelineLabel } from '../../lib/pipelineLabels'
 import { adsQuery, pipelineQuery, statusQuery } from '../../lib/queries'
-import { dayNumber, monthLabels, position, timeWindow, weeks } from '../../lib/timeScale'
+import { monthLabels, position, timeWindow, weeks } from '../../lib/timeScale'
 import type { AdDto, PipelineDto } from '../../lib/types'
 import { useNarrow } from '../../lib/useMediaQuery'
 
@@ -116,7 +116,6 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
   const today = dayNumber(now)
   const reviewMark = status?.reviewMark ? new Date(status.reviewMark) : null
   const seen = reviewMark ? dayNumber(reviewMark) : null
-  const monthName = (date: Date) => date.toLocaleString(localeFor(lang), { month: 'long' })
 
   const handleSkjul = async (feedId: string) => {
     const index = visibleAds.findIndex((a) => a.feedId === feedId)
@@ -305,7 +304,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                 key={month.date.getTime()}
                 className="absolute top-9 right-0 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
               >
-                {monthName(month.date)}
+                {monthName(month.date, localeFor(lang), 'long')}
               </span>
             ) : (
               <span
@@ -313,7 +312,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                 className="at-x absolute top-9 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
                 style={{ '--x': pct(month.x) }}
               >
-                {monthName(month.date)}
+                {monthName(month.date, localeFor(lang), 'long')}
               </span>
             )
           )}

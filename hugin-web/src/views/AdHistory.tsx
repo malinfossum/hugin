@@ -6,9 +6,9 @@ import {
   ScaleBand,
 } from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
-import { formatDate, formatDayMonth } from '../lib/dates'
+import { dayNumber, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
 import { daysLeftText, isClosing, labelFlips, lifelineTone, pct } from '../lib/lifeline'
-import { dayNumber, months, monthWindow, position } from '../lib/timeScale'
+import { months, monthWindow, position } from '../lib/timeScale'
 import type { AdDto } from '../lib/types'
 import { useNarrow } from '../lib/useMediaQuery'
 
@@ -39,8 +39,9 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
   // and past that only the years above it. A phone keeps half as many.
   const step = (segments.length <= 12 ? 1 : segments.length <= 36 ? 3 : 0) * (narrow ? 2 : 1)
   // Years in map lettering: at each January, and at the start unless January is the next month.
+  const isJanuary = (date?: Date) => date !== undefined && osloParts(date).monthIndex === 0
   const years = segments.filter(
-    (month, i) => month.first.getMonth() === 0 || (i === 0 && segments[1]?.first.getMonth() !== 0)
+    (month, i) => isJanuary(month.first) || (i === 0 && !isJanuary(segments[1]?.first))
   )
 
   return (
@@ -58,7 +59,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
               )}
               style={month.x > 88 ? undefined : { '--x': pct(month.x) }}
             >
-              {month.first.getFullYear()}
+              {osloParts(month.first).year}
             </span>
           ))}
           <span
@@ -78,7 +79,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                   className="at-x absolute bottom-0 text-xs text-ink-tertiary tabular-nums"
                   style={{ '--x': pct(month.x) }}
                 >
-                  {month.first.toLocaleString(localeFor(lang), { month: 'short' })}
+                  {monthName(month.first, localeFor(lang), 'short')}
                 </span>
               )}
             </span>
