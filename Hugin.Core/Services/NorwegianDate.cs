@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Hugin.Core.Services;
 
 /// <summary>
@@ -10,25 +12,44 @@ namespace Hugin.Core.Services;
 /// </summary>
 public static class NorwegianDate
 {
-    public static TimeZoneInfo Zone { get; } = FindZone();
+    /// <summary>The IANA id first (Linux, and Windows with ICU), then the Windows one.</summary>
+    internal static readonly string[] ZoneIds = ["Europe/Oslo", "W. Europe Standard Time"];
+
+    public static TimeZoneInfo Zone { get; } = FindZone(ZoneIds);
 
     /// <summary>False when no Norwegian zone was found and <see cref="Zone"/> is the machine's.</summary>
-    public static bool IsNorwegian => Zone.Id is "Europe/Oslo" or "W. Europe Standard Time";
+    public static bool IsNorwegian => IsNorwegianZone(Zone);
+
+    internal static bool IsNorwegianZone(TimeZoneInfo zone) => ZoneIds.Contains(zone.Id);
 
     /// <summary>The Norwegian calendar date of an instant.</summary>
     public static DateOnly Of(DateTimeOffset instant) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, Zone).DateTime);
 
     /// <summary>23:59:59 on a Norwegian date, with that date's offset (summer time included).</summary>
-    public static DateTimeOffset EndOf(DateOnly date)
+    public static DateTimeOffset EndOf(DateOnly date) => AtWallTime(date.ToDateTime(new TimeOnly(23, 59, 59)));
+
+    /// <summary>A Norwegian wall-clock time with no offset of its own, given the offset Norway had
+    /// then. Its <see cref="DateTime.Kind"/> is ignored: the clock reading is what counts.</summary>
+    public static DateTimeOffset AtWallTime(DateTime wallTime)
     {
-        var local = date.ToDateTime(new TimeOnly(23, 59, 59));
+        var local = DateTime.SpecifyKind(wallTime, DateTimeKind.Unspecified);
         return new DateTimeOffset(local, Zone.GetUtcOffset(local));
     }
 
-    private static TimeZoneInfo FindZone()
+    /// <summary>dd.MM.yyyy, the Norwegian date of an instant, for dates people read. Dates take
+    /// periods; ISO dates are only for files and logs that a machine or a sort order reads.</summary>
+    public static string FormatDate(DateTimeOffset instant) =>
+        Of(instant).ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+
+    /// <summary>dd.MM.yyyy HH:mm in Norwegian time.</summary>
+    public static string FormatDateTime(DateTimeOffset instant) =>
+        TimeZoneInfo.ConvertTime(instant, Zone).ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+
+    /// <summary>The first of <paramref name="ids"/> the system knows, else the machine's zone.</summary>
+    internal static TimeZoneInfo FindZone(IEnumerable<string> ids)
     {
-        foreach (var id in new[] { "Europe/Oslo", "W. Europe Standard Time" })
+        foreach (var id in ids)
         {
             try
             {

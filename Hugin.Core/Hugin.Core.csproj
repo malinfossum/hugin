@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The tests reach the zone lookup directly, so its fallback can be tested with ids that
+         do not exist. -->
+    <InternalsVisibleTo Include="Hugin.Tests" />
+  </ItemGroup>
+
 </Project>
