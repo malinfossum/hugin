@@ -187,9 +187,8 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
 
             if (entry.Ad is { } ad)
             {
-                // The end of a Norwegian day, as NAV sends it. DaysLeft and the dashboard both read
-                // the Norwegian date, so the count is expiresInDays on the UTC container and on a
-                // machine in Europe/Oslo alike.
+                // The end of a Norwegian day, as NAV sends it. DaysLeft counts Norwegian dates, so the
+                // count is expiresInDays on the UTC container and on a machine in Europe/Oslo alike.
                 var deadline = NorwegianDate.EndOf(NorwegianDate.Of(now).AddDays(ad.ExpiresInDays));
                 var published = now.AddDays(-ad.PublishedDaysAgo);
                 await ads.PutSeededAsync(new Ad

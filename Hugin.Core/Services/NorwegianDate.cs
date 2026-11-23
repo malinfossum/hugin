@@ -5,10 +5,17 @@ namespace Hugin.Core.Services;
 /// <c>23:59:59+01:00</c> in winter, <c>+02:00</c> in summer) and Brreg's registration dates are
 /// Norwegian days too, so day counts and printed dates go through this zone. Never the UTC date,
 /// which lags it by up to two hours, and never the machine's zone, which is UTC in the container.
+/// The machine's zone is only the last resort when the system has no Norwegian zone at all;
+/// <see cref="IsNorwegian"/> says whether that happened, and the public-mode startup line shows it.
 /// </summary>
 public static class NorwegianDate
 {
+    private static readonly string[] ZoneIds = ["Europe/Oslo", "W. Europe Standard Time"];
+
     public static TimeZoneInfo Zone { get; } = FindZone();
+
+    /// <summary>False when no Norwegian zone was found and <see cref="Zone"/> is the machine's.</summary>
+    public static bool IsNorwegian => ZoneIds.Contains(Zone.Id);
 
     /// <summary>The Norwegian calendar date of an instant.</summary>
     public static DateOnly Of(DateTimeOffset instant) =>
@@ -23,16 +30,16 @@ public static class NorwegianDate
 
     private static TimeZoneInfo FindZone()
     {
-        foreach (var id in new[] { "Europe/Oslo", "W. Europe Standard Time" })
+        foreach (var id in ZoneIds)
         {
             try
             {
                 return TimeZoneInfo.FindSystemTimeZoneById(id);
             }
-            catch (TimeZoneNotFoundException)
-            {
-            }
-            catch (InvalidTimeZoneException)
+            // An unreadable zoneinfo file throws SecurityException on Unix. Escaping this static
+            // initializer would break every deadline call for the life of the process.
+            catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException
+                                          or System.Security.SecurityException)
             {
             }
         }

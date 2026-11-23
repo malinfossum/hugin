@@ -369,5 +369,8 @@ public class ExtractServiceTests
 
         Assert.That(md.Content, Does.Contain("| 2026-11-24 |"));
         Assert.That(txt.Content, Does.Contain("  2026-11-24  "));
+
+        var json = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Json, category: "IT");
+        Assert.That(json.Content, Does.Contain("2026-11-24T00:30:00+01:00"));
     }
 }

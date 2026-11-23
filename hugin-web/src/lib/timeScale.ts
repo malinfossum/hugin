@@ -1,8 +1,9 @@
 // One time scale for every lifeline chart (DESIGN.md, the Scale Bar and Lifeline rules): a window
 // of whole weeks that starts on a Monday a few weeks back and runs some weeks ahead, the same day
 // width everywhere it is drawn. A company's history spans months or years, so its sheet uses a
-// window of whole months instead, read off a bar of alternating months. Days are local calendar days, so an ad that expires 23:59 UTC
-// lands on the date the user sees.
+// window of whole months instead, read off a bar of alternating months. Days are local calendar days.
+// A frist ends at 23:59:59 Norwegian time and the server counts days left in Norwegian dates, so
+// in a browser in Norway the lifeline ends on the date the count names.
 
 const DAY_MS = 86_400_000
 

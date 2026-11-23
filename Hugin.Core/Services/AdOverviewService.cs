@@ -35,7 +35,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         bool includeHidden = false, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
-        // DaysLeft counts Norwegian dates, the same date the dashboard prints for the frist.
+        // DaysLeft counts Norwegian dates, the date a browser in Norway prints for the frist.
         var today = NorwegianDate.Of(now);
         var active = await ads.GetActiveAsync(now, municipalityNumber, includeHidden, ct);
         var index = await IndexAsync(await pipeline.GetAllAsync(ct: ct), ct);

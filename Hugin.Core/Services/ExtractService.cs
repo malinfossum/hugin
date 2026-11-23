@@ -135,7 +135,10 @@ public sealed class ExtractService(
     }
 
     private static ExtractAdRow ToAdRow(Ad a) =>
-        new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr, a.MunicipalityNumber, a.Expires, a.Category, a.SourceUrl);
+        // The same instant, carried at the Norwegian offset so its date part is the frist's date
+        // in every format (the database hands it back in UTC).
+        new(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr, a.MunicipalityNumber,
+            a.Expires is { } e ? TimeZoneInfo.ConvertTime(e, NorwegianDate.Zone) : null, a.Category, a.SourceUrl);
 
     public static string ScopeSlug(ExtractScope scope) => scope switch
     {
