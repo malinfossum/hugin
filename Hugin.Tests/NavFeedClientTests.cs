@@ -196,6 +196,46 @@ public class NavFeedClientTests
         Assert.That(result.Ads.Single().EmployerHomepage, Is.Null);
     }
 
+    // NAV's frist is the end of a Norwegian day. A timestamp that names no offset is Norwegian
+    // wall time, not the machine's zone (UTC in the container). One that names its offset, or
+    // ends in Z, keeps it.
+    [TestCase("2026-11-25T23:59:59", "2026-11-25T23:59:59+01:00")]
+    [TestCase("2026-06-25T23:59:59", "2026-06-25T23:59:59+02:00")]
+    [TestCase("2026-11-25T23:59:59+01:00", "2026-11-25T23:59:59+01:00")]
+    [TestCase("2026-11-25T23:59:59-05:00", "2026-11-25T23:59:59-05:00")]
+    [TestCase("2026-11-25T22:59:59Z", "2026-11-25T22:59:59+00:00")]
+    public async Task Timestamp_without_an_offset_is_Norwegian_wall_time(string sent, string expected)
+    {
+        const string page = """
+            {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
+             "status":"ACTIVE","title":"Utvikler","businessName":"Frist AS",
+             "municipal":"HAMAR","sistEndret":"2026-11-18T09:00:00+01:00"}}],"next_id":null,"id":"side-f"}
+            """;
+        var detail = """
+            {"uuid":"88888888-8888-8888-8888-888888888888","status":"ACTIVE",
+             "sistEndret":"2026-11-18T09:00:00+01:00",
+             "ad_content":{"uuid":"88888888-8888-8888-8888-888888888888",
+              "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/8",
+              "expires":"SENT",
+              "employer":{"name":"Frist AS","orgnr":"917365908"},
+              "workLocations":[{"municipal":"HAMAR"}],
+              "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
+            """.Replace("SENT", sent, StringComparison.Ordinal);
+
+        var result = await Client(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("publicToken", StringComparison.Ordinal)) return Text(TokenBody);
+            if (url.Contains("feedentry/8888", StringComparison.Ordinal)) return HttpFixtures.Json(detail);
+            return HttpFixtures.Json(page);
+        }).GetPageAsync(null, Config, ConfigScope);
+
+        var expires = result.Ads.Single().Expires;
+        var want = DateTimeOffset.Parse(expected, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.That(expires, Is.Not.Null);
+        Assert.That(expires!.Value.EqualsExact(want), Is.True, $"got {expires:O}");
+    }
+
     [Test]
     public async Task Detail_status_wins_over_a_stale_active_summary()
     {

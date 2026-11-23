@@ -195,11 +195,20 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
         return categories;
     }
 
-    private static DateTimeOffset? Timestamp(JsonElement e, string name) =>
-        DateTimeOffset.TryParse(Text(e, name), CultureInfo.InvariantCulture,
-            DateTimeStyles.RoundtripKind, out var parsed)
+    // NAV writes its timestamps with an offset. One without (no offset, no Z) would otherwise take
+    // the machine's zone, which is UTC in the container and an hour or two off the Norwegian day
+    // a frist ends on, so it is read as Norwegian wall time instead.
+    private static DateTimeOffset? Timestamp(JsonElement e, string name)
+    {
+        var text = Text(e, name);
+        if (!DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var wallTime))
+            return null;
+        if (wallTime.Kind == DateTimeKind.Unspecified) return NorwegianDate.AtWallTime(wallTime);
+        return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
+            out var parsed)
             ? parsed
             : null;
+    }
 
     private static string? Text(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object
