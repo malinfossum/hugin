@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import { formatDate } from '../../lib/dates'
 import type { AdDto } from '../../lib/types'
-import { fristIn, TestQueryProvider } from '../../test-utils'
+import { fristIn, pinToday, TestQueryProvider } from '../../test-utils'
 import { NeedsAction } from './NeedsAction'
 
 function jsonResponse(body: unknown) {
@@ -68,7 +68,12 @@ function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
+beforeEach(() => {
+  pinToday()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   window.localStorage.removeItem('hugin-focus')
 })
@@ -112,6 +117,25 @@ describe('NeedsAction', () => {
 
     const item = await screen.findByText(/Over natten/)
     expect(item).toHaveTextContent(`har frist ${formatDate(fristIn(7))}, om 7 dager.`)
+  })
+
+  it('says a frist that passed overnight has closed, not that it closes today', async () => {
+    // Cached yesterday, when the frist was today; it is now a day gone.
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Gikk ut i natt',
+        pipelineStatus: 'active',
+        daysLeft: 0,
+        expires: fristIn(-1),
+      }),
+    ]
+    renderNeedsAction(mockFetch(ads))
+
+    const item = await screen.findByText(/Gikk ut i natt/)
+    expect(item).toHaveTextContent(
+      `Gikk ut i natt hos Acme AS hadde frist ${formatDate(fristIn(-1))}.`
+    )
   })
 
   it('says when an overdue (negative daysLeft) active entry closed', async () => {

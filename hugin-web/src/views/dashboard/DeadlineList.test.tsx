@@ -1,13 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { Toaster } from '../../components/ui/toast'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { fristIn, TestQueryProvider, toastRegion } from '../../test-utils'
+import { fristIn, pinToday, TestQueryProvider, toastRegion } from '../../test-utils'
 import { DeadlineList, type Show } from './DeadlineList'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -132,7 +132,12 @@ function renderListWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
+beforeEach(() => {
+  pinToday()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   window.localStorage.removeItem('hugin-focus')
 })
@@ -254,6 +259,17 @@ describe('DeadlineList', () => {
 
     const row = await screen.findByRole('listitem')
     expect(within(row).getByText('7 dager')).toHaveClass('text-rust')
+  })
+
+  it('calls a frist that passed overnight expired, not today', async () => {
+    // Cached yesterday, when the frist was today; it is now a day gone.
+    renderList(
+      fakeServer([ad({ feedId: 'a1', title: 'Gikk ut i natt', daysLeft: 0, expires: fristIn(-1) })])
+    )
+
+    const row = await screen.findByRole('listitem')
+    expect(within(row).getByText('utløpt')).toBeInTheDocument()
+    expect(within(row).queryByText('i dag')).not.toBeInTheDocument()
   })
 
   it('marks a frist within 7 days in rust (its one job) and always prints the number', async () => {

@@ -6,7 +6,7 @@ import {
   ScaleBand,
 } from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
-import { dayNumber, dayOf, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
+import { dateOfDay, dayOf, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
 import {
   daysLeftFrom,
   daysLeftText,
@@ -16,6 +16,7 @@ import {
   pct,
 } from '../lib/lifeline'
 import { months, monthWindow, position } from '../lib/timeScale'
+import { useToday } from '../lib/today'
 import type { AdDto } from '../lib/types'
 import { useNarrow } from '../lib/useMediaQuery'
 
@@ -28,12 +29,12 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
   const t = useT()
   const [lang] = useLang()
   const narrow = useNarrow()
+  const today = useToday()
 
   if (ads.length === 0)
     return <p className="text-body-sm text-ink-tertiary">{t('companies.noAds')}</p>
 
-  const now = new Date()
-  const today = dayNumber(now)
+  const now = dateOfDay(today)
   const days = ads.flatMap((ad) =>
     [dayOf(ad.published), dayOf(ad.expires)].filter((day): day is number => day !== null)
   )
@@ -138,12 +139,17 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                     {!ad.isActive && (
                       <span className="font-semibold">{t('companies.expiredTag')}</span>
                     )}
-                    {ad.published && (
-                      <span>{t('companies.published', { date: formatDate(ad.published) })}</span>
+                    {published !== null && (
+                      <span>
+                        {t('companies.published', { date: formatDate(ad.published as string) })}
+                      </span>
                     )}
                     <span>
                       {t('companies.deadlineLabel', {
-                        date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
+                        date:
+                          expires !== null
+                            ? formatDate(ad.expires as string)
+                            : t('companies.notGiven'),
                       })}
                     </span>
                   </span>

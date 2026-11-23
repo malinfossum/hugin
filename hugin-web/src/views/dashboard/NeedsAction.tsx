@@ -4,9 +4,10 @@ import { Button } from '../../components/ui/button'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
 import { displayCompanyName } from '../../lib/companyName'
-import { dayNumber, dayOf, formatDate } from '../../lib/dates'
+import { dayOf, formatDate } from '../../lib/dates'
 import { daysLeftFrom, deadlineRowId, isClosing } from '../../lib/lifeline'
 import { adsQuery } from '../../lib/queries'
+import { useToday } from '../../lib/today'
 import type { AdDto } from '../../lib/types'
 
 /** One plain sentence per ad: which ad, when it closes, and why it needs action. */
@@ -14,7 +15,8 @@ function sentence(ad: AdDto, daysLeft: number, t: T): string {
   const name = ad.employer
     ? t('needsAction.adAt', { title: ad.title, employer: displayCompanyName(ad.employer) })
     : ad.title
-  const date = ad.expires ? formatDate(ad.expires) : ''
+  const date =
+    dayOf(ad.expires) !== null ? formatDate(ad.expires as string) : t('companies.notGiven')
   const closes =
     daysLeft < 0
       ? t('needsAction.closed', { ad: name, date })
@@ -45,9 +47,9 @@ export function NeedsAction() {
   const t = useT()
   const loadError = isError ? t('needsAction.loadError') : null
 
-  // Days left from the frist and today's Norwegian date, as DeadlineList counts them, so the
+  // Days left from the frist and the shared Norwegian today, as DeadlineList counts them, so the
   // sentence and the row it points to name the same count after midnight too.
-  const today = dayNumber(new Date())
+  const today = useToday()
   const needsAction = ads.flatMap((ad) => {
     const daysLeft = daysLeftFrom(dayOf(ad.expires), today, ad.daysLeft)
     return adMatchesFocus(ad, focus) && ad.pipelineStatus === 'active' && isClosing(daysLeft)

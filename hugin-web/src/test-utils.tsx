@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { createContext, type ReactNode, useContext, useState } from 'react'
+import { vi } from 'vitest'
 import { dateOfDay, dayNumber } from './lib/dates'
 import { makeQueryClient } from './lib/queryClient'
 
@@ -68,6 +69,18 @@ export function TestRouter({
 /** Where a toast lands: the Base UI viewport the Toaster portals to the end of <body>. The
  * LiveRegionProvider's own region stays the first [aria-live="polite"] in the document. */
 export const toastRegion = () => document.querySelector('[data-slot="toast-viewport"]')
+
+/** Noon on the Norwegian day this test file loaded, about 11:00 or 10:00 UTC. */
+const PINNED_NOON = new Date(dateOfDay(dayNumber(new Date())).getTime() + 11 * 3_600_000)
+
+/** Starts the clock at noon on the day the file loaded and lets it run from there. A suite that
+ * counts days from fristIn calls this in beforeEach, so a run that crosses midnight still counts
+ * from the day its fixtures were built. Only Date is faked: timers and React Query run as normal.
+ * Undo with vi.useRealTimers(). */
+export function pinToday() {
+  vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true })
+  vi.setSystemTime(PINNED_NOON)
+}
 
 /** A frist `days` Norwegian days from today, at noon UTC (the same date in Norway), so a test's
  * frist and its days left agree whenever the suite runs. */

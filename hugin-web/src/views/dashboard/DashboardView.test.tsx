@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { fristIn, TestQueryProvider, TestRouter } from '../../test-utils'
+import { fristIn, pinToday, TestQueryProvider, TestRouter } from '../../test-utils'
 import { DashboardView } from './DashboardView'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -129,7 +129,12 @@ const WATCHED_SOON = ad({
 })
 const UNTRACKED = ad({ feedId: 'u1', title: 'Løs annonse', pipelineStatus: null, daysLeft: 3 })
 
+beforeEach(() => {
+  pinToday()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
