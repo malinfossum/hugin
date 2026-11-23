@@ -247,6 +247,34 @@ public sealed class ResetEndpointTests
     }
 
     [Test]
+    public async Task WipeAsync_names_the_snapshot_in_Norwegian_time()
+    {
+        // 23:30:05 UTC on 23.11 is 00:30:05 on 24.11 in Norway, on my machine and in the UTC
+        // container alike.
+        var dir = Path.Combine(Path.GetTempPath(), $"hugin-snapshot-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var dbPath = Path.Combine(dir, "hugin.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<HuginDbContext>()
+                .UseSqlite(HuginDbInitializer.ConnectionString(dbPath)).Options;
+            await using var db = new HuginDbContext(options);
+            await HuginDbInitializer.InitAsync(db, dbPath);
+            var clock = new FakeClock(new DateTimeOffset(2026, 11, 23, 23, 30, 5, TimeSpan.Zero));
+            var service = new ResetService(db, new HuginConfigFile(Path.Combine(dir, "hugin.json")), clock);
+
+            var snapshot = await service.WipeAsync();
+
+            Assert.That(snapshot, Is.EqualTo($"{dbPath}.reset-20261124-003005.bak"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Test]
     public async Task WipeAsync_round_trips_a_database_path_containing_an_apostrophe()
     {
         // VACUUM INTO takes a string literal, not a parameter, so an unescaped apostrophe in the

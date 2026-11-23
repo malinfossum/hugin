@@ -150,6 +150,7 @@ internal static class ExtractRenderer
 
         foreach (var r in rows)
         {
+            // ISO on purpose, unlike the CLI: this table is pasted into the Preparelogg log.
             var dato = NorwegianDate.Of(r.Updated).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             var grunn = string.IsNullOrWhiteSpace(r.Why) ? MissingWhyMarker : r.Why;
 

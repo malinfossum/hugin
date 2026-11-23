@@ -214,7 +214,8 @@ internal static class Program
             return 0;
         }
 
-        Console.WriteLine($"Nytt siden {NorwegianDate.FormatDateTime(items.Since)}");
+        var zone = NorwegianDate.IsNorwegian ? "norsk tid" : NorwegianDate.Zone.Id;
+        Console.WriteLine($"Nytt siden {NorwegianDate.FormatDateTime(items.Since)} ({zone})");
         Console.WriteLine();
 
         Console.WriteLine($"## Nye selskaper ({items.Companies.Count})");
