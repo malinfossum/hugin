@@ -6,8 +6,15 @@ import {
   ScaleBand,
 } from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
-import { dayNumber, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
-import { daysLeftText, isClosing, labelFlips, lifelineTone, pct } from '../lib/lifeline'
+import { dayNumber, dayOf, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
+import {
+  daysLeftFrom,
+  daysLeftText,
+  isClosing,
+  labelFlips,
+  lifelineTone,
+  pct,
+} from '../lib/lifeline'
 import { months, monthWindow, position } from '../lib/timeScale'
 import type { AdDto } from '../lib/types'
 import { useNarrow } from '../lib/useMediaQuery'
@@ -27,7 +34,6 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
 
   const now = new Date()
   const today = dayNumber(now)
-  const dayOf = (iso: string | null) => (iso ? dayNumber(new Date(iso)) : null)
   const days = ads.flatMap((ad) =>
     [dayOf(ad.published), dayOf(ad.expires)].filter((day): day is number => day !== null)
   )
@@ -95,9 +101,8 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
             const from = published ?? expires ?? today
             // An open ad's past runs to today; an expired one's whole life is past.
             const pastEnd = ad.isActive ? today : (expires ?? from)
-            // The company endpoint leaves daysLeft out; the frist says it just as well.
-            const daysLeft =
-              ad.daysLeft ?? (ad.isActive && expires !== null ? expires - today : null)
+            // Counted from the frist, like the dashboard; the company endpoint leaves daysLeft out.
+            const daysLeft = ad.isActive ? daysLeftFrom(expires, today, ad.daysLeft) : ad.daysLeft
             const tone = lifelineTone({ ...ad, daysLeft })
             const future = ad.isActive && expires !== null && expires >= today
             const labelAt = future ? (expires as number) : today

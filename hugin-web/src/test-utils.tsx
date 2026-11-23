@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { createContext, type ReactNode, useContext, useState } from 'react'
+import { dateOfDay, dayNumber } from './lib/dates'
 import { makeQueryClient } from './lib/queryClient'
 
 /** Gives a test its own QueryClient (own cache), like App does, so no cached data leaks
@@ -67,3 +68,12 @@ export function TestRouter({
 /** Where a toast lands: the Base UI viewport the Toaster portals to the end of <body>. The
  * LiveRegionProvider's own region stays the first [aria-live="polite"] in the document. */
 export const toastRegion = () => document.querySelector('[data-slot="toast-viewport"]')
+
+/** A frist `days` Norwegian days from today, at noon UTC (the same date in Norway), so a test's
+ * frist and its days left agree whenever the suite runs. */
+export function fristIn(days: number): string {
+  const date = dateOfDay(dayNumber(new Date()) + days)
+    .toISOString()
+    .slice(0, 10)
+  return `${date}T12:00:00Z`
+}

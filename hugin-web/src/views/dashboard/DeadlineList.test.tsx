@@ -7,7 +7,7 @@ import { Toaster } from '../../components/ui/toast'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { TestQueryProvider, toastRegion } from '../../test-utils'
+import { fristIn, TestQueryProvider, toastRegion } from '../../test-utils'
 import { DeadlineList, type Show } from './DeadlineList'
 
 function jsonResponse(body: unknown, init: { status?: number } = {}) {
@@ -18,6 +18,8 @@ function jsonResponse(body: unknown, init: { status?: number } = {}) {
 }
 
 function ad(overrides: Partial<AdDto> = {}): AdDto {
+  // The frist follows daysLeft unless a test sets it: the dashboard counts days from the frist.
+  const daysLeft = overrides.daysLeft === undefined ? 6 : overrides.daysLeft
   return {
     feedId: 'a1',
     title: 'Utvikler',
@@ -25,8 +27,8 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employerOrgnr: '715787630',
     kommune: '0301',
     kommuneNavn: null,
-    expires: '2026-08-25T00:00:00Z',
-    daysLeft: 6,
+    expires: daysLeft === null ? null : fristIn(daysLeft),
+    daysLeft,
     category: 'IT',
     sourceUrl: 'https://nav.no/stillinger/a1',
     pipelineStatus: null,
@@ -244,6 +246,16 @@ describe('DeadlineList', () => {
     expect(within(rows[2]).getByText('ingen frist')).toBeInTheDocument()
   })
 
+  it('counts days from the frist, so the count and the lifeline share one today', async () => {
+    // A list cached before midnight still says 8 days; the frist is now 7 days away.
+    renderList(
+      fakeServer([ad({ feedId: 'a1', title: 'Over natten', daysLeft: 8, expires: fristIn(7) })])
+    )
+
+    const row = await screen.findByRole('listitem')
+    expect(within(row).getByText('7 dager')).toHaveClass('text-rust')
+  })
+
   it('marks a frist within 7 days in rust (its one job) and always prints the number', async () => {
     const ads = [
       ad({ feedId: 'a1', title: 'Snart', daysLeft: 2 }),
@@ -256,7 +268,7 @@ describe('DeadlineList', () => {
     expect(within(rows[0]).getByText('2 dager')).toHaveClass('text-rust')
     expect(within(rows[1]).getByText('7 dager')).toHaveClass('text-rust')
     expect(within(rows[2]).getByText('12 dager')).not.toHaveClass('text-rust')
-    // Never colour alone: the closing figure is also set heavier.
+    // Never color alone: the closing figure is also set heavier.
     expect(within(rows[0]).getByText('2 dager')).toHaveClass('font-semibold')
     expect(within(rows[2]).getByText('12 dager')).not.toHaveClass('font-semibold')
   })

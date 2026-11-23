@@ -18,8 +18,9 @@ import { useReadOnly } from '../../context/readOnly'
 import { localeFor, useLang, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
-import { dayNumber, formatDate, formatDayMonth, monthName } from '../../lib/dates'
+import { dayNumber, dayOf, formatDate, formatDayMonth, monthName } from '../../lib/dates'
 import {
+  daysLeftFrom,
   daysLeftText,
   deadlineRowId,
   isClosing,
@@ -115,7 +116,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
   const at = (day: number) => position(scale, day)
   const today = dayNumber(now)
   const reviewMark = status?.reviewMark ? new Date(status.reviewMark) : null
-  const seen = reviewMark ? dayNumber(reviewMark) : null
+  const seen = dayOf(status?.reviewMark ?? null)
 
   const handleSkjul = async (feedId: string) => {
     const index = visibleAds.findIndex((a) => a.feedId === feedId)
@@ -338,12 +339,13 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
         <ul className="flex list-none flex-col ps-0">
           {visibleAds.map((ad) => {
             const published = ad.published ? new Date(ad.published) : null
-            const from = published ? dayNumber(published) : null
-            const expires = ad.expires ? dayNumber(new Date(ad.expires)) : null
+            const from = dayOf(ad.published)
+            const expires = dayOf(ad.expires)
+            const daysLeft = daysLeftFrom(expires, today, ad.daysLeft)
             // The server's rule for "new since last visit": fetched after the mark.
             const isNew = reviewMark !== null && new Date(ad.firstSeen) > reviewMark
             const clipped = from === null || from < scale.start
-            const tone = lifelineTone(ad)
+            const tone = lifelineTone({ ...ad, daysLeft })
             const end = expires ?? today
             const flip = labelFlips(at(end), narrow)
             return (
@@ -534,7 +536,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                       {ad.expires && (
                         <b
                           className={
-                            isClosing(ad.daysLeft)
+                            isClosing(daysLeft)
                               ? 'font-semibold text-rust'
                               : 'font-semibold text-foreground'
                           }
@@ -543,10 +545,8 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                         </b>
                       )}
                       {ad.expires && ' · '}
-                      <span
-                        className={isClosing(ad.daysLeft) ? 'font-semibold text-rust' : undefined}
-                      >
-                        {daysLeftText(ad.daysLeft, t)}
+                      <span className={isClosing(daysLeft) ? 'font-semibold text-rust' : undefined}>
+                        {daysLeftText(daysLeft, t)}
                       </span>
                     </span>
                   </div>
