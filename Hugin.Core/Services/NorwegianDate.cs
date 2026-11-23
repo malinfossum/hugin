@@ -10,12 +10,10 @@ namespace Hugin.Core.Services;
 /// </summary>
 public static class NorwegianDate
 {
-    private static readonly string[] ZoneIds = ["Europe/Oslo", "W. Europe Standard Time"];
-
     public static TimeZoneInfo Zone { get; } = FindZone();
 
     /// <summary>False when no Norwegian zone was found and <see cref="Zone"/> is the machine's.</summary>
-    public static bool IsNorwegian => ZoneIds.Contains(Zone.Id);
+    public static bool IsNorwegian => Zone.Id is "Europe/Oslo" or "W. Europe Standard Time";
 
     /// <summary>The Norwegian calendar date of an instant.</summary>
     public static DateOnly Of(DateTimeOffset instant) =>
@@ -30,7 +28,7 @@ public static class NorwegianDate
 
     private static TimeZoneInfo FindZone()
     {
-        foreach (var id in ZoneIds)
+        foreach (var id in new[] { "Europe/Oslo", "W. Europe Standard Time" })
         {
             try
             {

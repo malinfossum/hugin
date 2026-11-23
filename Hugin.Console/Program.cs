@@ -388,7 +388,7 @@ internal static class Program
                 Console.WriteLine($"[{group.Key}] ({group.Count()})");
                 foreach (var ad in group)
                 {
-                    var expires = ad.Expires is { } e ? $"  (frist {NorwegianDate.Of(e).ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture)})" : "";
+                    var expires = ad.Expires is { } e ? $"  (frist {NorwegianDate.Of(e).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)})" : "";
                     Console.WriteLine($"  {ad.Title} · {ad.EmployerName}{expires}");
                     if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
                 }

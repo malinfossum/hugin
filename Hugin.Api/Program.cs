@@ -209,7 +209,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
         // (ICU-backed culture, tzdata-backed Europe/Oslo) before anything else can go wrong. The zone
         // shown is the one deadlines are counted in, so a fallback to the machine's zone shows here.
         var zone = NorwegianDate.Zone.Id;
-        var oslo = NorwegianDate.IsNorwegian ? zone : $"IKKE FUNNET, bruker {zone} (tzdata mangler)";
+        var oslo = NorwegianDate.IsNorwegian ? zone : $"IKKE FUNNET eller ulesbar, bruker {zone}";
         Console.WriteLine($"Hugin kjører i public-modus på {listenAddress}:{port}. State: {publicMode.StateDir}. "
             + $"Kultur: {System.Globalization.CultureInfo.CurrentCulture.Name}, tidssone Europe/Oslo: {oslo}.");
         Console.WriteLine("ADVARSEL: alt i state-mappen serveres skrivebeskyttet til alle som når porten. "

@@ -208,7 +208,7 @@ public sealed class AdOverviewServiceTests
     [Test]
     public async Task A_UTC_end_of_day_counts_as_the_next_Norwegian_date()
     {
-        // 23:59:59 UTC on 23.11 is 00:59:59 on 24.11 in Norway, the date the dashboard shows.
+        // 23:59:59 UTC on 23.11 is 00:59:59 on 24.11 in Norway, the date a browser in Norway shows.
         var now = new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
         var ads = AdsWith(MakeAd("a", expires: new DateTimeOffset(2026, 11, 23, 23, 59, 59, TimeSpan.Zero)));
         var sut = new AdOverviewService(ads, new FakePipelineRepository(), new FakeClock(now), new FakeCompanyRepository());
