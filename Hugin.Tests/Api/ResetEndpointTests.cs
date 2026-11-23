@@ -249,6 +249,7 @@ public sealed class ResetEndpointTests
     [Test]
     public async Task WipeAsync_names_the_snapshot_in_Norwegian_time()
     {
+        NorwegianZone.Require();
         // 23:30:05 UTC on 23.11 is 00:30:05 on 24.11 in Norway, on my machine and in the UTC
         // container alike.
         var dir = Path.Combine(Path.GetTempPath(), $"hugin-snapshot-{Guid.NewGuid():N}");

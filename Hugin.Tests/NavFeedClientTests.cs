@@ -211,8 +211,12 @@ public class NavFeedClientTests
     [TestCase("2026-11-25T23:59:59.999999999", "2026-11-25T23:59:59.9999999+01:00")]
     // A frist with no time of day lasts the whole of its Norwegian day.
     [TestCase("2026-11-25", "2026-11-25T23:59:59+01:00")]
+    // ...also when the date names a zone, so the machine's zone never moves it to the day before.
+    [TestCase("2026-11-25+01:00", "2026-11-25T23:59:59+01:00")]
+    [TestCase("2026-11-25Z", "2026-11-25T23:59:59+01:00")]
     public async Task Expires_is_read_as_Norwegian_time_when_it_names_no_offset(string sent, string expected)
     {
+        NorwegianZone.Require();
         var ad = await FeedAdWith("expires", sent);
 
         AssertExactly(ad.Expires, expected);
@@ -221,15 +225,18 @@ public class NavFeedClientTests
     [Test]
     public async Task Published_with_no_time_of_day_starts_at_Norwegian_midnight()
     {
+        NorwegianZone.Require();
         var ad = await FeedAdWith("published", "2026-11-25");
 
         AssertExactly(ad.Published, "2026-11-25T00:00:00+01:00");
     }
 
-    [TestCase("not a date")]
-    [TestCase("0001-01-01T00:30:00")]
-    public async Task Unreadable_expires_maps_to_null(string sent)
+    [TestCase("not a date", false)]
+    // Read as Norwegian wall time, its UTC instant falls before year 1.
+    [TestCase("0001-01-01T00:30:00", true)]
+    public async Task Unreadable_expires_maps_to_null(string sent, bool needsNorwegianZone)
     {
+        if (needsNorwegianZone) NorwegianZone.Require();
         var ad = await FeedAdWith("expires", sent);
 
         Assert.That(ad.Expires, Is.Null);
