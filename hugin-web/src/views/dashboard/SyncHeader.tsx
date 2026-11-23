@@ -27,7 +27,8 @@ import type { NewDto, SourceStateDto } from '../../lib/types'
 function syncedWhen(iso: string, today: number, t: T): string {
   const time = formatTime(iso)
   const daysAgo = today - dayNumber(new Date(iso))
-  if (daysAgo === 0) return t('sync.whenToday', { time })
+  // Below 0 too: a sync that finished after midnight, before the shared today has moved on.
+  if (daysAgo <= 0) return t('sync.whenToday', { time })
   if (daysAgo === 1) return t('sync.whenYesterday', { time })
   return t('sync.whenDate', { date: formatDate(iso), time })
 }

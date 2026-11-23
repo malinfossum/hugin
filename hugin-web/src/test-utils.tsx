@@ -73,7 +73,7 @@ export const toastRegion = () => document.querySelector('[data-slot="toast-viewp
 /** 11:00 UTC on the Norwegian day this test file loaded: noon in winter, 13:00 in summer. */
 const PINNED_NOON = new Date(dateOfDay(dayNumber(new Date())).getTime() + 11 * 3_600_000)
 
-/** Starts the clock at noon on the day the file loaded and lets it run from there. A suite that
+/** Starts the clock at PINNED_NOON and lets it run from there. A suite that
  * counts days from fristIn calls this in beforeEach, so a run that crosses midnight still counts
  * from the day its fixtures were built. Only Date is faked: timers and React Query run as normal.
  * Undo with vi.useRealTimers(). */

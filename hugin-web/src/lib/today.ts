@@ -36,11 +36,12 @@ function subscribe(listener: () => void) {
 
 // With no view subscribed the cached day may be stale, so a first render reads the clock. React
 // reads the snapshot more than once per render and every read must agree, so the clock is read
-// at most once a second and the reads in between get the cached day.
+// at most once a second and the reads in between get the cached day. A clock set back reads at
+// once too.
 let readAt = 0
 function snapshot() {
   const now = Date.now()
-  if (listeners.size === 0 && now - readAt > 1000) {
+  if (listeners.size === 0 && Math.abs(now - readAt) > 1000) {
     today = dayNumber(new Date(now))
     readAt = now
   }

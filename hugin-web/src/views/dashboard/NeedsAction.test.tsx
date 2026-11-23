@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
 import { formatDate } from '../../lib/dates'
+import { adsQuery } from '../../lib/queries'
+import { makeQueryClient } from '../../lib/queryClient'
 import type { AdDto } from '../../lib/types'
 import { fristIn, pinToday, TestQueryProvider } from '../../test-utils'
 import { NeedsAction } from './NeedsAction'
@@ -52,6 +54,22 @@ function renderNeedsAction(fetchMock: ReturnType<typeof vi.fn>) {
       </LanguageProvider>
     </TestQueryProvider>
   )
+}
+
+/** Renders NeedsAction and waits until the ads have arrived, so a test that expects nothing
+ * rendered checks the filter, not the moment before the response. */
+async function renderSettled(fetchMock: ReturnType<typeof vi.fn>) {
+  vi.stubGlobal('fetch', fetchMock)
+  const client = makeQueryClient()
+  const view = render(
+    <TestQueryProvider client={client}>
+      <LanguageProvider>
+        <NeedsAction />
+      </LanguageProvider>
+    </TestQueryProvider>
+  )
+  await waitFor(() => expect(client.getQueryState(adsQuery().queryKey)?.status).toBe('success'))
+  return view
 }
 
 /** Same as renderNeedsAction but wrapped in FocusProvider, for tests that seed a focus. */
@@ -148,9 +166,8 @@ describe('NeedsAction', () => {
         expires: 'garbage',
       }),
     ])
-    const { container } = renderNeedsAction(fetchMock)
+    const { container } = await renderSettled(fetchMock)
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     expect(screen.queryByText(/Uleselig/)).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
   })
@@ -177,11 +194,8 @@ describe('NeedsAction', () => {
       ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),
     ]
     const fetchMock = mockFetch(ads)
-    const { container } = renderNeedsAction(fetchMock)
+    const { container } = await renderSettled(fetchMock)
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalled()
-    })
     expect(container).toBeEmptyDOMElement()
   })
 
