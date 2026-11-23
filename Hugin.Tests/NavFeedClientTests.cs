@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
 using Hugin.Infrastructure.Http;
@@ -198,13 +199,51 @@ public class NavFeedClientTests
 
     // NAV's frist is the end of a Norwegian day. A timestamp that names no offset is Norwegian
     // wall time, not the machine's zone (UTC in the container). One that names its offset, or
-    // ends in Z, keeps it.
+    // ends in Z, keeps it, all the way to the end of year 9999.
     [TestCase("2026-11-25T23:59:59", "2026-11-25T23:59:59+01:00")]
     [TestCase("2026-06-25T23:59:59", "2026-06-25T23:59:59+02:00")]
     [TestCase("2026-11-25T23:59:59+01:00", "2026-11-25T23:59:59+01:00")]
     [TestCase("2026-11-25T23:59:59-05:00", "2026-11-25T23:59:59-05:00")]
     [TestCase("2026-11-25T22:59:59Z", "2026-11-25T22:59:59+00:00")]
-    public async Task Timestamp_without_an_offset_is_Norwegian_wall_time(string sent, string expected)
+    [TestCase("9999-12-31T23:30:00+00:00", "9999-12-31T23:30:00+00:00")]
+    // More than the seven fraction digits a tick holds must not round up into the next day.
+    [TestCase("2026-11-25T23:59:59.999999999+01:00", "2026-11-25T23:59:59.9999999+01:00")]
+    [TestCase("2026-11-25T23:59:59.999999999", "2026-11-25T23:59:59.9999999+01:00")]
+    // A frist with no time of day lasts the whole of its Norwegian day.
+    [TestCase("2026-11-25", "2026-11-25T23:59:59+01:00")]
+    public async Task Expires_is_read_as_Norwegian_time_when_it_names_no_offset(string sent, string expected)
+    {
+        var ad = await FeedAdWith("expires", sent);
+
+        AssertExactly(ad.Expires, expected);
+    }
+
+    [Test]
+    public async Task Published_with_no_time_of_day_starts_at_Norwegian_midnight()
+    {
+        var ad = await FeedAdWith("published", "2026-11-25");
+
+        AssertExactly(ad.Published, "2026-11-25T00:00:00+01:00");
+    }
+
+    [TestCase("not a date")]
+    [TestCase("0001-01-01T00:30:00")]
+    public async Task Unreadable_expires_maps_to_null(string sent)
+    {
+        var ad = await FeedAdWith("expires", sent);
+
+        Assert.That(ad.Expires, Is.Null);
+    }
+
+    private static void AssertExactly(DateTimeOffset? actual, string expected)
+    {
+        var want = DateTimeOffset.Parse(expected, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.That(actual, Is.Not.Null);
+        Assert.That(actual!.Value.EqualsExact(want), Is.True, $"got {actual:O}");
+    }
+
+    /// <summary>One ad whose detail carries <paramref name="sent"/> in <paramref name="field"/>.</summary>
+    private static async Task<FeedAd> FeedAdWith(string field, string sent)
     {
         const string page = """
             {"items":[{"_feed_entry":{"uuid":"88888888-8888-8888-8888-888888888888",
@@ -216,11 +255,11 @@ public class NavFeedClientTests
              "sistEndret":"2026-11-18T09:00:00+01:00",
              "ad_content":{"uuid":"88888888-8888-8888-8888-888888888888",
               "title":"Utvikler","link":"https://arbeidsplassen.nav.no/stillinger/stilling/8",
-              "expires":"SENT",
+              "FIELD":"SENT",
               "employer":{"name":"Frist AS","orgnr":"917365908"},
               "workLocations":[{"municipal":"HAMAR"}],
               "occupationCategories":[{"level1":"IT","level2":"Utvikling"}]}}
-            """.Replace("SENT", sent, StringComparison.Ordinal);
+            """.Replace("FIELD", field, StringComparison.Ordinal).Replace("SENT", sent, StringComparison.Ordinal);
 
         var result = await Client(request =>
         {
@@ -230,10 +269,7 @@ public class NavFeedClientTests
             return HttpFixtures.Json(page);
         }).GetPageAsync(null, Config, ConfigScope);
 
-        var expires = result.Ads.Single().Expires;
-        var want = DateTimeOffset.Parse(expected, System.Globalization.CultureInfo.InvariantCulture);
-        Assert.That(expires, Is.Not.Null);
-        Assert.That(expires!.Value.EqualsExact(want), Is.True, $"got {expires:O}");
+        return result.Ads.Single();
     }
 
     [Test]
