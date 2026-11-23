@@ -30,8 +30,20 @@ export interface OsloParts {
   minute: number
 }
 
-/** The Norwegian wall-clock reading of an instant. */
+const isValid = (date: Date) => !Number.isNaN(date.getTime())
+
+const UNREADABLE: OsloParts = {
+  year: Number.NaN,
+  monthIndex: Number.NaN,
+  day: Number.NaN,
+  hour: Number.NaN,
+  minute: Number.NaN,
+}
+
+/** The Norwegian wall-clock reading of an instant. An Invalid Date reads as NaN throughout,
+ * where Intl would throw a RangeError. */
 export function osloParts(instant: Date): OsloParts {
+  if (!isValid(instant)) return UNREADABLE
   const read: Partial<Record<Intl.DateTimeFormatPartTypes, number>> = {}
   for (const part of partsFormat.formatToParts(instant)) {
     if (part.type !== 'literal') read[part.type] = Number(part.value)
@@ -53,10 +65,19 @@ export function calendarDate(year: number, monthIndex: number, day: number): Dat
 }
 
 /** The Norwegian calendar day of an instant as a day number (whole days since 01.01.1970), so
- * differences are whole days across DST changes. */
+ * differences are whole days across DST changes. NaN for an Invalid Date; a timestamp from the
+ * server goes through dayOf instead. */
 export function dayNumber(instant: Date): number {
   const { year, monthIndex, day } = osloParts(instant)
   return Date.UTC(year, monthIndex, day) / DAY_MS
+}
+
+/** The Norwegian day of a timestamp from the server, or null when there is none or it does not
+ * parse, so a bad value leaves a lifeline undrawn rather than drawn at NaN. */
+export function dayOf(iso: string | null): number | null {
+  if (iso === null) return null
+  const day = dayNumber(new Date(iso))
+  return Number.isNaN(day) ? null : day
 }
 
 /** The calendar date of a day number, the inverse of dayNumber. */
@@ -66,23 +87,29 @@ export function dateOfDay(day: number): Date {
 
 /** dd.MM.yyyy, the Norwegian date of an instant. */
 export function formatDate(iso: string): string {
-  const { year, monthIndex, day } = osloParts(new Date(iso))
+  const date = new Date(iso)
+  if (!isValid(date)) return ''
+  const { year, monthIndex, day } = osloParts(date)
   return `${pad(day)}.${pad(monthIndex + 1)}.${year}`
 }
 
 /** dd.MM, for the marks on a time sheet's scale. */
 export function formatDayMonth(date: Date): string {
+  if (!isValid(date)) return ''
   const { monthIndex, day } = osloParts(date)
   return `${pad(day)}.${pad(monthIndex + 1)}`
 }
 
 /** HH:mm, Norwegian time. */
 export function formatTime(iso: string): string {
-  const { hour, minute } = osloParts(new Date(iso))
+  const date = new Date(iso)
+  if (!isValid(date)) return ''
+  const { hour, minute } = osloParts(date)
   return `${pad(hour)}:${pad(minute)}`
 }
 
 /** The name of the Norwegian month of a date, in the reader's language. */
 export function monthName(date: Date, locale: string, width: 'long' | 'short'): string {
+  if (!isValid(date)) return ''
   return new Intl.DateTimeFormat(locale, { month: width, timeZone: ZONE }).format(date)
 }

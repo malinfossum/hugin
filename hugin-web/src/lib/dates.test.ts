@@ -3,6 +3,7 @@ import {
   calendarDate,
   dateOfDay,
   dayNumber,
+  dayOf,
   formatDate,
   formatDayMonth,
   formatTime,
@@ -84,6 +85,21 @@ describe.each(['America/New_York', 'Pacific/Auckland', 'UTC'])('in %s', (zone) =
     it('names the Norwegian month of an instant', () => {
       expect(monthName(new Date('2026-11-30T23:30:00Z'), 'nb-NO', 'long')).toBe('desember')
       expect(monthName(calendarDate(2026, 0, 1), 'en-GB', 'short')).toBe('Jan')
+    })
+  })
+
+  describe('an unreadable timestamp', () => {
+    it('prints as nothing instead of throwing', () => {
+      expect(formatDate('not a date')).toBe('')
+      expect(formatTime('not a date')).toBe('')
+      expect(formatDayMonth(new Date(Number.NaN))).toBe('')
+      expect(monthName(new Date(Number.NaN), 'nb-NO', 'long')).toBe('')
+    })
+    it('has no day', () => {
+      expect(dayOf('not a date')).toBeNull()
+      expect(dayOf(null)).toBeNull()
+      expect(dayOf('2026-11-23T23:30:00Z')).toBe(dayNumber(calendarDate(2026, 10, 24)))
+      expect(dayNumber(new Date(Number.NaN))).toBeNaN()
     })
   })
 })
