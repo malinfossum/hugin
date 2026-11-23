@@ -1,5 +1,6 @@
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
+using Hugin.Core.Services;
 using Hugin.Infrastructure;
 using Hugin.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,9 @@ public sealed class ResetService(HuginDbContext db, HuginConfigFile file, IClock
     public async Task<string> WipeAsync(CancellationToken ct = default)
     {
         var dbPath = file.DatabasePath;
-        var snapshot = $"{dbPath}.reset-{clock.UtcNow.ToLocalTime():yyyyMMdd-HHmmss}.bak";
+        // Named in Norwegian time, so the container and my machine name the same moment alike.
+        var stamp = TimeZoneInfo.ConvertTime(clock.UtcNow, NorwegianDate.Zone);
+        var snapshot = $"{dbPath}.reset-{stamp:yyyyMMdd-HHmmss}.bak";
         if (snapshot.Contains('\n') || snapshot.Contains('\0'))
             throw new InvalidOperationException("Ugyldig sti for sikkerhetskopi.");
 

@@ -176,10 +176,44 @@ public sealed class AdOverviewServiceTests
     public async Task Deadline_today_is_zero_days_left()
     {
         var now = new DateTimeOffset(2026, 8, 19, 8, 0, 0, TimeSpan.Zero);
-        var ads = AdsWith(MakeAd("today", expires: new DateTimeOffset(2026, 8, 19, 23, 59, 0, TimeSpan.Zero)));
+        var ads = AdsWith(MakeAd("today", expires: new DateTimeOffset(2026, 8, 19, 23, 59, 59, TimeSpan.FromHours(2))));
         var sut = new AdOverviewService(ads, new FakePipelineRepository(), new FakeClock(now), new FakeCompanyRepository());
 
         Assert.That((await sut.GetAsync())[0].DaysLeft, Is.Zero);
+    }
+
+    // NAV sends the frist as the end of a Norwegian day: +01:00 in winter, +02:00 in summer.
+    [TestCase("2026-11-25T23:59:59+01:00", "2026-11-23T12:00:00Z")]
+    [TestCase("2026-07-15T23:59:59+02:00", "2026-07-13T12:00:00Z")]
+    public async Task Days_left_counts_the_Norwegian_date_of_a_NAV_frist(string expires, string now)
+    {
+        var ads = AdsWith(MakeAd("a", expires: DateTimeOffset.Parse(expires)));
+        var sut = new AdOverviewService(ads, new FakePipelineRepository(),
+            new FakeClock(DateTimeOffset.Parse(now)), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetAsync())[0].DaysLeft, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Days_left_counts_from_the_Norwegian_date_just_after_midnight()
+    {
+        // 23:30 UTC on 23.11 is 00:30 on 24.11 in Norway: the frist on 25.11 is one day away.
+        var now = new DateTimeOffset(2026, 11, 23, 23, 30, 0, TimeSpan.Zero);
+        var ads = AdsWith(MakeAd("a", expires: new DateTimeOffset(2026, 11, 25, 23, 59, 59, TimeSpan.FromHours(1))));
+        var sut = new AdOverviewService(ads, new FakePipelineRepository(), new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetAsync())[0].DaysLeft, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task A_UTC_end_of_day_counts_as_the_next_Norwegian_date()
+    {
+        // 23:59:59 UTC on 23.11 is 00:59:59 on 24.11 in Norway, the date every surface shows.
+        var now = new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
+        var ads = AdsWith(MakeAd("a", expires: new DateTimeOffset(2026, 11, 23, 23, 59, 59, TimeSpan.Zero)));
+        var sut = new AdOverviewService(ads, new FakePipelineRepository(), new FakeClock(now), new FakeCompanyRepository());
+
+        Assert.That((await sut.GetAsync())[0].DaysLeft, Is.EqualTo(4));
     }
 
     [Test]

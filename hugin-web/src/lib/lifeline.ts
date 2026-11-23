@@ -1,5 +1,5 @@
 // What a lifeline says about an ad (DESIGN.md, the Lifeline rule), shared by every view that
-// draws one: its future's colour, and the days-left figure beside its frist.
+// draws one: its future's color, and the days-left figure beside its frist.
 import type { T } from '../i18n'
 import type { AdDto } from './types'
 
@@ -8,9 +8,20 @@ export function isClosing(daysLeft: number | null): boolean {
   return daysLeft !== null && daysLeft <= 7
 }
 
+/** Days left to a frist, counted from the same Norwegian today the lifeline is drawn from. A
+ * list cached before midnight still carries yesterday's server count, so the frist's own day wins
+ * and the server's count is only the fallback when there is no readable frist. */
+export function daysLeftFrom(
+  expiresDay: number | null,
+  today: number,
+  serverDaysLeft: number | null
+): number | null {
+  return expiresDay !== null ? expiresDay - today : serverDaysLeft
+}
+
 export type LifelineTone = 'closing' | 'applied' | 'open'
 
-/** Which colour a lifeline's future carries. Closing beats applied (DESIGN.md, Lifeline rule). */
+/** Which color a lifeline's future carries. Closing beats applied (DESIGN.md, Lifeline rule). */
 export function lifelineTone(ad: AdDto): LifelineTone {
   if (isClosing(ad.daysLeft)) return 'closing'
   return ad.pipelineStatus === 'applied' ? 'applied' : 'open'

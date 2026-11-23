@@ -1,20 +1,11 @@
 // One time scale for every lifeline chart (DESIGN.md, the Scale Bar and Lifeline rules): a window
 // of whole weeks that starts on a Monday a few weeks back and runs some weeks ahead, the same day
 // width everywhere it is drawn. A company's history spans months or years, so its sheet uses a
-// window of whole months instead, read off a bar of alternating months. Days are local calendar days, so an ad that expires 23:59 UTC
-// lands on the date the user sees.
+// window of whole months instead, read off a bar of alternating months. Days are Norwegian
+// calendar days in every browser (dates.ts). A frist ends at 23:59:59 Norwegian time and the
+// server counts days left in Norwegian dates, so the lifeline ends on the date the count names.
 
-const DAY_MS = 86_400_000
-
-/** Local calendar day as a day number, so differences are whole days across DST changes. */
-export function dayNumber(date: Date): number {
-  return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS)
-}
-
-function dateOfDay(day: number): Date {
-  const utc = new Date(day * DAY_MS)
-  return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
-}
+import { calendarDate, dateOfDay, dayNumber, osloParts } from './dates'
 
 export interface TimeWindow {
   /** First day (a Monday, or a first of the month for a month window), inclusive. */
@@ -38,7 +29,7 @@ export function position(window: TimeWindow, day: number): number {
 }
 
 export interface Week {
-  /** Monday of the week, as a Date. */
+  /** Monday of the week, as a calendar date (dates.ts). */
   monday: Date
   /** Left edge and width, in percent. */
   x: number
@@ -61,7 +52,8 @@ export function weeks(window: TimeWindow): Week[] {
 }
 
 export interface MonthLabel {
-  /** First of the month, or the window's start for a month that began before it. */
+  /** First of the month, or the window's start for a month that began before it, as a calendar
+   * date (dates.ts). */
   date: Date
   x: number
   /** Near the right edge the label is set right-aligned so it stays inside the bar. */
@@ -73,13 +65,14 @@ export interface MonthLabel {
 export function monthLabels(window: TimeWindow): MonthLabel[] {
   const out: MonthLabel[] = []
   const first = dateOfDay(window.start)
-  const nextMonth = dayNumber(new Date(first.getFullYear(), first.getMonth() + 1, 1))
-  if (first.getDate() !== 1 && nextMonth - window.start >= 14) {
+  const { year, monthIndex, day: firstDay } = osloParts(first)
+  const nextMonth = dayNumber(calendarDate(year, monthIndex + 1, 1))
+  if (firstDay !== 1 && nextMonth - window.start >= 14) {
     out.push({ date: first, x: 0, alignEnd: false })
   }
   for (let day = window.start; day < window.end; day++) {
     const date = dateOfDay(day)
-    if (date.getDate() !== 1) continue
+    if (osloParts(date).day !== 1) continue
     const x = position(window, day)
     out.push({ date, x, alignEnd: x > 78 })
   }
@@ -89,16 +82,17 @@ export function monthLabels(window: TimeWindow): MonthLabel[] {
 /** Whole months from the one holding `first` to the one holding `last`, widened back to at least
  * `minMonths` so a short history still has room to read. */
 export function monthWindow(first: number, last: number, minMonths = 3): TimeWindow {
-  const from = dateOfDay(first)
-  const to = dateOfDay(last)
-  const end = new Date(to.getFullYear(), to.getMonth() + 1, 1)
-  const span = (end.getFullYear() - from.getFullYear()) * 12 + end.getMonth() - from.getMonth()
-  const start = new Date(end.getFullYear(), end.getMonth() - Math.max(span, minMonths), 1)
+  const from = osloParts(dateOfDay(first))
+  const to = osloParts(dateOfDay(last))
+  const end = calendarDate(to.year, to.monthIndex + 1, 1)
+  const { year, monthIndex } = osloParts(end)
+  const span = (year - from.year) * 12 + monthIndex - from.monthIndex
+  const start = calendarDate(year, monthIndex - Math.max(span, minMonths), 1)
   return { start: dayNumber(start), end: dayNumber(end) }
 }
 
 export interface Month {
-  /** First of the month, as a Date. */
+  /** First of the month, as a calendar date (dates.ts). */
   first: Date
   /** Left edge and width, in percent. */
   x: number
@@ -110,12 +104,12 @@ export interface Month {
 /** The months of a month window, as segments of its scale bar. */
 export function months(window: TimeWindow): Month[] {
   const out: Month[] = []
-  const first = dateOfDay(window.start)
+  const first = osloParts(dateOfDay(window.start))
   for (let i = 0; ; i++) {
-    const date = new Date(first.getFullYear(), first.getMonth() + i, 1)
+    const date = calendarDate(first.year, first.monthIndex + i, 1)
     const day = dayNumber(date)
     if (day >= window.end) break
-    const next = dayNumber(new Date(date.getFullYear(), date.getMonth() + 1, 1))
+    const next = dayNumber(calendarDate(first.year, first.monthIndex + i + 1, 1))
     out.push({
       first: date,
       x: position(window, day),

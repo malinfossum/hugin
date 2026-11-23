@@ -206,10 +206,10 @@ app.Lifetime.ApplicationStarted.Register(() =>
     if (isPublic)
     {
         // The first log line of a deploy proves the two Linux runtime facts the spec asks for
-        // (ICU-backed culture, tzdata-backed Europe/Oslo) before anything else can go wrong.
-        string oslo;
-        try { oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo").Id; }
-        catch (TimeZoneNotFoundException) { oslo = "IKKE FUNNET (tzdata mangler)"; }
+        // (ICU-backed culture, tzdata-backed Europe/Oslo) before anything else can go wrong. The zone
+        // shown is the one deadlines are counted in, so a fallback to the machine's zone shows here.
+        var zone = NorwegianDate.Zone.Id;
+        var oslo = NorwegianDate.IsNorwegian ? zone : $"IKKE FUNNET eller ulesbar, bruker {zone}";
         Console.WriteLine($"Hugin kjører i public-modus på {listenAddress}:{port}. State: {publicMode.StateDir}. "
             + $"Kultur: {System.Globalization.CultureInfo.CurrentCulture.Name}, tidssone Europe/Oslo: {oslo}.");
         Console.WriteLine("ADVARSEL: alt i state-mappen serveres skrivebeskyttet til alle som når porten. "

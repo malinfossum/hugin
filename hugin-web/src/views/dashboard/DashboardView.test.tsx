@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveRegionProvider } from '../../components/LiveRegion'
 import { LanguageProvider } from '../../i18n'
 import type { AdDto } from '../../lib/types'
-import { TestQueryProvider, TestRouter } from '../../test-utils'
+import { fristIn, pinToday, TestQueryProvider, TestRouter } from '../../test-utils'
 import { DashboardView } from './DashboardView'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -14,6 +14,8 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function ad(overrides: Partial<AdDto> = {}): AdDto {
+  // The frist follows daysLeft unless a test sets it: the dashboard counts days from the frist.
+  const daysLeft = overrides.daysLeft === undefined ? 6 : overrides.daysLeft
   return {
     feedId: 'a1',
     title: 'Utvikler',
@@ -21,8 +23,8 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employerOrgnr: '715787630',
     kommune: '0301',
     kommuneNavn: null,
-    expires: '2026-08-25T00:00:00Z',
-    daysLeft: 6,
+    expires: daysLeft === null ? null : fristIn(daysLeft),
+    daysLeft,
     category: 'IT',
     sourceUrl: 'https://nav.no/stillinger/a1',
     pipelineStatus: null,
@@ -127,7 +129,12 @@ const WATCHED_SOON = ad({
 })
 const UNTRACKED = ad({ feedId: 'u1', title: 'Løs annonse', pipelineStatus: null, daysLeft: 3 })
 
+beforeEach(() => {
+  pinToday()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 

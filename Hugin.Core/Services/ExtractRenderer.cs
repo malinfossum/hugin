@@ -121,7 +121,9 @@ internal static class ExtractRenderer
 
         foreach (var a in rows)
         {
-            var frist = a.Expires?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "";
+            var frist = a.Expires is { } e
+                ? NorwegianDate.Of(e).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                : "";
 
             sb.AppendLine(md
                 ? $"| {Cell(a.Title)} | {Cell(a.Employer)} | {Cell(a.Kommune)} | {frist} | {Cell(a.SourceUrl)} |"
@@ -148,7 +150,8 @@ internal static class ExtractRenderer
 
         foreach (var r in rows)
         {
-            var dato = r.Updated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            // ISO on purpose, unlike the CLI: this table is pasted into the Preparelogg log.
+            var dato = NorwegianDate.Of(r.Updated).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             var grunn = string.IsNullOrWhiteSpace(r.Why) ? MissingWhyMarker : r.Why;
 
             sb.AppendLine(md

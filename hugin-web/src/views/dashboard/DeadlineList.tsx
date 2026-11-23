@@ -18,8 +18,9 @@ import { useReadOnly } from '../../context/readOnly'
 import { localeFor, useLang, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
 import { displayCompanyName } from '../../lib/companyName'
-import { formatDate, formatDayMonth } from '../../lib/dates'
+import { dateOfDay, dayOf, formatDate, formatDayMonth, monthName } from '../../lib/dates'
 import {
+  daysLeftFrom,
   daysLeftText,
   deadlineRowId,
   isClosing,
@@ -30,7 +31,8 @@ import {
 import { useSavePipelineEntry, useSetAdHidden, useSetAdLink } from '../../lib/mutations'
 import { pipelineLabel } from '../../lib/pipelineLabels'
 import { adsQuery, pipelineQuery, statusQuery } from '../../lib/queries'
-import { dayNumber, monthLabels, position, timeWindow, weeks } from '../../lib/timeScale'
+import { monthLabels, position, timeWindow, weeks } from '../../lib/timeScale'
+import { useToday } from '../../lib/today'
 import type { AdDto, PipelineDto } from '../../lib/types'
 import { useNarrow } from '../../lib/useMediaQuery'
 
@@ -110,13 +112,12 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
   const { data: status } = useQuery(statusQuery())
   const [lang] = useLang()
   const narrow = useNarrow()
-  const now = new Date()
+  const today = useToday()
+  const now = dateOfDay(today)
   const scale = narrow ? timeWindow(now, 11, 9) : timeWindow(now, 21, 12)
   const at = (day: number) => position(scale, day)
-  const today = dayNumber(now)
   const reviewMark = status?.reviewMark ? new Date(status.reviewMark) : null
-  const seen = reviewMark ? dayNumber(reviewMark) : null
-  const monthName = (date: Date) => date.toLocaleString(localeFor(lang), { month: 'long' })
+  const seen = dayOf(status?.reviewMark ?? null)
 
   const handleSkjul = async (feedId: string) => {
     const index = visibleAds.findIndex((a) => a.feedId === feedId)
@@ -305,7 +306,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                 key={month.date.getTime()}
                 className="absolute top-9 right-0 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
               >
-                {monthName(month.date)}
+                {monthName(month.date, localeFor(lang), 'long')}
               </span>
             ) : (
               <span
@@ -313,7 +314,7 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                 className="at-x absolute top-9 text-xs font-semibold tracking-widest text-contour uppercase md:top-0.5"
                 style={{ '--x': pct(month.x) }}
               >
-                {monthName(month.date)}
+                {monthName(month.date, localeFor(lang), 'long')}
               </span>
             )
           )}
@@ -338,13 +339,15 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
       <div hidden={!drawn} className="relative">
         <ul className="flex list-none flex-col ps-0">
           {visibleAds.map((ad) => {
-            const published = ad.published ? new Date(ad.published) : null
-            const from = published ? dayNumber(published) : null
-            const expires = ad.expires ? dayNumber(new Date(ad.expires)) : null
+            const from = dayOf(ad.published)
+            // Only a readable date gets a label, so a bad one leaves no empty «siden».
+            const published = from !== null ? new Date(ad.published as string) : null
+            const expires = dayOf(ad.expires)
+            const daysLeft = daysLeftFrom(expires, today, ad.daysLeft)
             // The server's rule for "new since last visit": fetched after the mark.
             const isNew = reviewMark !== null && new Date(ad.firstSeen) > reviewMark
             const clipped = from === null || from < scale.start
-            const tone = lifelineTone(ad)
+            const tone = lifelineTone({ ...ad, daysLeft })
             const end = expires ?? today
             const flip = labelFlips(at(end), narrow)
             return (
@@ -532,22 +535,20 @@ export function DeadlineList({ show, onShowChange, onOpenSettings }: DeadlineLis
                       )}
                       style={{ '--x': pct(at(end)) }}
                     >
-                      {ad.expires && (
+                      {expires !== null && (
                         <b
                           className={
-                            isClosing(ad.daysLeft)
+                            isClosing(daysLeft)
                               ? 'font-semibold text-rust'
                               : 'font-semibold text-foreground'
                           }
                         >
-                          {formatDate(ad.expires)}
+                          {formatDate(ad.expires as string)}
                         </b>
                       )}
-                      {ad.expires && ' · '}
-                      <span
-                        className={isClosing(ad.daysLeft) ? 'font-semibold text-rust' : undefined}
-                      >
-                        {daysLeftText(ad.daysLeft, t)}
+                      {expires !== null && ' · '}
+                      <span className={isClosing(daysLeft) ? 'font-semibold text-rust' : undefined}>
+                        {daysLeftText(daysLeft, t)}
                       </span>
                     </span>
                   </div>

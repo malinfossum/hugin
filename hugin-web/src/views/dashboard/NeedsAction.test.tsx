@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FocusProvider } from '../../context/focus'
 import { LanguageProvider } from '../../i18n'
+import { formatDate } from '../../lib/dates'
+import { adsQuery } from '../../lib/queries'
+import { makeQueryClient } from '../../lib/queryClient'
 import type { AdDto } from '../../lib/types'
-import { TestQueryProvider } from '../../test-utils'
+import { fristIn, pinToday, TestQueryProvider } from '../../test-utils'
 import { NeedsAction } from './NeedsAction'
 
 function jsonResponse(body: unknown) {
@@ -15,6 +18,8 @@ function jsonResponse(body: unknown) {
 }
 
 function ad(overrides: Partial<AdDto> = {}): AdDto {
+  // The frist follows daysLeft unless a test sets it: the dashboard counts days from the frist.
+  const daysLeft = overrides.daysLeft === undefined ? 6 : overrides.daysLeft
   return {
     feedId: 'a1',
     title: 'Utvikler',
@@ -22,8 +27,8 @@ function ad(overrides: Partial<AdDto> = {}): AdDto {
     employerOrgnr: '715787630',
     kommune: '0301',
     kommuneNavn: null,
-    expires: '2026-08-25T00:00:00Z',
-    daysLeft: 6,
+    expires: daysLeft === null ? null : fristIn(daysLeft),
+    daysLeft,
     category: 'IT',
     sourceUrl: 'https://nav.no/stillinger/a1',
     pipelineStatus: null,
@@ -51,6 +56,22 @@ function renderNeedsAction(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
+/** Renders NeedsAction and waits until the ads have arrived, so a test that expects nothing
+ * rendered checks the filter, not the moment before the response. */
+async function renderSettled(fetchMock: ReturnType<typeof vi.fn>) {
+  vi.stubGlobal('fetch', fetchMock)
+  const client = makeQueryClient()
+  const view = render(
+    <TestQueryProvider client={client}>
+      <LanguageProvider>
+        <NeedsAction />
+      </LanguageProvider>
+    </TestQueryProvider>
+  )
+  await waitFor(() => expect(client.getQueryState(adsQuery().queryKey)?.status).toBe('success'))
+  return view
+}
+
 /** Same as renderNeedsAction but wrapped in FocusProvider, for tests that seed a focus. */
 function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('fetch', fetchMock)
@@ -65,7 +86,12 @@ function renderNeedsActionWithFocus(fetchMock: ReturnType<typeof vi.fn>) {
   )
 }
 
+beforeEach(() => {
+  pinToday()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   window.localStorage.removeItem('hugin-focus')
 })
@@ -83,7 +109,7 @@ describe('NeedsAction', () => {
 
     const item = await screen.findByText(/Skal med/)
     expect(item).toHaveTextContent(
-      'Skal med hos Acme AS har frist 25.08.2026, om 3 dager. Du følger med, men har ikke søkt.'
+      `Skal med hos Acme AS har frist ${formatDate(fristIn(3))}, om 3 dager. Du følger med, men har ikke søkt.`
     )
 
     const today = screen.getByText(/Frist i dag/)
@@ -94,8 +120,68 @@ describe('NeedsAction', () => {
     expect(screen.queryByText(/Ingen frist/)).not.toBeInTheDocument()
   })
 
+  it('counts days from the frist, not a count cached before midnight', async () => {
+    // The cached list was fetched yesterday: the server said 8 days then, 7 now.
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Over natten',
+        pipelineStatus: 'active',
+        daysLeft: 8,
+        expires: fristIn(7),
+      }),
+    ]
+    renderNeedsAction(mockFetch(ads))
+
+    const item = await screen.findByText(/Over natten/)
+    expect(item).toHaveTextContent(`har frist ${formatDate(fristIn(7))}, om 7 dager.`)
+  })
+
+  it('says a frist that passed overnight has closed, not that it closes today', async () => {
+    // Cached yesterday, when the frist was today; it is now a day gone.
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Gikk ut i natt',
+        pipelineStatus: 'active',
+        daysLeft: 0,
+        expires: fristIn(-1),
+      }),
+    ]
+    renderNeedsAction(mockFetch(ads))
+
+    const item = await screen.findByText(/Gikk ut i natt/)
+    expect(item).toHaveTextContent(
+      `Gikk ut i natt hos Acme AS hadde frist ${formatDate(fristIn(-1))}.`
+    )
+  })
+
+  it('leaves an ad whose frist does not read to its deadline row, rather than name no date', async () => {
+    const fetchMock = mockFetch([
+      ad({
+        feedId: 'a1',
+        title: 'Uleselig',
+        pipelineStatus: 'active',
+        daysLeft: 3,
+        expires: 'garbage',
+      }),
+    ])
+    const { container } = await renderSettled(fetchMock)
+
+    expect(screen.queryByText(/Uleselig/)).not.toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('says when an overdue (negative daysLeft) active entry closed', async () => {
-    const ads = [ad({ feedId: 'a1', title: 'Forfalt', pipelineStatus: 'active', daysLeft: -1 })]
+    const ads = [
+      ad({
+        feedId: 'a1',
+        title: 'Forfalt',
+        pipelineStatus: 'active',
+        daysLeft: -1,
+        expires: '2026-08-25T12:00:00Z',
+      }),
+    ]
     renderNeedsAction(mockFetch(ads))
 
     const item = await screen.findByText(/Forfalt/)
@@ -108,11 +194,8 @@ describe('NeedsAction', () => {
       ad({ feedId: 'a2', title: 'For langt unna', pipelineStatus: 'active', daysLeft: 10 }),
     ]
     const fetchMock = mockFetch(ads)
-    const { container } = renderNeedsAction(fetchMock)
+    const { container } = await renderSettled(fetchMock)
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalled()
-    })
     expect(container).toBeEmptyDOMElement()
   })
 

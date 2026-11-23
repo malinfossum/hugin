@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Config;
 using Hugin.Core.Services;
@@ -32,7 +33,7 @@ namespace Hugin.Infrastructure.Http;
 ///    only survivors are enriched. Inactive ads return a stub with no ad_content. That is expected:
 ///    NAV strips content once an ad is gone, so the summary values stand and IsActive flips.
 /// </summary>
-public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : INavFeedClient
+public sealed partial class NavFeedClient(HttpClient http, NavTokenProvider tokens) : INavFeedClient
 {
     public const string BaseAddress = "https://pam-stilling-feed.nav.no/";
 
@@ -132,7 +133,7 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
             EmployerHomepage = employer.ValueKind == JsonValueKind.Object ? Text(employer, "homepage")?.Trim() : null,
             MunicipalityNumber = MunicipalityFromLocations(content, scope) ?? ad.MunicipalityNumber,
             Published = Timestamp(content, "published"),
-            Expires = Timestamp(content, "expires"),
+            Expires = Timestamp(content, "expires", endOfDay: true),
             // The arbeidsplassen deep-link is the one NAV terms require; sourceurl points
             // at the employer page and is only a fallback.
             SourceUrl = UrlGuard.HttpOrHttps(Text(content, "link")) ?? UrlGuard.HttpOrHttps(Text(content, "sourceurl")),
@@ -195,11 +196,62 @@ public sealed class NavFeedClient(HttpClient http, NavTokenProvider tokens) : IN
         return categories;
     }
 
-    private static DateTimeOffset? Timestamp(JsonElement e, string name) =>
-        DateTimeOffset.TryParse(Text(e, name), CultureInfo.InvariantCulture,
-            DateTimeStyles.RoundtripKind, out var parsed)
-            ? parsed
-            : null;
+    // NAV writes its timestamps with an offset. One without (no offset, no Z) would otherwise take
+    // the machine's zone, which is UTC in the container and an hour or two off the Norwegian day
+    // a frist ends on, so it is read as Norwegian wall time instead. Whether it has an offset is
+    // read off the text: parsing it as a DateTime first would convert it to the machine's zone.
+    private static DateTimeOffset? Timestamp(JsonElement e, string name, bool endOfDay = false)
+    {
+        var text = Text(e, name)?.Trim();
+        if (string.IsNullOrEmpty(text)) return null;
+        // A tick holds seven fraction digits; parsing more rounds 23:59:59.999999999 into the next day.
+        text = LongFraction().Replace(text, "$1");
+
+        try
+        {
+            // A date with no time of day names a Norwegian day, whatever zone follows it: a frist
+            // lasts the whole of that day and a publish date starts at its midnight.
+            var day = DateWithZone().Match(text) is { Success: true } named ? named.Groups["date"].Value : text;
+            if (DateOnly.TryParseExact(day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+                    out var date))
+                return endOfDay
+                    ? NorwegianDate.EndOf(date)
+                    : NorwegianDate.AtWallTime(date.ToDateTime(TimeOnly.MinValue));
+
+            if (HasOffset().IsMatch(text))
+                return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                    out var parsed)
+                    ? parsed
+                    : null;
+
+            // Any other form: RoundtripKind says whether the text named a zone after all. Only one
+            // that named none is Norwegian wall time.
+            if (!DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
+                    out var wallTime))
+                return null;
+            if (wallTime.Kind == DateTimeKind.Unspecified) return NorwegianDate.AtWallTime(wallTime);
+            return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out var zoned)
+                ? zoned
+                : null;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // A wall time so close to year 1 that its UTC instant falls before it.
+            return null;
+        }
+    }
+
+    [GeneratedRegex(@"(\.\d{7})\d+")]
+    private static partial Regex LongFraction();
+
+    /// <summary>A time of day followed by Z or a +hh:mm, +hhmm or +hh offset.</summary>
+    [GeneratedRegex(@"[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?\s*(Z|[+-]\d{2}(:?\d{2})?)$", RegexOptions.IgnoreCase)]
+    private static partial Regex HasOffset();
+
+    /// <summary>A date with Z or an offset and no time of day.</summary>
+    [GeneratedRegex(@"^(?<date>\d{4}-\d{2}-\d{2})\s*(Z|[+-]\d{2}(:?\d{2})?)$", RegexOptions.IgnoreCase)]
+    private static partial Regex DateWithZone();
 
     private static string? Text(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object

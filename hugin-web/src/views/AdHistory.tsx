@@ -6,9 +6,17 @@ import {
   ScaleBand,
 } from '../components/TimeSheet'
 import { localeFor, useLang, useT } from '../i18n'
-import { formatDate, formatDayMonth } from '../lib/dates'
-import { daysLeftText, isClosing, labelFlips, lifelineTone, pct } from '../lib/lifeline'
-import { dayNumber, months, monthWindow, position } from '../lib/timeScale'
+import { dateOfDay, dayOf, formatDate, formatDayMonth, monthName, osloParts } from '../lib/dates'
+import {
+  daysLeftFrom,
+  daysLeftText,
+  isClosing,
+  labelFlips,
+  lifelineTone,
+  pct,
+} from '../lib/lifeline'
+import { months, monthWindow, position } from '../lib/timeScale'
+import { useToday } from '../lib/today'
 import type { AdDto } from '../lib/types'
 import { useNarrow } from '../lib/useMediaQuery'
 
@@ -21,13 +29,12 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
   const t = useT()
   const [lang] = useLang()
   const narrow = useNarrow()
+  const today = useToday()
 
   if (ads.length === 0)
     return <p className="text-body-sm text-ink-tertiary">{t('companies.noAds')}</p>
 
-  const now = new Date()
-  const today = dayNumber(now)
-  const dayOf = (iso: string | null) => (iso ? dayNumber(new Date(iso)) : null)
+  const now = dateOfDay(today)
   const days = ads.flatMap((ad) =>
     [dayOf(ad.published), dayOf(ad.expires)].filter((day): day is number => day !== null)
   )
@@ -39,8 +46,9 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
   // and past that only the years above it. A phone keeps half as many.
   const step = (segments.length <= 12 ? 1 : segments.length <= 36 ? 3 : 0) * (narrow ? 2 : 1)
   // Years in map lettering: at each January, and at the start unless January is the next month.
+  const isJanuary = (date?: Date) => date !== undefined && osloParts(date).monthIndex === 0
   const years = segments.filter(
-    (month, i) => month.first.getMonth() === 0 || (i === 0 && segments[1]?.first.getMonth() !== 0)
+    (month, i) => isJanuary(month.first) || (i === 0 && !isJanuary(segments[1]?.first))
   )
 
   return (
@@ -58,7 +66,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
               )}
               style={month.x > 88 ? undefined : { '--x': pct(month.x) }}
             >
-              {month.first.getFullYear()}
+              {osloParts(month.first).year}
             </span>
           ))}
           <span
@@ -78,7 +86,7 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                   className="at-x absolute bottom-0 text-xs text-ink-tertiary tabular-nums"
                   style={{ '--x': pct(month.x) }}
                 >
-                  {month.first.toLocaleString(localeFor(lang), { month: 'short' })}
+                  {monthName(month.first, localeFor(lang), 'short')}
                 </span>
               )}
             </span>
@@ -94,9 +102,8 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
             const from = published ?? expires ?? today
             // An open ad's past runs to today; an expired one's whole life is past.
             const pastEnd = ad.isActive ? today : (expires ?? from)
-            // The company endpoint leaves daysLeft out; the frist says it just as well.
-            const daysLeft =
-              ad.daysLeft ?? (ad.isActive && expires !== null ? expires - today : null)
+            // Counted from the frist, like the dashboard; the company endpoint leaves daysLeft out.
+            const daysLeft = ad.isActive ? daysLeftFrom(expires, today, ad.daysLeft) : ad.daysLeft
             const tone = lifelineTone({ ...ad, daysLeft })
             const future = ad.isActive && expires !== null && expires >= today
             const labelAt = future ? (expires as number) : today
@@ -132,12 +139,17 @@ export function AdHistory({ ads }: { ads: AdDto[] }) {
                     {!ad.isActive && (
                       <span className="font-semibold">{t('companies.expiredTag')}</span>
                     )}
-                    {ad.published && (
-                      <span>{t('companies.published', { date: formatDate(ad.published) })}</span>
+                    {published !== null && (
+                      <span>
+                        {t('companies.published', { date: formatDate(ad.published as string) })}
+                      </span>
                     )}
                     <span>
                       {t('companies.deadlineLabel', {
-                        date: ad.expires ? formatDate(ad.expires) : t('companies.notGiven'),
+                        date:
+                          expires !== null
+                            ? formatDate(ad.expires as string)
+                            : t('companies.notGiven'),
                       })}
                     </span>
                   </span>

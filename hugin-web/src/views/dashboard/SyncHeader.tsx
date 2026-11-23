@@ -15,24 +15,26 @@ import { toast } from '../../components/ui/toast'
 import { useReadOnly } from '../../context/readOnly'
 import { type T, useFormatNumber, useT } from '../../i18n'
 import { ApiError } from '../../lib/api'
-import { formatDate, formatTime } from '../../lib/dates'
+import { dayNumber, formatDate, formatTime } from '../../lib/dates'
 import { useMarkSeen, useStartSync } from '../../lib/mutations'
 import { newQuery, statusQuery, syncStatusQuery } from '../../lib/queries'
 import { getFailureMessage, isNoCoverageFailure } from '../../lib/syncResult'
-import { dayNumber } from '../../lib/timeScale'
+import { useToday } from '../../lib/today'
 import type { NewDto, SourceStateDto } from '../../lib/types'
 
-/** «i dag kl. 08:16», «i går kl. 17:40», else the date: when a source last synced, in words. */
-function syncedWhen(iso: string, t: T): string {
+/** «i dag kl. 08:16», «i går kl. 17:40», else the date: when a source last synced, in words,
+ * counted from the dashboard's shared today. */
+function syncedWhen(iso: string, today: number, t: T): string {
   const time = formatTime(iso)
-  const daysAgo = dayNumber(new Date()) - dayNumber(new Date(iso))
-  if (daysAgo === 0) return t('sync.whenToday', { time })
+  const daysAgo = today - dayNumber(new Date(iso))
+  // Below 0 too: a sync that finished after midnight, before the shared today has moved on.
+  if (daysAgo <= 0) return t('sync.whenToday', { time })
   if (daysAgo === 1) return t('sync.whenYesterday', { time })
   return t('sync.whenDate', { date: formatDate(iso), time })
 }
 
-function formatLastSync(source: SourceStateDto | null | undefined, t: T): string {
-  return source ? syncedWhen(source.lastSyncUtc, t) : t('sync.never')
+function formatLastSync(source: SourceStateDto | null | undefined, today: number, t: T): string {
+  return source ? syncedWhen(source.lastSyncUtc, today, t) : t('sync.never')
 }
 
 /** Both registers synced in the same run (the same minute): one phrase says it for both. */
@@ -95,6 +97,7 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
   const announce = useAnnounce()
   const t = useT()
   const formatNumber = useFormatNumber()
+  const today = useToday()
   const { readOnly } = useReadOnly()
   const { markSyncStarted } = useSyncWatcher()
   const startSyncMutation = useStartSync()
@@ -167,19 +170,23 @@ export function SyncHeader({ onRequestCoverage }: SyncHeaderProps) {
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground tabular-nums">
             {status && syncedTogether(status) ? (
               <p>
-                {t('sync.syncedBoth', { when: syncedWhen(syncedTogether(status) as string, t) })}
+                {t('sync.syncedBoth', {
+                  when: syncedWhen(syncedTogether(status) as string, today, t),
+                })}
               </p>
             ) : (
               <dl className="flex flex-wrap gap-x-4 gap-y-1">
                 <div className="flex gap-1.5">
                   <dt>{t('sync.brregLabel')}</dt>
                   <dd className="font-medium text-foreground">
-                    {formatLastSync(status?.brreg, t)}
+                    {formatLastSync(status?.brreg, today, t)}
                   </dd>
                 </div>
                 <div className="flex gap-1.5">
                   <dt>{t('sync.navLabel')}</dt>
-                  <dd className="font-medium text-foreground">{formatLastSync(status?.nav, t)}</dd>
+                  <dd className="font-medium text-foreground">
+                    {formatLastSync(status?.nav, today, t)}
+                  </dd>
                 </div>
               </dl>
             )}

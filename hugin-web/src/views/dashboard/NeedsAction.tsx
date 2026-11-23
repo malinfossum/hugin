@@ -4,18 +4,18 @@ import { Button } from '../../components/ui/button'
 import { adMatchesFocus, useFocus } from '../../context/focus'
 import { type T, useT } from '../../i18n'
 import { displayCompanyName } from '../../lib/companyName'
-import { formatDate } from '../../lib/dates'
-import { deadlineRowId } from '../../lib/lifeline'
+import { dayOf, formatDate } from '../../lib/dates'
+import { deadlineRowId, isClosing } from '../../lib/lifeline'
 import { adsQuery } from '../../lib/queries'
+import { useToday } from '../../lib/today'
 import type { AdDto } from '../../lib/types'
 
 /** One plain sentence per ad: which ad, when it closes, and why it needs action. */
-function sentence(ad: AdDto, t: T): string {
+function sentence(ad: AdDto, daysLeft: number, t: T): string {
   const name = ad.employer
     ? t('needsAction.adAt', { title: ad.title, employer: displayCompanyName(ad.employer) })
     : ad.title
-  const date = ad.expires ? formatDate(ad.expires) : ''
-  const daysLeft = ad.daysLeft as number
+  const date = formatDate(ad.expires as string)
   const closes =
     daysLeft < 0
       ? t('needsAction.closed', { ad: name, date })
@@ -46,13 +46,18 @@ export function NeedsAction() {
   const t = useT()
   const loadError = isError ? t('needsAction.loadError') : null
 
-  const needsAction = ads.filter(
-    (ad) =>
-      adMatchesFocus(ad, focus) &&
-      ad.pipelineStatus === 'active' &&
-      ad.daysLeft !== null &&
-      ad.daysLeft <= 7
-  )
+  // Days left from the frist and the shared Norwegian today, as DeadlineList counts them, so the
+  // sentence and the row it points to name the same count after midnight too.
+  const today = useToday()
+  // The sentence names the frist, so an ad without a readable one is left to its deadline row.
+  const needsAction = ads.flatMap((ad) => {
+    const expires = dayOf(ad.expires)
+    if (expires === null) return []
+    const daysLeft = expires - today
+    return adMatchesFocus(ad, focus) && ad.pipelineStatus === 'active' && isClosing(daysLeft)
+      ? [{ ad, daysLeft }]
+      : []
+  })
 
   if (!loadError && needsAction.length === 0) return null
 
@@ -80,12 +85,12 @@ export function NeedsAction() {
           </p>
         )}
         <ul className="flex list-none flex-col ps-0">
-          {needsAction.map((ad) => (
+          {needsAction.map(({ ad, daysLeft }) => (
             <li
               key={ad.feedId}
               className="flex flex-col gap-x-6 md:flex-row md:items-baseline md:justify-between"
             >
-              <span className="text-pretty md:py-3">{sentence(ad, t)}</span>
+              <span className="text-pretty md:py-3">{sentence(ad, daysLeft, t)}</span>
               <Button
                 variant="link"
                 className="-ms-2.5 min-h-11 shrink-0 self-start md:ms-0"

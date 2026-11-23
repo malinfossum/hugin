@@ -214,7 +214,8 @@ internal static class Program
             return 0;
         }
 
-        Console.WriteLine($"Nytt siden {items.Since:yyyy-MM-dd HH:mm} UTC");
+        var zone = NorwegianDate.IsNorwegian ? "norsk tid" : NorwegianDate.Zone.Id;
+        Console.WriteLine($"Nytt siden {NorwegianDate.FormatDateTime(items.Since)} ({zone})");
         Console.WriteLine();
 
         Console.WriteLine($"## Nye selskaper ({items.Companies.Count})");
@@ -340,8 +341,8 @@ internal static class Program
         if (!entry.MissingWhy) Console.WriteLine($"  Grunn: {entry.Why}");
         if (!string.IsNullOrWhiteSpace(entry.Note)) Console.WriteLine($"  Notat: {entry.Note}");
         if (!string.IsNullOrWhiteSpace(entry.SvarText)) Console.WriteLine($"  Svar: {entry.SvarText}");
-        Console.WriteLine($"  Opprettet: {entry.Created.ToLocalTime():yyyy-MM-dd}");
-        Console.WriteLine($"  Sist endret: {entry.Updated.ToLocalTime():yyyy-MM-dd}");
+        Console.WriteLine($"  Opprettet: {NorwegianDate.FormatDate(entry.Created)}");
+        Console.WriteLine($"  Sist endret: {NorwegianDate.FormatDate(entry.Updated)}");
 
         var links = result.Removal.LinksCleared;
         if (links > 0) Console.WriteLine($"  {links} {(links == 1 ? "annonselenke" : "annonselenker")} fjernet.");
@@ -388,7 +389,7 @@ internal static class Program
                 Console.WriteLine($"[{group.Key}] ({group.Count()})");
                 foreach (var ad in group)
                 {
-                    var expires = ad.Expires is { } e ? $"  (frist {e:yyyy-MM-dd})" : "";
+                    var expires = ad.Expires is { } e ? $"  (frist {NorwegianDate.FormatDate(e)})" : "";
                     Console.WriteLine($"  {ad.Title} · {ad.EmployerName}{expires}");
                     if (ad.SourceUrl is not null) Console.WriteLine($"    {ad.SourceUrl}");
                 }
@@ -412,7 +413,7 @@ internal static class Program
         foreach (var entry in entries)
         {
             var company = await repository.GetAsync(entry.Orgnr);
-            Console.WriteLine($"{entry.Updated:yyyy-MM-dd}  {CliLabels.Status(entry.Status),-16}  "
+            Console.WriteLine($"{NorwegianDate.FormatDate(entry.Updated)}  {CliLabels.Status(entry.Status),-16}  "
                 + $"{company?.Name ?? entry.Orgnr}");
             Console.WriteLine($"    Grunn: {(entry.MissingWhy ? "⚠ mangler begrunnelse" : entry.Why)}");
         }
