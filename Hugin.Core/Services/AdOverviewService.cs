@@ -9,7 +9,7 @@ public sealed record AdOverview(string FeedId, string Title, string? EmployerNam
     string? LinkedOrgnr = null);
 
 /// <summary>
-/// One pipeline entry with the ads it is linked to summarised: <see cref="AdsExpired"/> is true
+/// One pipeline entry with the ads it is linked to summarized: <see cref="AdsExpired"/> is true
 /// when the entry has ads and none of them is still open. Derived on every read, never stored.
 /// A fresh ad from the same employer brings the entry back by itself.
 /// </summary>
@@ -35,7 +35,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         bool includeHidden = false, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
-        // DaysLeft counts Norwegian dates, the date a browser in Norway prints for the frist.
+        // DaysLeft counts Norwegian dates, the date every surface prints for the frist.
         var today = NorwegianDate.Of(now);
         var active = await ads.GetActiveAsync(now, municipalityNumber, includeHidden, ct);
         var index = await IndexAsync(await pipeline.GetAllAsync(ct: ct), ct);
