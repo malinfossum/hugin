@@ -222,11 +222,14 @@ public class NavFeedClientTests
         AssertExactly(ad.Expires, expected);
     }
 
-    [Test]
-    public async Task Published_with_no_time_of_day_starts_at_Norwegian_midnight()
+    [TestCase("2026-11-25")]
+    // A zone after the date does not move it to the Norwegian day before.
+    [TestCase("2026-11-25+02:00")]
+    [TestCase("2026-11-25Z")]
+    public async Task Published_with_no_time_of_day_starts_at_Norwegian_midnight(string sent)
     {
         NorwegianZone.Require();
-        var ad = await FeedAdWith("published", "2026-11-25");
+        var ad = await FeedAdWith("published", sent);
 
         AssertExactly(ad.Published, "2026-11-25T00:00:00+01:00");
     }

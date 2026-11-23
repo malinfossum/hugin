@@ -209,8 +209,10 @@ public sealed partial class NavFeedClient(HttpClient http, NavTokenProvider toke
 
         try
         {
-            // A frist with no time of day lasts the whole of that Norwegian day.
-            if (DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+            // A date with no time of day names a Norwegian day, whatever zone follows it: a frist
+            // lasts the whole of that day and a publish date starts at its midnight.
+            var day = DateWithZone().Match(text) is { Success: true } named ? named.Groups["date"].Value : text;
+            if (DateOnly.TryParseExact(day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
                     out var date))
                 return endOfDay
                     ? NorwegianDate.EndOf(date)
@@ -222,19 +224,16 @@ public sealed partial class NavFeedClient(HttpClient http, NavTokenProvider toke
                     ? parsed
                     : null;
 
-            // Any other form: RoundtripKind says whether the text named a zone after all (a date
-            // with an offset and no time of day). Only one that named none is Norwegian wall time.
+            // Any other form: RoundtripKind says whether the text named a zone after all. Only one
+            // that named none is Norwegian wall time.
             if (!DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                     out var wallTime))
                 return null;
             if (wallTime.Kind == DateTimeKind.Unspecified) return NorwegianDate.AtWallTime(wallTime);
-            if (!DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None,
-                    out var zoned))
-                return null;
-            // A frist with a zone but no time of day still lasts the whole of the day it names.
-            return endOfDay && DateWithZone().IsMatch(text)
-                ? NorwegianDate.EndOf(DateOnly.FromDateTime(zoned.DateTime))
-                : zoned;
+            return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out var zoned)
+                ? zoned
+                : null;
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -251,7 +250,7 @@ public sealed partial class NavFeedClient(HttpClient http, NavTokenProvider toke
     private static partial Regex HasOffset();
 
     /// <summary>A date with Z or an offset and no time of day.</summary>
-    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}\s*(Z|[+-]\d{2}(:?\d{2})?)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<date>\d{4}-\d{2}-\d{2})\s*(Z|[+-]\d{2}(:?\d{2})?)$", RegexOptions.IgnoreCase)]
     private static partial Regex DateWithZone();
 
     private static string? Text(JsonElement e, string name) =>

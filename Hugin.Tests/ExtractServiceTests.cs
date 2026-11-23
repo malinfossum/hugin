@@ -359,6 +359,7 @@ public class ExtractServiceTests
     [Test]
     public async Task Frist_is_printed_as_the_Norwegian_date()
     {
+        NorwegianZone.Require();
         // The database hands every timestamp back in UTC; 23:30 UTC on 23.11 is 24.11 in Norway.
         var ads = new FakeAdRepository();
         ads.Store["a1"] = Ad("a1", "Utvikler", category: "IT",
@@ -378,6 +379,7 @@ public class ExtractServiceTests
     [Test]
     public async Task Tracker_date_is_the_Norwegian_date()
     {
+        NorwegianZone.Require();
         // 23:30 UTC on 23.11 is 00:30 on 24.11 in Norway, the day I actually updated the entry.
         var companies = new FakeCompanyRepository();
         companies.Store["1"] = Company("1", "Sent AS");

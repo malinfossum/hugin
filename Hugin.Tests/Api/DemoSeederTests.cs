@@ -241,6 +241,7 @@ public sealed class DemoSeederTests
     [Test]
     public async Task First_run_creates_company_ad_and_pipeline_row()
     {
+        NorwegianZone.Require();
         WriteSeed(ThreeFirms);
         Assert.That(await Seeder(clock: new FakeClock(Noon)).ApplyAsync(), Is.EqualTo(3));
 
@@ -291,6 +292,7 @@ public sealed class DemoSeederTests
     [Test]
     public async Task The_frist_ends_a_Norwegian_day_across_the_switch_to_winter_time()
     {
+        NorwegianZone.Require();
         // Summer time ends on 25.10.2026, so a frist three days after 23.10 ends at +01:00.
         WriteSeed(ThreeFirms);
         await Seeder(clock: new FakeClock(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero))).ApplyAsync();
@@ -317,6 +319,7 @@ public sealed class DemoSeederTests
     [Test]
     public async Task Second_run_two_days_on_rolls_the_ad_and_leaves_the_rest()
     {
+        NorwegianZone.Require();
         WriteSeed(ThreeFirms);
         var clock = new FakeClock(Noon);
         await Seeder(clock: clock).ApplyAsync();
