@@ -35,7 +35,8 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
         bool includeHidden = false, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
-        var today = now.UtcDateTime.Date;
+        // DaysLeft counts Norwegian dates, the same date the dashboard prints for the frist.
+        var today = NorwegianDate.Of(now);
         var active = await ads.GetActiveAsync(now, municipalityNumber, includeHidden, ct);
         var index = await IndexAsync(await pipeline.GetAllAsync(ct: ct), ct);
 
@@ -46,7 +47,7 @@ public sealed class AdOverviewService(IAdRepository ads, IPipelineRepository pip
 
             results.Add(new AdOverview(a.FeedId, a.Title, a.EmployerName, a.EmployerOrgnr,
                 a.MunicipalityNumber, a.Expires,
-                a.Expires is { } e ? (e.UtcDateTime.Date - today).Days : null,
+                a.Expires is { } e ? NorwegianDate.Of(e).DayNumber - today.DayNumber : null,
                 a.Category, a.SourceUrl, status, a.Hidden, a.Published, a.FirstSeen, a.LinkedOrgnr));
         }
 

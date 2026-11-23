@@ -255,7 +255,7 @@ public sealed class DemoSeederTests
         var ad = await _db.Ads.SingleAsync(a => a.FeedId == "demo-100000001");
         Assert.That(ad.Published, Is.EqualTo(Noon.AddDays(-10)));
         Assert.That(ad.FirstSeen, Is.EqualTo(Noon.AddDays(-10)));
-        Assert.That(ad.Expires, Is.EqualTo(new DateTimeOffset(2026, 10, 11, 23, 59, 59, TimeSpan.Zero)));
+        Assert.That(ad.Expires, Is.EqualTo(new DateTimeOffset(2026, 10, 11, 23, 59, 59, TimeSpan.FromHours(2))));
         Assert.That(ad.IsActive, Is.True);
         Assert.That(ad.EmployerName, Is.EqualTo("Mjøskode AS"));
         Assert.That(ad.EmployerOrgnr, Is.EqualTo("100000001"));
@@ -289,6 +289,17 @@ public sealed class DemoSeederTests
     }
 
     [Test]
+    public async Task The_frist_ends_a_Norwegian_day_across_the_switch_to_winter_time()
+    {
+        // Summer time ends on 25.10.2026, so a frist three days after 23.10 ends at +01:00.
+        WriteSeed(ThreeFirms);
+        await Seeder(clock: new FakeClock(new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero))).ApplyAsync();
+
+        var ad = await _db.Ads.SingleAsync(a => a.FeedId == "demo-100000001");
+        Assert.That(ad.Expires, Is.EqualTo(new DateTimeOffset(2026, 10, 26, 23, 59, 59, TimeSpan.FromHours(1))));
+    }
+
+    [Test]
     public async Task An_ad_expiring_today_is_still_open_with_zero_days_left()
     {
         WriteSeed("""
@@ -317,7 +328,7 @@ public sealed class DemoSeederTests
         _db.ChangeTracker.Clear();
         var ad = await _db.Ads.SingleAsync(a => a.FeedId == "demo-100000002");
         Assert.That(ad.Published, Is.EqualTo(Noon), "now (Noon + 2 days) minus publishedDaysAgo 2");
-        Assert.That(ad.Expires, Is.EqualTo(new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.Zero)));
+        Assert.That(ad.Expires, Is.EqualTo(new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.FromHours(1))));
         Assert.That((await _db.Companies.SingleAsync(c => c.Orgnr == "100000002")).FirstSeen,
             Is.EqualTo(Noon.AddDays(-60)), "company FirstSeen is kept");
         var after = await _db.Pipeline.SingleAsync(p => p.Orgnr == "100000002");

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Hugin.Core.Abstractions;
 using Hugin.Core.Models;
+using Hugin.Core.Services;
 
 namespace Hugin.Api.Services;
 
@@ -186,9 +187,10 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
 
             if (entry.Ad is { } ad)
             {
-                // DaysLeft counts whole UTC dates, so a UTC end of day gives the same count on
-                // the UTC container and on a machine in Europe/Oslo.
-                var deadline = now.UtcDateTime.Date.AddDays(ad.ExpiresInDays + 1).AddSeconds(-1);
+                // The end of a Norwegian day, as NAV sends it. DaysLeft and the dashboard both read
+                // the Norwegian date, so the count is expiresInDays on the UTC container and on a
+                // machine in Europe/Oslo alike.
+                var deadline = NorwegianDate.EndOf(NorwegianDate.Of(now).AddDays(ad.ExpiresInDays));
                 var published = now.AddDays(-ad.PublishedDaysAgo);
                 await ads.PutSeededAsync(new Ad
                 {
@@ -199,7 +201,7 @@ public sealed partial class DemoSeeder(PublicModeOptions mode, IPipelineReposito
                     MunicipalityNumber = company.Kommune,
                     Published = published,
                     FirstSeen = published,
-                    Expires = new DateTimeOffset(deadline, TimeSpan.Zero),
+                    Expires = deadline,
                     Category = DemoAdCategory,
                     IsActive = ad.ExpiresInDays >= 0,
                 }, ct);

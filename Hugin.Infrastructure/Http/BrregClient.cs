@@ -42,27 +42,7 @@ public sealed class BrregClient(HttpClient http, ILogger<BrregClient>? logger = 
     // Brreg's registration dates are Norwegian calendar days, so the open upper bound of a
     // bisected range is "today in Norway", not the UTC date, which lags it by up to two hours
     // and would leave a unit registered late in the evening outside every slice.
-    private static readonly TimeZoneInfo Norway = FindNorway();
-
-    private DateOnly Today() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_clock.UtcNow, Norway).DateTime);
-
-    private static TimeZoneInfo FindNorway()
-    {
-        foreach (var id in new[] { "Europe/Oslo", "W. Europe Standard Time" })
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(id);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-            }
-            catch (InvalidTimeZoneException)
-            {
-            }
-        }
-        return TimeZoneInfo.Local;
-    }
+    private DateOnly Today() => NorwegianDate.Of(_clock.UtcNow);
 
     public async Task<IReadOnlyList<RegisterCompany>> GetCompaniesAsync(IEnumerable<string> naceCodes,
         IEnumerable<string> municipalityNumbers, CancellationToken ct = default)

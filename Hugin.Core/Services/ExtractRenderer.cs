@@ -121,7 +121,9 @@ internal static class ExtractRenderer
 
         foreach (var a in rows)
         {
-            var frist = a.Expires?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "";
+            var frist = a.Expires is { } e
+                ? NorwegianDate.Of(e).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                : "";
 
             sb.AppendLine(md
                 ? $"| {Cell(a.Title)} | {Cell(a.Employer)} | {Cell(a.Kommune)} | {frist} | {Cell(a.SourceUrl)} |"

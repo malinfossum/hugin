@@ -354,4 +354,20 @@ public class ExtractServiceTests
         Assert.That(json.FileName, Is.EqualTo("hugin-category-20260820.json"));
         Assert.That(json.ContentType, Is.EqualTo("application/json"));
     }
+
+    [Test]
+    public async Task Frist_is_printed_as_the_Norwegian_date()
+    {
+        // The database hands every timestamp back in UTC; 23:30 UTC on 23.11 is 24.11 in Norway.
+        var ads = new FakeAdRepository();
+        ads.Store["a1"] = Ad("a1", "Utvikler", category: "IT",
+            expires: new DateTimeOffset(2026, 11, 23, 23, 30, 0, TimeSpan.Zero));
+        var service = BuildService(ads: ads);
+
+        var md = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Md, category: "IT");
+        var txt = await service.ExtractAsync(ExtractScope.Category, ExtractFormat.Txt, category: "IT");
+
+        Assert.That(md.Content, Does.Contain("| 2026-11-24 |"));
+        Assert.That(txt.Content, Does.Contain("  2026-11-24  "));
+    }
 }
